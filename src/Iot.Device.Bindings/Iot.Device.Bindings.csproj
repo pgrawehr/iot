@@ -23,6 +23,7 @@
   <ItemGroup>
     <PackageReference Include="System.Drawing.Common" Version="$(SystemDrawingCommonPackageVersion)" />
     <PackageReference Include="System.IO.Ports" Version="$(SystemIOPortsPackageVersion)" />
+    <PackageReference Include="System.IO.Ports" Version="4.6.0-preview8.19405.3" />
     <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj">
       <AdditionalProperties>RuntimeIdentifier=linux</AdditionalProperties>
     </ProjectReference>
