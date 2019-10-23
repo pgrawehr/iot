@@ -15,9 +15,9 @@ namespace System.Device.Pwm.Drivers
     public class SoftwarePwmChannel : PwmChannel
     {
         private readonly bool _shouldDispose;
-        // use to determine the freqncy of the PWM
-        // PulseFrequency = total frenquency
-        // curent pulse width = when the signal is hi
+        // use to determine the frequency of the PWM
+        // PulseFrequency = total frequency
+        // current pulse width = when the signal is high
         private double _currentPulseWidth;
         private double _pulseFrequency;
         private int _frequency;
@@ -37,6 +37,11 @@ namespace System.Device.Pwm.Drivers
         private Thread _runningThread;
         private GpioController _controller;
         private bool _runThread = true;
+
+        /// <summary>
+		/// Event to bring our thread out of the wait state
+		/// </summary>
+        private AutoResetEvent _optionsChangedEvent;
 
         /// <summary>
         /// The frequency in hertz.
@@ -108,6 +113,7 @@ namespace System.Device.Pwm.Drivers
             _controller.OpenPin(_servoPin, PinMode.Output);
             _usePrecisionTimer = usePrecisionTimer;
             _isRunning = false;
+            _optionsChangedEvent = new AutoResetEvent(false);
             _runningThread = new Thread(RunSoftPWM);
             _runningThread.Start();
 
@@ -120,6 +126,7 @@ namespace System.Device.Pwm.Drivers
         private void UpdateRange()
         {
             _currentPulseWidth = _percentage * _pulseFrequency;
+            _optionsChangedEvent.Set();
         }
 
         private void RunSoftPWM()
@@ -147,10 +154,10 @@ namespace System.Device.Pwm.Drivers
                     }
                     else
                     {
-                        Task.Delay(TimeSpan.FromMilliseconds(_currentPulseWidth)).Wait();
+                        _optionsChangedEvent.WaitOne(TimeSpan.FromMilliseconds(_currentPulseWidth));
                     }
 
-                    // The pulse if over and so set the pin to low and then wait until it's time for the next pulse
+                    // The pulse is over and so set the pin to low and then wait until it's time for the next pulse
                     _controller.Write(_servoPin, PinValue.Low);
 
                     if (_usePrecisionTimer)
@@ -159,8 +166,8 @@ namespace System.Device.Pwm.Drivers
                     }
                     else
                     {
-                        Task.Delay(TimeSpan.FromMilliseconds(_pulseFrequency - _currentPulseWidth)).Wait();
-                    }
+						_optionsChangedEvent.WaitOne(TimeSpan.FromMilliseconds(_pulseFrequency - _currentPulseWidth));
+					}
                 }
                 else
                 {
@@ -168,6 +175,11 @@ namespace System.Device.Pwm.Drivers
                     {
                         _controller.Write(_servoPin, PinValue.Low);
                         _isStopped = true;
+                    }
+                    else
+                    {
+                        // Wait until disposed or new config
+                        _optionsChangedEvent.WaitOne();
                     }
                 }
             }
@@ -182,7 +194,6 @@ namespace System.Device.Pwm.Drivers
         private void Wait(double milliseconds)
         {
             long initialTick = _stopwatch.ElapsedTicks;
-            long initialElapsed = _stopwatch.ElapsedMilliseconds;
             double desiredTicks = milliseconds / 1000.0 * Stopwatch.Frequency;
             double finalTick = initialTick + desiredTicks;
             while (_stopwatch.ElapsedTicks < finalTick)
@@ -197,6 +208,7 @@ namespace System.Device.Pwm.Drivers
         public override void Start()
         {
             _isRunning = true;
+            _optionsChangedEvent.Set();
         }
 
         /// <summary>
@@ -205,6 +217,7 @@ namespace System.Device.Pwm.Drivers
         public override void Stop()
         {
             _isRunning = false;
+            _optionsChangedEvent.Set();
         }
 
         /// <inheritdoc/>
@@ -212,8 +225,11 @@ namespace System.Device.Pwm.Drivers
         {
             _isRunning = false;
             _runThread = false;
+            _optionsChangedEvent.Set();
             _runningThread?.Join();
             _runningThread = null;
+            _optionsChangedEvent?.Dispose();
+            _optionsChangedEvent = null;
 
             if (_shouldDispose)
             {
