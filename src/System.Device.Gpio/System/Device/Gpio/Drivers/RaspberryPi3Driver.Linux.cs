@@ -44,6 +44,11 @@ namespace System.Device.Gpio.Drivers
             }
         }
 
+        private bool IsPinOpen(int pin)
+        {
+            return _sysFSModes.ContainsKey(pin);
+        }
+
         /// <summary>
         /// Gets the mode of a pin for Unix.
         /// </summary>
@@ -76,7 +81,7 @@ namespace System.Device.Gpio.Drivers
             InitializeSysFS();
 
             _sysFSDriver.OpenPin(pinNumber);
-            _sysFSDriver.SetPinMode(pinNumber, GetModeForUnixDriver(_sysFSModes[pinNumber]));
+            // _sysFSDriver.SetPinMode(pinNumber, GetModeForUnixDriver(_sysFSModes[pinNumber]));
 
             _sysFSDriver.AddCallbackForPinValueChangedEvent(pinNumber, eventTypes, callback);
         }
@@ -89,11 +94,17 @@ namespace System.Device.Gpio.Drivers
         {
             ValidatePinNumber(pinNumber);
 
-            if (_sysFSModes.ContainsKey(pinNumber) && _sysFSModes[pinNumber] == PinMode.Output)
+            lock (s_sysFsInitializationLock)
             {
-                Write(pinNumber, PinValue.Low);
-                SetPinMode(pinNumber, PinMode.Input);
+                if (_sysFSDriver != null)
+                {
+                    _sysFSDriver.ClosePin(pinNumber);
+                }
             }
+
+            // Set pin low and mode to input upon closing a pin
+            Write(pinNumber, PinValue.Low);
+            SetPinMode(pinNumber, PinMode.Input);
         }
 
         /// <summary>
@@ -152,11 +163,11 @@ namespace System.Device.Gpio.Drivers
         /// <param name="callback">Delegate that defines the structure for callbacks when a pin value changed event occurs.</param>
         protected internal override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
         {
-            ValidatePinNumber(pinNumber);
+            ValidatePinIsInput(pinNumber);
             InitializeSysFS();
 
             _sysFSDriver.OpenPin(pinNumber);
-            _sysFSDriver.SetPinMode(pinNumber, GetModeForUnixDriver(_sysFSModes[pinNumber]));
+            // _sysFSDriver.SetPinMode(pinNumber, GetModeForUnixDriver(_sysFSModes[pinNumber]));
 
             _sysFSDriver.RemoveCallbackForPinValueChangedEvent(pinNumber, callback);
         }
@@ -271,12 +282,11 @@ namespace System.Device.Gpio.Drivers
         /// <returns>A structure that contains the result of the waiting operation.</returns>
         protected internal override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            ValidatePinNumber(pinNumber);
+            ValidatePinIsInput(pinNumber);
             InitializeSysFS();
 
             _sysFSDriver.OpenPin(pinNumber);
-            _sysFSDriver.SetPinMode(pinNumber, GetModeForUnixDriver(_sysFSModes[pinNumber]));
-
+            
             return _sysFSDriver.WaitForEvent(pinNumber, eventTypes, cancellationToken);
         }
 
@@ -289,12 +299,11 @@ namespace System.Device.Gpio.Drivers
         /// <returns>A task representing the operation of getting the structure that contains the result of the waiting operation</returns>
         protected internal override ValueTask<WaitForEventResult> WaitForEventAsync(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            ValidatePinNumber(pinNumber);
+            ValidatePinIsInput(pinNumber);
             InitializeSysFS();
 
             _sysFSDriver.OpenPin(pinNumber);
-            _sysFSDriver.SetPinMode(pinNumber, GetModeForUnixDriver(_sysFSModes[pinNumber]));
-
+            
             return _sysFSDriver.WaitForEventAsync(pinNumber, eventTypes, cancellationToken);
         }
 
@@ -389,7 +398,7 @@ namespace System.Device.Gpio.Drivers
                 {
                     return;
                 }
-                _sysFSDriver = new SysFsDriver();
+                _sysFSDriver = new InterruptSysFsDriver(this);
             }
         }
 
