@@ -55,8 +55,8 @@ namespace Iot.Device.CharacterLcd.Samples
             Console.WriteLine("Individual line test");
             console.Clear();
             console.LineFeedMode = LineFeedMode.Truncate;
-            console.Write(0, "This is all garbage that will be replaced");
-            console.Write(0, "Running clock test");
+            console.ReplaceLine(0, "This is all garbage that will be replaced");
+            console.ReplaceLine(0, "Running clock test");
             int left = console.Size.Width;
             Task alertTask = null;
             // Let the current time move trought the display on line 1
@@ -73,7 +73,7 @@ namespace Iot.Device.CharacterLcd.Samples
                 {
                     printTime = time.Substring(-left);
                 }
-                console.Write(1, printTime);
+                console.ReplaceLine(1, printTime);
                 left--;
                 // Each full minute, blink the display (but continue writing the time)
                 if (now.Second == 0 && alertTask == null)
@@ -98,7 +98,7 @@ namespace Iot.Device.CharacterLcd.Samples
             Console.WriteLine("Culture Info Test");
             console.LoadCulture(CultureInfo.CreateSpecificCulture("de-CH"), '?');
             console.Clear();
-            console.NewLineSleepTime = TimeSpan.FromSeconds(1);
+            console.ScrollUpDelay = TimeSpan.FromSeconds(1);
             console.LineFeedMode = LineFeedMode.WordWrap;
             //console.WriteLine(@"Die Ratten im Gemäuer, englischer Originaltitel ""The Rats in the Walls"" " +
             //    "ist eine phantastische Kurzgeschichte des amerikanischen Schriftstellers H. P. Lovecraft. Das etwa " +

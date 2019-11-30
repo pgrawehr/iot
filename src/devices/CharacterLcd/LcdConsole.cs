@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Drawing;
 using System.Collections.Generic;
 using System.Text;
@@ -25,7 +29,7 @@ namespace Iot.Device.CharacterLcd
         private LineFeedMode _lineFeedMode;
         private readonly object _lock;
         private readonly bool _shouldDispose;
-        private TimeSpan _newLineSleepTime;
+        private TimeSpan _scrollUpDelay;
         private string _romType;
         private Encoding _characterEncoding;
 
@@ -36,7 +40,7 @@ namespace Iot.Device.CharacterLcd
         /// <param name="lcd">The low-level LCD interface.</param>
         /// <param name="romType">Name of character ROM of display. Currently supported types: A00 and A02.</param>
         /// <param name="shouldDispose">If the class should dispose the LCD driver when it is disposed. Defaults to true</param>
-        public LcdConsole(ICharacterLcd lcd, String romType, bool shouldDispose = true)
+        public LcdConsole(ICharacterLcd lcd, string romType, bool shouldDispose = true)
         {
             _lcd = lcd;
             _shouldDispose = shouldDispose;
@@ -46,7 +50,7 @@ namespace Iot.Device.CharacterLcd
             _currentData = new StringBuilder[Size.Height];
             CursorLeft = 0;
             CursorTop = 0;
-            NewLineSleepTime = TimeSpan.Zero;
+            ScrollUpDelay = TimeSpan.Zero;
             _lock = new object();
             _lcd.UnderlineCursorVisible = false;
             _lcd.BlinkingCursorVisible = false;
@@ -77,14 +81,14 @@ namespace Iot.Device.CharacterLcd
         }
 
         /// <summary>
-        /// If larger than Zero, an extra wait is introduced each time a newline is written. Can be used to render entire paragraphs to the display, 
+        /// If this is larger than zero, an a wait is introduced each time the display wraps to the next line or scrolls up. Can be used to print long texts to the display, 
         /// but keeping it readable. 
         /// </summary>
-        public TimeSpan NewLineSleepTime
+        public TimeSpan ScrollUpDelay
         {
             get
             {
-                return _newLineSleepTime;
+                return _scrollUpDelay;
             }
 
             set
@@ -93,7 +97,7 @@ namespace Iot.Device.CharacterLcd
                 {
                     throw new ArgumentOutOfRangeException(nameof(value), "Timespan must be positive");
                 }
-                _newLineSleepTime = value;
+                _scrollUpDelay = value;
             }
         }
 
@@ -269,21 +273,22 @@ namespace Iot.Device.CharacterLcd
         }
 
         /// <summary>
-        /// Writes text, starting at the given line number. 
-        /// This will overwrite the text in the given line, filling up with spaces, if needed. Line wrapping is disabled, so this method will write exactly one line. 
+        /// Replaces the text of the given line. 
+        /// This will overwrite the text in the given line, filling up with spaces, if needed. 
+        /// This will never wrap to the next line, and line feeds in the input string are not allowed. 
         /// </summary>
         /// <param name="lineNumber">0-based index of the line to start</param>
         /// <param name="text">Text to insert. No newlines supported.</param>
         /// <exception cref="ArgumentException">The string contains newlines.</exception>
-        public void Write(int lineNumber, string text)
+        public void ReplaceLine(int lineNumber, string text)
         {
+            if (text.Contains("\n"))
+            {
+                // This is to simplify usage. You would normally use this method to replace one line with new text (i.e. replace only the active element, not affecting the menu title)
+                throw new ArgumentException("The string may not contain line feeds");
+            }
             lock (_lock)
             {
-                if (text.Contains("\n"))
-                {
-                    // This is to simplify usage. You would normally use this method to replace one line with new text (i.e. replace only the active element, not affecting the menu title)
-                    throw new ArgumentException("The string may not contain line feeds");
-                }
                 SetCursorPosition(0, lineNumber);
                 if (text.Length > Size.Width)
                 {
@@ -399,9 +404,9 @@ namespace Iot.Device.CharacterLcd
         private void NewLine()
         {
             // Wait before scrolling, so that the last line may also contain text
-            if (_newLineSleepTime > TimeSpan.Zero)
+            if (_scrollUpDelay > TimeSpan.Zero)
             {
-                Thread.Sleep(_newLineSleepTime);
+                Thread.Sleep(_scrollUpDelay);
             }
             lock (_lock)
             {
@@ -440,6 +445,7 @@ namespace Iot.Device.CharacterLcd
 
         /// <summary>
         /// Scrolls the text up by one row, clearing the last row. Does not change the cursor position.
+        /// Implementation note: Caller must own the lock. 
         /// </summary>
         private void ScrollUp()
         {
@@ -453,6 +459,7 @@ namespace Iot.Device.CharacterLcd
 
         /// <summary>
         /// This is expected to be called only with a string length of less or equal the remaining number of characters on the current line. 
+        /// Implementation note: Caller must own the lock. 
         /// </summary>
         private void WriteCurrentLine(string line)
         {
@@ -474,15 +481,15 @@ namespace Iot.Device.CharacterLcd
         /// <returns>True if all important characters for that culture are available and loaded.</returns>
         public bool LoadCulture(CultureInfo culture, char unknownCharacter = '?', LcdCharacterEncodingFactory factory = null)
         {
+            if (factory == null)
+            {
+                factory = new LcdCharacterEncodingFactory();
+            }
+
+            bool supported;
+            var encoding = factory.Create(culture, _romType, unknownCharacter, out supported);
             lock (_lock)
             {
-                if (factory == null)
-                {
-                    factory = new LcdCharacterEncodingFactory();
-                }
-
-                bool supported;
-                var encoding = factory.Create(culture, _romType, unknownCharacter, out supported);
                 for (byte i = 0; i < encoding.ExtraCharacters.Count; i++)
                 {
                     byte[] pixelMap = encoding.ExtraCharacters[i];
@@ -490,8 +497,8 @@ namespace Iot.Device.CharacterLcd
                 }
 
                 _characterEncoding = encoding;
-                return supported;
             }
+            return supported;
         }
 
         /// <summary>
