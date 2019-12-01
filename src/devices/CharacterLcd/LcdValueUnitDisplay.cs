@@ -238,11 +238,81 @@ namespace Iot.Device.CharacterLcd
                         Insert(ret, 3, 6, 32, 6);
                         xPosition += 3;
                         break;
-                    case 'P':
+                    case 'B':
+                        Insert(ret, 0, 6, 6, 2);
+                        Insert(ret, 1, 6, 32, 3);
+                        Insert(ret, 2, 6, 5, 2);
+                        Insert(ret, 3, 6, 6, 3);
+                        xPosition += 3;
+                        break;
+                    case 'C':
+                        Insert(ret, 0, 6, 6, 2);
+                        Insert(ret, 1, 6, 32, 32);
+                        Insert(ret, 2, 6, 32, 32);
+                        Insert(ret, 3, 6, 6, 3);
+                        xPosition += 3;
+                        break;
+                    case 'D':
                         Insert(ret, 0, 6, 6, 2);
                         Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 6, 5, 5);
+                        Insert(ret, 2, 6, 32, 6);
+                        Insert(ret, 3, 6, 6, 3);
+                        xPosition += 3;
+                        break;
+                    case 'E':
+                        Insert(ret, 0, 6, 6, 6);
+                        Insert(ret, 1, 6, 4, 32);
+                        Insert(ret, 2, 6, 5, 32);
+                        Insert(ret, 3, 6, 6, 6);
+                        xPosition += 3;
+                        break;
+                    case 'F':
+                        Insert(ret, 0, 6, 6, 6);
+                        Insert(ret, 1, 6, 4, 32);
+                        Insert(ret, 2, 6, 5, 32);
                         Insert(ret, 3, 6, 32, 32);
+                        xPosition += 3;
+                        break;
+                    case 'G':
+                        Insert(ret, 0, 6, 6, 2);
+                        Insert(ret, 1, 6, 32, 5);
+                        Insert(ret, 2, 6, 5, 2);
+                        Insert(ret, 3, 6, 6, 3);
+                        xPosition += 3;
+                        break;
+                    case 'H':
+                        Insert(ret, 0, 6, 32, 6);
+                        Insert(ret, 1, 6, 4, 6);
+                        Insert(ret, 2, 6, 5, 6);
+                        Insert(ret, 3, 6, 32, 6);
+                        xPosition += 3;
+                        break;
+                    case 'I':
+                        Insert(ret, 0, 6, 6, 6);
+                        Insert(ret, 1, 32, 6, 32);
+                        Insert(ret, 2, 32, 6, 32);
+                        Insert(ret, 3, 6, 6, 6);
+                        xPosition += 3;
+                        break;
+                    case 'J':
+                        Insert(ret, 0, 32, 32, 6);
+                        Insert(ret, 1, 32, 32, 6);
+                        Insert(ret, 2, 32, 32, 6);
+                        Insert(ret, 3, 1, 6, 3);
+                        xPosition += 3;
+                        break;
+                    case 'K':
+                        Insert(ret, 0, 6, 32, 0);
+                        Insert(ret, 1, 6, 0, 3);
+                        Insert(ret, 2, 6, 1, 2);
+                        Insert(ret, 3, 6, 32, 1);
+                        xPosition += 3;
+                        break;
+                    case 'L':
+                        Insert(ret, 0, 6, 32, 32);
+                        Insert(ret, 1, 6, 32, 32);
+                        Insert(ret, 2, 6, 32, 32);
+                        Insert(ret, 3, 6, 6, 3);
                         xPosition += 3;
                         break;
                     case 'M':
@@ -250,6 +320,97 @@ namespace Iot.Device.CharacterLcd
                         Insert(ret, 1, 6, 1, 3, 6);
                         Insert(ret, 2, 6, 32, 32, 6);
                         Insert(ret, 3, 6, 32, 32, 6);
+                        xPosition += 4;
+                        break;
+                    case 'N':
+                        Insert(ret, 0, 6, 2, 6);
+                        Insert(ret, 1, 6, 1, 6);
+                        Insert(ret, 2, 6, 32, 6);
+                        Insert(ret, 3, 6, 32, 6);
+                        xPosition += 3;
+                        break;
+                    case 'O':
+                        Insert(ret, 0, 0, 6, 2);
+                        Insert(ret, 1, 6, 32, 6);
+                        Insert(ret, 2, 6, 32, 6);
+                        Insert(ret, 3, 1, 6, 3);
+                        xPosition += 3;
+                        break;
+                    case 'P':
+                        Insert(ret, 0, 6, 6, 2);
+                        Insert(ret, 1, 6, 32, 6);
+                        Insert(ret, 2, 6, 5, 5);
+                        Insert(ret, 3, 6, 32, 32);
+                        xPosition += 3;
+                        break;
+                    case 'Q':
+                        Insert(ret, 0, 0, 6, 2);
+                        Insert(ret, 1, 6, 32, 6);
+                        Insert(ret, 2, 6, 32, 6);
+                        Insert(ret, 3, 1, 6, 6);
+                        xPosition += 3;
+                        break;
+                    case 'R':
+                        Insert(ret, 0, 6, 6, 2);
+                        Insert(ret, 1, 6, 32, 6);
+                        Insert(ret, 2, 6, 6, 3);
+                        Insert(ret, 3, 6, 1, 2);
+                        xPosition += 3;
+                        break;
+                    case 'S':
+                        Insert(ret, 0, 0, 6, 2);
+                        Insert(ret, 1, 1, 2, 32);
+                        Insert(ret, 2, 32, 1, 2);
+                        Insert(ret, 3, 1, 6, 3);
+                        xPosition += 3;
+                        break;
+                    case 'T':
+                        Insert(ret, 0, 6, 6, 6);
+                        Insert(ret, 1, 32, 6, 32);
+                        Insert(ret, 2, 32, 6, 32);
+                        Insert(ret, 3, 32, 6, 32);
+                        xPosition += 3;
+                        break;
+                    case 'U':
+                        Insert(ret, 0, 6, 32, 6);
+                        Insert(ret, 1, 6, 32, 6);
+                        Insert(ret, 2, 6, 32, 6);
+                        Insert(ret, 3, 1, 6, 3);
+                        xPosition += 3;
+                        break;
+                    case 'V':
+                        Insert(ret, 0, 6, 32, 32, 6);
+                        Insert(ret, 1, 6, 32, 32, 6);
+                        Insert(ret, 2, 1, 2, 0, 3);
+                        Insert(ret, 3, 32, 1, 3, 32);
+                        xPosition += 4;
+                        break;
+                    case 'W':
+                        Insert(ret, 0, 6, 32, 32, 6);
+                        Insert(ret, 1, 6, 32, 32, 6);
+                        Insert(ret, 2, 6, 0, 2, 6);
+                        Insert(ret, 3, 6, 3, 1, 6);
+                        xPosition += 4;
+                        break;
+                    case 'X':
+                        Insert(ret, 0, 1, 2, 0, 3);
+                        Insert(ret, 1, 32, 1, 3, 32);
+                        Insert(ret, 2, 32, 0, 2, 32);
+                        Insert(ret, 3, 0, 3, 1, 2);
+                        xPosition += 4;
+                        break;
+                    case 'Y':
+                        Insert(ret, 0, 1, 2, 0, 3);
+                        Insert(ret, 1, 32, 1, 6, 32);
+                        Insert(ret, 2, 32, 32, 6, 32);
+                        Insert(ret, 3, 32, 32, 6, 32);
+                        xPosition += 4;
+                        break;
+                    case 'Z':
+                        Insert(ret, 0, 6, 6, 6);
+                        Insert(ret, 1, 32, 0, 3);
+                        Insert(ret, 2, 0, 3, 32);
+                        Insert(ret, 3, 6, 6, 6);
                         xPosition += 3;
                         break;
                     case ' ':

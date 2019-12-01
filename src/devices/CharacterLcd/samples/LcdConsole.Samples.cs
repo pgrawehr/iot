@@ -199,6 +199,16 @@ namespace Iot.Device.CharacterLcd.Samples
                 Thread.Sleep(100);
             }
             Console.ReadKey(true);
+            Console.WriteLine("And the capital letters of the latin alphabet");
+            char[] chars = new[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
+            int idx = 0;
+            while (Console.KeyAvailable == false)
+            {
+                val.DisplayValue(chars[idx].ToString(), chars[idx].ToString());
+                idx = (idx + 1) % chars.Length;
+                Thread.Sleep(1000);
+            }
+            Console.ReadKey(true);
         }
     }
 }
