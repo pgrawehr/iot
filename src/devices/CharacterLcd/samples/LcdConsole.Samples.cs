@@ -96,19 +96,20 @@ namespace Iot.Device.CharacterLcd.Samples
             alertTask?.Wait();
             Console.ReadKey();
             Console.WriteLine("Culture Info Test");
-            console.LoadCulture(CultureInfo.CreateSpecificCulture("de-CH"), '?');
+            LcdCharacterEncoding encoding = LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("de-CH"), "A00", '?', 8);
+            console.LoadEncoding(encoding);
             console.Clear();
             console.ScrollUpDelay = TimeSpan.FromSeconds(1);
             console.LineFeedMode = LineFeedMode.WordWrap;
-            //console.WriteLine(@"Die Ratten im Gemäuer, englischer Originaltitel ""The Rats in the Walls"" " +
-            //    "ist eine phantastische Kurzgeschichte des amerikanischen Schriftstellers H. P. Lovecraft. Das etwa " +
-            //    "8000 Wörter umfassende Werk wurde zwischen August und September 1923 verfasst und erschien erstmals " +
-            //    "im März 1924 im Pulp-Magazin Weird Tales. Der Titel bezieht sich auf das Rascheln von Ratten in den " +
-            //    "Gemäuern des Familienanwesens, das der Erzähler Delapore nach 300 Jahren auf den Ruinen des Stammsitzes " +
-            //    "seiner Vorfahren neu errichtet hat. Im Verlauf der Erzählung führen die Ratten Delapore zur Entdeckung " +
-            //    "des grausigen Geheimnisses der Gruft seines Anwesens und der finsteren Vergangenheit seiner Familie. " +
-            //    "Nach Lovecraft entstand die Grundidee für die Geschichte, als eines späten Abends seine Tapete zu knistern begann. " +
-            //    "(von https://de.wikipedia.org/wiki/Die_Ratten_im_Gem%C3%A4uer, CC-BY-SA 3.0)");
+            console.WriteLine(@"Die Ratten im Gemäuer, englischer Originaltitel ""The Rats in the Walls"" " +
+                "ist eine phantastische Kurzgeschichte des amerikanischen Schriftstellers H. P. Lovecraft. Das etwa " +
+                "8000 Wörter umfassende Werk wurde zwischen August und September 1923 verfasst und erschien erstmals " +
+                "im März 1924 im Pulp-Magazin Weird Tales. Der Titel bezieht sich auf das Rascheln von Ratten in den " +
+                "Gemäuern des Familienanwesens, das der Erzähler Delapore nach 300 Jahren auf den Ruinen des Stammsitzes " +
+                "seiner Vorfahren neu errichtet hat. Im Verlauf der Erzählung führen die Ratten Delapore zur Entdeckung " +
+                "des grausigen Geheimnisses der Gruft seines Anwesens und der finsteren Vergangenheit seiner Familie. " +
+                "Nach Lovecraft entstand die Grundidee für die Geschichte, als eines späten Abends seine Tapete zu knistern begann. " +
+                "(von https://de.wikipedia.org/wiki/Die_Ratten_im_Gem%C3%A4uer, CC-BY-SA 3.0)");
             console.WriteLine("From A00 default map: ");
             console.WriteLine("Code: [{|}]^_\\");
             console.WriteLine("Greek: Ωαβεπθμ");
@@ -119,8 +120,8 @@ namespace Iot.Device.CharacterLcd.Samples
             console.WriteLine("Umlauts: äöüßÄÜÖ");
             console.WriteLine("Äußerst ölige, überflüssige Ölfässer im Großhandel von Ützhausen.");
             console.WriteLine("Currency: ¥€£$");
-
-            console.LoadCulture(CultureInfo.CreateSpecificCulture("fr-fr"), '?');
+            encoding = LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("fr-fr"), "A00", '?', 8);
+            console.LoadEncoding(encoding);
             console.Clear();
             console.WriteLine("Le français est une langue indo-européenne de la famille des langues romanes. " +
                 "Le français s'est formé en France. Le français est déclaré langue officielle en France en 1539. " +
@@ -128,16 +129,17 @@ namespace Iot.Device.CharacterLcd.Samples
                 "des tsars de Russie aux rois d'Espagne et d'Angleterre en passant par les princes de l'Allemagne, " +
                 "il demeure une langue importante de la diplomatie internationale aux côtés de l'anglais. ");
 
-            console.LoadCulture(CultureInfo.CreateSpecificCulture("da-da"), '?');
+            encoding = LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("da-da"), "A00", '?', 8);
+            console.LoadEncoding(encoding);
             console.Clear();
             console.WriteLine("Dansk er et nordgermansk sprog af den østnordiske (kontinentale) gruppe, " +
                 "der tales af ca. seks millioner mennesker. Det er stærkt påvirket af plattysk. Dansk tales " +
-                "også i Sydslesvig (i Flensborg ca. 20 %) samt på Færøerne og Grønland.");
-            console.WriteLine("PÅ FÆRØER");
-
+                "også i Sydslesvig (i Flensborg ca. 20 %) samt PÅ FÆRØER OG GRØNLAND.");
+            
             Console.ReadLine();
             Console.WriteLine("Japanese test");
-            console.LoadCulture(CultureInfo.CreateSpecificCulture("ja-ja"));
+            encoding = LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("ja-ja"), "A00", '?', 8);
+            console.LoadEncoding(encoding);
             console.WriteLine("What about some japanese?");
             console.WriteLine("イロハニホヘト");
             console.WriteLine("チリヌルヲ");

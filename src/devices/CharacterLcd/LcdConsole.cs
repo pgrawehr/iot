@@ -472,25 +472,64 @@ namespace Iot.Device.CharacterLcd
         }
 
         /// <summary>
-        /// Loads the character set for the given culture, if available
+        /// Creates an encoding that can be used for an LCD display. 
+        /// Typically, the returned value will be loaded using <see cref="LoadEncoding(LcdCharacterEncoding)"/>.
         /// </summary>
-        /// <param name="culture">Culture to load</param>
+        /// <param name="culture">Required display culture (forwarded to the factory)</param>
+        /// <param name="romType">The name of the ROM for which the encoding is to be applied. The default factory supports roms A00 and A02.</param>
         /// <param name="unknownCharacter">The character to print for unknown letters, default: ?</param>
+        /// <param name="maxNumberOfCustomCharacters">The maximum number of custom characters supported by the hardware.</param>
         /// <param name="factory">Character encoding factory that delivers the mapping of the Char type to the hardware ROM character codes. May add special characters into 
         /// the character ROM. Default: Null (Use internal factory)</param>
-        /// <returns>True if all important characters for that culture are available and loaded.</returns>
-        public bool LoadCulture(CultureInfo culture, char unknownCharacter = '?', LcdCharacterEncodingFactory factory = null)
+        public static LcdCharacterEncoding CreateEncoding(CultureInfo culture, string romType, char unknownCharacter = '?', int maxNumberOfCustomCharacters = 8, LcdCharacterEncodingFactory factory = null)
         {
             if (factory == null)
             {
                 factory = new LcdCharacterEncodingFactory();
             }
 
-            bool supported;
-            var encoding = factory.Create(culture, _romType, unknownCharacter, out supported);
+            return factory.Create(culture, romType, unknownCharacter, maxNumberOfCustomCharacters);
+        }
+
+        /// <summary>
+        /// Loads the specified encoding. 
+        /// This behaves as <see cref="LoadEncoding(LcdCharacterEncoding)"/> when the argument is of the dynamic type <see cref="LcdCharacterEncoding"/>, otherwise like an encding 
+        /// with no special characters.
+        /// </summary>
+        /// <param name="encoding">The encoding to load.</param>
+        /// <returns>See true if the encoding was correctly loaded.</returns>
+        public bool LoadEncoding(Encoding encoding)
+        {
+            LcdCharacterEncoding lcdCharacterEncoding = encoding as LcdCharacterEncoding;
+            if (lcdCharacterEncoding != null)
+            {
+                return LoadEncoding(encoding);
+            }
             lock (_lock)
             {
-                for (byte i = 0; i < encoding.ExtraCharacters.Count; i++)
+                _characterEncoding = encoding;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Loads the specified character encoding. This loads any custom characters from the encoding to the display. 
+        /// </summary>
+        /// <param name="encoding">The encoding to load.</param>
+        /// <returns>True if the character encoding was successfully loaded, false if there are not enough custom slots for all the required custom characters.
+        /// This may also return false if the encoding factory returned incomplete results, such as a missing custom character for a special diacritic.</returns>
+        public bool LoadEncoding(LcdCharacterEncoding encoding)
+        {
+            bool allCharactersLoaded = encoding.AllCharactersSupported;
+            lock (_lock)
+            {
+                int numberOfCharctersToLoad = Math.Min(encoding.ExtraCharacters.Count, _lcd.NumberOfCustomCharactersSupported);
+                if (numberOfCharctersToLoad < encoding.ExtraCharacters.Count)
+                {
+                    // We can't completelly load that encoding, because there are not enough custom slots. 
+                    allCharactersLoaded = false;
+                }
+                for (byte i = 0; i < numberOfCharctersToLoad; i++)
                 {
                     byte[] pixelMap = encoding.ExtraCharacters[i];
                     _lcd.CreateCustomCharacter(i, pixelMap);
@@ -498,13 +537,13 @@ namespace Iot.Device.CharacterLcd
 
                 _characterEncoding = encoding;
             }
-            return supported;
+            return allCharactersLoaded;
         }
 
         /// <summary>
-        /// Resets the character mapping to hardware defaults
+        /// Resets the character encoding to hardware defaults (using simply the lower byte of a char).
         /// </summary>
-        public void ResetCulture()
+        public void ResetEncoding()
         {
             lock (_lock)
             {
