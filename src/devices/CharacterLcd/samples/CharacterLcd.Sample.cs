@@ -77,7 +77,7 @@ namespace Iot.Device.CharacterLcd.Samples
                     hd44780.Clear();
                     Console.WriteLine("Display initialized. Press Enter to start tests.");
                     Console.ReadLine();
-                    
+                    LcdConsoleSamples.ValueTest(hd44780);
                     LcdConsoleSamples.WriteTest(hd44780);
                     ExtendedSample.Test(hd44780);
                 }

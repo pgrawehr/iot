@@ -157,5 +157,48 @@ namespace Iot.Device.CharacterLcd.Samples
             console.Write("Test finished");
             console.Dispose();
         }
+
+        /// <summary>
+        /// A test method
+        /// </summary>
+        /// <param name="lcd">The lcd driver</param>
+        public static void ValueTest(ICharacterLcd lcd)
+        {
+            Random random = new Random(1234);
+            Console.WriteLine("Value and unit test - big font (press any key to go to the next test)");
+            Console.WriteLine("Displaying time, culture de-CH");
+            LcdValueUnitDisplay val = new LcdValueUnitDisplay(lcd, CultureInfo.CreateSpecificCulture("de-CH"));
+            val.InitForRom("A00");
+            while (Console.KeyAvailable == false)
+            {
+                val.DisplayTime(DateTime.Now);
+                Thread.Sleep(100);
+            }
+            Console.ReadKey(true);
+            Console.WriteLine("Same, now long time format");
+            while (Console.KeyAvailable == false)
+            {
+                val.DisplayTime(DateTime.Now, "T");
+                Thread.Sleep(100);
+            }
+            Console.ReadKey(true);
+            Console.WriteLine("Now with en-US culture");
+            val = new LcdValueUnitDisplay(lcd, CultureInfo.CreateSpecificCulture("en-US"));
+            val.InitForRom("A00");
+            while (Console.KeyAvailable == false)
+            {
+                val.DisplayTime(DateTime.Now);
+                Thread.Sleep(100);
+            }
+            Console.ReadKey(true);
+            Console.WriteLine("Now something a bit more technical");
+            while (Console.KeyAvailable == false)
+            {
+                double voltage = random.NextDouble();
+                val.DisplayValue(voltage.ToString("F3") + "V", "Supply Voltage");
+                Thread.Sleep(100);
+            }
+            Console.ReadKey(true);
+        }
     }
 }
