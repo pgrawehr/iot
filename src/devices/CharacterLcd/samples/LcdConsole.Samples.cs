@@ -195,8 +195,20 @@ namespace Iot.Device.CharacterLcd.Samples
             while (Console.KeyAvailable == false)
             {
                 double voltage = random.NextDouble();
-                val.DisplayValue(voltage.ToString("F3") + "V", "Supply Voltage");
-                Thread.Sleep(100);
+                val.DisplayValue(voltage.ToString("F3") + "kV", "Supply Voltage");
+                Thread.Sleep(500);
+            }
+            Console.ReadKey(true);
+            Console.WriteLine("Common units");
+            string unitsToDisplay = "kV mA nF μF pF MΩ";
+            int index = 0;
+            while (Console.KeyAvailable == false)
+            {
+                string current = unitsToDisplay.Substring(index);
+                val.DisplayValue(current);
+                index = (index + 1) % unitsToDisplay.Length;
+                
+                Thread.Sleep(500);
             }
             Console.ReadKey(true);
             Console.WriteLine("And the capital letters of the latin alphabet");

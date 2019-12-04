@@ -59,7 +59,7 @@ namespace Iot.Device.CharacterLcd
             {
                 _lcd.CreateCustomCharacter(i, specialGraphicsRequired[i]);
             }
-            _currentSeparationChar = ':';
+            _currentSeparationChar = ' '; // To make sure the next function doesn't just skip the initialization
             LoadSeparationChar(_currentSeparationChar);
              _encoding = encoding;
             _lcd.BlinkingCursorVisible = false;
@@ -274,10 +274,10 @@ namespace Iot.Device.CharacterLcd
                         xPosition += 3;
                         break;
                     case 'G':
-                        Insert(ret, 0, 6, 6, 2);
+                        Insert(ret, 0, 0, 6, 2);
                         Insert(ret, 1, 6, 32, 5);
                         Insert(ret, 2, 6, 5, 2);
-                        Insert(ret, 3, 6, 6, 3);
+                        Insert(ret, 3, 1, 6, 3);
                         xPosition += 3;
                         break;
                     case 'H':
@@ -411,6 +411,49 @@ namespace Iot.Device.CharacterLcd
                         Insert(ret, 1, 32, 0, 3);
                         Insert(ret, 2, 0, 3, 32);
                         Insert(ret, 3, 6, 6, 6);
+                        xPosition += 3;
+                        break;
+                    case 'Ω':
+                        Insert(ret, 0, 0, 6, 6, 2);
+                        Insert(ret, 1, 6, 32, 32, 6);
+                        Insert(ret, 2, 6, 2, 0, 6);
+                        Insert(ret, 3, 4, 3, 1, 4);
+                        xPosition += 4;
+                        break;
+                        // Small letters for common unit prefixes (to be extended)
+                    case 'm':
+                        Insert(ret, 0, 32, 32, 32, 32);
+                        Insert(ret, 1, 32, 32, 32, 32);
+                        Insert(ret, 2, 0, 2, 0, 2);
+                        Insert(ret, 3, 6, 32, 32, 6);
+                        xPosition += 4;
+                        break;
+                    case 'n':
+                        Insert(ret, 0, 32, 32, 32);
+                        Insert(ret, 1, 32, 32, 32);
+                        Insert(ret, 2, 6, 6, 2);
+                        Insert(ret, 3, 6, 32, 6);
+                        xPosition += 3;
+                        break;
+                    case 'k':
+                        Insert(ret, 0, 32, 32);
+                        Insert(ret, 1, 6, 32);
+                        Insert(ret, 2, 6, 0);
+                        Insert(ret, 3, 6, 1);
+                        xPosition += 2;
+                        break;
+                    case 'p':
+                        Insert(ret, 0, 32, 32);
+                        Insert(ret, 1, 6, 5, 2);
+                        Insert(ret, 2, 6, 4, 6);
+                        Insert(ret, 3, 6, 32, 32);
+                        xPosition += 3;
+                        break;
+                    case 'μ':
+                        Insert(ret, 0, 32, 32, 32);
+                        Insert(ret, 1, 32, 32, 32);
+                        Insert(ret, 2, 6, 32, 6);
+                        Insert(ret, 3, 6, 6, 3);
                         xPosition += 3;
                         break;
                     case ' ':
