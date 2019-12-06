@@ -26,6 +26,11 @@ namespace Iot.Device.CharacterLcd
     /// </remarks>
     public class Hd44780 : ICharacterLcd, IDisposable
     {
+        /// <summary>
+        /// Number of bytes required for a custom character
+        /// </summary>
+        private const int CharacterPixelHeight = 8; 
+
         private bool _disposed;
 
         /// <summary>
@@ -391,11 +396,11 @@ namespace Iot.Device.CharacterLcd
         /// <param name="characterMap">Provide an array of 8 bytes containing the pattern</param>
         public void CreateCustomCharacter(byte location, ReadOnlySpan<byte> characterMap)
         {
-            if (location > NumberOfCustomCharactersSupported - 1)
+            if (location >= NumberOfCustomCharactersSupported)
                 throw new ArgumentOutOfRangeException(nameof(location));
 
-            if (characterMap.Length != 8)
-                throw new ArgumentException("The character map must be exactly 8 bytes long", nameof(characterMap));
+            if (characterMap.Length != CharacterPixelHeight)
+                throw new ArgumentException($"The character map must be exactly {CharacterPixelHeight} bytes long", nameof(characterMap));
 
             // The character address is set in bits 3-5 of the command byte
             SendCommand((byte)(SetCGRamAddressCommand | (location << 3)));
