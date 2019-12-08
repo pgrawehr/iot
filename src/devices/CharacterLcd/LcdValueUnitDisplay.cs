@@ -5,6 +5,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,10 +20,12 @@ namespace Iot.Device.CharacterLcd
     /// </summary>
     public class LcdValueUnitDisplay
     {
+        private const string BigFontMap = "BigFontMap.txt";
         private readonly ICharacterLcd _lcd;
+        private readonly CultureInfo _culture;
+        private readonly Dictionary<char, byte[]> _font;
+        private char _currentSeparationChar; 
         private LcdCharacterEncoding _encoding;
-        private CultureInfo _culture;
-        private char _currentSeparationChar;
 
         /// <summary>
         /// Creates an instance of <see cref="LcdValueUnitDisplay"/>
@@ -31,6 +36,7 @@ namespace Iot.Device.CharacterLcd
         {
             _lcd = lcd;
             _culture = culture;
+            _font = new Dictionary<char, byte[]>();
             if (lcd.Size.Width < 20 || lcd.Size.Height < 4)
             {
                 throw new NotSupportedException("This class can only run on displays with at least 20x4 characters.");
@@ -38,6 +44,17 @@ namespace Iot.Device.CharacterLcd
             if (lcd.NumberOfCustomCharactersSupported < 8)
             {
                 throw new NotSupportedException("This class can only run on displays with 8 or more custom character slots");
+            }
+        }
+
+        /// <summary>
+        /// Returns the active culture. 
+        /// </summary>
+        public CultureInfo Culture
+        {
+            get
+            {
+                return _culture;
             }
         }
 
@@ -69,6 +86,82 @@ namespace Iot.Device.CharacterLcd
             _lcd.BacklightOn = true;
             _lcd.DisplayOn = true;
             _lcd.Clear();
+            ReadCharacterMap();
+        }
+
+        private void ReadCharacterMap()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            // Get our resource file (independent of default namespace of project)
+            string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith("BigFontMap.txt"));
+
+            string mapFile;
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            {
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    mapFile = reader.ReadToEnd();
+                }
+            }
+
+            // -1: init
+            // 0: char seen, awaiting first line
+            // 1.. 3 next line
+            int characterStep = -1;
+            char currentChar = ' ';
+            byte[] currentCharMap = null;
+            int currentCharMapPos = 0;
+            // Parse the character map file (syntax see there)
+            using (StringReader r = new StringReader(mapFile))
+            {
+                string line;
+                int lineNo = 0;
+                while ((line = r.ReadLine()) != null)
+                {
+                    lineNo++;
+                    if (line.StartsWith("//") || string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
+                    if (characterStep == -1)
+                    {
+                        line = line.TrimEnd();
+                        if (line.Length != 2 || line[1] != ':')
+                        {
+                            throw new InvalidDataException($"Line {lineNo}: Expected character followed by ':', found {line}");
+                        }
+                        currentChar = line[0];
+                        characterStep = 0;
+                        continue;
+                    }
+                    string[] splits = line.Split(',', StringSplitOptions.None);
+                    if (characterStep == 0)
+                    {
+                        currentCharMap = new byte[splits.Length * 4];
+                        currentCharMapPos = 0;
+                    }
+                    for (int i = 0; i < splits.Length; i++)
+                    {
+                        byte b;
+                        if (!byte.TryParse(splits[i], out b))
+                        {
+                            throw new InvalidDataException($"Line {lineNo}: Expected byte, found {splits[i]}");
+                        }
+                        if (currentCharMapPos >= currentCharMap.Length)
+                        {
+                            throw new InvalidDataException($"Line {lineNo}: Character is expected to have {currentCharMap.Length} bytes, but found more");
+                        }
+                        currentCharMap[currentCharMapPos] = b;
+                        currentCharMapPos++;
+                    }
+                    characterStep++;
+                    if (characterStep == 4)
+                    {
+                        _font.Add(currentChar, currentCharMap);
+                        characterStep = -1;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -88,7 +181,7 @@ namespace Iot.Device.CharacterLcd
                 smallText = toDisplay.Substring(spaceIdx + 1);
                 toDisplay = toDisplay.Substring(0, spaceIdx);
             }
-            StringBuilder[] lines = CreateLinesFromText(toDisplay, smallText, 0);
+            StringBuilder[] lines = CreateLinesFromText(toDisplay, smallText, 0, out _);
             UpdateDisplay(lines);
         }
 
@@ -100,529 +193,97 @@ namespace Iot.Device.CharacterLcd
         /// <param name="unitText">Unit or name of value. This is printed in normal small font on the bottom right corner of the display. </param>
         public void DisplayValue(string formattedValue, string unitText = "")
         {
-            var lines = CreateLinesFromText(formattedValue, unitText, 0);
+            var lines = CreateLinesFromText(formattedValue, unitText, 0, out _);
             UpdateDisplay(lines);
         }
 
+        /// <summary>
+        /// Summary
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="scrollSpeed"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public Task DisplayBigTextAsync(string text, TimeSpan scrollSpeed, CancellationToken cancellationToken)
         {
             return Task.Factory.StartNew(() =>
             {
-
+                int startPosition = 0;
+                int totalColumnsUsed;
+                CreateLinesFromText(text, string.Empty, 0, out totalColumnsUsed);
+                if (totalColumnsUsed == 0)
+                {
+                    return;
+                }
+                while (startPosition < totalColumnsUsed)
+                {
+                    var displayContent = CreateLinesFromText(text, string.Empty, -startPosition, out _);
+                    UpdateDisplay(displayContent);
+                    if (WaitHandle.WaitAny(new[] { cancellationToken.WaitHandle }, (int)scrollSpeed.TotalMilliseconds) != WaitHandle.WaitTimeout)
+                    {
+                        break;
+                    }
+                    startPosition++;
+                }
             });
         }
 
-        private StringBuilder[] CreateLinesFromText(string bigText, string smallText, int startPosition)
+        private StringBuilder[] CreateLinesFromText(string bigText, string smallText, int startPosition, out int totalColumnsUsed)
         {
             int xPosition = startPosition; // The current x position during drawing. We draw 4-chars high letters, but with variable width
-
-            void Insert(StringBuilder[] builder, int row, params byte[] ci)
+            int totalColumnsUsedInternal = 0;
+            StringBuilder[] ret = new StringBuilder[_lcd.Size.Height];
+            // Insert a 2-column char
+            void Insert(int columns, params byte[] ci)
             {
-                for (int i = 0; i < ci.Length; i++)
+                int nextByte = 0;
+                for (int row = 0; row < 4; row++)
                 {
-                    // Otherwise, there's no room for this character column
-                    int column = xPosition + i;
-                    if (column < _lcd.Size.Width && column >= 0)
+                    for (int column = 0; column < columns; column++)
                     {
-                        builder[row][column] = (char)ci[i];
+                        // Otherwise, there's no room for this character column
+                        int realColumn = xPosition + column;
+                        if (realColumn < _lcd.Size.Width && realColumn >= 0)
+                        {
+                            byte b = ci[nextByte];
+                            // We use 9 as space, makes the formatting of the character table a bit more consistent, as everything is 1 digit only
+                            if (b == 9)
+                            {
+                                b = 32;
+                            }
+                            ret[row][realColumn] = (char)b;
+                        }
+                        nextByte++;
                     }
                 }
+                xPosition += columns;
+                totalColumnsUsedInternal += columns;
             }
-            StringBuilder[] ret = new StringBuilder[_lcd.Size.Height];
+            
             for (int i = 0; i < _lcd.Size.Height; i++)
             {
                 ret[i] = new StringBuilder();
                 ret[i].Append(new string(' ', _lcd.Size.Width));
             }
 
-            foreach(var c in bigText)
+            // Only one of these can be printed simultaneously
+            if (bigText.Contains(':'))
             {
-                // Creates the big numbers. (char)32 is the empty field, for the others see CreateSpecialChars
-                switch (c)
+                LoadSeparationChar(':');
+            }
+            else if (bigText.Contains('.'))
+            {
+                LoadSeparationChar('.');
+            }
+            else if (bigText.Contains(','))
+            {
+                LoadSeparationChar(',');
+            }
+            foreach (var c in bigText)
+            {
+                if (_font.TryGetValue(c, out byte[] value))
                 {
-                    case '1':
-                        Insert(ret, 0, 32, 0, 6);
-                        Insert(ret, 1, 0, 3, 6);
-                        Insert(ret, 2, 32, 32, 6);
-                        Insert(ret, 3, 32, 32, 6);
-                        xPosition += 3;
-                        break;
-                    case '2':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 32, 0, 3);
-                        Insert(ret, 2, 0, 3, 32);
-                        Insert(ret, 3, 6, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case '3':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 32, 0, 3);
-                        Insert(ret, 2, 32, 1, 2);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case '4':
-                        Insert(ret, 0, 32, 0, 6);
-                        Insert(ret, 1, 0, 3, 6);
-                        Insert(ret, 2, 5, 5, 6);
-                        Insert(ret, 3, 32, 32, 6);
-                        xPosition += 3;
-                        break;
-                    case '5':
-                        Insert(ret, 0, 6, 6, 6);
-                        Insert(ret, 1, 6, 32, 32);
-                        Insert(ret, 2, 5, 5, 2);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case '6':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 6, 32, 32);
-                        Insert(ret, 2, 6, 5, 2);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case '7':
-                        Insert(ret, 0, 6, 6, 6);
-                        Insert(ret, 1, 32, 0, 3);
-                        Insert(ret, 2, 0, 3, 32);
-                        Insert(ret, 3, 3, 32, 32);
-                        xPosition += 3;
-                        break;
-                    case '8':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 1, 4, 3);
-                        Insert(ret, 2, 0, 5, 2);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case '9':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 5, 5, 6);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case '0':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 6, 0, 6);
-                        Insert(ret, 2, 6, 3, 6);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case ':':
-                        Insert(ret, 0, 32);
-                        Insert(ret, 1, 7);
-                        Insert(ret, 2, 7);
-                        Insert(ret, 3, 32);
-                        LoadSeparationChar(':');
-                        xPosition += 1;
-                        break;
-                    case '.':
-                        Insert(ret, 0, 32);
-                        Insert(ret, 1, 32);
-                        Insert(ret, 2, 32);
-                        Insert(ret, 3, 7);
-                        LoadSeparationChar('.');
-                        xPosition += 1;
-                        break;
-                    case ',':
-                        Insert(ret, 0, 32);
-                        Insert(ret, 1, 32);
-                        Insert(ret, 2, 32);
-                        Insert(ret, 3, 7);
-                        LoadSeparationChar(',');
-                        xPosition += 1;
-                        break;
-                    case '-':
-                        Insert(ret, 0, 32);
-                        Insert(ret, 1, 32);
-                        Insert(ret, 2, 5);
-                        Insert(ret, 3, 32);
-                        LoadSeparationChar(',');
-                        xPosition += 1;
-                        break;
-                    case 'A':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 6, 5, 6);
-                        Insert(ret, 3, 6, 32, 6);
-                        xPosition += 3;
-                        break;
-                    case 'B':
-                        Insert(ret, 0, 6, 6, 2);
-                        Insert(ret, 1, 6, 32, 3);
-                        Insert(ret, 2, 6, 5, 2);
-                        Insert(ret, 3, 6, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'C':
-                        Insert(ret, 0, 6, 6, 2);
-                        Insert(ret, 1, 6, 32, 32);
-                        Insert(ret, 2, 6, 32, 32);
-                        Insert(ret, 3, 6, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'D':
-                        Insert(ret, 0, 6, 6, 2);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 6, 32, 6);
-                        Insert(ret, 3, 6, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'E':
-                        Insert(ret, 0, 6, 6, 6);
-                        Insert(ret, 1, 6, 4, 32);
-                        Insert(ret, 2, 6, 5, 32);
-                        Insert(ret, 3, 6, 6, 6);
-                        xPosition += 3;
-                        break;
-                    case 'F':
-                        Insert(ret, 0, 6, 6, 6);
-                        Insert(ret, 1, 6, 4, 32);
-                        Insert(ret, 2, 6, 5, 32);
-                        Insert(ret, 3, 6, 32, 32);
-                        xPosition += 3;
-                        break;
-                    case 'G':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 6, 32, 5);
-                        Insert(ret, 2, 6, 5, 2);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'H':
-                        Insert(ret, 0, 6, 32, 6);
-                        Insert(ret, 1, 6, 4, 6);
-                        Insert(ret, 2, 6, 5, 6);
-                        Insert(ret, 3, 6, 32, 6);
-                        xPosition += 3;
-                        break;
-                    case 'I':
-                        Insert(ret, 0, 6, 6, 6);
-                        Insert(ret, 1, 32, 6, 32);
-                        Insert(ret, 2, 32, 6, 32);
-                        Insert(ret, 3, 6, 6, 6);
-                        xPosition += 3;
-                        break;
-                    case 'J':
-                        Insert(ret, 0, 32, 32, 6);
-                        Insert(ret, 1, 32, 32, 6);
-                        Insert(ret, 2, 32, 32, 6);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'K':
-                        Insert(ret, 0, 6, 32, 0);
-                        Insert(ret, 1, 6, 0, 3);
-                        Insert(ret, 2, 6, 1, 2);
-                        Insert(ret, 3, 6, 32, 1);
-                        xPosition += 3;
-                        break;
-                    case 'L':
-                        Insert(ret, 0, 6, 32, 32);
-                        Insert(ret, 1, 6, 32, 32);
-                        Insert(ret, 2, 6, 32, 32);
-                        Insert(ret, 3, 6, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'M':
-                        Insert(ret, 0, 6, 2, 0, 6);
-                        Insert(ret, 1, 6, 1, 3, 6);
-                        Insert(ret, 2, 6, 32, 32, 6);
-                        Insert(ret, 3, 6, 32, 32, 6);
-                        xPosition += 4;
-                        break;
-                    case 'N':
-                        Insert(ret, 0, 6, 2, 6);
-                        Insert(ret, 1, 6, 1, 6);
-                        Insert(ret, 2, 6, 32, 6);
-                        Insert(ret, 3, 6, 32, 6);
-                        xPosition += 3;
-                        break;
-                    case 'O':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 6, 32, 6);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'P':
-                        Insert(ret, 0, 6, 6, 2);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 6, 5, 5);
-                        Insert(ret, 3, 6, 32, 32);
-                        xPosition += 3;
-                        break;
-                    case 'Q':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 6, 32, 6);
-                        Insert(ret, 3, 1, 6, 6);
-                        xPosition += 3;
-                        break;
-                    case 'R':
-                        Insert(ret, 0, 6, 6, 2);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 6, 6, 3);
-                        Insert(ret, 3, 6, 1, 2);
-                        xPosition += 3;
-                        break;
-                    case 'S':
-                        Insert(ret, 0, 0, 6, 2);
-                        Insert(ret, 1, 1, 2, 32);
-                        Insert(ret, 2, 32, 1, 2);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'T':
-                        Insert(ret, 0, 6, 6, 6);
-                        Insert(ret, 1, 32, 6, 32);
-                        Insert(ret, 2, 32, 6, 32);
-                        Insert(ret, 3, 32, 6, 32);
-                        xPosition += 3;
-                        break;
-                    case 'U':
-                        Insert(ret, 0, 6, 32, 6);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 6, 32, 6);
-                        Insert(ret, 3, 1, 6, 3);
-                        xPosition += 3;
-                        break;
-                    case 'V':
-                        Insert(ret, 0, 6, 32, 32, 6);
-                        Insert(ret, 1, 6, 32, 32, 6);
-                        Insert(ret, 2, 1, 2, 0, 3);
-                        Insert(ret, 3, 32, 1, 3, 32);
-                        xPosition += 4;
-                        break;
-                    case 'W':
-                        Insert(ret, 0, 6, 32, 32, 6);
-                        Insert(ret, 1, 6, 32, 32, 6);
-                        Insert(ret, 2, 6, 0, 2, 6);
-                        Insert(ret, 3, 6, 3, 1, 6);
-                        xPosition += 4;
-                        break;
-                    case 'X':
-                        Insert(ret, 0, 1, 2, 0, 3);
-                        Insert(ret, 1, 32, 1, 3, 32);
-                        Insert(ret, 2, 32, 0, 2, 32);
-                        Insert(ret, 3, 0, 3, 1, 2);
-                        xPosition += 4;
-                        break;
-                    case 'Y':
-                        Insert(ret, 0, 1, 2, 0, 3);
-                        Insert(ret, 1, 32, 1, 6, 32);
-                        Insert(ret, 2, 32, 32, 6, 32);
-                        Insert(ret, 3, 32, 32, 6, 32);
-                        xPosition += 4;
-                        break;
-                    case 'Z':
-                        Insert(ret, 0, 6, 6, 6);
-                        Insert(ret, 1, 32, 0, 3);
-                        Insert(ret, 2, 0, 3, 32);
-                        Insert(ret, 3, 6, 6, 6);
-                        xPosition += 3;
-                        break;
-                    case 'Ω':
-                        Insert(ret, 0, 0, 6, 6, 2);
-                        Insert(ret, 1, 6, 32, 32, 6);
-                        Insert(ret, 2, 6, 2, 0, 6);
-                        Insert(ret, 3, 4, 3, 1, 4);
-                        xPosition += 4;
-                        break;
-                    case 'a':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 4, 4, 32);
-                        Insert(ret, 2, 0, 4, 2);
-                        Insert(ret, 3, 1, 4, 3);
-                        xPosition += 3;
-                        break;
-                    case 'b':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 6, 32, 32);
-                        Insert(ret, 2, 6, 5, 2);
-                        Insert(ret, 3, 6, 4, 3);
-                        xPosition += 3;
-                        break;
-                    case 'c':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 32, 32);
-                        Insert(ret, 2, 0, 5);
-                        Insert(ret, 3, 1, 4);
-                        xPosition += 2;
-                        break;
-                    case 'd':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 32, 32, 6);
-                        Insert(ret, 2, 0, 5, 6);
-                        Insert(ret, 3, 1, 4, 6);
-                        xPosition += 3;
-                        break;
-                    case 'e':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 4, 4, 4);
-                        Insert(ret, 2, 6, 4, 2);
-                        Insert(ret, 3, 1, 4, 3);
-                        xPosition += 3;
-                        break;
-                    case 'f':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 32, 0, 5);
-                        Insert(ret, 2, 5, 6, 5);
-                        Insert(ret, 3, 32, 6, 32);
-                        xPosition += 3;
-                        break;
-                    case 'g':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 0, 5, 6);
-                        Insert(ret, 2, 6, 4, 6);
-                        Insert(ret, 3, 32, 4, 3);
-                        xPosition += 3;
-                        break;
-                    case 'h':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 6, 32, 32);
-                        Insert(ret, 2, 6, 6, 2);
-                        Insert(ret, 3, 6, 32, 6);
-                        xPosition += 3;
-                        break;
-                    case 'i':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 5, 32);
-                        Insert(ret, 2, 6, 5);
-                        Insert(ret, 3, 6, 32);
-                        xPosition += 2;
-                        break;
-                    case 'j':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 5, 6);
-                        Insert(ret, 2, 4, 6);
-                        Insert(ret, 3, 4, 3);
-                        xPosition += 2;
-                        break;
-                    case 'k':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 6, 32);
-                        Insert(ret, 2, 6, 0);
-                        Insert(ret, 3, 6, 1);
-                        xPosition += 2;
-                        break;
-                    case 'l':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 6, 32);
-                        Insert(ret, 2, 6, 32);
-                        Insert(ret, 3, 1, 4);
-                        xPosition += 2;
-                        break;
-                    case 'm':
-                        Insert(ret, 0, 32, 32, 32, 32);
-                        Insert(ret, 1, 32, 32, 32, 32);
-                        Insert(ret, 2, 0, 2, 0, 2);
-                        Insert(ret, 3, 6, 32, 32, 6);
-                        xPosition += 4;
-                        break;
-                    case 'n':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 32, 32, 32);
-                        Insert(ret, 2, 6, 6, 2);
-                        Insert(ret, 3, 6, 32, 6);
-                        xPosition += 3;
-                        break;
-                    case 'o':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 32, 32, 32);
-                        Insert(ret, 2, 0, 5, 2);
-                        Insert(ret, 3, 1, 4, 3);
-                        xPosition += 3;
-                        break;
-                    case 'p':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 6, 5, 2);
-                        Insert(ret, 2, 6, 4, 6);
-                        Insert(ret, 3, 6, 32, 32);
-                        xPosition += 3;
-                        break;
-                    case 'q':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 0, 5, 6);
-                        Insert(ret, 2, 1, 4, 6);
-                        Insert(ret, 3, 32, 32, 6);
-                        xPosition += 3;
-                        break;
-                    case 'r':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 32, 32);
-                        Insert(ret, 2, 6, 0);
-                        Insert(ret, 3, 6, 32);
-                        xPosition += 2;
-                        break;
-                    case 's':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 0, 5, 5);
-                        Insert(ret, 2, 1, 4, 2);
-                        Insert(ret, 3, 4, 4, 3);
-                        xPosition += 3;
-                        break;
-                    case 't':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 32, 0, 32);
-                        Insert(ret, 2, 5, 6, 5);
-                        Insert(ret, 3, 32, 6, 4);
-                        xPosition += 3;
-                        break;
-                    case 'u':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 32, 32, 32);
-                        Insert(ret, 2, 6, 32, 6);
-                        Insert(ret, 3, 1, 4, 6);
-                        xPosition += 3;
-                        break;
-                    case 'v':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 32, 32, 32);
-                        Insert(ret, 2, 1, 2, 2);
-                        Insert(ret, 3, 32, 1, 32);
-                        xPosition += 3;
-                        break;
-                    case 'w':
-                        Insert(ret, 0, 32, 32, 32, 32);
-                        Insert(ret, 1, 32, 32, 32, 32);
-                        Insert(ret, 2, 6, 32, 32, 6);
-                        Insert(ret, 3, 1, 3, 1, 3);
-                        xPosition += 4;
-                        break;
-                    case 'x':
-                        Insert(ret, 0, 32, 32);
-                        Insert(ret, 1, 32, 32);
-                        Insert(ret, 2, 2, 0);
-                        Insert(ret, 3, 3, 1);
-                        xPosition += 2;
-                        break;
-                    case 'y':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 6, 32, 6);
-                        Insert(ret, 2, 1, 4, 6);
-                        Insert(ret, 3, 32, 4, 6);
-                        xPosition += 3;
-                        break;
-                    case 'z':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 4, 4, 4);
-                        Insert(ret, 2, 32, 0, 3);
-                        Insert(ret, 3, 0, 4, 4);
-                        xPosition += 3;
-                        break;
-                    case 'μ':
-                        Insert(ret, 0, 32, 32, 32);
-                        Insert(ret, 1, 32, 32, 32);
-                        Insert(ret, 2, 6, 32, 6);
-                        Insert(ret, 3, 6, 4, 3);
-                        xPosition += 3;
-                        break;
-                    case ' ':
-                        xPosition += 1;
-                        break;
+                    Insert(value.Length / 4, value);
                 }
             }
 
@@ -635,6 +296,7 @@ namespace Iot.Device.CharacterLcd
             {
                 ret[3][xPosition + i] = (char)encodedSmallText[i];
             }
+            totalColumnsUsed = totalColumnsUsedInternal;
             return ret;
         }
 

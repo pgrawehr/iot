@@ -211,16 +211,31 @@ namespace Iot.Device.CharacterLcd.Samples
                 Thread.Sleep(500);
             }
             Console.ReadKey(true);
-            Console.WriteLine("And the capital letters of the latin alphabet");
+            Console.WriteLine("And the letters of the latin alphabet");
             char[] chars = new[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
             int idx = 0;
             while (Console.KeyAvailable == false)
             {
-                val.DisplayValue(chars[idx].ToString(), chars[idx].ToString());
+                string letter = chars[idx].ToString();
+                letter = letter + letter.ToLower(val.Culture);
+                val.DisplayValue(letter, letter);
                 idx = (idx + 1) % chars.Length;
                 Thread.Sleep(1000);
             }
             Console.ReadKey(true);
+            CancellationTokenSource ts = new CancellationTokenSource();
+            Task t = val.DisplayBigTextAsync("The quick brown fox jumps over the lazy dog.", TimeSpan.FromSeconds(1), ts.Token);
+            while ((Console.KeyAvailable == false) && (t.IsCompleted == false))
+            {
+                // Do nothing
+                Thread.Sleep(50);
+            }
+            Console.ReadKey();
+            ts.Cancel();
+            t.Wait();
+            ts.Dispose();
+            Console.WriteLine("Big font tests done. Press Enter to continue");
+            Console.ReadLine();
         }
     }
 }
