@@ -28,6 +28,7 @@ namespace System.Device.Gpio.Drivers
                 {
                     throw ExceptionHelper.GetIOException(ExceptionResource.NoChipFound, Marshal.GetLastWin32Error());
                 }
+
                 _pinNumberToSafeLineHandle = new Dictionary<int, SafeLineHandle>(PinCount);
             }
             catch (DllNotFoundException)
@@ -69,6 +70,7 @@ namespace System.Device.Gpio.Drivers
                     _pinNumberToSafeLineHandle[pinNumber] = pinHandle;
                 }
             }
+
             return new LibGpiodDriverEventHandler(pinNumber, pinHandle);
         }
 
@@ -95,6 +97,7 @@ namespace System.Device.Gpio.Drivers
             {
                 throw ExceptionHelper.GetInvalidOperationException(ExceptionResource.PinNotOpenedError, pin: pinNumber);
             }
+
             return pinHandle.PinMode;
         }
 
@@ -127,6 +130,7 @@ namespace System.Device.Gpio.Drivers
 
                 return result;
             }
+
             throw ExceptionHelper.GetInvalidOperationException(ExceptionResource.PinNotOpenedError, pin: pinNumber);
         }
 
@@ -241,7 +245,6 @@ namespace System.Device.Gpio.Drivers
                 _pinNumberToEventHandler = null;
             }
 
-            
             if (_pinNumberToSafeLineHandle != null)
             {
                 foreach (int pin in _pinNumberToSafeLineHandle.Keys)

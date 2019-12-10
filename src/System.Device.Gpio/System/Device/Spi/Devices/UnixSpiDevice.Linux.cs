@@ -48,6 +48,7 @@ namespace System.Device.Spi
             {
                 return;
             }
+
             lock (s_initializationLock)
             {
                 string deviceFileName = $"{DevicePath}{_settings.BusId}.{_settings.ChipSelectLine}";
@@ -55,6 +56,7 @@ namespace System.Device.Spi
                 {
                     return;
                 }
+
                 _deviceFileDescriptor = Interop.open(deviceFileName, FileOpenFlags.O_RDWR);
                 if (_deviceFileDescriptor < 0)
                 {

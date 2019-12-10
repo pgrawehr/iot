@@ -50,6 +50,7 @@ namespace System.Device.Gpio.Drivers
                 Interop.munmap((IntPtr)_registerViewPointer, 0);
                 _registerViewPointer = null;
             }
+
             if (_sysFSDriver != null)
             {
                 _sysFSDriver.Dispose();
@@ -427,12 +428,14 @@ namespace System.Device.Gpio.Drivers
             {
                 return;
             }
+
             lock (s_sysFsInitializationLock)
             {
                 if (_sysFSDriver != null)
                 {
                     return;
                 }
+
                 _sysFSDriver = new SysFsDriver();
             }
         }
@@ -553,6 +556,7 @@ namespace System.Device.Gpio.Drivers
             {
                 throw new InvalidOperationException("Can not get a pin mode of a pin that is not open.");
             }
+
             return _sysFSModes[pinNumber];
         }
     }

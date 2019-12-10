@@ -60,7 +60,7 @@
     <Rule Id="SA1128" Action="Error" />
     <Rule Id="SA1129" Action="None" /> <!-- Should not use value type default ctors -->
     <Rule Id="SA1130" Action="Error" />
-    <Rule Id="SA1131" Action="Error" />
+    <Rule Id="SA1131" Action="None" /> <!-- Constants should be on the right side of a comparison -->
     <Rule Id="SA1132" Action="Error" />
     <Rule Id="SA1133" Action="Error" />
     <Rule Id="SA1134" Action="Error" />
@@ -93,7 +93,7 @@
     <Rule Id="SA1306" Action="Error" />
     <Rule Id="SA1307" Action="Error" />
     <Rule Id="SA1308" Action="None" />
-    <Rule Id="SA1309" Action="None" /> <!-- Field names should not begin with an underscore (in our case, they should!) -->
+    <Rule Id="SA1309" Action="None" /> <!-- Field names should not begin with an underscore (in our case, they should, see SX1309) -->
     <Rule Id="SA1310" Action="None" />
     <Rule Id="SA1311" Action="None" /> <!-- Static readonly fields should begin with upper-case letter -->
     <Rule Id="SA1312" Action="Error" />
@@ -106,27 +106,27 @@
     <Rule Id="SA1404" Action="Error" />
     <Rule Id="SA1405" Action="Error" />
     <Rule Id="SA1406" Action="Error" />
-    <Rule Id="SA1407" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1407" Action="None" /> <!-- Arithmetic expressions must declare precedence -->
     <Rule Id="SA1408" Action="Error" />
     <Rule Id="SA1410" Action="Error" />
-    <Rule Id="SA1411" Action="None" /> <!-- TODO -->
-    <Rule Id="SA1412" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1411" Action="None" /> 
+    <Rule Id="SA1412" Action="None" /> <!-- Store files as UTF-8 -->
     <Rule Id="SA1413" Action="None" />
-    <Rule Id="SA1500" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1500" Action="Error" /> 
     <Rule Id="SA1501" Action="Error" />
     <Rule Id="SA1502" Action="Error" />
     <Rule Id="SA1503" Action="Error" />
     <Rule Id="SA1504" Action="Error" />
     <Rule Id="SA1505" Action="Error" />
     <Rule Id="SA1506" Action="Error" />
-    <Rule Id="SA1507" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1507" Action="Error" /> 
     <Rule Id="SA1508" Action="None" />
-    <Rule Id="SA1509" Action="None" />
+    <Rule Id="SA1509" Action="Error" />
     <Rule Id="SA1510" Action="Error" />
     <Rule Id="SA1511" Action="Error" />
     <Rule Id="SA1512" Action="Error" />
-    <Rule Id="SA1513" Action="None" />
-    <Rule Id="SA1514" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1513" Action="Error" />
+    <Rule Id="SA1514" Action="Error" /> 
     <Rule Id="SA1515" Action="None" />
     <Rule Id="SA1516" Action="None" />
     <Rule Id="SA1517" Action="Error" />
@@ -176,5 +176,6 @@
     <Rule Id="SA1651" Action="Error" />
     <Rule Id="SA1652" Action="Error" />
     <Rule Id="SX1101" Action="None" /> <!-- TODO -->
+	<Rule Id="SX1309" Action="Error" /> <!-- Members should be prefixed with _ -->
   </Rules>
 </RuleSet>

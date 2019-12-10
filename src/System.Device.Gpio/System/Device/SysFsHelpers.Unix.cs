@@ -62,7 +62,8 @@ namespace System.Device
                 {
                     return true;
                 }
-            } while (Stopwatch.GetTimestamp() < expiration);
+            }
+            while (Stopwatch.GetTimestamp() < expiration);
 
             return false;
         }

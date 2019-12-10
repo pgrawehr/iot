@@ -55,6 +55,7 @@ namespace System.Device.I2c
                 {
                     return;
                 }
+
                 _deviceFileDescriptor = Interop.open(deviceFileName, FileOpenFlags.O_RDWR);
 
                 if (_deviceFileDescriptor < 0)
@@ -68,6 +69,7 @@ namespace System.Device.I2c
                 {
                     _functionalities = 0;
                 }
+
                 _functionalities = tempFlags;
             }
         }
