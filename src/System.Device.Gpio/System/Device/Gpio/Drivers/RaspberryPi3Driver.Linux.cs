@@ -474,7 +474,9 @@ namespace System.Device.Gpio.Drivers
                 _registerViewPointer = (RegisterView*)mapPointer;
             }
         }
-
+#if DEBUG
+                    ThisWontCompile();
+#endif
         /// <summary>
         /// Gets the mode of a pin.
         /// </summary>
