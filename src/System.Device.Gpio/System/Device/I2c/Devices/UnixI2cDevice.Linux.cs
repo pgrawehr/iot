@@ -12,8 +12,8 @@ namespace System.Device.I2c
     /// </summary>
     internal class UnixI2cDevice : I2cDevice
     {
-        private readonly I2cConnectionSettings _settings;
         private const string DefaultDevicePath = "/dev/i2c";
+        private readonly I2cConnectionSettings _settings;
         private int _deviceFileDescriptor = -1;
         private I2cFunctionalityFlags _functionalities;
         private static readonly object s_initializationLock = new object();
@@ -176,7 +176,9 @@ namespace System.Device.I2c
         public override unsafe void Read(Span<byte> buffer)
         {
             if (buffer.Length == 0)
+            {
                 throw new ArgumentException($"{nameof(buffer)} cannot be empty.");
+            }
 
             Initialize();
 
@@ -229,7 +231,9 @@ namespace System.Device.I2c
         public override unsafe void WriteRead(ReadOnlySpan<byte> writeBuffer, Span<byte> readBuffer)
         {
             if (readBuffer.Length == 0)
+            {
                 throw new ArgumentException($"{nameof(readBuffer)} cannot be empty.");
+            }
 
             Initialize();
 

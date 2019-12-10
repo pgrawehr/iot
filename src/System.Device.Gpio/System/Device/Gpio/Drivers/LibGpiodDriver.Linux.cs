@@ -150,7 +150,7 @@ namespace System.Device.Gpio.Drivers
 
         protected internal override void SetPinMode(int pinNumber, PinMode mode)
         {
-            int requestResult  = -1;
+            int requestResult = -1;
             if (_pinNumberToSafeLineHandle.TryGetValue(pinNumber, out SafeLineHandle pinHandle))
             {
                 string consumer = pinNumber.ToString();
@@ -180,22 +180,22 @@ namespace System.Device.Gpio.Drivers
 
                 if ((eventTypes & PinEventTypes.Rising) != 0)
                 {
-                    eventHandler.ValueRising += callback;
+                    eventHandler.ValueRising += Callback;
                 }
 
                 if ((eventTypes & PinEventTypes.Falling) != 0)
                 {
-                    eventHandler.ValueFalling += callback;
+                    eventHandler.ValueFalling += Callback;
                 }
 
                 bool eventOccured = false;
-                void callback(object o, PinValueChangedEventArgs e)
+                void Callback(object o, PinValueChangedEventArgs e)
                 {
                     eventOccured = true;
                 }
 
                 WaitForEventResult(cancellationToken, eventHandler.CancellationTokenSource.Token, ref eventOccured);
-                RemoveCallbackForPinValueChangedEvent(pinNumber, callback);
+                RemoveCallbackForPinValueChangedEvent(pinNumber, Callback);
 
                 return new WaitForEventResult
                 {

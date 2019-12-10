@@ -48,7 +48,9 @@ namespace System.Device
         {
             // quick return for happy path
             if (isDone())
+            {
                 return true;
+            }
 
             long expiration = Stopwatch.GetTimestamp() + MaxWaitTime;
 

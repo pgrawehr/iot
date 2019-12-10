@@ -6,7 +6,7 @@
     <Rule Id="SA1001" Action="Error" />
     <Rule Id="SA1002" Action="Error" />
     <Rule Id="SA1003" Action="Error" />
-    <Rule Id="SA1004" Action="Error" />
+    <Rule Id="SA1004" Action="None" /> <!-- Documentation line should begin with a space -->
     <Rule Id="SA1005" Action="Error" />
     <Rule Id="SA1006" Action="Error" />
     <Rule Id="SA1007" Action="Error" />
@@ -30,7 +30,7 @@
     <Rule Id="SA1025" Action="Error" />
     <Rule Id="SA1026" Action="Error" />
     <Rule Id="SA1027" Action="None" />
-    <Rule Id="SA1028" Action="Error" />
+    <Rule Id="SA1028" Action="None" /> <!-- Code should not contain trailing whitespace -->
     <Rule Id="SA1100" Action="Error" />
     <Rule Id="SA1101" Action="None" />
     <Rule Id="SA1102" Action="None" />
@@ -58,7 +58,7 @@
     <Rule Id="SA1125" Action="None" />
     <Rule Id="SA1127" Action="Error" />
     <Rule Id="SA1128" Action="Error" />
-    <Rule Id="SA1129" Action="Error" />
+    <Rule Id="SA1129" Action="None" /> <!-- Should not use value type default ctors -->
     <Rule Id="SA1130" Action="Error" />
     <Rule Id="SA1131" Action="Error" />
     <Rule Id="SA1132" Action="Error" />
@@ -67,9 +67,9 @@
     <Rule Id="SA1135" Action="Error" />
     <Rule Id="SA1136" Action="Error" />
     <Rule Id="SA1137" Action="Error" />
-    <Rule Id="SA1139" Action="Error" />
+    <Rule Id="SA1139" Action="Error" /> 
     <Rule Id="SA1200" Action="Error" />
-    <Rule Id="SA1201" Action="Error" />
+    <Rule Id="SA1201" Action="None" /> <!--Enum should not follow a class -->
     <Rule Id="SA1202" Action="None" />
     <Rule Id="SA1203" Action="Error" />
     <Rule Id="SA1204" Action="None" />
@@ -91,14 +91,14 @@
     <Rule Id="SA1304" Action="None" />
     <Rule Id="SA1305" Action="None" /> <!-- TODO  -->
     <Rule Id="SA1306" Action="Error" />
-    <Rule Id="SA1307" Action="None" />
+    <Rule Id="SA1307" Action="Error" />
     <Rule Id="SA1308" Action="None" />
-    <Rule Id="SA1309" Action="Error" />
+    <Rule Id="SA1309" Action="None" /> <!-- Field names should not begin with an underscore (in our case, they should!) -->
     <Rule Id="SA1310" Action="None" />
-    <Rule Id="SA1311" Action="Error" />
+    <Rule Id="SA1311" Action="None" /> <!-- Static readonly fields should begin with upper-case letter -->
     <Rule Id="SA1312" Action="Error" />
-    <Rule Id="SA1313" Action="None" /> <!-- TODO-->
-    <Rule Id="SA1314" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1313" Action="None" /> 
+    <Rule Id="SA1314" Action="Error" /> 
     <Rule Id="SA1400" Action="Error" />
     <Rule Id="SA1401" Action="None" />
     <Rule Id="SA1402" Action="None" /> <!-- TODO -->

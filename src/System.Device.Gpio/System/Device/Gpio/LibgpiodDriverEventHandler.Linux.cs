@@ -78,9 +78,14 @@ namespace System.Device.Gpio.Drivers
         public void OnPinValueChanged(PinValueChangedEventArgs args, PinEventTypes detectionOfEventTypes)
         {
             if (detectionOfEventTypes == PinEventTypes.Rising && args.ChangeType == PinEventTypes.Rising)
+            {
                 ValueRising?.Invoke(this, args);
+            }
+
             if (detectionOfEventTypes == PinEventTypes.Falling && args.ChangeType == PinEventTypes.Falling)
+            {
                 ValueFalling?.Invoke(this, args);
+            }
         }
 
         public bool IsCallbackListEmpty()

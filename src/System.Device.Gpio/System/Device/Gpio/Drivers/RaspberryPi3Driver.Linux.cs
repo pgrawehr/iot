@@ -16,9 +16,6 @@ namespace System.Device.Gpio.Drivers
     public unsafe partial class RaspberryPi3Driver : GpioDriver
     {
         private const int ENOENT = 2; // error indicates that an entity doesn't exist
-        private RegisterView* _registerViewPointer = null;
-        private static readonly object s_initializationLock = new object();
-        private static readonly object s_sysFsInitializationLock = new object();
         private const uint PeripheralBaseAddressBcm2835 = 0x2000_0000;
         private const uint PeripheralBaseAddressBcm2836 = 0x3F00_0000;
         private const uint PeripheralBaseAddressBcm2838 = 0xFE00_0000;
@@ -30,9 +27,13 @@ namespace System.Device.Gpio.Drivers
         private const string DeviceTreeRanges = "/proc/device-tree/soc/ranges";
         private const string ModelFilePath = "/proc/device-tree/model";
 
-        private UnixDriver _sysFSDriver = null;
         private readonly IDictionary<int, PinMode> _sysFSModes = new Dictionary<int, PinMode>();
-
+        private RegisterView* _registerViewPointer = null;
+        private static readonly object s_initializationLock = new object();
+        private static readonly object s_sysFsInitializationLock = new object();
+        
+        private UnixDriver _sysFSDriver = null;
+        
         /// <summary>
         /// Returns true if this is a Raspberry Pi4
         /// </summary>
@@ -368,7 +369,7 @@ namespace System.Device.Gpio.Drivers
             get { return *(ulong*)(_registerViewPointer->GPSET); }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set {  *(ulong*)(_registerViewPointer->GPSET) = value; }
+            set { *(ulong*)(_registerViewPointer->GPSET) = value; }
         }
 
         protected ulong ClearRegister
@@ -377,7 +378,7 @@ namespace System.Device.Gpio.Drivers
             get { return *(ulong*)(_registerViewPointer->GPCLR); }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set {  *(ulong*)(_registerViewPointer->GPCLR) = value; }
+            set { *(ulong*)(_registerViewPointer->GPCLR) = value; }
         }
 
         /// <summary>

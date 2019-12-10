@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 internal partial class Interop
@@ -33,6 +34,8 @@ internal enum I2cSettings : uint
     I2C_SMBUS = 0x0720
 }
 
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:Element should begin with upper-case letter", Justification = "Native name")]
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1307:Accessible fields should begin with upper-case letter", Justification = "native member names")]
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct i2c_msg
 {
@@ -51,6 +54,8 @@ internal enum I2cMessageFlags : ushort
     I2C_M_RD = 0x0001
 }
 
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:Element should begin with upper-case letter", Justification = "Native name")]
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1307:Accessible fields should begin with upper-case letter", Justification = "native member names")]
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct i2c_rdwr_ioctl_data
 {
@@ -92,6 +97,8 @@ internal enum SpiSettings : uint
     SPI_IOC_RD_MAX_SPEED_HZ = 0x80046b04
 }
 
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:Element should begin with upper-case letter", Justification = "Native name")]
+[SuppressMessage("StyleCop.CSharp.NamingRules", "SA1307:Accessible fields should begin with upper-case letter", Justification = "native member names")]
 [StructLayout(LayoutKind.Sequential)]
 internal struct spi_ioc_transfer
 {

@@ -21,14 +21,14 @@ namespace System.Device.Gpio.Drivers
         private const string GpioLabel = "/label";
         private const string GpioContoller = "pinctrl";
         private const string GpioOffsetBase = "/base";
-        private int _pollFileDescriptor = -1;
-        private Thread _eventDetectionThread;
-        private int _pinsToDetectEventsCount;
         private readonly CancellationTokenSource s_eventThreadCancellationTokenSource;
         private readonly List<int> _exportedPins = new List<int>();
         private readonly Dictionary<int, UnixDriverDevicePin> _devicePins = new Dictionary<int, UnixDriverDevicePin>();
         private readonly int _pollingTimeoutInMilliseconds = Convert.ToInt32(TimeSpan.FromMilliseconds(1).TotalMilliseconds);
         private static readonly int s_pinOffset = ReadOffset();
+        private int _pollFileDescriptor = -1;
+        private Thread _eventDetectionThread;
+        private int _pinsToDetectEventsCount;
 
         private static int ReadOffset()
         {
@@ -42,12 +42,16 @@ namespace System.Device.Gpio.Drivers
                         if (File.ReadAllText($"{name}{GpioLabel}").StartsWith(GpioContoller, StringComparison.Ordinal))
                         {
                             if (int.TryParse(File.ReadAllText($"{name}{GpioOffsetBase}"), out int pinOffset))
+                            {
                                 return pinOffset;
+                            }
                         }
                     }
                     // Ignoring file not found or any other IO exceptions as it is not guaranteed the folder would have files "label" "base"
                     // And don't want to throw in this case just continue to load the gpiochip with default offset = 0  
-                    catch (IOException) { }
+                    catch (IOException)
+                    {
+                    }
                 }
             }
             return 0;
@@ -443,7 +447,11 @@ namespace System.Device.Gpio.Drivers
                     try
                     {
                         s_eventThreadCancellationTokenSource.Cancel();
-                    } catch (ObjectDisposedException) { }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+
                     while (_eventDetectionThread != null && _eventDetectionThread.IsAlive)
                     {
                         Thread.Sleep(TimeSpan.FromMilliseconds(10)); // Wait until the event detection thread is aborted.
@@ -464,7 +472,11 @@ namespace System.Device.Gpio.Drivers
                 {
                     s_eventThreadCancellationTokenSource.Cancel();
                     s_eventThreadCancellationTokenSource.Dispose();
-                } catch (ObjectDisposedException) { } //The Cancellation Token source may already be disposed.
+                }
+                catch (ObjectDisposedException)
+                {
+                    // The Cancellation Token source may already be disposed.
+                }
                 while (_eventDetectionThread != null && _eventDetectionThread.IsAlive)
                 {
                     Thread.Sleep(TimeSpan.FromMilliseconds(10)); // Wait until the event detection thread is aborted.
@@ -541,7 +553,7 @@ namespace System.Device.Gpio.Drivers
                     }
                 } catch (ObjectDisposedException)
                 {
-                    break; //If cancellation token source is dispossed then we need to exit this thread.
+                    break; // If cancellation token source is dispossed then we need to exit this thread.
                 }
             }
 
