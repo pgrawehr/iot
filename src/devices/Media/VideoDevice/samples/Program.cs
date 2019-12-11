@@ -9,9 +9,15 @@ using Iot.Device.Media;
 
 namespace V4l2.Samples
 {
-    class Program
+    /// <summary>
+    /// Test program main class
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Main entry point
+        /// </summary>
+        public static void Main(string[] args)
         {
             VideoConnectionSettings settings = new VideoConnectionSettings(0, (2560, 1920), PixelFormat.JPEG);
             using VideoDevice device = VideoDevice.Create(settings);
@@ -21,13 +27,15 @@ namespace V4l2.Samples
             {
                 Console.Write($"{item} ");
             }
+
             Console.WriteLine();
 
             // Get the resolutions of the format
-            foreach ((uint Width, uint Height) in device.GetPixelFormatResolutions(PixelFormat.YUYV))
+            foreach (var resolution in device.GetPixelFormatResolutions(PixelFormat.YUYV))
             {
-                Console.Write($"{Width}x{Height} ");
+                Console.Write($"{resolution.Width}x{resolution.Height} ");
             }
+
             Console.WriteLine();
 
             // Query v4l2 controls default and current value

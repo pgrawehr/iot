@@ -44,14 +44,14 @@ Following example demonstrates how to create MelodyElement sequence and how to p
 ```csharp
 IList<MelodyElement> sequence =  new  List<MelodyElement>()
 {
-	new  NoteElement(Note.C, Octave.Fourth, Duration.Quarter),
-	new  PauseElement(Duration.Quarter),
-	new  NoteElement(Note.C, Octave.Fourth, Duration.Quarter)
+    new  NoteElement(Note.C, Octave.Fourth, Duration.Quarter),
+    new  PauseElement(Duration.Quarter),
+    new  NoteElement(Note.C, Octave.Fourth, Duration.Quarter)
 };
 
 using (var  player  =  new  MelodyPlayer(new  Buzzer(21)))
 {
-	player.Play(sequence, 100);
+    player.Play(sequence, 100);
 }
 ```
 
@@ -74,9 +74,9 @@ As far as `MelodyPlayer.Play` method is not asynchronous, calls of this method a
 using (var  player1  =  new  MelodyPlayer(new  Buzzer(21)))
 using (var  player2  =  new  MelodyPlayer(new  Buzzer(26)))
 {
-	Task.WaitAll(
-		Task.Run(() =>  player1.Play(AlphabetSong, 100, -12)),
-		Task.Run(() =>  player2.Play(AlphabetSong, 100)));
+    Task.WaitAll(
+        Task.Run(() =>  player1.Play(AlphabetSong, 100, -12)),
+        Task.Run(() =>  player2.Play(AlphabetSong, 100)));
 }
 ```
 

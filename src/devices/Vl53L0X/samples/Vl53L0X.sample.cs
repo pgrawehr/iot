@@ -9,9 +9,15 @@ using Iot.Device.Vl53L0X;
 
 namespace Vl53L0Xsample
 {
-    class Program
+    /// <summary>
+    /// Example program
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Main entry point
+        /// </summary>
+        public static void Main(string[] args)
         {
             Console.WriteLine("Hello VL53L0X!");
             Vl53L0X vL53L0X = new Vl53L0X(I2cDevice.Create(new I2cConnectionSettings(1, Vl53L0X.DefaultI2cAddress)));
@@ -36,6 +42,7 @@ namespace Vl53L0Xsample
                 {
                     Console.WriteLine($"Exception: {ex.Message}");
                 }
+
                 Thread.Sleep(500);
             }
 
