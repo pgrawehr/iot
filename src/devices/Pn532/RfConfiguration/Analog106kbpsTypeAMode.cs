@@ -95,7 +95,8 @@ namespace Iot.Device.Pn532.RfConfiguration
         /// <returns>Serialized value</returns>
         public byte[] Serialize()
         {
-            return new byte[11] {
+            return new byte[11]
+            {
                 RfConfiguration, GsNOn, CWGsP,
                 ModGsP, DemodWhenRfOn,
                 RxThreshold, DemodWhenRfOff,

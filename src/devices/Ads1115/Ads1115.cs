@@ -96,7 +96,9 @@ namespace Iot.Device.Ads1115
 
             Span<byte> writeBuff = stackalloc byte[3]
             {
-                (byte)Register.ADC_CONFIG_REG_ADDR, configHi, configLo
+                (byte)Register.ADC_CONFIG_REG_ADDR,
+                configHi,
+                configLo
             };
 
             _i2cDevice.Write(writeBuff);

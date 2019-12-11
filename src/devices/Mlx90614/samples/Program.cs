@@ -8,9 +8,16 @@ using System.Threading;
 
 namespace Iot.Device.Mlx90614.Sample
 {
-    class Program
+    /// <summary>
+    /// Test program main class
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Entry point for example program
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        public static void Main(string[] args)
         {
             I2cConnectionSettings settings = new I2cConnectionSettings(1, Mlx90614.DefaultI2cAddress);
             I2cDevice i2cDevice = I2cDevice.Create(settings);

@@ -26,13 +26,13 @@ internal enum I2cSettings : uint
 {
     /// <summary>Get the adapter functionality mask.</summary>
     I2C_FUNCS = 0x0705,
-    
+
     /// <summary>Use this slave address, even if it is already in use by a driver.</summary>
     I2C_SLAVE_FORCE = 0x0706,
-    
+
     /// <summary>Combined R/W transfer (one STOP only).</summary>
     I2C_RDWR = 0x0707,
-    
+
     /// <summary>Smbus transfer.</summary>
     I2C_SMBUS = 0x0720
 }
@@ -53,7 +53,7 @@ internal enum I2cMessageFlags : ushort
 {
     /// <summary>Write data to slave.</summary>
     I2C_M_WR = 0x0000,
-    
+
     /// <summary>Read data from slave.</summary>
     I2C_M_RD = 0x0001
 }
@@ -89,19 +89,19 @@ internal enum SpiSettings : uint
 {
     /// <summary>Set SPI mode.</summary>
     SPI_IOC_WR_MODE = 0x40016b01,
-    
+
     /// <summary>Get SPI mode.</summary>
     SPI_IOC_RD_MODE = 0x80016b01,
-    
+
     /// <summary>Set bits per word.</summary>
     SPI_IOC_WR_BITS_PER_WORD = 0x40016b03,
-    
+
     /// <summary>Get bits per word.</summary>
     SPI_IOC_RD_BITS_PER_WORD = 0x80016b03,
-    
+
     /// <summary>Set max speed (Hz).</summary>
     SPI_IOC_WR_MAX_SPEED_HZ = 0x40046b04,
-    
+
     /// <summary>Get max speed (Hz).</summary>
     SPI_IOC_RD_MAX_SPEED_HZ = 0x80046b04
 }

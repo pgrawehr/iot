@@ -88,7 +88,7 @@ namespace System.Device.Gpio.Drivers
             return _pinNumberToEventHandler.ContainsKey(pinNumber);
         }
 
-        protected internal override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber) => 
+        protected internal override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber) =>
             throw ExceptionHelper.GetPlatformNotSupportedException(ExceptionResource.ConvertPinNumberingSchemaError);
 
         protected internal override PinMode GetPinMode(int pinNumber)
@@ -173,7 +173,7 @@ namespace System.Device.Gpio.Drivers
             if (requestResult == -1)
             {
                 throw ExceptionHelper.GetIOException(ExceptionResource.SetPinModeError, Marshal.GetLastWin32Error(), pinNumber);
-            } 
+            }
         }
 
         protected internal override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)

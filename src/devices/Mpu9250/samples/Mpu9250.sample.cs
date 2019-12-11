@@ -11,9 +11,16 @@ using Iot.Device.Imu;
 
 namespace DemoMpu9250
 {
-    class Program
+    /// <summary>
+    /// Test program main class
+    /// </summary>
+    internal class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Entry point for example program
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        public static void Main(string[] args)
         {
             Console.WriteLine("Hello MPU9250!");
 
@@ -23,13 +30,15 @@ namespace DemoMpu9250
             }
             else
             {
-                Console.WriteLine("If you want to run a deep dive calibration data export, run this sample with an argument for the number of calibration cycles you want:");
-                Console.WriteLine("To run a calibration with 1000 sample and exporting all data: ./Mpu9250.sample 1000");
+                Console.WriteLine(
+                    "If you want to run a deep dive calibration data export, run this sample with an argument for the number of calibration cycles you want:");
+                Console.WriteLine(
+                    "To run a calibration with 1000 sample and exporting all data: ./Mpu9250.sample 1000");
                 MainTest();
-            }            
+            }
         }
 
-        static void MagnetometerCalibrationDeepDive(int calibrationCount)
+        public static void MagnetometerCalibrationDeepDive(int calibrationCount)
         {
             var mpui2CConnectionSettingmpus = new I2cConnectionSettings(1, Mpu9250.DefaultI2cAddress);
             Mpu9250 mpu9250 = new Mpu9250(I2cDevice.Create(mpui2CConnectionSettingmpus));
@@ -55,6 +64,7 @@ namespace DemoMpu9250
                         Console.WriteLine("Error reading");
                     }
                 }
+
                 Console.WriteLine("Performing calibration");
                 // then we calibrate
                 var magnetoBias = mpu9250.CalibrateMagnetometer(calibrationCount);
@@ -85,16 +95,19 @@ namespace DemoMpu9250
                     }
                 }
             }
+
             Console.WriteLine("Calibration deep dive over, file name is mag.csv");
         }
 
-        static void MainTest()
-        {           
+        public static void MainTest()
+        {
             var mpui2CConnectionSettingmpus = new I2cConnectionSettings(1, Mpu9250.DefaultI2cAddress);
             Mpu9250 mpu9250 = new Mpu9250(I2cDevice.Create(mpui2CConnectionSettingmpus));
             Console.WriteLine($"Check version magnetometer: {mpu9250.GetMagnetometerVersion()}");
-            Console.WriteLine("Magnetometer calibration is taking couple of seconds, please be patient! Please make sure you are not close to any magnetic field like magnet or phone.");
-            Console.WriteLine("Please move your sensor as much as possible in all direction in space to get as many points in space as possible");
+            Console.WriteLine(
+                "Magnetometer calibration is taking couple of seconds, please be patient! Please make sure you are not close to any magnetic field like magnet or phone.");
+            Console.WriteLine(
+                "Please move your sensor as much as possible in all direction in space to get as many points in space as possible");
             var mag = mpu9250.CalibrateMagnetometer();
             Console.WriteLine($"Hardware bias multiplicative:");
             Console.WriteLine($"Mag X = {mag.X}");

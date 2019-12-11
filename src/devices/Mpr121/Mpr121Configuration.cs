@@ -79,6 +79,6 @@ namespace Iot.Device.Mpr121
         /// <summary>
         /// Electrode Configuration (datasheet page 15).
         /// </summary>
-        public byte ElectrodeConfiguration  { get; set; }
+        public byte ElectrodeConfiguration { get; set; }
     }
 }

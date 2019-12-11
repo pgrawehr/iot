@@ -18,34 +18,42 @@ namespace Iot.Device.Imu
         /// None
         /// </summary>
         None = 0b0000_0000,
+
         /// <summary>
         /// I2C Slave 0
         /// </summary>
         I2CSlave0 = 0b0000_0001,
+
         /// <summary>
         /// I2C Slave 1
         /// </summary>
         I2CSlave1 = 0b0000_0010,
+
         /// <summary>
         /// I2C Slave 2
         /// </summary>
         I2CSlave2 = 0b0000_0100,
+
         /// <summary>
         /// Accelerometer
         /// </summary>
         Accelerometer = 0b0000_1000,
+
         /// <summary>
         /// Gyroscope Z
         /// </summary>
         GyroscopeZ = 0b0001_0000,
+
         /// <summary>
         /// Gyroscope Y
         /// </summary>
         GyroscopeY = 0b0010_0000,
+
         /// <summary>
         /// Gyroscope X
         /// </summary>
         GyroscopeX = 0b0100_0000,
+
         /// <summary>
         /// Temperature
         /// </summary>

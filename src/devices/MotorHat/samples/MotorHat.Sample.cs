@@ -8,19 +8,25 @@ using System.Threading;
 
 namespace Iot.Device.MotorHat.Samples
 {
-    class Program
+    /// <summary>
+    /// Test program main class
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Entry point for example program
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        public static void Main(string[] args)
         {
             const double Period = 10.0;
             Stopwatch sw = Stopwatch.StartNew();
 
             // Use the following code to generate an I2C address different from the default
-            //var busId = 1;
-            //var selectedI2cAddress = 0b000000;     // A5 A4 A3 A2 A1 A0
-            //var deviceAddress = MotorHat.I2cAddressBase + selectedI2cAddress;
-            //var settings = new I2cConnectionSettings(busId, deviceAddress);
-
+            // var busId = 1;
+            // var selectedI2cAddress = 0b000000;     // A5 A4 A3 A2 A1 A0
+            // var deviceAddress = MotorHat.I2cAddressBase + selectedI2cAddress;
+            // var settings = new I2cConnectionSettings(busId, deviceAddress);
             using (var motorHat = new MotorHat())
             {
                 var motor = motorHat.CreateDCMotor(1);

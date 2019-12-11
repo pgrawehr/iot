@@ -144,10 +144,13 @@ namespace Iot.Device.Seesaw
         {
             byte[] retval = new byte[length];
 
-            Span<byte> bytesToWrite = stackalloc byte[2] { (byte)moduleAddress, (byte)functionAddress };
+            Span<byte> bytesToWrite = stackalloc byte[2]
+            {
+                (byte)moduleAddress, (byte)functionAddress
+            };
 
             I2cDevice.Write(bytesToWrite);
-            
+
             if (readDelayMicroSeconds > 0)
             {
                 DelayHelper.DelayMicroseconds(readDelayMicroSeconds, true);

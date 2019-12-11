@@ -9,9 +9,16 @@ using System.Threading;
 
 namespace Iot.Device.Nrf24l01.Samples
 {
-    class Program
+    /// <summary>
+    /// Test program main class
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Entry point for example program
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        public static void Main(string[] args)
         {
             // SPI0 CS0
             SpiConnectionSettings senderSettings = new SpiConnectionSettings(0, 0)
@@ -62,6 +69,7 @@ namespace Iot.Device.Nrf24l01.Samples
             {
                 Console.Write($"{item} ");
             }
+
             Console.WriteLine();
 
             Console.WriteLine($"Message: {res}");

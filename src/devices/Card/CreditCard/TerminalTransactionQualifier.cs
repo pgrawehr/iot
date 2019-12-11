@@ -48,46 +48,57 @@ namespace Iot.Device.Card.CreditCardProcessing
         /// Magnetic Stripe Supported
         /// </summary>
         MagStripeSupported = 0b1000_0000_0000_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Emv Mode Supported
         /// </summary>
         EmvModeSupported = 0b0010_0000_0000_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Emv Contact Chip Supported
         /// </summary>
         EmvContactChipSupported = 0b0001_0000_0000_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Offline Only Reader
         /// </summary>
         OfflineOnlyReader = 0b0000_1000_0000_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Online Pin Supported
         /// </summary>
         OnlinePinSupported = 0b0000_0100_0000_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Signature Supported
         /// </summary>
         SignatureSupported = 0b0000_0010_0000_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Offline Data Authentication
         /// </summary>
         OfflineDataAuthentication = 0b0000_0001_0000_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Online Cryptogram Required
         /// </summary>
         OnlineCryptogramRequired = 0b0000_0000_1000_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Cvm Required
         /// </summary>
         CvmRequired = 0b0000_0000_0100_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Contact Chip Offline Pin Supported
         /// </summary>
         ContactChipOfflinePinSupported = 0b0000_0000_0010_0000_0000_0000_0000_0000,
+
         /// <summary>
         /// Issuer Update Processing Supported
         /// </summary>
         IssuerUpdateProcessingSupported = 0b0000_0000_0000_0000_1000_0000_0000_0000,
+
         /// <summary>
         /// Consumer Device Cvm Supported
         /// </summary>

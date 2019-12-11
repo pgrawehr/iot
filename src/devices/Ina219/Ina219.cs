@@ -48,7 +48,7 @@ namespace Iot.Device.Adc
         /// <summary>
         /// Method to initialize values during device construction
         /// </summary>
-        /// <param name="i2cDevice"></param>        
+        /// <param name="i2cDevice">Interface to I2C device access</param>
         private void Initialize(I2cDevice i2cDevice)
         {
             _currentLsb = 1F;
@@ -241,7 +241,9 @@ namespace Iot.Device.Adc
             WriteRegister(Ina219Register.Calibration, calibrationValue);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Dispose instance
+        /// </summary>
         protected virtual void Dispose(bool disposing)
         {
             if (_disposeI2cDevice & disposing)

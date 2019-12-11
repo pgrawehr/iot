@@ -17,12 +17,14 @@ namespace Iot.Device.Hmc5883l
         /// When RDY bit is clear it shall remain cleared for a minimum of a 250 μs. 
         /// </summary>
         Ready = 0b_0000_0001,
+
         /// <summary>
         /// Data output register lock. This bit is set when some but not all for of the six data output registers have been read.
         /// When this bit is set, the six data output registers are locked and any new data will not be placed in these register until
         /// one of four conditions are met: all six have been read or the mode changed, a POR is issued, the mode is changed, the measurement is changed.
         /// </summary>
         Lock = 0b_0000_0010,
+
         /// <summary>
         /// Regulator Enabled Bit. This bit is set when the internal voltage regulator is enabled.
         /// This bit is cleared when the internal regulator is disabled.

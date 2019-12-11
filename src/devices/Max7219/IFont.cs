@@ -29,8 +29,8 @@ namespace Iot.Device.Max7219
     /// </code>
     /// 
     /// </example>
-    public interface IFont {
-
+    public interface IFont
+    {
         /// <summary>
         /// Returns a list of bytes for a given character to be written to a matrix.
         /// </summary>

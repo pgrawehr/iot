@@ -12,7 +12,7 @@ namespace Iot.Device.Buzzer.Samples
     /// <summary>
     /// Buzzer wrapper which allows to play melody element sequences with desired tempo.
     /// </summary>
-    class MelodyPlayer : IDisposable
+    internal class MelodyPlayer : IDisposable
     {
         private readonly Buzzer _buzzer;
         private int _wholeNoteDurationInMilliseconds;
@@ -48,6 +48,7 @@ namespace Iot.Device.Buzzer.Samples
             {
                 return sequence;
             }
+
             return sequence
                 .Select(element => TransposeElement(element, tonesToTransponse))
                 .ToList();
@@ -104,7 +105,7 @@ namespace Iot.Device.Buzzer.Samples
             }
         }
 
-        private static readonly Dictionary<Note, double> notesOfEightOctaveToFrequenciesMap 
+        private static readonly Dictionary<Note, double> notesOfEightOctaveToFrequenciesMap
             = new Dictionary<Note, double>
                 {
                     { Note.C,  4186.01 },

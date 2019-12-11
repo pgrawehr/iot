@@ -26,7 +26,7 @@ namespace Iot.Device.Ssd13xx.Commands.Ssd1327Commands
             {
                 Config |= 0b_0000_0001;
             }
-            
+
             if (nibbleRemap)
             {
                 Config |= 0b_0000_0010;

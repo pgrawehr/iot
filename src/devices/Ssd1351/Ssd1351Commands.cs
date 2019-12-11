@@ -52,10 +52,13 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>Disabled</summary>
         Disabled = 0x00,
+
         /// <summary>Input enabled</summary>
         InputEnabled = 0x01,
+
         /// <summary>Output low</summary>
         OutputLow = 0x10,
+
         /// <summary>Output high</summary>
         OutputHigh = 0x11
     }
@@ -67,10 +70,13 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>Color depth: 256</summary>
         ColourDepth256 = 0x00,
+
         /// <summary>Color depth: 65k</summary>
         ColourDepth65K = 0x01,
+
         /// <summary>Color depth: 262k</summary>
         ColourDepth262K = 0x02,
+
         /// <summary>Color depth: 262k 16-bit</summary>
         ColourDepth262K16Bit = 0x03
     }
@@ -82,6 +88,7 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>None</summary>
         None = 0x00,
+
         /// <summary>Parity split (odd and even numbers)</summary>
         OddEven = 0x01
     }
@@ -93,6 +100,7 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>Column 0</summary>
         Column0 = 0x00,
+
         /// <summary>Column 127</summary>
         Column127 = 0x01
     }
@@ -104,6 +112,7 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>BGR (blue, green, red)</summary>
         BGR = 0x00,
+
         /// <summary>RGB (red, green, blue)</summary>
         RGB = 0x01
     }
@@ -115,18 +124,25 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>0.72 of VCC level</summary>
         VccX072 = 0x00,
+
         /// <summary>0.74 of VCC level</summary>
         VccX074 = 0x01,
+
         /// <summary>0.76 of VCC level</summary>
         VccX076 = 0x02,
+
         /// <summary>0.78 of VCC level</summary>
         VccX078 = 0x03,
+
         /// <summary>0.80 of VCC level</summary>
         VccX080 = 0x04,
+
         /// <summary>0.82 of VCC level</summary>
         VccX082 = 0x05,
+
         /// <summary>0.84 of VCC level</summary>
         VccX084 = 0x06,
+
         /// <summary>0.86 of VCC level</summary>
         VccX086 = 0x07
     }
@@ -138,6 +154,7 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>External VDD source</summary>
         External = 0x00,
+
         /// <summary>Internal VDD source</summary>
         Internal = 0x01
     }
@@ -149,8 +166,10 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>No scroll</summary>
         NoScroll = 0x00,
+
         /// <summary>Scroll to segment 127</summary>
         Scroll2Seg127 = 0x01,
+
         /// <summary>Scroll to segment 0</summary>
         Scroll2Seg0 = 0x40
     }
@@ -162,8 +181,10 @@ namespace Iot.Device.Ssd1351
     {
         /// <summary>Normal speed</summary>
         Normal = 0x01,
+
         /// <summary>Slow speed</summary>
         Slow = 0x02,
+
         /// <summary>Slowest speed</summary>
         Slowest = 0x03
     }
@@ -173,7 +194,6 @@ namespace Iot.Device.Ssd1351
     /// </summary>
     public partial class Ssd1351 : IDisposable
     {
-
         /// <summary>
         /// This command is used to lock the OLED driver IC from accepting any command except itself.
         /// </summary>
@@ -395,7 +415,7 @@ namespace Iot.Device.Ssd1351
         /// <param name="pin1Mode">The GpioMode of Pin1. (defaults to Output/Low)</param>
         public void SetGpio(GpioMode pin0Mode = GpioMode.OutputLow, GpioMode pin1Mode = GpioMode.OutputLow)
         {
-            SendCommand(Ssd1351Command.SetGPIO, (byte)(((int) pin1Mode << 2) + pin0Mode));
+            SendCommand(Ssd1351Command.SetGPIO, (byte)(((int)pin1Mode << 2) + pin0Mode));
         }
 
         /// <summary>
@@ -405,7 +425,7 @@ namespace Iot.Device.Ssd1351
         /// If this paramneter is null or an empty array then the gray leves are set to default.</param>
         public void SetGrayLevels(byte[] grayLevels = null)
         {
-            if(grayLevels == null || grayLevels.Length == 0)
+            if (grayLevels == null || grayLevels.Length == 0)
             {
                 SendCommand(Ssd1351Command.SetDefaultGrayLevels);
             }
@@ -419,8 +439,6 @@ namespace Iot.Device.Ssd1351
                 SendCommand(Ssd1351Command.SetGrayLevels, grayLevels);
             }
         }
-
-
 
         /// <summary>
         /// This command sets the display to be inverse.
@@ -533,7 +551,7 @@ namespace Iot.Device.Ssd1351
                 throw new ArgumentException("Color depth 256 not supported.", nameof(colorDepth));
             }
 
-            SendCommand(Ssd1351Command.SetRemap, (byte)(((int) colorDepth << 6) + ((int) commonSplit << 5) + ((int) seg0Common << 4) + ((int) colorSequence << 2)));
+            SendCommand(Ssd1351Command.SetRemap, (byte)(((int)colorDepth << 6) + ((int)commonSplit << 5) + ((int)seg0Common << 4) + ((int)colorSequence << 2)));
         }
 
         /// <summary>

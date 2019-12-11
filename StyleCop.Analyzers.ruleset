@@ -2,6 +2,7 @@
 <RuleSet Name="SyleCop Rules" ToolsVersion="15.0">
   <Rules AnalyzerId="StyleCop.Analyzers" RuleNamespace="StyleCop.Analyzers">
     <Rule Id="SA0000" Action="Error" />
+	<Rule Id="SA0001" Action="None" /> <!-- XML comment analysis is disabled (default for sample projects) -->
     <Rule Id="SA1000" Action="Error" />
     <Rule Id="SA1001" Action="Error" />
     <Rule Id="SA1002" Action="Error" />
@@ -27,7 +28,7 @@
     <Rule Id="SA1022" Action="Error" />
     <Rule Id="SA1023" Action="Error" />
     <Rule Id="SA1024" Action="Error" />
-    <Rule Id="SA1025" Action="Error" />
+    <Rule Id="SA1025" Action="Error" /> 
     <Rule Id="SA1026" Action="Error" />
     <Rule Id="SA1027" Action="None" />
     <Rule Id="SA1028" Action="None" /> <!-- Code should not contain trailing whitespace -->
@@ -157,7 +158,7 @@
     <Rule Id="SA1622" Action="Error" />
     <Rule Id="SA1623" Action="None" />
     <Rule Id="SA1624" Action="None" />
-    <Rule Id="SA1625" Action="Error" />
+    <Rule Id="SA1625" Action="None" /> <!-- Maybe not so important: Element documentation should not be copy-pasted -->
     <Rule Id="SA1626" Action="None" /> <!-- TODO -->
     <Rule Id="SA1627" Action="None" /> <!-- TODO -->
     <Rule Id="SA1629" Action="None" />

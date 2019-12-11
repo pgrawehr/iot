@@ -576,7 +576,7 @@ namespace System.Device.Gpio.Drivers
                         var args = new PinValueChangedEventArgs(eventTypes, pinNumber);
                         _devicePins[pinNumber]?.OnPinValueChanged(args);
                     }
-                } 
+                }
                 catch (ObjectDisposedException)
                 {
                     break; // If cancellation token source is dispossed then we need to exit this thread.
@@ -601,7 +601,7 @@ namespace System.Device.Gpio.Drivers
             _devicePins[pinNumber].ValueFalling -= callback;
             _devicePins[pinNumber].ValueRising -= callback;
             if (_devicePins[pinNumber].IsCallbackListEmpty())
-            { 
+            {
                 _pinsToDetectEventsCount--;
 
                 bool closePollFileDescriptor = (_pinsToDetectEventsCount == 0);

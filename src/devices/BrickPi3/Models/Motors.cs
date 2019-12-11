@@ -7,14 +7,17 @@ namespace Iot.Device.BrickPi3.Models
     /// <summary>
     /// Port used to select the ports for motors
     /// </summary>
-    public enum MotorPort: byte
+    public enum MotorPort : byte
     {
         /// <summary>Port A</summary>
         PortA = 0x01,
+
         /// <summary>Port B</summary>
         PortB = 0x02,
+
         /// <summary>Port C</summary>
         PortC = 0x04,
+
         /// <summary>Port D</summary>
         PortD = 0x08
     }
@@ -25,12 +28,16 @@ namespace Iot.Device.BrickPi3.Models
     public enum BrickPortMotor : byte
     {
         // Used to select the ports for motors
+
         /// <summary>Port A</summary>
         PortA = 0x01,
+
         /// <summary>Port B</summary>
         PortB = 0x02,
+
         /// <summary>Port C</summary>
         PortC = 0x04,
+
         /// <summary>Port D</summary>
         PortD = 0x08
     }
@@ -42,8 +49,10 @@ namespace Iot.Device.BrickPi3.Models
     {
         /// <summary></summary>
         AllOk = 0,
+
         /// <summary>LOW_VOLTAGE_FLOAT - The motors are automatically disabled because the battery voltage is too low</summary>
         LowVoltageFloat = 0x01,
+
         /// <summary>OVERLOADED - The motors aren't close to the target (applies to position control and dps speed control).</summary>
         Overloaded = 0x02
     }
@@ -81,10 +90,13 @@ namespace Iot.Device.BrickPi3.Models
     {
         /// <summary>Stop</summary>
         Stop = 0,
+
         /// <summary>Full speed</summary>
         Full = 100,
+
         /// <summary>Half speed</summary>
         Half = 50,
+
         /// <summary>Float motor</summary>
         Float = 128
     }

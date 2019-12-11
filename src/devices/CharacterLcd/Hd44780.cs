@@ -77,7 +77,9 @@ namespace Iot.Device.CharacterLcd
             _lcdInterface = lcdInterface;
 
             if (_lcdInterface.EightBitMode)
+            {
                 _displayFunction |= DisplayFunction.EightBit;
+            }
 
             Initialize(size.Height);
             _rowOffsets = InitializeRowOffsets(size.Height);
@@ -91,9 +93,10 @@ namespace Iot.Device.CharacterLcd
             // While the chip supports 5x10 pixel characters for one line displays they
             // don't seem to be generally available. Supporting 5x10 would require extra
             // support for CreateCustomCharacter
-
             if (GetTwoLineMode(rows))
+            {
                 _displayFunction |= DisplayFunction.TwoLine;
+            }
 
             _displayControl |= DisplayControl.DisplayOn;
             _displayMode |= DisplayEntryMode.Increment;
@@ -176,7 +179,6 @@ namespace Iot.Device.CharacterLcd
             //   Second row: 64 - 83  [0x40 - 0x53]
             //   Third row:  20 - 39  [0x14 - 0x27]  (Continues first row)
             //   Fourth row: 84 - 103 [0x54 - 0x67]  (Continues second row)
-
             byte[] rowOffsets;
 
             switch (rows)
@@ -244,15 +246,18 @@ namespace Iot.Device.CharacterLcd
         {
             int rows = _rowOffsets.Length;
             if (top < 0 || top >= rows)
+            {
                 throw new ArgumentOutOfRangeException(nameof(top));
+            }
 
             // Throw if we're given a negative left value or the calculated address would be
             // larger than the max "good" address. Addressing is covered in detail in
             // InitializeRowOffsets above.
-
             int newAddress = left + _rowOffsets[top];
             if (left < 0 || (rows == 1 && newAddress >= 80) || (rows > 1 && newAddress >= 104))
+            {
                 throw new ArgumentOutOfRangeException(nameof(left));
+            }
 
             SendCommand((byte)(SetDDRamAddressCommand | newAddress));
         }
@@ -371,7 +376,9 @@ namespace Iot.Device.CharacterLcd
         public void CreateCustomCharacter(byte location, params byte[] characterMap)
         {
             if (characterMap == null)
+            {
                 throw new ArgumentNullException(nameof(characterMap));
+            }
 
             CreateCustomCharacter(location, characterMap.AsSpan());
         }
@@ -384,10 +391,14 @@ namespace Iot.Device.CharacterLcd
         public void CreateCustomCharacter(byte location, ReadOnlySpan<byte> characterMap)
         {
             if (location > 7)
+            {
                 throw new ArgumentOutOfRangeException(nameof(location));
+            }
 
             if (characterMap.Length != 8)
+            {
                 throw new ArgumentException(nameof(characterMap));
+            }
 
             // The character address is set in bits 3-5 of the command byte
             SendCommand((byte)(SetCGRamAddressCommand | (location << 3)));
@@ -435,7 +446,7 @@ namespace Iot.Device.CharacterLcd
             if (!_disposed)
             {
                 Dispose(true);
-               _disposed = true;
+                _disposed = true;
             }
         }
     }

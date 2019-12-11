@@ -33,7 +33,7 @@ namespace Iot.Device.Ads1115
         /// 128 SPS
         /// </summary>
         SPS128 = 0x04,
-        
+
         /// <summary>
         /// 250 SPS
         /// </summary>

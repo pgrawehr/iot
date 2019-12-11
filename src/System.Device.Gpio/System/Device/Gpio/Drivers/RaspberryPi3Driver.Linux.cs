@@ -31,9 +31,9 @@ namespace System.Device.Gpio.Drivers
         private RegisterView* _registerViewPointer = null;
         private static readonly object s_initializationLock = new object();
         private static readonly object s_sysFsInitializationLock = new object();
-        
+
         private UnixDriver _sysFSDriver = null;
-        
+
         /// <summary>
         /// Returns true if this is a Raspberry Pi4
         /// </summary>

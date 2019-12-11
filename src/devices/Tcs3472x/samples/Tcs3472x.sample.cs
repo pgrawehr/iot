@@ -9,16 +9,23 @@ using Iot.Device.Tcs3472x;
 
 namespace Tcs3472xsample
 {
-    class Program
+    /// <summary>
+    /// Test program main class
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Entry point for example program
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        public static void Main(string[] args)
         {
             Console.WriteLine("Hello TCS3472x!");
             var i2cSettings = new I2cConnectionSettings(1, Tcs3472x.DefaultI2cAddress);
             I2cDevice i2cDevice = I2cDevice.Create(i2cSettings);
-            using(Tcs3472x tcs3472X = new Tcs3472x(i2cDevice))
+            using (Tcs3472x tcs3472X = new Tcs3472x(i2cDevice))
             {
-                while(!Console.KeyAvailable)
+                while (!Console.KeyAvailable)
                 {
                     Console.WriteLine($"ID: {tcs3472X.ChipId} Gain: {tcs3472X.Gain} Time to wait: {tcs3472X.IsClearInterrupt}");
                     var col = tcs3472X.GetColor();

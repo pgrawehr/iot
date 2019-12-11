@@ -21,11 +21,17 @@ namespace Iot.Device.Pn532.AsTarget
         /// </summary>
         public byte[] Atqa
         {
-            get { return _atqa; }
+            get
+            {
+                return _atqa;
+            }
             set
             {
                 if (value.Length != _atqa.Length)
+                {
                     throw new ArgumentException($"{nameof(Atqa)} has to be {_atqa.Length} byte long");
+                }
+
                 value.CopyTo(_atqa, 0);
             }
         }
@@ -37,11 +43,17 @@ namespace Iot.Device.Pn532.AsTarget
         /// </summary>
         public byte[] NfcId3
         {
-            get { return _nfcId3; }
+            get
+            {
+                return _nfcId3;
+            }
             set
             {
                 if (value.Length != _nfcId3.Length)
+                {
                     throw new ArgumentException($"{nameof(NfcId3)} has to be {_nfcId3.Length} byte long");
+                }
+
                 value.CopyTo(_nfcId3, 0);
             }
         }

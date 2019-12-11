@@ -16,7 +16,7 @@ namespace Iot.Device.Seesaw
         /// <returns>A value between 0..1023 that represents the analog value.</returns> 
         public ushort AnalogRead(byte pin)
         {
-            const int AdcConversionDelayMicroseconds = 500; //500 microSeconds delay between read and write to allow Adc conversion time.
+            const int AdcConversionDelayMicroseconds = 500; // 500 microSeconds delay between read and write to allow Adc conversion time.
 
             if (!HasModule(SeesawModule.Gpio))
             {

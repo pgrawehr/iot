@@ -207,12 +207,12 @@ namespace System.Device.Gpio.Tests
                 controller.OpenPin(OutputPin, PinMode.Output);
                 controller.Write(OutputPin, PinValue.Low);
 
-                controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Rising, (o, e) => 
+                controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Rising, (o, e) =>
                 {
                     risingEventOccuredCount++;
-                });                        
+                });
                 controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Rising, Callback);
-                controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Rising, (o, e) => 
+                controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Rising, (o, e) =>
                 {
                     risingEventOccuredCount++;
                     if (fallingEventOccuredCount == 4)
@@ -220,7 +220,7 @@ namespace System.Device.Gpio.Tests
                         controller.UnregisterCallbackForPinValueChangedEvent(InputPin, Callback);
                     }
                 });
-                controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Falling, (o, e) => 
+                controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Falling, (o, e) =>
                 {
                     fallingEventOccuredCount++;
                 });

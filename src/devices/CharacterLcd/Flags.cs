@@ -7,7 +7,6 @@ using System;
 namespace Iot.Device.CharacterLcd
 {
     // Command flags are found on page 24/25 of the HD4478U spec.
-
     [Flags]
     internal enum DisplayEntryMode : byte
     {

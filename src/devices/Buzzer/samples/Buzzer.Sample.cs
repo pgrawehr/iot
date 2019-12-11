@@ -9,10 +9,14 @@ using System.Threading.Tasks;
 
 namespace Iot.Device.Buzzer.Samples
 {
-    class Program
+    /// <summary>
+    /// A buzzer test application
+    /// </summary>
+    public class Program
     {
         // Alphabet song: https://en.wikipedia.org/wiki/Alphabet_song#/media/File:Alphabet_song.png
-        static IList<MelodyElement> AlphabetSong = new List<MelodyElement>()
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.SpacingRules", "SA1025:Code should not contain multiple whitespace in a row", Justification = "Readability")]
+        internal static IList<MelodyElement> AlphabetSong = new List<MelodyElement>()
         {
             new NoteElement(Note.C, Octave.Fourth, Duration.Quarter),   // A
             new NoteElement(Note.C, Octave.Fourth, Duration.Quarter),   // B
@@ -52,7 +56,10 @@ namespace Iot.Device.Buzzer.Samples
             new NoteElement(Note.D, Octave.Fourth, Duration.Half)       // Z
         };
 
-        static void Main(string[] args)
+        /// <summary>
+        /// Main entry point
+        /// </summary>
+        public static void Main(string[] args)
         {
             using (var player1 = new MelodyPlayer(new Buzzer(21)))
             using (var player2 = new MelodyPlayer(new Buzzer(26)))

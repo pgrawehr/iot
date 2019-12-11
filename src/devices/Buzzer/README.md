@@ -24,7 +24,7 @@ Here's an example how you could use `Buzzer`.
 ```csharp
 using (Buzzer buzzer = new Buzzer(21)); // Initialize buzzer with software PWM connected to pin 21.
 {
-	buzzer.PlayTone(440, 1000); // Play tone with frequency 440 hertz for one second.
+    buzzer.PlayTone(440, 1000); // Play tone with frequency 440 hertz for one second.
 }
 ```
 `Buzzer` allows to play tone for certain duration like in example above.
@@ -32,9 +32,9 @@ Or you could start tone playing, perform some operation and then stop tone playi
 ```csharp
 using (Buzzer buzzer = new Buzzer(21));
 {
-	buzzer.StartPlaying(440);
-	Thread.Sleep(1000);
-	buzzer.StopPlaying();
+    buzzer.StartPlaying(440);
+    Thread.Sleep(1000);
+    buzzer.StopPlaying();
 }
 ```
 The result will be the same as in previous example.
@@ -43,11 +43,11 @@ The result will be the same as in previous example.
 ```csharp
 using (Buzzer buzzer = new Buzzer(21)); // Initialize buzzer with software PWM connected to pin 21.
 {
-	buzzer.StartPlaying(440);
-	Thread.Sleep(1000);
-	buzzer.StartPlaying(880);
-	Thread.Sleep(1000);
-	buzzer.StopPlaying();
+    buzzer.StartPlaying(440);
+    Thread.Sleep(1000);
+    buzzer.StartPlaying(880);
+    Thread.Sleep(1000);
+    buzzer.StopPlaying();
 }
 ```
 This example will play tone with frequency 440 for a second and then will play tone with a frequency 880 for a second.

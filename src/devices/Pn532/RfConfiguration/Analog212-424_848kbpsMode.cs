@@ -78,7 +78,8 @@ namespace Iot.Device.Pn532.RfConfiguration
         /// <returns>Serialized value</returns>
         public byte[] Serialize()
         {
-            return new byte[9] {
+            return new byte[9]
+            {
                 RxThreshold212, ModWidth212, MifNFC212,
                 RxThreshold424, ModWidth424, MifNFC424,
                 RxThreshold848, ModWidth848, MifNFC848,

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Iot.Device.Ssd1351.Samples
 {
-    class Program
+    internal class Program
     {
         private static void InitDisplayForAdafruit(Ssd1351 device)
         {
@@ -19,7 +19,7 @@ namespace Iot.Device.Ssd1351.Samples
             device.SetDisplayOff(); // Turn on sleep mode
             device.SetDisplayClockDivideRatioOscillatorFrequency(0x01, 0x0F); // 7:4 = Oscillator Frequency, 3:0 = CLK Div Ratio (A[3:0]+1 = 1..16) 
             device.SetMultiplexRatio(); // Use all 128 common lines by default....
-            device.SetSegmentReMapColorDepth(ColorDepth.ColourDepth65K, CommonSplit.OddEven, Seg0Common.Column127); //0x74 Color Depth = 64K, Enable COM Split Odd Even, Scan from COM[N-1] to COM0. Where N is the Multiplex ratio., Color sequence is normal: B -> G -> R
+            device.SetSegmentReMapColorDepth(ColorDepth.ColourDepth65K, CommonSplit.OddEven, Seg0Common.Column127); // 0x74 Color Depth = 64K, Enable COM Split Odd Even, Scan from COM[N-1] to COM0. Where N is the Multiplex ratio., Color sequence is normal: B -> G -> R
             device.SetColumnAddress(); // Columns = 0 -> 127
             device.SetRowAddress(); // Rows = 0 -> 127
             device.SetDisplayStartLine(); // set startline to to 0
@@ -37,7 +37,7 @@ namespace Iot.Device.Ssd1351.Samples
             device.ClearScreen();
         }
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             const int pinID_DC = 23;
             const int pinID_Reset = 24;
@@ -64,7 +64,7 @@ namespace Iot.Device.Ssd1351.Samples
                     }
 
                 }
- 
+
             }
 
         }

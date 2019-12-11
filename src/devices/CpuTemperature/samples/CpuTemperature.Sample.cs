@@ -8,9 +8,16 @@ using Iot.Device.CpuTemperature;
 
 namespace Iot.Device.CpuTemperature.Samples
 {
-    class Program
+    /// <summary>
+    /// Test program main class
+    /// </summary>
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Entry point for example program
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        public static void Main(string[] args)
         {
             CpuTemperature cpuTemperature = new CpuTemperature();
 

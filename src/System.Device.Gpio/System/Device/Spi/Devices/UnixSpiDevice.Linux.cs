@@ -18,7 +18,7 @@ namespace System.Device.Spi
         private static readonly object s_initializationLock = new object();
         private readonly SpiConnectionSettings _settings;
         private int _deviceFileDescriptor = -1;
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="UnixSpiDevice"/> class that will use the specified settings to communicate with the SPI device.
         /// </summary>
@@ -149,7 +149,7 @@ namespace System.Device.Spi
             {
                 throw new ArgumentException($"{nameof(buffer)} cannot be empty.");
             }
-                
+
             Initialize();
 
             fixed (byte* bufferPtr = buffer)

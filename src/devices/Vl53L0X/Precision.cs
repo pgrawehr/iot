@@ -12,8 +12,10 @@ namespace Iot.Device.Vl53L0X
     {
         /// <summary>Short range</summary>
         ShortRange = 0,
+
         /// <summary>Long range</summary>
         LongRange,
+
         /// <summary>High precision</summary>
         HighPrecision,
     }

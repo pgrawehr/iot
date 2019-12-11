@@ -24,11 +24,17 @@ namespace Iot.Device.Pn532.AsTarget
         /// </summary>
         public byte[] NfcId2
         {
-            get { return _nfcId2; }
+            get
+            {
+                return _nfcId2;
+            }
             set
             {
                 if (value.Length != _nfcId2.Length)
+                {
                     throw new ArgumentException($"{nameof(NfcId2)} can only be {_nfcId2.Length} byte long");
+                }
+
                 value.CopyTo(_nfcId2, 0);
             }
         }
@@ -38,11 +44,17 @@ namespace Iot.Device.Pn532.AsTarget
         /// </summary>
         public byte[] Pad
         {
-            get { return _pad; }
+            get
+            {
+                return _pad;
+            }
             set
             {
                 if (value.Length != _pad.Length)
+                {
                     throw new ArgumentException($"{nameof(Pad)} can only be {_pad.Length} byte long");
+                }
+
                 value.CopyTo(_pad, 0);
             }
         }
@@ -53,11 +65,17 @@ namespace Iot.Device.Pn532.AsTarget
         /// </summary>
         public byte[] SystemCode
         {
-            get { return _systemCode; }
+            get
+            {
+                return _systemCode;
+            }
             set
             {
                 if (value.Length != _systemCode.Length)
+                {
                     throw new ArgumentException($"{nameof(SystemCode)} can only be {_systemCode.Length} byte long");
+                }
+
                 value.CopyTo(_systemCode, 0);
             }
         }

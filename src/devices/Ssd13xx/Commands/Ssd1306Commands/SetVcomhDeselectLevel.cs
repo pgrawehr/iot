@@ -46,14 +46,17 @@ namespace Iot.Device.Ssd13xx.Commands.Ssd1306Commands
             /// ~0.65 x Vcc.
             /// </summary>
             Vcc0_65 = 0x00,
+
             /// <summary>
             /// ~0.77 x Vcc.  Default value after reset.
             /// </summary>
             Vcc0_77 = 0x20,
+
             /// <summary>
             /// ~0.83 x Vcc.
             /// </summary>
             Vcc0_83 = 0x30,
+
             /// <summary>
             /// ~1.00 x Vcc.
             /// </summary>

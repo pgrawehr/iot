@@ -12,7 +12,11 @@ namespace Iot.Device.Adc.Samples
     /// </summary>
     public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Main entry point
+        /// </summary>
+        /// <param name="args">Unused</param>
+        public static void Main(string[] args)
         {
             const byte Adafruit_Ina219_I2cAddress = 0x40;
             const byte Adafruit_Ina219_I2cBus = 0x1;
@@ -26,7 +30,7 @@ namespace Iot.Device.Adc.Samples
                 // set up the bus and shunt voltage ranges and the calibration. Other values left at default.
                 device.BusVoltageRange = Ina219BusVoltageRange.Range16v;
                 device.PgaSensitivity = Ina219PgaSensitivity.PlusOrMinus40mv;
-                device.SetCalibration(33574, (float)12.2e-6);
+                device.SetCalibration(33574, 12.2e-6f);
 
                 while (true)
                 {
