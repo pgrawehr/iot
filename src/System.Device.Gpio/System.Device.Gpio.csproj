@@ -9,7 +9,7 @@
     <TargetRefPath>$(OutputPath)$(TargetFramework)\ref\$(MSBuildProjectName).dll</TargetRefPath>
     <IsPackable>true</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <GeneratePlatformNotSupportedAssembly Condition="'$(RuntimeIdentifier)' == ''">true</GeneratePlatformNotSupportedAssembly>
+    <!-- <GeneratePlatformNotSupportedAssembly Condition="'$(RuntimeIdentifier)' == ''">true</GeneratePlatformNotSupportedAssembly>-->
     <Configurations>Windows-Debug;Linux-Debug;Linux-Release;Windows-Release;Debug;Release</Configurations>
   </PropertyGroup>
   <ItemGroup>
