@@ -34,9 +34,9 @@
     <Rule Id="SA1028" Action="None" /> <!-- Code should not contain trailing whitespace -->
     <Rule Id="SA1100" Action="Error" />
     <Rule Id="SA1101" Action="None" />
-    <Rule Id="SA1102" Action="None" />
-    <Rule Id="SA1103" Action="None" />
-    <Rule Id="SA1104" Action="None" />
+    <Rule Id="SA1102" Action="Error" />
+    <Rule Id="SA1103" Action="Error" />
+    <Rule Id="SA1104" Action="Error" />
     <Rule Id="SA1105" Action="Error" />
     <Rule Id="SA1106" Action="Error" />
     <Rule Id="SA1107" Action="Error" />
@@ -46,13 +46,13 @@
     <Rule Id="SA1112" Action="Error" />
     <Rule Id="SA1113" Action="Error" />
     <Rule Id="SA1114" Action="Error" />
-    <Rule Id="SA1115" Action="None" />
+    <Rule Id="SA1115" Action="Error" />
     <Rule Id="SA1116" Action="None" />
     <Rule Id="SA1117" Action="None" />
     <Rule Id="SA1118" Action="None" />
     <Rule Id="SA1119" Action="None" />
     <Rule Id="SA1120" Action="Error" />
-    <Rule Id="SA1121" Action="None" />
+    <Rule Id="SA1121" Action="None" /> <!-- Use Built-In type aliases. When interfacing with hardware, using the Framework types may be more clear.-->
     <Rule Id="SA1122" Action="Error" />
     <Rule Id="SA1123" Action="Error" />
     <Rule Id="SA1124" Action="None" />
@@ -85,12 +85,12 @@
     <Rule Id="SA1213" Action="Error" />
     <Rule Id="SA1214" Action="Error" />
     <Rule Id="SA1216" Action="Error" />
-    <Rule Id="SA1217" Action="None" />
+    <Rule Id="SA1217" Action="None" /> <!-- Using statements should be ordered by alphabet -->
     <Rule Id="SA1300" Action="Error" />
     <Rule Id="SA1302" Action="Error" />
     <Rule Id="SA1303" Action="Error" />
     <Rule Id="SA1304" Action="None" />
-    <Rule Id="SA1305" Action="None" /> <!-- TODO  -->
+    <Rule Id="SA1305" Action="None" /> <!-- Field names must not use hungarian notation  -->
     <Rule Id="SA1306" Action="Error" />
     <Rule Id="SA1307" Action="Error" />
     <Rule Id="SA1308" Action="None" />
@@ -102,7 +102,7 @@
     <Rule Id="SA1314" Action="Error" /> 
     <Rule Id="SA1400" Action="Error" />
     <Rule Id="SA1401" Action="None" />
-    <Rule Id="SA1402" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1402" Action="None" /> <!-- File may only contain a single type -->
     <Rule Id="SA1403" Action="Error" />
     <Rule Id="SA1404" Action="Error" />
     <Rule Id="SA1405" Action="Error" />
@@ -112,7 +112,7 @@
     <Rule Id="SA1410" Action="Error" />
     <Rule Id="SA1411" Action="None" /> 
     <Rule Id="SA1412" Action="None" /> <!-- Store files as UTF-8 -->
-    <Rule Id="SA1413" Action="None" />
+    <Rule Id="SA1413" Action="None" /> <!-- Use trailing comma in multi-line initializers -->
     <Rule Id="SA1500" Action="Error" /> 
     <Rule Id="SA1501" Action="Error" />
     <Rule Id="SA1502" Action="Error" />
@@ -121,7 +121,7 @@
     <Rule Id="SA1505" Action="Error" />
     <Rule Id="SA1506" Action="Error" />
     <Rule Id="SA1507" Action="Error" /> 
-    <Rule Id="SA1508" Action="None" />
+    <Rule Id="SA1508" Action="None" /> <!-- A closing brace should not be preceded by a blank line -->
     <Rule Id="SA1509" Action="Error" />
     <Rule Id="SA1510" Action="Error" />
     <Rule Id="SA1511" Action="Error" />
@@ -134,49 +134,49 @@
     <Rule Id="SA1518" Action="Error" />
     <Rule Id="SA1519" Action="Error" />
     <Rule Id="SA1520" Action="Error" />
-    <Rule Id="SA1600" Action="None" />
-    <Rule Id="SA1601" Action="None" />
-    <Rule Id="SA1602" Action="None" />
-    <Rule Id="SA1604" Action="None" />
+    <Rule Id="SA1600" Action="None" />  <!-- Elements should be documented -->
+    <Rule Id="SA1601" Action="None" /> <!-- Partial elements should be documented -->
+    <Rule Id="SA1602" Action="None" /> <!-- Enumeration items should be documented -->
+    <Rule Id="SA1604" Action="None" /> <!-- Element documentation should have summary -->
     <Rule Id="SA1605" Action="Error" />
     <Rule Id="SA1606" Action="Error" />
     <Rule Id="SA1607" Action="Error" />
     <Rule Id="SA1608" Action="Error" />
     <Rule Id="SA1609" Action="None" />
-    <Rule Id="SA1610" Action="None" /> <!-- TODO -->
-    <Rule Id="SA1611" Action="None" />
+    <Rule Id="SA1610" Action="None" /> <!-- Property documentation should have value text -->
+    <Rule Id="SA1611" Action="None" /> <!-- The documentation for parameter 'message' is missing -->
     <Rule Id="SA1612" Action="Error" />
     <Rule Id="SA1613" Action="Error" />
     <Rule Id="SA1614" Action="Error" />
     <Rule Id="SA1615" Action="None" />
-    <Rule Id="SA1616" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1616" Action="None" /> <!-- Element return value documentation should have text -->
     <Rule Id="SA1617" Action="Error" />
-    <Rule Id="SA1618" Action="None" />
-    <Rule Id="SA1619" Action="None" />
+    <Rule Id="SA1618" Action="None" /> <!-- The documentation for type parameter is missing -->
+    <Rule Id="SA1619" Action="None" /> <!-- The documentation for type parameter is missing -->
     <Rule Id="SA1620" Action="Error" />
     <Rule Id="SA1621" Action="Error" />
     <Rule Id="SA1622" Action="Error" />
-    <Rule Id="SA1623" Action="None" />
-    <Rule Id="SA1624" Action="None" />
+    <Rule Id="SA1623" Action="None" /> <!-- Property documentation text -->
+    <Rule Id="SA1624" Action="None" /> <!-- Because the property only contains a visible get accessor, the documentation summary text should begin with 'Gets' -->
     <Rule Id="SA1625" Action="None" /> <!-- Maybe not so important: Element documentation should not be copy-pasted -->
-    <Rule Id="SA1626" Action="None" /> <!-- TODO -->
-    <Rule Id="SA1627" Action="None" /> <!-- TODO -->
-    <Rule Id="SA1629" Action="None" />
-    <Rule Id="SA1633" Action="None" />
-    <Rule Id="SA1634" Action="None" />
-    <Rule Id="SA1635" Action="None" />
-    <Rule Id="SA1636" Action="None" />
-    <Rule Id="SA1637" Action="None" />
+    <Rule Id="SA1626" Action="None" /> <!-- Single-line comments should not use documentation style slashes -->
+    <Rule Id="SA1627" Action="None" /> <!-- The documentation text within the \'exception\' tag should not be empty -->
+    <Rule Id="SA1629" Action="None" /> <!-- Documentation text should end with a period -->
+    <Rule Id="SA1633" Action="None" /> <!-- File should have header -->
+    <Rule Id="SA1634" Action="None" /> <!-- File Header must show copyright. Our header does not use the expected syntax -->
+    <Rule Id="SA1635" Action="None" /> <!-- Same as SA1634? -->
+    <Rule Id="SA1636" Action="None" /> <!-- File Header copyright tag must match -->
+    <Rule Id="SA1637" Action="None" /> <!-- File Header must contain file name -->
     <Rule Id="SA1638" Action="Error" />
-    <Rule Id="SA1640" Action="None" />
+    <Rule Id="SA1640" Action="None" /> <!-- File header must have valid company text -->
     <Rule Id="SA1641" Action="Error" />
-    <Rule Id="SA1642" Action="None" />
-    <Rule Id="SA1643" Action="None" />
+    <Rule Id="SA1642" Action="None" /> <!-- Constructor summary documentation should begin with standard text -->
+    <Rule Id="SA1643" Action="None" /> <!-- Destructor summary documentation should begin with standard text -->
     <Rule Id="SA1648" Action="Error" />
-    <Rule Id="SA1649" Action="None" /> <!-- TODO -->
+    <Rule Id="SA1649" Action="None" /> <!-- Maybe todo: File name should match first type name -->
     <Rule Id="SA1651" Action="Error" />
     <Rule Id="SA1652" Action="Error" />
-    <Rule Id="SX1101" Action="None" /> <!-- TODO -->
+    <Rule Id="SX1101" Action="None" /> <!-- Maybe todo: Do not prefix local members with this -->
 	<Rule Id="SX1309" Action="Error" /> <!-- Members should be prefixed with _ -->
   </Rules>
 </RuleSet>
