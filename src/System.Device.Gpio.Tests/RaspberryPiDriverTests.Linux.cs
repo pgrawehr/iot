@@ -33,7 +33,6 @@ namespace System.Device.Gpio.Tests
                 controller.SetPinMode(OpenPin, PinMode.InputPullDown);
                 Assert.Equal(PinValue.Low, controller.Read(OpenPin));
                 controller.SetPinMode(OpenPin, PinMode.InputPullUp);
-                // Thread.Sleep(1);
                 Assert.Equal(PinValue.High, controller.Read(OpenPin));
             }
         }
@@ -46,7 +45,6 @@ namespace System.Device.Gpio.Tests
             const int pulseLength = 1;
             const int waitTime = 20;
 
-            // int maxWaitSpins = 5000;
             int numInterrupts = 0;
             int numRisingEdges = 0;
             using (GpioController controller = new GpioController(GetTestNumberingScheme(), GetTestDriver()))
