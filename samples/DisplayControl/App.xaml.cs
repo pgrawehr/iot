@@ -17,9 +17,11 @@ namespace DisplayControl
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
+                var vm = new MainWindowViewModel();
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = new MainWindowViewModel(),
+                    ViewModel = vm,
+                    DataContext = vm
                 };
             }
 

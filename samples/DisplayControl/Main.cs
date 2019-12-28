@@ -15,32 +15,42 @@ namespace DisplayControl
 {
     internal sealed class Program : IDisposable
     {
-        const int LedPin = 17;
+        const int LedPin = 5;
+        const int ValidationPin = 6;
 
         internal Program(GpioController controller)
         {
             Controller = controller;
-            MainAppBuilder = AppBuilder.Configure<App>()
+        }
+
+        public GpioController Controller { get; }
+
+        public static AppBuilder BuildAvaloniaApp()
+        {
+            return AppBuilder.Configure<App>()
                 .UsePlatformDetect()
                 .LogToTrace()
                 .UseReactiveUI();
         }
 
-        public GpioController Controller { get; }
-
-        public AppBuilder MainAppBuilder { get; }
-
         public static void Main(string[] args)
         {
+            Console.WriteLine("Press enter to start (waiting for debugger?)");
+            Console.ReadLine();
             Console.WriteLine($"Initializing Hardware...");
             using (GpioController controller = new GpioController())
             {
                 controller.OpenPin(LedPin, PinMode.Output);
+                controller.OpenPin(ValidationPin, PinMode.Input);
                 Program prog = new Program(controller);
                 try
                 {
                     Trace.Listeners.Add(new ConsoleTraceListener());
                     controller.Write(LedPin, PinValue.High);
+                    if (controller.Read(ValidationPin) != PinValue.High)
+                    {
+                        Console.WriteLine($"Could not detect high level on pin {ValidationPin}. Incorrect setup?");
+                    }
                     prog.Initialize();
                     prog.Run(args);
                 }
@@ -59,7 +69,7 @@ namespace DisplayControl
 
         public void Run(string[] args)
         {
-            MainAppBuilder.StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
         }
 
         public void Dispose()

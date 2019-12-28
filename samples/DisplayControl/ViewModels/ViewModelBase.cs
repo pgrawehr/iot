@@ -5,7 +5,13 @@ using ReactiveUI;
 
 namespace DisplayControl.ViewModels
 {
-    public class ViewModelBase : ReactiveObject
+    public class ViewModelBase : ReactiveObject, IActivatableViewModel
     {
+        public ViewModelActivator Activator { get; }
+        
+        public ViewModelBase()
+        {
+            Activator = new ViewModelActivator();
+        }
     }
 }
