@@ -24,7 +24,7 @@ namespace Iot.Device.CharacterLcd
         private readonly ICharacterLcd _lcd;
         private readonly CultureInfo _culture;
         private readonly Dictionary<char, byte[]> _font;
-        private char _currentSeparationChar; 
+        private char _currentSeparationChar;
         private LcdCharacterEncoding _encoding;
 
         /// <summary>
@@ -41,6 +41,7 @@ namespace Iot.Device.CharacterLcd
             {
                 throw new NotSupportedException("This class can only run on displays with at least 20x4 characters.");
             }
+
             if (lcd.NumberOfCustomCharactersSupported < 8)
             {
                 throw new NotSupportedException("This class can only run on displays with 8 or more custom character slots");
@@ -48,7 +49,7 @@ namespace Iot.Device.CharacterLcd
         }
 
         /// <summary>
-        /// Returns the active culture. 
+        /// Returns the active culture.
         /// </summary>
         public CultureInfo Culture
         {
@@ -60,7 +61,7 @@ namespace Iot.Device.CharacterLcd
 
         /// <summary>
         /// Initializes the display for use as a big-number display.
-        /// Configures the display with some graphic blocks for the display of big numbers. 
+        /// Configures the display with some graphic blocks for the display of big numbers.
         /// </summary>
         /// <param name="romName">Name of the character Rom, required to properly print culture-specific characters in the small text display</param>
         /// <param name="factory">Encoding factory or null</param>
@@ -70,7 +71,8 @@ namespace Iot.Device.CharacterLcd
             {
                 factory = new LcdCharacterEncodingFactory();
             }
-            // Create the default encoding for the current ROM and culture, but leave the custom characters away. 
+
+            // Create the default encoding for the current ROM and culture, but leave the custom characters away.
             var encoding = factory.Create(_culture, romName, ' ', 0);
             Dictionary<byte, byte[]> specialGraphicsRequired = new Dictionary<byte, byte[]>();
             CreateSpecialChars(specialGraphicsRequired);
@@ -78,9 +80,10 @@ namespace Iot.Device.CharacterLcd
             {
                 _lcd.CreateCustomCharacter(i, specialGraphicsRequired[i]);
             }
+
             _currentSeparationChar = ' '; // To make sure the next function doesn't just skip the initialization
             LoadSeparationChar(_currentSeparationChar);
-             _encoding = encoding;
+            _encoding = encoding;
             _lcd.BlinkingCursorVisible = false;
             _lcd.UnderlineCursorVisible = false;
             _lcd.BacklightOn = true;
@@ -123,6 +126,7 @@ namespace Iot.Device.CharacterLcd
                     {
                         continue;
                     }
+
                     if (characterStep == -1)
                     {
                         line = line.TrimEnd();
@@ -130,16 +134,19 @@ namespace Iot.Device.CharacterLcd
                         {
                             throw new InvalidDataException($"Line {lineNo}: Expected character followed by ':', found {line}");
                         }
+
                         currentChar = line[0];
                         characterStep = 0;
                         continue;
                     }
+
                     string[] splits = line.Split(',', StringSplitOptions.None);
                     if (characterStep == 0)
                     {
                         currentCharMap = new byte[splits.Length * 4];
                         currentCharMapPos = 0;
                     }
+
                     for (int i = 0; i < splits.Length; i++)
                     {
                         byte b;
@@ -147,13 +154,16 @@ namespace Iot.Device.CharacterLcd
                         {
                             throw new InvalidDataException($"Line {lineNo}: Expected byte, found {splits[i]}");
                         }
+
                         if (currentCharMapPos >= currentCharMap.Length)
                         {
                             throw new InvalidDataException($"Line {lineNo}: Character is expected to have {currentCharMap.Length} bytes, but found more");
                         }
+
                         currentCharMap[currentCharMapPos] = b;
                         currentCharMapPos++;
                     }
+
                     characterStep++;
                     if (characterStep == 4)
                     {
@@ -169,7 +179,7 @@ namespace Iot.Device.CharacterLcd
         /// </summary>
         /// <param name="dateTime">Time to display</param>
         /// <param name="format">Time format specifier, default "t" (default short time format with hours and minutes and eventually AM/PM).
-        /// Anything after the first space in the formatted string is printed as small text. This will for instance be AM/PM when the format specifier "T" is used, 
+        /// Anything after the first space in the formatted string is printed as small text. This will for instance be AM/PM when the format specifier "T" is used,
         /// since only 6 chars (and two separators) fit on the display.</param>
         public void DisplayTime(DateTime dateTime, string format = "t")
         {
@@ -181,13 +191,14 @@ namespace Iot.Device.CharacterLcd
                 smallText = toDisplay.Substring(spaceIdx + 1);
                 toDisplay = toDisplay.Substring(0, spaceIdx);
             }
+
             StringBuilder[] lines = CreateLinesFromText(toDisplay, smallText, 0, out _);
             UpdateDisplay(lines);
         }
 
         /// <summary>
-        /// Display the given value/unit pair. The value must be pre-formatted with the required number of digits, ie. "2.01". 
-        /// The value should only contain one of ".", ":" or ",", or the printed result may be unexpected. 
+        /// Display the given value/unit pair. The value must be pre-formatted with the required number of digits, ie. "2.01".
+        /// The value should only contain one of ".", ":" or ",", or the printed result may be unexpected.
         /// </summary>
         /// <param name="formattedValue">Pre-formatted value to print</param>
         /// <param name="unitText">Unit or name of value. This is printed in normal small font on the bottom right corner of the display. </param>
@@ -198,12 +209,12 @@ namespace Iot.Device.CharacterLcd
         }
 
         /// <summary>
-        /// Summary
+        /// Scrolls a text in big font trough the display
         /// </summary>
-        /// <param name="text"></param>
-        /// <param name="scrollSpeed"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <param name="text">Text to display</param>
+        /// <param name="scrollSpeed">Speed between scroll steps (one step being one display cell width)</param>
+        /// <param name="cancellationToken">Token for cancelling the operation</param>
+        /// <returns>A task handle</returns>
         public Task DisplayBigTextAsync(string text, TimeSpan scrollSpeed, CancellationToken cancellationToken)
         {
             return Task.Factory.StartNew(() =>
@@ -215,6 +226,7 @@ namespace Iot.Device.CharacterLcd
                 {
                     return;
                 }
+
                 while (startPosition < totalColumnsUsed)
                 {
                     var displayContent = CreateLinesFromText(text, string.Empty, -startPosition, out _);
@@ -223,6 +235,7 @@ namespace Iot.Device.CharacterLcd
                     {
                         break;
                     }
+
                     startPosition++;
                 }
             });
@@ -251,15 +264,18 @@ namespace Iot.Device.CharacterLcd
                             {
                                 b = 32;
                             }
+
                             ret[row][realColumn] = (char)b;
                         }
+
                         nextByte++;
                     }
                 }
+
                 xPosition += columns;
                 totalColumnsUsedInternal += columns;
             }
-            
+
             for (int i = 0; i < _lcd.Size.Height; i++)
             {
                 ret[i] = new StringBuilder();
@@ -279,6 +295,7 @@ namespace Iot.Device.CharacterLcd
             {
                 LoadSeparationChar(',');
             }
+
             foreach (var c in bigText)
             {
                 if (_font.TryGetValue(c, out byte[] value))
@@ -288,7 +305,7 @@ namespace Iot.Device.CharacterLcd
             }
 
             // Right allign the small text (i.e. an unit)
-            // It will eventually overwrite the last row of the rightmost digits, but that presumably is still readable. 
+            // It will eventually overwrite the last row of the rightmost digits, but that presumably is still readable.
             int unitPosition = _lcd.Size.Width - smallText.Length;
             xPosition = unitPosition;
             var encodedSmallText = _encoding.GetBytes(smallText);
@@ -296,6 +313,7 @@ namespace Iot.Device.CharacterLcd
             {
                 ret[3][xPosition + i] = (char)encodedSmallText[i];
             }
+
             totalColumnsUsed = totalColumnsUsedInternal;
             return ret;
         }
@@ -305,7 +323,7 @@ namespace Iot.Device.CharacterLcd
             for (int i = 0; i < lines.Length; i++)
             {
                 _lcd.SetCursorPosition(0, i);
-                // Will again do a character translation, but that shouldn't hurt, as all characters in the input strings should be printable now. 
+                // Will again do a character translation, but that shouldn't hurt, as all characters in the input strings should be printable now.
                 _lcd.Write(lines[i].ToString());
             }
         }
@@ -389,22 +407,21 @@ namespace Iot.Device.CharacterLcd
                 0b11111,
                 0b11111,
             });
-            
         }
 
         /// <summary>
-        /// Character code 7 is always used for the separation char, which is one of ":", "." or ",". 
+        /// Character code 7 is always used for the separation char, which is one of ":", "." or ",".
         /// </summary>
-        /// <param name="separationChar"></param>
+        /// <param name="separationChar">Separation character</param>
         private void LoadSeparationChar(char separationChar)
         {
             if (separationChar == _currentSeparationChar)
             {
                 return;
             }
+
             switch (separationChar)
             {
-
                 case ':':
                     _lcd.CreateCustomCharacter(7, new byte[]
                     {
@@ -447,6 +464,7 @@ namespace Iot.Device.CharacterLcd
                 default:
                     throw new NotImplementedException("Unknown separation char: " + separationChar);
             }
+
             _currentSeparationChar = separationChar;
         }
     }
