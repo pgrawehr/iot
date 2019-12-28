@@ -4,7 +4,12 @@
 
 using System;
 using System.Device.Gpio;
+using System.Diagnostics;
 using System.Threading;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Logging.Serilog;
+using Avalonia.ReactiveUI;
 
 namespace DisplayControl
 {
@@ -15,9 +20,15 @@ namespace DisplayControl
         internal Program(GpioController controller)
         {
             Controller = controller;
+            MainAppBuilder = AppBuilder.Configure<App>()
+                .UsePlatformDetect()
+                .LogToTrace()
+                .UseReactiveUI();
         }
 
         public GpioController Controller { get; }
+
+        public AppBuilder MainAppBuilder { get; }
 
         public static void Main(string[] args)
         {
@@ -28,9 +39,10 @@ namespace DisplayControl
                 Program prog = new Program(controller);
                 try
                 {
+                    Trace.Listeners.Add(new ConsoleTraceListener());
                     controller.Write(LedPin, PinValue.High);
                     prog.Initialize();
-                    prog.Run();
+                    prog.Run(args);
                 }
                 finally
                 {
@@ -43,6 +55,11 @@ namespace DisplayControl
         public void Initialize()
         {
 
+        }
+
+        public void Run(string[] args)
+        {
+            MainAppBuilder.StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
         }
 
         public void Dispose()
