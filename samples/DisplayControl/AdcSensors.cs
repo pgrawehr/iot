@@ -29,13 +29,13 @@ namespace DisplayControl
         public void Init()
         {
             var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.GND));
-            m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.Continuous);
+            m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.PowerDown);
 
             var displayI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.VCC));
             m_displayAdc = new Ads1115(displayI2c);
 
-            _voltage3_3V = new ObservableValue<double>("3.3V Supply Voltage", 0.0);
-            _currentSunBrightness = new ObservableValue<double>("Sunlight strength", 0.0);
+            _voltage3_3V = new ObservableValue<double>("3.3V Supply Voltage", "V", 0.0);
+            _currentSunBrightness = new ObservableValue<double>("Sunlight strength", "V", 0.0);
 
             _sensorValueSources.Add(_voltage3_3V);
             _sensorValueSources.Add(_currentSunBrightness);
@@ -55,8 +55,9 @@ namespace DisplayControl
             while (!m_cancellationTokenSource.IsCancellationRequested)
             {
                 _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
-                _currentSunBrightness.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN0);
-                m_cancellationTokenSource.Token.WaitHandle.WaitOne(100);
+                // Todo: Voltage is not really the correct unit for this.
+                _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) - m_cpuAdc.ReadVoltage(InputMultiplexer.AIN0);
+                m_cancellationTokenSource.Token.WaitHandle.WaitOne(2000);
             }
         }
 

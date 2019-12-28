@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using DisplayControl.ViewModels;
 using ReactiveUI;
 
@@ -10,11 +13,13 @@ namespace DisplayControl.Views
     public class MainWindow : Window, IViewFor<MainWindowViewModel>
     {
         private MainWindowViewModel m_viewModel;
+        private ListBox m_listBox;
 
         public MainWindow()
         {
             InitializeComponent();
             this.AttachDevTools();
+            m_listBox = this.FindControl<ListBox>("ListElements");
         }
 
         public MainWindowViewModel ViewModel
@@ -33,6 +38,8 @@ namespace DisplayControl.Views
                 {
                     Close();
                 };
+
+                m_viewModel.PropertyChanged += AnyPropertyChanged;
             }
         }
 
@@ -45,6 +52,24 @@ namespace DisplayControl.Views
             set
             {
                 ViewModel = (MainWindowViewModel)value;
+            }
+        }
+
+        private void AnyPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ViewModel.ListBoxElements))
+            {
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    m_listBox.BeginInit();
+                    var elems = new List<SensorValueSource>(ViewModel.ListBoxElements);
+                    ViewModel.ListBoxElements.Clear();
+                    foreach(var elem in elems)
+                    {
+                        ViewModel.ListBoxElements.Add(elem);
+                    }
+                    m_listBox.EndInit();
+                });
             }
         }
 

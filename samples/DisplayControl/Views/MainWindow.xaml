@@ -17,15 +17,16 @@
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
             </MenuItem>
         </Menu>
-    
-    <TextBlock Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        <ListBox Items="{Binding ListBoxElements}" SelectionMode="Single" SelectedItem="{Binding SelectedElement}">
+        <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
+            <TextBlock Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" />
+        </StackPanel>
+        <ListBox x:Name="ListElements" Items="{Binding ListBoxElements, Mode=OneWay}" SelectionMode="Single" SelectedItem="{Binding SelectedElement}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Border Background="Gray" CornerRadius="4" Padding="4">
-                        <StackPanel Orientation="Horizontal">
+                    <Border Background="LightGray" CornerRadius="4" Padding="4">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
                             <TextBlock Text="{Binding ValueDescription}"/>
-                            <TextBlock Text="{Binding}"/>
+                            <TextBox Text="{Binding ValueAsString, Mode=TwoWay}"/>
                         </StackPanel>
                     </Border>
                 </DataTemplate>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Text;
 
 namespace DisplayControl
@@ -11,8 +12,8 @@ namespace DisplayControl
 
         private List<IObserver<T>> m_observers;
 
-        public ObservableValue(string valueDescription, T value)
-            : base(valueDescription)
+        public ObservableValue(string valueDescription, string unit, T value)
+            : base(valueDescription, unit)
         {
             m_value = value;
             m_observers = new List<IObserver<T>>();
@@ -50,6 +51,14 @@ namespace DisplayControl
             get
             {
                 return Value;
+            }
+        }
+
+        public override string ValueAsString
+        {
+            get
+            {
+                return String.Format(CultureInfo.CurrentCulture, "{0:F3} {1}", Value, Unit);
             }
         }
 

@@ -10,9 +10,10 @@ namespace DisplayControl
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public SensorValueSource(string valueDescription)
+        public SensorValueSource(string valueDescription, string unit)
         {
             ValueDescription = valueDescription;
+            Unit = unit;
         }
 
         public abstract object GenericValue
@@ -23,6 +24,20 @@ namespace DisplayControl
         public string ValueDescription
         {
             get;
+        }
+
+        public virtual string ValueAsString
+        {
+            get
+            {
+                return ToString();
+            }
+        }
+
+        public string Unit
+        {
+            get;
+            protected set;
         }
 
         protected void NotifyPropertyChanged([CallerMemberName]string propertyName = null)

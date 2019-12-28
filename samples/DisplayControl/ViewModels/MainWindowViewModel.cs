@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Text;
 using Avalonia.Media;
@@ -13,13 +14,23 @@ namespace DisplayControl.ViewModels
         private IBrush m_statusColor;
         private bool m_cancel;
 
-        public MainWindowViewModel(DataContainer dataContainer)
+        public MainWindowViewModel()
         {
             Status = "System initialized";
             StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
             Cancel = false;
+            ListBoxElements = new ObservableCollection<SensorValueSource>();
+        }
+
+        public MainWindowViewModel(DataContainer dataContainer)
+            : this()
+        {
             DataContainer = dataContainer;
-            ListBoxElements = dataContainer.SensorValueSources;
+            ListBoxElements = new ObservableCollection<SensorValueSource>(dataContainer.SensorValueSources);
+            foreach (var elem in ListBoxElements)
+            {
+                elem.PropertyChanged += ListBoxElementPropertyChanged;
+            }
         }
 
         public event Action DoClose;
@@ -66,7 +77,7 @@ namespace DisplayControl.ViewModels
             private set;
         }
 
-        public IList<SensorValueSource> ListBoxElements
+        public ObservableCollection<SensorValueSource> ListBoxElements
         {
             get;
             private set;
@@ -85,6 +96,11 @@ namespace DisplayControl.ViewModels
                 DataContainer.ActiveValueSource = value;
                 this.RaiseAndSetIfChanged(ref v, value);
             }
+        }
+
+        private void ListBoxElementPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            this.RaisePropertyChanged(nameof(ListBoxElements));
         }
 
         public void SetStatus(string text, string color)
