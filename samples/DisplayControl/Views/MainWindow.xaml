@@ -14,12 +14,22 @@
     <StackPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_Open..."/>
-                <Separator/>
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
             </MenuItem>
         </Menu>
     
     <TextBlock Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <ListBox Items="{Binding ListBoxElements}" SelectionMode="Single" SelectedItem="{Binding SelectedElement}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="Gray" CornerRadius="4" Padding="4">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding ValueDescription}"/>
+                            <TextBlock Text="{Binding}"/>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </StackPanel>
 </Window>

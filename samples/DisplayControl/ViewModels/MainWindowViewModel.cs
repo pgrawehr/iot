@@ -19,6 +19,7 @@ namespace DisplayControl.ViewModels
             StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
             Cancel = false;
             DataContainer = dataContainer;
+            ListBoxElements = dataContainer.SensorValueSources;
         }
 
         public event Action DoClose;
@@ -63,6 +64,27 @@ namespace DisplayControl.ViewModels
         { 
             get;
             private set;
+        }
+
+        public IList<SensorValueSource> ListBoxElements
+        {
+            get;
+            private set;
+        }
+
+        public SensorValueSource SelectedElement
+        {
+            get
+            {
+                return DataContainer.ActiveValueSource;
+            }
+            set
+            {
+                var v = DataContainer.ActiveValueSource;
+                // Change before, so that the notified clients see the new value (but provide old value to the method)
+                DataContainer.ActiveValueSource = value;
+                this.RaiseAndSetIfChanged(ref v, value);
+            }
         }
 
         public void SetStatus(string text, string color)

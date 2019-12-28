@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29409.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisplayControl", "DisplayControl.csproj", "{62733748-E938-4E40-B761-6AF6E61040CE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{09724973-4015-4689-A2B6-98167B2A756C} = {09724973-4015-4689-A2B6-98167B2A756C}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaSample", "..\AvaloniaSample\AvaloniaSample.csproj", "{235E5834-737C-42D0-B59A-E44B460F430D}"
 EndProject

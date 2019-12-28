@@ -51,7 +51,6 @@ namespace DisplayControl
                     {
                         Console.WriteLine($"Could not detect high level on pin {ValidationPin}. Incorrect setup?");
                     }
-                    prog.Initialize();
                     prog.Run(args);
                 }
                 finally
@@ -62,14 +61,11 @@ namespace DisplayControl
             }
         }
 
-        public void Initialize()
-        {
-
-        }
-
         public void Run(string[] args)
         {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
+            var builder = BuildAvaloniaApp();
+            App.SetGpioController(Controller);
+            builder.StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
         }
 
         public void Dispose()

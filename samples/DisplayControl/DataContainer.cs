@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Globalization;
@@ -13,20 +15,37 @@ namespace DisplayControl
         I2cDevice m_displayDevice = null;
         ICharacterLcd m_characterLcd = null;
         LcdConsole m_lcdConsole = null;
+        AdcSensors m_adcSensors = null;
+        SensorValueSource m_activeValueSource;
 
-        List<SensorValueSource> m_sensorValueSources;
+        ObservableCollection<SensorValueSource> m_sensorValueSources;
 
         public DataContainer(GpioController controller)
         {
             Controller = controller;
-            m_sensorValueSources = new List<SensorValueSource>();
+            m_sensorValueSources = new ObservableCollection<SensorValueSource>();
+            m_activeValueSource = null;
         }
 
         public GpioController Controller { get; }
 
-        public void InitializeDisplay()
+        public ObservableCollection<SensorValueSource> SensorValueSources => m_sensorValueSources;
+
+        public SensorValueSource ActiveValueSource
         {
-            m_displayDevice = I2cDevice.Create(new I2cConnectionSettings(1, 0x27)))
+            get
+            {
+                return m_activeValueSource;
+            }
+            set
+            {
+                m_activeValueSource = value;
+            }
+        }
+
+        private void InitializeDisplay()
+        {
+            m_displayDevice = I2cDevice.Create(new I2cConnectionSettings(1, 0x27));
             var lcdInterface = LcdInterface.CreateI2c(m_displayDevice, false);
             m_characterLcd = new Lcd2004(lcdInterface);
 
@@ -41,9 +60,30 @@ namespace DisplayControl
             m_lcdConsole.Write("== Ready ==");
         }
 
-        public void InitializeSensors()
+        private void InitializeSensors()
         {
-            
+            m_adcSensors = new AdcSensors();
+            m_adcSensors.Init();
+            foreach(var sensor in m_adcSensors.SensorValueSources)
+            {
+                sensor.PropertyChanged += OnSensorValueChanged;
+                m_sensorValueSources.Add(sensor);
+            }
+        }
+
+        public void OnSensorValueChanged(object sender, PropertyChangedEventArgs args)
+        {
+            if (m_activeValueSource == sender)
+            {
+                DisplayValue(m_activeValueSource);
+            }
+        }
+
+        public void DisplayValue(SensorValueSource valueSource)
+        {
+            m_lcdConsole.Clear();
+            m_lcdConsole.WriteLine(valueSource.ValueDescription);
+            m_lcdConsole.Write(valueSource.ToString());
         }
 
         public void Initialize()
@@ -62,6 +102,15 @@ namespace DisplayControl
 
         public void ShutDown()
         {
+            m_lcdConsole.Clear();
+            m_lcdConsole.BacklightOn = false;
+            m_lcdConsole.DisplayOn = false;
+            foreach(var sensor in m_sensorValueSources)
+            {
+                sensor.PropertyChanged -= OnSensorValueChanged;
+            }
+            m_adcSensors.Dispose();
+            m_adcSensors = null;
             m_lcdConsole.Dispose();
             m_lcdConsole = null;
             m_characterLcd.Dispose();
