@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reactive;
 using System.Text;
+using Avalonia.Media;
 using ReactiveUI;
 
 namespace DisplayControl.ViewModels
@@ -9,14 +10,15 @@ namespace DisplayControl.ViewModels
     public class MainWindowViewModel : ViewModelBase
     {
         private string m_status;
-        private string m_statusColor;
+        private IBrush m_statusColor;
         private bool m_cancel;
 
-        public MainWindowViewModel()
+        public MainWindowViewModel(DataContainer dataContainer)
         {
             Status = "System initialized";
-            StatusColor = "Green";
+            StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
             Cancel = false;
+            DataContainer = dataContainer;
         }
 
         public event Action DoClose;
@@ -33,7 +35,7 @@ namespace DisplayControl.ViewModels
             }
         }
 
-        public string StatusColor
+        public IBrush StatusColor
         {
             get
             {
@@ -57,11 +59,34 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public DataContainer DataContainer 
+        { 
+            get;
+            private set;
+        }
+
+        public void SetStatus(string text, string color)
+        {
+            StatusColor = new SolidColorBrush(SystemDrawing.FromName(color));
+            Status = text;
+        }
+
         public void ExitCommand()
         {
-            Status = "Shutting down...";
             Cancel = true;
             DoClose?.Invoke();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && DataContainer != null)
+            {
+                SetStatus("Shutting down...", "Yellow");
+                DataContainer.ShutDown();
+                DataContainer = null;
+            }
+
+            base.Dispose(disposing);
         }
     }
 }

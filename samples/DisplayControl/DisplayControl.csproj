@@ -25,5 +25,10 @@
       <AdditionalProperties>$(AdditionalProperties);RuntimeIdentifier=linux</AdditionalProperties>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Iot.Device.Bindings">
+      <HintPath>..\..\artifacts\bin\Iot.Device.Bindings\Debug\netcoreapp2.1\Iot.Device.Bindings.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
 </Project>

@@ -51,7 +51,12 @@ namespace DisplayControl.Views
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
-            
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            ViewModel?.Dispose();
+            base.OnClosed(e);
         }
     }
 }
