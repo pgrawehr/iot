@@ -78,6 +78,7 @@ namespace Iot.Device.CharacterLcd
             DefaultA00Map.Add('÷', 253);
             DefaultA00Map.Add('×', (byte)'x');
             DefaultA00Map.Add('█', 255);
+            DefaultA00Map.Add('°', 0b1101_1111);
 
             // Now the japanese characters in the A00 rom map.
             // They use the same order than described in https://de.wikipedia.org/wiki/Japanische_Schrift#F%C3%BCnfzig-Laute-Tafel Table "Katakana", so the mapping sounds reasonable.
@@ -166,6 +167,7 @@ namespace Iot.Device.CharacterLcd
             DefaultA02Map.Add('↲', 0b0001_0111);
             DefaultA02Map.Add('≤', 0b0001_1100);
             DefaultA02Map.Add('≥', 0b0001_1101);
+            DefaultA02Map.Add('°', 0b1011_0000);
 
             // Cyrillic script, capital letters (russian, slawic languages)
             DefaultA02Map.Add('А', (byte)'A');
