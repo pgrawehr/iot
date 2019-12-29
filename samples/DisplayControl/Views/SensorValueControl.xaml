@@ -1,0 +1,17 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:DisplayControl.ViewModels;assembly=DisplayControl"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DisplayControl.Views.SensorValueControl">
+    <Design.DataContext>
+        <vm:SensorValueViewModel/>
+    </Design.DataContext>
+    <StackPanel Orientation="Horizontal" Spacing="5">
+        <TextBlock VerticalAlignment="Center" Text="{Binding ValueDescription}"/>
+        <TextBox VerticalAlignment="Center" Text="{Binding ValueAsString}"/>
+        <TextBlock VerticalAlignment="Center" Text="{Binding Unit}"/>
+        <Button Content="Select!"/>
+    </StackPanel>
+</UserControl>

@@ -32,5 +32,8 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
+        <ItemsControl Items="{Binding SensorValues}">
+            
+        </ItemsControl>
     </StackPanel>
 </Window>

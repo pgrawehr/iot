@@ -13,6 +13,7 @@ namespace DisplayControl.ViewModels
         private string m_status;
         private IBrush m_statusColor;
         private bool m_cancel;
+        private ObservableCollection<SensorValueViewModel> m_sensorValueViewModels;
 
         public MainWindowViewModel()
         {
@@ -30,6 +31,11 @@ namespace DisplayControl.ViewModels
             foreach (var elem in ListBoxElements)
             {
                 elem.PropertyChanged += ListBoxElementPropertyChanged;
+            }
+            m_sensorValueViewModels = new ObservableCollection<SensorValueViewModel>();
+            foreach (var elem in dataContainer.SensorValueSources)
+            {
+                m_sensorValueViewModels.Add(new SensorValueViewModel(elem));
             }
         }
 
@@ -81,6 +87,14 @@ namespace DisplayControl.ViewModels
         {
             get;
             private set;
+        }
+
+        public ObservableCollection<SensorValueViewModel> SensorValues
+        {
+            get
+            {
+                return m_sensorValueViewModels;
+            }
         }
 
         public SensorValueSource SelectedElement

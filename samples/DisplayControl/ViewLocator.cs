@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using DisplayControl.ViewModels;
@@ -11,16 +11,26 @@ namespace DisplayControl
 
         public IControl Build(object data)
         {
-            var name = data.GetType().FullName.Replace("ViewModel", "View");
-            var type = Type.GetType(name);
+            var type = data.GetType();
+            var viewName = type.FullName.Replace("ViewModel", "View");
+            var viewType = Type.GetType(viewName);
 
-            if (type != null)
+            // Should actually place that in a folder named "Controls", but the designer seems to have problems with that
+            var ns = type.Namespace.Replace("ViewModel", "View");
+            var controlName = ns + "." + type.Name.Replace("ViewModel", "Control");
+            var controlType = Type.GetType(controlName);
+
+            if (viewType != null)
             {
-                return (Control)Activator.CreateInstance(type);
+                return (Control)Activator.CreateInstance(viewType);
+            }
+            else if (controlType != null)
+            {
+                return (Control)Activator.CreateInstance(controlType);
             }
             else
             {
-                return new TextBlock { Text = "Not Found: " + name };
+                return new TextBlock { Text = $"View for {data.GetType().FullName} not found."};
             }
         }
 
