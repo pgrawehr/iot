@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
+using Avalonia.Threading;
 using ReactiveUI;
 
 namespace DisplayControl.ViewModels
@@ -21,8 +23,9 @@ namespace DisplayControl.ViewModels
         public SensorValueViewModel(SensorValueSource source)
             : this()
         {
-            _sensorValueSource = source;
+            _sensorValueSource = source ?? throw new ArgumentNullException(nameof(source));
             UpdateValuesFromSource();
+            source.PropertyChanged += SourcePropertyChanged;
         }
 
         public string ValueDescription
@@ -73,6 +76,19 @@ namespace DisplayControl.ViewModels
             ValueDescription = _sensorValueSource.ValueDescription;
             ValueAsString = _sensorValueSource.ValueAsString;
             Unit = _sensorValueSource.Unit;
+        }
+
+        private void SourcePropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                UpdateValuesFromSource();
+                return;
+            }
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                UpdateValuesFromSource();
+            });
         }
     }
 }
