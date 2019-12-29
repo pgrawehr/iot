@@ -14,6 +14,7 @@ namespace DisplayControl.ViewModels
         private IBrush m_statusColor;
         private bool m_cancel;
         private ObservableCollection<SensorValueViewModel> m_sensorValueViewModels;
+        private SensorValueViewModel m_selectedViewModel;
 
         public MainWindowViewModel()
         {
@@ -97,6 +98,18 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public SensorValueViewModel SelectedViewModel
+        {
+            get
+            {
+                return m_selectedViewModel;
+            }
+            private set
+            {
+                this.RaiseAndSetIfChanged(ref m_selectedViewModel, value);
+            }
+        }
+
         public SensorValueSource SelectedElement
         {
             get
@@ -115,6 +128,12 @@ namespace DisplayControl.ViewModels
         private void ListBoxElementPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             this.RaisePropertyChanged(nameof(ListBoxElements));
+        }
+
+        public void ActivateValue(SensorValueViewModel vm)
+        {
+            SelectedViewModel = vm;
+            DataContainer.ActiveValueSource = vm.Source;
         }
 
         public void SetStatus(string text, string color)

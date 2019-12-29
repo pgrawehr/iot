@@ -34,7 +34,7 @@ namespace DisplayControl
             var displayI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.VCC));
             m_displayAdc = new Ads1115(displayI2c);
 
-            _voltage3_3V = new ObservableValue<double>("3.3V Supply Voltage", "V", 0.0);
+            _voltage3_3V = new VoltageWithLimits("3.3V Supply Voltage", 3.2, 3.4);
             _currentSunBrightness = new ObservableValue<double>("Sunlight strength", "V", 0.0);
 
             _sensorValueSources.Add(_voltage3_3V);

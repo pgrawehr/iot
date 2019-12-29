@@ -8,6 +8,8 @@ namespace DisplayControl
 {
     public abstract class SensorValueSource : INotifyPropertyChanged
     {
+        private WarningLevel _warningLevel;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public SensorValueSource(string valueDescription, string unit)
@@ -34,6 +36,19 @@ namespace DisplayControl
             }
         }
 
+        public WarningLevel WarningLevel
+        {
+            get
+            {
+                return _warningLevel;
+            }
+            set
+            {
+                _warningLevel = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         public string Unit
         {
             get;
@@ -47,6 +62,10 @@ namespace DisplayControl
             {
                 tempEvent(this, new PropertyChangedEventArgs(propertyName));
             }
+        }
+
+        protected virtual void ValueChanged()
+        {
         }
 
         public override string ToString()

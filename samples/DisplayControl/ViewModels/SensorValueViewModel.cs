@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
+using Avalonia.Media;
 using Avalonia.Threading;
 using ReactiveUI;
 
@@ -13,6 +14,7 @@ namespace DisplayControl.ViewModels
         private string _valueDescription;
         private string _valueAsString;
         private string _unit;
+        private IBrush _statusColor;
 
         public SensorValueViewModel()
         {
@@ -64,6 +66,26 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public IBrush StatusColor
+        {
+            get
+            {
+                return _statusColor;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _statusColor, value);
+            }
+        }
+
+        public SensorValueSource Source
+        {
+            get
+            {
+                return _sensorValueSource;
+            }
+        }
+
         private void UpdateValuesFromSource()
         {
             if (_sensorValueSource == null)
@@ -71,11 +93,28 @@ namespace DisplayControl.ViewModels
                 ValueDescription = string.Empty;
                 ValueAsString = string.Empty;
                 Unit = string.Empty;
+                StatusColor = new SolidColorBrush(SystemDrawing.FromName("Gray"));
                 return;
             }
             ValueDescription = _sensorValueSource.ValueDescription;
             ValueAsString = _sensorValueSource.ValueAsString;
             Unit = _sensorValueSource.Unit;
+            if (_sensorValueSource.WarningLevel == WarningLevel.None)
+            {
+                StatusColor = new SolidColorBrush(SystemDrawing.FromName("White"));
+            }
+            else if (_sensorValueSource.WarningLevel == WarningLevel.NoData)
+            { 
+                StatusColor = new SolidColorBrush(SystemDrawing.FromName("Gray"));
+            }
+            else if (_sensorValueSource.WarningLevel == WarningLevel.Error)
+            {
+                StatusColor = new SolidColorBrush(SystemDrawing.FromName("Red"));
+            }
+            else if (_sensorValueSource.WarningLevel == WarningLevel.Warning)
+            {
+                StatusColor = new SolidColorBrush(SystemDrawing.FromName("Yellow"));
+            }
         }
 
         private void SourcePropertyChanged(object sender, PropertyChangedEventArgs e)

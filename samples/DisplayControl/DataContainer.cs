@@ -82,7 +82,7 @@ namespace DisplayControl
         public void DisplayValue(SensorValueSource valueSource)
         {
             m_lcdConsole.ReplaceLine(0, valueSource.ValueDescription);
-            m_lcdConsole.ReplaceLine(1, valueSource.ValueAsString);
+            m_lcdConsole.ReplaceLine(1, String.Format(CultureInfo.CurrentCulture, "{0} {1}", valueSource.ValueAsString, valueSource.Unit));
         }
 
         public void Initialize()

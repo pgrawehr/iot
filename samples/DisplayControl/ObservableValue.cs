@@ -43,6 +43,7 @@ namespace DisplayControl
                 }
                 NotifyPropertyChanged();
                 NotifyPropertyChanged(nameof(GenericValue));
+                ValueChanged();
             }
         }
 
@@ -58,7 +59,18 @@ namespace DisplayControl
         {
             get
             {
-                return String.Format(CultureInfo.CurrentCulture, "{0:F3} {1}", Value, Unit);
+                if (typeof(T) == typeof(double) || typeof(T) == typeof(float))
+                {
+                    return String.Format(CultureInfo.CurrentCulture, "{0:F3}", Value);
+                }
+                else if (typeof(T) == typeof(int) || typeof(T) == typeof(short))
+                {
+                    return String.Format(CultureInfo.CurrentCulture, "{0}", Value);
+                }
+                else
+                {
+                    return Value.ToString();
+                }
             }
         }
 
