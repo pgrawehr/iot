@@ -9,6 +9,7 @@ namespace DisplayControl
     public class ObservableValue<T> : SensorValueSource, IObservable<T>
     {
         private T m_value;
+        private string m_valueFormatter;
 
         private List<IObserver<T>> m_observers;
 
@@ -16,6 +17,15 @@ namespace DisplayControl
             : base(valueDescription, unit)
         {
             m_value = value;
+
+            if (typeof(T) == typeof(double) || typeof(T) == typeof(float))
+            {
+                m_valueFormatter = "{0:F3}";
+            }
+            else
+            {
+                m_valueFormatter = "{0}";
+            }
             m_observers = new List<IObserver<T>>();
         }
 
@@ -47,6 +57,21 @@ namespace DisplayControl
             }
         }
 
+        internal string ValueFormatter
+        {
+            get
+            {
+                return m_valueFormatter;
+            }
+            set
+            {
+                m_valueFormatter = value;
+                NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(GenericValue));
+                ValueChanged();
+            }
+        }
+
         public override object GenericValue
         {
             get
@@ -59,18 +84,7 @@ namespace DisplayControl
         {
             get
             {
-                if (typeof(T) == typeof(double) || typeof(T) == typeof(float))
-                {
-                    return String.Format(CultureInfo.CurrentCulture, "{0:F3}", Value);
-                }
-                else if (typeof(T) == typeof(int) || typeof(T) == typeof(short))
-                {
-                    return String.Format(CultureInfo.CurrentCulture, "{0}", Value);
-                }
-                else
-                {
-                    return Value.ToString();
-                }
+                return string.Format(CultureInfo.CurrentCulture, ValueFormatter, Value);
             }
         }
 

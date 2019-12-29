@@ -19,18 +19,19 @@ namespace DisplayControl
         AdcSensors m_adcSensors = null;
         SensorValueSource m_activeValueSource;
 
-        ObservableCollection<SensorValueSource> m_sensorValueSources;
+        List<SensorValueSource> m_sensorValueSources;
+        private DhtSensors m_dhtSensors;
 
         public DataContainer(GpioController controller)
         {
             Controller = controller;
-            m_sensorValueSources = new ObservableCollection<SensorValueSource>();
+            m_sensorValueSources = new List<SensorValueSource>();
             m_activeValueSource = null;
         }
 
         public GpioController Controller { get; }
 
-        public ObservableCollection<SensorValueSource> SensorValueSources => m_sensorValueSources;
+        public List<SensorValueSource> SensorValueSources => m_sensorValueSources;
 
         public SensorValueSource ActiveValueSource
         {
@@ -41,6 +42,8 @@ namespace DisplayControl
             set
             {
                 m_activeValueSource = value;
+                // Immediatelly show the new value
+                DisplayValue(value);
             }
         }
 
@@ -55,7 +58,7 @@ namespace DisplayControl
             m_characterLcd.DisplayOn = true;
             m_characterLcd.Clear();
             m_characterLcd.Write("== Startup ==");
-            m_lcdConsole = new LcdConsole(m_characterLcd, "A02", false);
+            m_lcdConsole = new LcdConsole(m_characterLcd, "A00", false);
             LoadEncoding();
             m_lcdConsole.Clear();
             m_lcdConsole.Write("== Ready ==");
@@ -66,7 +69,16 @@ namespace DisplayControl
             m_adcSensors = new AdcSensors();
             m_adcSensors.Init();
             m_adcSensors.ButtonPressed += DisplayButtonPressed;
-            foreach(var sensor in m_adcSensors.SensorValueSources)
+
+            List<SensorValueSource> allSources = new List<SensorValueSource>();
+            allSources.AddRange(m_adcSensors.SensorValueSources);
+
+            m_dhtSensors = new DhtSensors();
+            m_dhtSensors.Init(Controller);
+
+            allSources.AddRange(m_dhtSensors.SensorValueSources);
+
+            foreach(var sensor in allSources)
             {
                 sensor.PropertyChanged += OnSensorValueChanged;
                 m_sensorValueSources.Add(sensor);
@@ -75,11 +87,44 @@ namespace DisplayControl
 
         private void DisplayButtonPressed(DisplayButton button, bool pressed)
         {
-            if (pressed)
+            if (pressed == false)
+            {
+                // React only on press events
+                return;
+            }
+
+            if (button == DisplayButton.Next)
             {
                 if (ActiveValueSource == null)
                 {
                     ActiveValueSource = SensorValueSources.FirstOrDefault();
+                }
+                else
+                {
+                    int idx = SensorValueSources.IndexOf(ActiveValueSource);
+                    if (idx < 0)
+                    {
+                        idx = 0;
+                    }
+                    idx = (idx + 1) % SensorValueSources.Count;
+                    ActiveValueSource = SensorValueSources[idx];
+                }
+            }
+            if (button == DisplayButton.Previous)
+            {
+                if (ActiveValueSource == null)
+                {
+                    ActiveValueSource = SensorValueSources.FirstOrDefault();
+                }
+                else
+                {
+                    int idx = SensorValueSources.IndexOf(ActiveValueSource);
+                    idx = (idx - 1);
+                    if (idx < 0)
+                    {
+                        idx = SensorValueSources.Count - 1;
+                    }
+                    ActiveValueSource = SensorValueSources[idx];
                 }
             }
         }
@@ -109,7 +154,7 @@ namespace DisplayControl
         /// </summary>
         public void LoadEncoding()
         {
-            m_lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("de-CH"), "A02"));
+            m_lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("de-CH"), "A00"));
         }
 
         public void ShutDown()
@@ -123,6 +168,9 @@ namespace DisplayControl
             }
             m_adcSensors.Dispose();
             m_adcSensors = null;
+            m_dhtSensors.Dispose();
+            m_dhtSensors = null;
+
             m_lcdConsole.Dispose();
             m_lcdConsole = null;
             m_characterLcd.Dispose();

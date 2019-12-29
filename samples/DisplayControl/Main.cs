@@ -29,7 +29,7 @@ namespace DisplayControl
         {
             return AppBuilder.Configure<App>()
                 .UsePlatformDetect()
-                .LogToTrace(Avalonia.Logging.LogEventLevel.Debug)
+                .LogToTrace()
                 .UseReactiveUI();
         }
 
