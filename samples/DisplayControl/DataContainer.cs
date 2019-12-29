@@ -81,9 +81,8 @@ namespace DisplayControl
 
         public void DisplayValue(SensorValueSource valueSource)
         {
-            m_lcdConsole.Clear();
-            m_lcdConsole.WriteLine(valueSource.ValueDescription);
-            m_lcdConsole.Write(valueSource.ToString());
+            m_lcdConsole.ReplaceLine(0, valueSource.ValueDescription);
+            m_lcdConsole.ReplaceLine(1, valueSource.ValueAsString);
         }
 
         public void Initialize()

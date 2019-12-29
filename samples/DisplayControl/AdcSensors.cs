@@ -57,7 +57,7 @@ namespace DisplayControl
                 _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
                 // Todo: Voltage is not really the correct unit for this.
                 _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) - m_cpuAdc.ReadVoltage(InputMultiplexer.AIN0);
-                m_cancellationTokenSource.Token.WaitHandle.WaitOne(2000);
+                m_cancellationTokenSource.Token.WaitHandle.WaitOne(500);
             }
         }
 

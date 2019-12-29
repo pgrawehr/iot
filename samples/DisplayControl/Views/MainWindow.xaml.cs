@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
@@ -61,14 +62,12 @@ namespace DisplayControl.Views
             {
                 Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    m_listBox.BeginInit();
-                    var elems = new List<SensorValueSource>(ViewModel.ListBoxElements);
-                    ViewModel.ListBoxElements.Clear();
-                    foreach(var elem in elems)
-                    {
-                        ViewModel.ListBoxElements.Add(elem);
-                    }
-                    m_listBox.EndInit();
+                    // This is a big hack, but apparently the only way to force the listbox to refresh its contents. 
+                    /*m_listBox.BeginInit();
+                    var elem = ViewModel.ListBoxElements.FirstOrDefault();
+                    ViewModel.ListBoxElements.RemoveAt(0);
+                    ViewModel.ListBoxElements.Insert(0, elem);
+                    m_listBox.EndInit();*/
                 });
             }
         }

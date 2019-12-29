@@ -42,9 +42,10 @@ namespace DisplayControl
 
         protected void NotifyPropertyChanged([CallerMemberName]string propertyName = null)
         {
-            if (PropertyChanged != null)
+            var tempEvent = PropertyChanged;
+            if (tempEvent != null)
             {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+                tempEvent(this, new PropertyChangedEventArgs(propertyName));
             }
         }
 
