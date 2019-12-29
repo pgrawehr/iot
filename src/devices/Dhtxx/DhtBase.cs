@@ -44,6 +44,8 @@ namespace Iot.Device.DHTxx
         private readonly Stopwatch _stopwatch = new Stopwatch();
         private int _lastMeasurement = 0;
 
+        private bool _shouldDispose;
+
         /// <summary>
         /// How last read went, <c>true</c> for success, <c>false</c> for failure
         /// </summary>
@@ -88,9 +90,28 @@ namespace Iot.Device.DHTxx
         {
             _protocol = CommunicationProtocol.OneWire;
             _controller = new GpioController(pinNumberingScheme);
+            _shouldDispose = true;
             _pin = pin;
 
             _controller.OpenPin(_pin);
+            // delay 1s to make sure DHT stable
+            Thread.Sleep(1000);
+        }
+
+        /// <summary>
+        /// Create a DHT sensor attached to a specific GPIO controller
+        /// </summary>
+        /// <param name="gpioController">Gpio Controller, can be external</param>
+        /// <param name="pin">Pin number, in the numbering scheme of the controller</param>
+        /// <param name="shouldDispose">Pass true only if this instance should dispose the controller on exit</param>
+        public DhtBase(GpioController gpioController, int pin, bool shouldDispose = false)
+        {
+            _protocol = CommunicationProtocol.OneWire;
+            _controller = gpioController;
+            _shouldDispose = shouldDispose;
+            _pin = pin;
+            _controller.OpenPin(pin);
+
             // delay 1s to make sure DHT stable
             Thread.Sleep(1000);
         }
@@ -269,7 +290,15 @@ namespace Iot.Device.DHTxx
         /// <inheritdoc/>
         public void Dispose()
         {
-            _controller?.Dispose();
+            if (_shouldDispose)
+            {
+                _controller?.Dispose();
+            }
+            else
+            {
+                _controller.ClosePin(_pin);
+            }
+
             _i2cDevice?.Dispose();
         }
     }

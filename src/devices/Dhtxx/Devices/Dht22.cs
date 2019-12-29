@@ -22,6 +22,17 @@ namespace Iot.Device.DHTxx
         {
         }
 
+        /// <summary>
+        /// Create a DHT22 sensor
+        /// </summary>
+        /// <param name="gpioController">Gpio controller where the sensor is attached</param>
+        /// <param name="pin">The pin number (GPIO number)</param>
+        /// <param name="shouldDispose">True only if the controller should be disposed with the sensor</param>
+        public Dht22(GpioController gpioController, int pin, bool shouldDispose = false)
+            : base(gpioController, pin, shouldDispose)
+        {
+        }
+
         internal override double GetHumidity(byte[] readBuff)
         {
             return (readBuff[0] << 8 | readBuff[1]) * 0.1;

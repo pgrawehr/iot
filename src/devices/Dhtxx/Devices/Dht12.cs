@@ -29,6 +29,17 @@ namespace Iot.Device.DHTxx
         }
 
         /// <summary>
+        /// Create a DHT12 sensor
+        /// </summary>
+        /// <param name="gpioController">Gpio controller where the sensor is attached</param>
+        /// <param name="pin">The pin number (GPIO number)</param>
+        /// <param name="shouldDispose">True only if the controller should be disposed with the sensor</param>
+        public Dht12(GpioController gpioController, int pin, bool shouldDispose = false)
+            : base(gpioController, pin, shouldDispose)
+        {
+        }
+
+        /// <summary>
         /// Create a DHT12 sensor through I2C
         /// </summary>
         /// <param name="i2cDevice">I2C Device</param>
