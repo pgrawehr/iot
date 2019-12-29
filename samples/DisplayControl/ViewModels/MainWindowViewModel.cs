@@ -21,18 +21,12 @@ namespace DisplayControl.ViewModels
             Status = "System initialized";
             StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
             Cancel = false;
-            ListBoxElements = new ObservableCollection<SensorValueSource>();
         }
 
         public MainWindowViewModel(DataContainer dataContainer)
             : this()
         {
             DataContainer = dataContainer;
-            ListBoxElements = new ObservableCollection<SensorValueSource>(dataContainer.SensorValueSources);
-            foreach (var elem in ListBoxElements)
-            {
-                elem.PropertyChanged += ListBoxElementPropertyChanged;
-            }
             m_sensorValueViewModels = new ObservableCollection<SensorValueViewModel>();
             foreach (var elem in dataContainer.SensorValueSources)
             {
@@ -84,12 +78,6 @@ namespace DisplayControl.ViewModels
             private set;
         }
 
-        public ObservableCollection<SensorValueSource> ListBoxElements
-        {
-            get;
-            private set;
-        }
-
         public ObservableCollection<SensorValueViewModel> SensorValues
         {
             get
@@ -108,26 +96,6 @@ namespace DisplayControl.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref m_selectedViewModel, value);
             }
-        }
-
-        public SensorValueSource SelectedElement
-        {
-            get
-            {
-                return DataContainer.ActiveValueSource;
-            }
-            set
-            {
-                var v = DataContainer.ActiveValueSource;
-                // Change before, so that the notified clients see the new value (but provide old value to the method)
-                DataContainer.ActiveValueSource = value;
-                this.RaiseAndSetIfChanged(ref v, value);
-            }
-        }
-
-        private void ListBoxElementPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            this.RaisePropertyChanged(nameof(ListBoxElements));
         }
 
         public void ActivateValue(SensorValueViewModel vm)

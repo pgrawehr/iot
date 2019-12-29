@@ -40,7 +40,6 @@ namespace DisplayControl.Views
                     Close();
                 };
 
-                m_viewModel.PropertyChanged += AnyPropertyChanged;
             }
         }
 
@@ -53,22 +52,6 @@ namespace DisplayControl.Views
             set
             {
                 ViewModel = (MainWindowViewModel)value;
-            }
-        }
-
-        private void AnyPropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(ViewModel.ListBoxElements))
-            {
-                Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    // This is a big hack, but apparently the only way to force the listbox to refresh its contents. 
-                    /*m_listBox.BeginInit();
-                    var elem = ViewModel.ListBoxElements.FirstOrDefault();
-                    ViewModel.ListBoxElements.RemoveAt(0);
-                    ViewModel.ListBoxElements.Insert(0, elem);
-                    m_listBox.EndInit();*/
-                });
             }
         }
 

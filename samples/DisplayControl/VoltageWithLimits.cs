@@ -8,11 +8,15 @@ namespace DisplayControl
     {
         private double _lowerLimit;
         private double _upperLimit;
+        private bool _withinLimits;
         public VoltageWithLimits(string valueDescription, double lowerLimit, double upperLimit) : base(valueDescription, "V", -1.0)
         {
             _lowerLimit = lowerLimit;
             _upperLimit = upperLimit;
+            _withinLimits = true;
         }
+
+        public event Action<object, EventArgs> LimitTriggered;
 
         protected override void ValueChanged()
         {
@@ -31,6 +35,16 @@ namespace DisplayControl
             else
             {
                 WarningLevel = WarningLevel.None;
+            }
+            if (WarningLevel == WarningLevel.Error && _withinLimits)
+            {
+                _withinLimits = false;
+                LimitTriggered?.Invoke(this, new EventArgs());
+            }
+            else if (!_withinLimits)
+            {
+                _withinLimits = true;
+                LimitTriggered?.Invoke(this, new EventArgs());
             }
             base.ValueChanged();
         }

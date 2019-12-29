@@ -20,18 +20,7 @@
         <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
             <TextBlock Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" />
         </StackPanel>
-        <ListBox x:Name="ListElements" Items="{Binding ListBoxElements, Mode=OneWay}" SelectionMode="Single" SelectedItem="{Binding SelectedElement}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="LightGray" CornerRadius="4" Padding="4">
-                        <StackPanel Orientation="Horizontal" Spacing="5">
-                            <TextBlock Text="{Binding ValueDescription}"/>
-                            <TextBox Text="{Binding ValueAsString, Mode=TwoWay}"/>
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        
         <ItemsControl Items="{Binding SensorValues}">
             
         </ItemsControl>

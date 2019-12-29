@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using Iot.Device.CharacterLcd;
 
@@ -64,10 +65,22 @@ namespace DisplayControl
         {
             m_adcSensors = new AdcSensors();
             m_adcSensors.Init();
+            m_adcSensors.ButtonPressed += DisplayButtonPressed;
             foreach(var sensor in m_adcSensors.SensorValueSources)
             {
                 sensor.PropertyChanged += OnSensorValueChanged;
                 m_sensorValueSources.Add(sensor);
+            }
+        }
+
+        private void DisplayButtonPressed(DisplayButton button, bool pressed)
+        {
+            if (pressed)
+            {
+                if (ActiveValueSource == null)
+                {
+                    ActiveValueSource = SensorValueSources.FirstOrDefault();
+                }
             }
         }
 
