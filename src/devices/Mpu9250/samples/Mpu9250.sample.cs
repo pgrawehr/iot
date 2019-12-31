@@ -124,8 +124,7 @@ namespace DemoMpu9250
             Console.WriteLine($"Acc Z bias = {mpu9250.AccelerometerBias.Z}");
             Console.WriteLine("Press a key to continue");
             var readKey = Console.ReadKey();
-            mpu9250.GyroscopeBandwidth = GyroscopeBandwidth.Bandwidth0250Hz;
-            mpu9250.AccelerometerBandwidth = AccelerometerBandwidth.Bandwidth0460Hz;
+            mpu9250.GyroscopeBandwidth = Mpu6050GyroBandwidth.BandWidth188Hz;
             Console.Clear();
 
             while (!Console.KeyAvailable)
