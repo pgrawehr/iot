@@ -93,32 +93,28 @@ namespace DemoMpu9250
         public static void MainTest()
         {
             var mpui2CConnectionSettingmpus = new I2cConnectionSettings(1, Mpu9250.DefaultI2cAddress);
-            Mpu9250 mpu9250 = new Mpu9250(I2cDevice.Create(mpui2CConnectionSettingmpus));
-            Console.WriteLine($"Check version magnetometer: {mpu9250.GetMagnetometerVersion()}");
-            Console.WriteLine(
-                "Magnetometer calibration is taking couple of seconds, please be patient! Please make sure you are not close to any magnetic field like magnet or phone.");
-            Console.WriteLine(
-                "Please move your sensor as much as possible in all direction in space to get as many points in space as possible");
-            var mag = mpu9250.CalibrateMagnetometer();
-            Console.WriteLine($"Hardware bias multiplicative:");
-            Console.WriteLine($"Mag X = {mag.X}");
-            Console.WriteLine($"Mag Y = {mag.Y}");
-            Console.WriteLine($"Mag Z = {mag.Z}");
-            Console.WriteLine($"Calculated corrected bias:");
-            Console.WriteLine($"Mag X = {mpu9250.MagnometerBias.X}");
-            Console.WriteLine($"Mag Y = {mpu9250.MagnometerBias.Y}");
-            Console.WriteLine($"Mag Z = {mpu9250.MagnometerBias.Z}");
-
+            var mpu9250 = new Mpu6050(I2cDevice.Create(mpui2CConnectionSettingmpus));
+            Console.WriteLine("Attach debugger and press enter");
+            Console.ReadLine();
             var resSelfTest = mpu9250.RunGyroscopeAccelerometerSelfTest();
             Console.WriteLine($"Self test:");
-            Console.WriteLine($"Gyro X = {resSelfTest.Item1.X} vs >0.005");
-            Console.WriteLine($"Gyro Y = {resSelfTest.Item1.Y} vs >0.005");
-            Console.WriteLine($"Gyro Z = {resSelfTest.Item1.Z} vs >0.005");
-            Console.WriteLine($"Acc X = {resSelfTest.Item2.X} vs >0.005 & <0.015");
-            Console.WriteLine($"Acc Y = {resSelfTest.Item2.Y} vs >0.005 & <0.015");
-            Console.WriteLine($"Acc Z = {resSelfTest.Item2.Z} vs >0.005 & <0.015");
+            Console.WriteLine($"Gyro X = {resSelfTest.Item1.X}% (should be < +/-14%)");
+            Console.WriteLine($"Gyro Y = {resSelfTest.Item1.Y}% (should be < +/-14%)");
+            Console.WriteLine($"Gyro Z = {resSelfTest.Item1.Z}% (should be < +/-14%)");
+            Console.WriteLine($"Acc X = {resSelfTest.Item2.X}% (should be < +/-14%)");
+            Console.WriteLine($"Acc Y = {resSelfTest.Item2.Y}% (should be < +/-14%)");
+            Console.WriteLine($"Acc Z = {resSelfTest.Item2.Z}% (should be < +/-14%)");
+            if (resSelfTest.pass)
+            {
+                Console.WriteLine($"Self test PASSED");
+            }
+            else
+            {
+                Console.WriteLine($"Self test FAILED");
+            }
+
             Console.WriteLine("Running Gyroscope and Accelerometer calibration");
-            mpu9250.CalibrateGyroscopeAccelerometer();
+            // mpu9250.CalibrateGyroscopeAccelerometer();
             Console.WriteLine("Calibration results:");
             Console.WriteLine($"Gyro X bias = {mpu9250.GyroscopeBias.X}");
             Console.WriteLine($"Gyro Y bias = {mpu9250.GyroscopeBias.Y}");
@@ -144,10 +140,6 @@ namespace DemoMpu9250
                 Console.WriteLine($"Acc Y = {acc.Y,15}");
                 Console.WriteLine($"Acc Z = {acc.Z,15}");
                 Console.WriteLine($"Temp = {mpu9250.GetTemperature().Celsius.ToString("0.00")} °C");
-                var magne = mpu9250.ReadMagnetometer();
-                Console.WriteLine($"Mag X = {magne.X,15}");
-                Console.WriteLine($"Mag Y = {magne.Y,15}");
-                Console.WriteLine($"Mag Z = {magne.Z,15}");
                 Thread.Sleep(100);
             }
 
