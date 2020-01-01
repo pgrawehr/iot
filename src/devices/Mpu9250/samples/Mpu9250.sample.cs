@@ -6,6 +6,7 @@ using System;
 using System.Device.I2c;
 using System.IO;
 using System.Net;
+using System.Numerics;
 using System.Threading;
 using Iot.Device.Imu;
 
@@ -127,19 +128,52 @@ namespace DemoMpu9250
             mpu9250.GyroscopeBandwidth = Mpu6050GyroBandwidth.BandWidth188Hz;
             Console.Clear();
 
+            // Fix this: should use sample rate, but we read at only 10 Hz below
+            mpu9250.SampleRateDivider = 0;
+            MadgwickAhrs ahrs = new MadgwickAhrs(mpu9250.SampleRate);
+
+            DateTime lastUpdate = DateTime.UtcNow;
+            Vector3 gyro = new Vector3();
+            Vector3 acc = new Vector3();
+
             while (!Console.KeyAvailable)
             {
-                Console.CursorTop = 0;
-                var gyro = mpu9250.GetGyroscopeReading();
-                Console.WriteLine($"Gyro X = {gyro.X,15}");
-                Console.WriteLine($"Gyro Y = {gyro.Y,15}");
-                Console.WriteLine($"Gyro Z = {gyro.Z,15}");
-                var acc = mpu9250.GetAccelerometer();
-                Console.WriteLine($"Acc X = {acc.X,15}");
-                Console.WriteLine($"Acc Y = {acc.Y,15}");
-                Console.WriteLine($"Acc Z = {acc.Z,15}");
-                Console.WriteLine($"Temp = {mpu9250.GetTemperature().Celsius.ToString("0.00")} °C");
-                Thread.Sleep(100);
+                double yaw;
+                double pitch;
+                double roll;
+                if (mpu9250.DataReady)
+                {
+                    gyro = mpu9250.GetGyroscopeReading();
+                    acc = mpu9250.GetAccelerometer();
+                    ahrs.Update((float)(gyro.X / 180.0 * Math.PI), (float)(gyro.Y / 180.0 * Math.PI), (float)(gyro.Z / 180.0 * Math.PI), acc.X, acc.Y, acc.Z);
+                }
+
+                var q = ahrs.Quaternion;
+                // Convert to Euler angles
+                yaw = Math.Atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
+                pitch = -Math.Asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
+                roll = Math.Atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+
+                pitch *= 180.0f / Math.PI;
+                yaw *= 180.0f / Math.PI;
+                roll *= 180.0f / Math.PI;
+
+                DateTime currentTime = DateTime.UtcNow;
+                if (currentTime - lastUpdate > TimeSpan.FromSeconds(1))
+                {
+                    lastUpdate = currentTime;
+                    Console.CursorTop = 0;
+                    Console.WriteLine($"Gyro X = {gyro.X,15}");
+                    Console.WriteLine($"Gyro Y = {gyro.Y,15}");
+                    Console.WriteLine($"Gyro Z = {gyro.Z,15}");
+                    Console.WriteLine($"Acc X = {acc.X,15}");
+                    Console.WriteLine($"Acc Y = {acc.Y,15}");
+                    Console.WriteLine($"Acc Z = {acc.Z,15}");
+                    Console.WriteLine($"Temp = {mpu9250.GetTemperature().Celsius.ToString("0.00")} °C");
+                    Console.WriteLine("Yaw, Pitch, Roll: {0:F2}, {1:F2}, {2:F2}", yaw, pitch, roll);
+                }
+
+                // Thread.Sleep((int)(1000 / mpu9250.SampleRate));
             }
 
             readKey = Console.ReadKey();
