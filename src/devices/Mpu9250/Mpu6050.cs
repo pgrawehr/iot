@@ -31,8 +31,6 @@ namespace Iot.Device.Imu
         /// </summary>
         public const byte SecondI2cAddress = 0x69;
 
-        private const float Adc = 0x8000;
-        private const float Gravity = 9.807f;
         internal I2cDevice _i2cDevice;
         private Vector3 _accelerometerBias = new Vector3();
         private Vector3 _gyroscopeBias = new Vector3();
@@ -48,6 +46,8 @@ namespace Iot.Device.Imu
         public Mpu6050(I2cDevice i2cDevice)
         {
             _i2cDevice = i2cDevice;
+            _accelerometerBias = new Vector3(0, 0, 0);
+            _gyroscopeBias = new Vector3(0, 0, 0);
             Reset();
             if (!CheckVersion())
             {
@@ -113,6 +113,16 @@ namespace Iot.Device.Imu
         }
 
         /// <summary>
+        /// If this is enabled, all sensor readings will automatically apply the calculated biases.
+        /// Before enabling this, it is suggested to run a calibration or load existing calibration values.
+        /// </summary>
+        public bool AutoApplyBias
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
         /// Get the accelerometer in G
         /// </summary>
         /// <remarks>
@@ -126,7 +136,16 @@ namespace Iot.Device.Imu
         ///  /  |  \
         ///         +X
         /// </remarks>
-        public Vector3 GetAccelerometer() => GetRawAccelerometer() * AccelerationScale;
+        public Vector3 GetAccelerometer()
+        {
+            var ret = GetRawAccelerometer() * AccelerationScale;
+            if (AutoApplyBias)
+            {
+                ret += AccelerometerBias;
+            }
+
+            return ret;
+        }
 
         private Vector3 GetRawAccelerometer()
         {
@@ -255,7 +274,16 @@ namespace Iot.Device.Imu
         ///  /  |  \
         ///         +X
         /// </remarks>
-        public Vector3 GetGyroscopeReading() => GetRawGyroscope() * GyroscopeScale;
+        public Vector3 GetGyroscopeReading()
+        {
+            var ret = GetRawGyroscope() * GyroscopeScale;
+            if (AutoApplyBias)
+            {
+                ret += GyroscopeBias;
+            }
+
+            return ret;
+        }
 
         private Vector3 GetRawGyroscope()
         {
@@ -420,22 +448,44 @@ namespace Iot.Device.Imu
             }
             set
             {
-                if (value != FifoModes.None)
+                // Reset the fifo
+                int usrCtl = ReadByte(Register.USER_CTRL);
+
+                WriteRegister(Register.USER_CTRL, (byte)(usrCtl | (int)UserControls.FIFO_RST));
+
+                // Then set the correct bits for the values we need
+                WriteRegister(Register.FIFO_EN, (byte)value);
+
+                // Enable (or disable) the fifo
+                if (FifoModes != FifoModes.None)
                 {
-                    // Make sure the FIFO is enabled
-                    var usrCtl = (UserControls)ReadByte(Register.USER_CTRL);
-                    usrCtl = usrCtl | UserControls.FIFO_RST;
-                    WriteRegister(Register.USER_CTRL, (byte)usrCtl);
+                    WriteRegister(Register.USER_CTRL, (byte)(usrCtl | 0b0100_0000));
+                    int timeout = 1000;
+                    while (timeout-- > 0)
+                    {
+                        // After a reset, we need to wait until we can set the enable bit
+                        // Again, this is undocumented, but otherwise, the register just stays 0
+                        byte checkValue = ReadByte(Register.USER_CTRL);
+                        // The other bit (bit 6) is the i2c master enable bit, the only we don't care about here
+                        if (checkValue == 0b0100_0000 || checkValue == 0b0110_0000)
+                        {
+                            // Clear the interrupt status register
+                            ReadByte(Register.INT_STATUS);
+                            return;
+                        }
+
+                        WriteRegister(Register.USER_CTRL, (byte)(usrCtl | 0b0100_0000));
+                        Thread.Sleep(1);
+                    }
+
+                    // Still unable to set the bit? This is a problem
+                    throw new IOException("Could not enable FIFO buffer");
                 }
                 else
                 {
-                    // Deactivate FIFO
-                    var usrCtl = (UserControls)ReadByte(Register.USER_CTRL);
-                    usrCtl = usrCtl & ~UserControls.FIFO_RST;
-                    WriteRegister(Register.USER_CTRL, (byte)usrCtl);
+                    WriteRegister(Register.USER_CTRL, (byte)(usrCtl & ~0b0100_0000));
                 }
 
-                WriteRegister(Register.FIFO_EN, (byte)value);
             }
         }
 
@@ -465,6 +515,18 @@ namespace Iot.Device.Imu
         #region Calibration and tests
 
         /// <summary>
+        /// Loads existing calibration values. Use this if no new calibration is needed or if a
+        /// calibration of the bias values is currently not possible, because the sensor cannot be brought into a level and steady state right now.
+        /// </summary>
+        /// <param name="gyroscopeBias">Gyroscope bias</param>
+        /// <param name="accelerometerBias">Accelerometer bias</param>
+        public void LoadCalibrationValues(Vector3 gyroscopeBias, Vector3 accelerometerBias)
+        {
+            _gyroscopeBias = gyroscopeBias;
+            _accelerometerBias = accelerometerBias;
+        }
+
+        /// <summary>
         /// Perform full calibration the gyroscope and the accelerometer
         /// It will automatically adjust as well the offset stored in the device
         /// The result bias will be stored in the AcceloremeterBias and GyroscopeBias
@@ -472,14 +534,7 @@ namespace Iot.Device.Imu
         /// <returns>Gyroscope and accelerometer bias</returns>
         public (Vector3 gyroscopeBias, Vector3 accelerometerBias) CalibrateGyroscopeAccelerometer()
         {
-            // = 131 LSB/degrees/sec
-            const int GyroSensitivity = 131;
-            // = 16384 LSB/g
-            const int AccSensitivity = 16384;
-            byte i2cMaster;
-            byte userControls;
-
-            Span<byte> rawData = stackalloc byte[12];
+            Span<byte> rawData = stackalloc byte[24];
 
             Vector3 gyroBias = new Vector3();
             Vector3 acceBias = new Vector3();
@@ -492,17 +547,16 @@ namespace Iot.Device.Imu
             WriteRegister(Register.INT_ENABLE, 0x00);
             // Disable FIFO
             FifoModes = FifoModes.None;
-            // Disable I2C master
-            i2cMaster = ReadByte(Register.I2C_MST_CTRL);
-            WriteRegister(Register.I2C_MST_CTRL, 0x00);
-            // Disable FIFO and I2C master modes
-            userControls = ReadByte(Register.USER_CTRL);
-            WriteRegister(Register.USER_CTRL, (byte)UserControls.None);
-            // Reset FIFO and DMP
-            WriteRegister(Register.USER_CTRL, (byte)UserControls.FIFO_RST);
+
             DelayHelper.DelayMilliseconds(15, false);
 
             // Configure MPU6050 gyro and accelerometer for bias calculation
+            var oldGyroSettings = GyroscopeBandwidth;
+            var oldSampleRateDivider = SampleRateDivider;
+            var oldGyroRange = GyroscopeRange;
+            var oldAccelRange = AccelerometerRange;
+
+            // Todo: Do we need to do this for several configuration parameter sets?
             // Set low-pass filter to 184 Hz
             GyroscopeBandwidth = Mpu6050GyroBandwidth.BandWidth188Hz;
             // Set sample rate to 1 kHz
@@ -513,120 +567,129 @@ namespace Iot.Device.Imu
 
             // Configure FIFO will be needed for bias calculation
             FifoModes = FifoModes.GyroscopeX | FifoModes.GyroscopeY | FifoModes.GyroscopeZ | FifoModes.Accelerometer;
-            // accumulate 40 samples in 40 milliseconds = 480 bytes
-            // Do not exceed 512 bytes max buffer
-            DelayHelper.DelayMilliseconds(40, false);
-            // We have our data, deactivate FIFO
-            FifoModes = FifoModes.None;
 
-            // How many sets of full gyro and accelerometer data for averaging
-            var packetCount = FifoCount / 12;
-
-            for (uint reading = 0; reading < packetCount; reading++)
+            Vector3 gyroMax = new Vector3(-1E10f, -1E10f, -1E10f);
+            Vector3 gyroMin = new Vector3(1E10f, 1E10f, 1E10f);
+            // Accumulate 2000 packets
+            int totalPacketCount = 0;
+            List<byte> completeBuffer = new List<byte>(4000);
+            while (totalPacketCount < 50)
             {
-                Vector3 accel_temp = new Vector3();
-                Vector3 gyro_temp = new Vector3();
+                ////byte intStatus = ReadByte(Register.INT_STATUS);
 
-                // Read data
-                ReadBytes(Register.FIFO_R_W, rawData);
+                ////if ((intStatus & 0x10) == 0x10)
+                ////{
+                ////    throw new IOException("Buffer overflow during calibration. Use a faster CPU");
+                ////}
 
-                // Form signed 16-bit integer for each sample in FIFO
-                accel_temp.X = BinaryPrimitives.ReadUInt16BigEndian(rawData);
-                accel_temp.Y = BinaryPrimitives.ReadUInt16BigEndian(rawData.Slice(2));
-                accel_temp.Z = BinaryPrimitives.ReadUInt16BigEndian(rawData.Slice(4));
-                gyro_temp.X = BinaryPrimitives.ReadUInt16BigEndian(rawData.Slice(6));
-                gyro_temp.Y = BinaryPrimitives.ReadUInt16BigEndian(rawData.Slice(8));
-                gyro_temp.Z = BinaryPrimitives.ReadUInt16BigEndian(rawData.Slice(10));
+                // How many sets of full gyro and accelerometer data for averaging
+                int packetCount = (int)(FifoCount / 24);
 
-                acceBias += accel_temp;
-                gyroBias += gyro_temp;
+                for (uint reading = 0; reading < packetCount; reading++)
+                {
+                    // There's data in the fifo, check first that we didn't have an overflow
+                    byte intStatus = ReadByte(Register.INT_STATUS);
+
+                    if ((intStatus & 0x10) == 0x10)
+                    {
+                        throw new IOException("Buffer overflow during calibration. Use a faster CPU");
+                    }
+
+                    ////Vector3 accel_temp = new Vector3();
+                    ////Vector3 gyro_temp = new Vector3();
+                    ReadBytes(Register.FIFO_R_W, rawData);
+
+                    completeBuffer.AddRange(rawData.ToArray());
+
+                    ////// Form signed 16-bit integer for each sample in FIFO
+                    ////accel_temp.X = BinaryPrimitives.ReadInt16BigEndian(rawData);
+                    ////accel_temp.Y = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(2));
+                    ////accel_temp.Z = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(4));
+                    ////gyro_temp.X = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(6));
+                    ////gyro_temp.Y = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(8));
+                    ////gyro_temp.Z = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(10));
+
+                    ////Console.Write("Raw Data:");
+                    ////for (int i = 0; i < rawData.Length; i++)
+                    ////{
+                    ////    Console.Write("{0:X} ", rawData[i]);
+                    ////}
+
+                    ////Console.WriteLine();
+
+                    ////if (gyroMax.X < gyro_temp.X)
+                    ////{
+                    ////    gyroMax.X = gyro_temp.X;
+                    ////}
+
+                    ////if (gyroMax.Y < gyro_temp.Y)
+                    ////{
+                    ////    gyroMax.Y = gyro_temp.Y;
+                    ////}
+
+                    ////if (gyroMax.Z < gyro_temp.Z)
+                    ////{
+                    ////    gyroMax.Z = gyro_temp.Z;
+                    ////}
+
+                    ////if (gyroMin.Y > gyro_temp.Y)
+                    ////{
+                    ////    gyroMin.Y = gyro_temp.Y;
+                    ////}
+
+                    ////if (gyroMin.X > gyro_temp.X)
+                    ////{
+                    ////    gyroMin.X = gyro_temp.X;
+                    ////}
+
+                    ////if (gyroMin.Z > gyro_temp.Z)
+                    ////{
+                    ////    gyroMin.Z = gyro_temp.Z;
+                    ////}
+
+                    ////acceBias += accel_temp;
+                    ////gyroBias += gyro_temp;
+                }
+
+                totalPacketCount += packetCount;
+                // Thread.Sleep(20);
+            }
+
+            for (int i = 0; i < completeBuffer.Count / 12; i++)
+            {
+                Console.Write("Raw Data Set {0}:", i);
+                for (int j = 0; j < 12; j++)
+                {
+                    int idx = i * 12 + j;
+                    Console.Write("{0:X} ", completeBuffer[idx]);
+                }
+
+                Console.WriteLine();
             }
 
             // Make the average
-            acceBias /= packetCount;
-            gyroBias /= packetCount;
+            acceBias /= totalPacketCount;
+            gyroBias /= totalPacketCount;
 
-            // bias on Z is cumulative
-            acceBias.Z += acceBias.Z > 0 ? -AccSensitivity : AccSensitivity;
-
-            // Divide by 4 to get 32.9 LSB per deg/s
-            // Biases are additive, so change sign on calculated average gyro biases
-            rawData[0] = (byte)(((int)(-gyroBias.X / 4) >> 8) & 0xFF);
-            rawData[1] = (byte)((int)(-gyroBias.X / 4) & 0xFF);
-            rawData[2] = (byte)(((int)(-gyroBias.Y / 4) >> 8) & 0xFF);
-            rawData[3] = (byte)((int)(-gyroBias.Y / 4) & 0xFF);
-            rawData[4] = (byte)(((int)(-gyroBias.Z / 4) >> 8) & 0xFF);
-            rawData[5] = (byte)((int)(-gyroBias.Z / 4) & 0xFF);
-
-            // Changes all Gyroscope offsets
-            WriteRegister(Register.XG_OFFSET_H, rawData[0]);
-            WriteRegister(Register.XG_OFFSET_L, rawData[1]);
-            WriteRegister(Register.YG_OFFSET_H, rawData[2]);
-            WriteRegister(Register.YG_OFFSET_L, rawData[3]);
-            WriteRegister(Register.ZG_OFFSET_H, rawData[4]);
-            WriteRegister(Register.ZG_OFFSET_L, rawData[5]);
+            gyroMax *= GyroscopeScale;
+            gyroMin *= GyroscopeScale;
 
             // Output scaled gyro biases for display in the main program
-            _gyroscopeBias = gyroBias / GyroSensitivity;
-
-            // Construct the accelerometer biases for push to the hardware accelerometer
-            // bias registers. These registers contain factory trim values which must be
-            // added to the calculated accelerometer biases; on boot up these registers
-            // will hold non-zero values. In addition, bit 0 of the lower byte must be
-            // preserved since it is used for temperature compensation calculations.
-            // Accelerometer bias registers expect bias input as 2048 LSB per g, so that
-            // the accelerometer biases calculated above must be divided by 8.
-
-            // A place to hold the factory accelerometer trim biases
-            Vector3 accel_bias_reg = new Vector3();
-            Span<byte> accData = stackalloc byte[2];
-            // Read factory accelerometer trim values
-            ReadBytes(Register.XA_OFFSET_H, accData);
-            accel_bias_reg.X = BinaryPrimitives.ReadUInt16BigEndian(accData);
-            ReadBytes(Register.YA_OFFSET_H, accData);
-            accel_bias_reg.Y = BinaryPrimitives.ReadUInt16BigEndian(accData);
-            ReadBytes(Register.ZA_OFFSET_H, accData);
-            accel_bias_reg.Z = BinaryPrimitives.ReadUInt16BigEndian(accData);
-
-            // Define mask for temperature compensation bit 0 of lower byte of
-            // accelerometer bias registers
-            uint mask = 0x01;
-            // Define array to hold mask bit for each accelerometer bias axis
-            Span<byte> mask_bit = stackalloc byte[3];
-
-            // If temperature compensation bit is set, record that fact in mask_bit
-            mask_bit[0] = (((uint)accel_bias_reg.X & mask) == mask) ? (byte)0x01 : (byte)0x00;
-            mask_bit[1] = (((uint)accel_bias_reg.Y & mask) == mask) ? (byte)0x01 : (byte)0x00;
-            mask_bit[2] = (((uint)accel_bias_reg.Z & mask) == mask) ? (byte)0x01 : (byte)0x00;
-
-            // Construct total accelerometer bias, including calculated average
-            // accelerometer bias from above
-            // Subtract calculated averaged accelerometer bias scaled to 2048 LSB/g
-            // (16 g full scale) and keep the mask
-            accel_bias_reg -= acceBias / 8;
-            // Add the "reserved" mask as it was
-            rawData[0] = (byte)(((int)accel_bias_reg.X >> 8) & 0xFF);
-            rawData[1] = (byte)(((int)accel_bias_reg.X & 0xFF) | mask_bit[0]);
-            rawData[2] = (byte)(((int)accel_bias_reg.Y >> 8) & 0xFF);
-            rawData[3] = (byte)(((int)accel_bias_reg.Y & 0xFF) | mask_bit[1]);
-            rawData[4] = (byte)(((int)accel_bias_reg.Z >> 8) & 0xFF);
-            rawData[5] = (byte)(((int)accel_bias_reg.Z & 0xFF) | mask_bit[2]);
-            // Push accelerometer biases to hardware registers
-            WriteRegister(Register.XA_OFFSET_H, rawData[0]);
-            WriteRegister(Register.XA_OFFSET_L, rawData[1]);
-            WriteRegister(Register.YA_OFFSET_H, rawData[2]);
-            WriteRegister(Register.YA_OFFSET_L, rawData[3]);
-            WriteRegister(Register.ZA_OFFSET_H, rawData[4]);
-            WriteRegister(Register.ZA_OFFSET_L, rawData[5]);
-
-            // Restore the previous modes
-            WriteRegister(Register.USER_CTRL, (byte)(userControls | (byte)UserControls.I2C_MST_EN));
-            i2cMaster = (byte)(i2cMaster & (~(byte)(I2cBusFrequency.Frequency348kHz) | (byte)I2cBusFrequency.Frequency400kHz));
-            WriteRegister(Register.I2C_MST_CTRL, i2cMaster);
-            DelayHelper.DelayMilliseconds(10, false);
+            // needs to be done before we change the rates again
+            _gyroscopeBias = gyroBias * GyroscopeScale;
 
             // Finally store the acceleration bias
-            _accelerometerBias = acceBias / AccSensitivity;
+            _accelerometerBias = acceBias * AccelerationScale;
+
+            // As long as we are on earth, the vertical acceleration is 1G, we don't want to consider that an error.
+            _accelerometerBias -= new Vector3(0, 0, 1);
+
+            // We have our data, deactivate FIFO and restore old values
+            FifoModes = FifoModes.None;
+            GyroscopeBandwidth = oldGyroSettings;
+            SampleRateDivider = oldSampleRateDivider;
+            GyroscopeRange = oldGyroRange;
+            AccelerometerRange = oldAccelRange;
 
             return (_gyroscopeBias, _accelerometerBias);
         }

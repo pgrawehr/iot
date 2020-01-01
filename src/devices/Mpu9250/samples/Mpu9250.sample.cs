@@ -114,8 +114,8 @@ namespace DemoMpu9250
                 Console.WriteLine($"Self test FAILED");
             }
 
-            Console.WriteLine("Running Gyroscope and Accelerometer calibration");
-            // mpu9250.CalibrateGyroscopeAccelerometer();
+            Console.WriteLine("Running Gyroscope and Accelerometer calibration. Keep the sensor level and steady.");
+            mpu9250.CalibrateGyroscopeAccelerometer();
             Console.WriteLine("Calibration results:");
             Console.WriteLine($"Gyro X bias = {mpu9250.GyroscopeBias.X}");
             Console.WriteLine($"Gyro Y bias = {mpu9250.GyroscopeBias.Y}");
@@ -136,6 +136,9 @@ namespace DemoMpu9250
             Vector3 gyro = new Vector3();
             Vector3 acc = new Vector3();
 
+            Vector3 gyroSum = new Vector3();
+            Vector3 accSum = new Vector3();
+
             while (!Console.KeyAvailable)
             {
                 double yaw;
@@ -144,7 +147,9 @@ namespace DemoMpu9250
                 if (mpu9250.DataReady)
                 {
                     gyro = mpu9250.GetGyroscopeReading();
+                    gyroSum += gyro;
                     acc = mpu9250.GetAccelerometer();
+                    accSum += acc;
                     ahrs.Update((float)(gyro.X / 180.0 * Math.PI), (float)(gyro.Y / 180.0 * Math.PI), (float)(gyro.Z / 180.0 * Math.PI), acc.X, acc.Y, acc.Z);
                 }
 
@@ -163,12 +168,21 @@ namespace DemoMpu9250
                 {
                     lastUpdate = currentTime;
                     Console.CursorTop = 0;
+                    Console.WriteLine("Last reading:");
                     Console.WriteLine($"Gyro X = {gyro.X,15}");
                     Console.WriteLine($"Gyro Y = {gyro.Y,15}");
                     Console.WriteLine($"Gyro Z = {gyro.Z,15}");
                     Console.WriteLine($"Acc X = {acc.X,15}");
                     Console.WriteLine($"Acc Y = {acc.Y,15}");
                     Console.WriteLine($"Acc Z = {acc.Z,15}");
+
+                    Console.WriteLine("Cummulative reading:");
+                    Console.WriteLine($"Gyro X = {gyroSum.X,15}");
+                    Console.WriteLine($"Gyro Y = {gyroSum.Y,15}");
+                    Console.WriteLine($"Gyro Z = {gyroSum.Z,15}");
+                    Console.WriteLine($"Acc X = {accSum.X,15}");
+                    Console.WriteLine($"Acc Y = {accSum.Y,15}");
+                    Console.WriteLine($"Acc Z = {accSum.Z,15}");
                     Console.WriteLine($"Temp = {mpu9250.GetTemperature().Celsius.ToString("0.00")} °C");
                     Console.WriteLine("Yaw, Pitch, Roll: {0:F2}, {1:F2}, {2:F2}", yaw, pitch, roll);
                 }
@@ -188,7 +202,7 @@ namespace DemoMpu9250
             while (!Console.KeyAvailable)
             {
                 Console.CursorTop = 0;
-                var acc = mpu9250.GetAccelerometer();
+                acc = mpu9250.GetAccelerometer();
                 Console.WriteLine($"Acc X = {acc.X,15}");
                 Console.WriteLine($"Acc Y = {acc.Y,15}");
                 Console.WriteLine($"Acc Z = {acc.Z,15}");
