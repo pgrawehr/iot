@@ -139,6 +139,8 @@ namespace DemoMpu9250
             Vector3 gyroSum = new Vector3();
             Vector3 accSum = new Vector3();
 
+            mpu9250.AutoApplyBias = true;
+
             while (!Console.KeyAvailable)
             {
                 double yaw;

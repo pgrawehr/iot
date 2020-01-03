@@ -570,19 +570,15 @@ namespace Iot.Device.Imu
 
             Vector3 gyroMax = new Vector3(-1E10f, -1E10f, -1E10f);
             Vector3 gyroMin = new Vector3(1E10f, 1E10f, 1E10f);
-            // Accumulate 2000 packets
+            // Accumulate 50 packets using the FIFO.
+            // Note that we must be very fast, otherwise the buffer seems to overflow and the data in the buffer is shifted by some bytes,
+            // basically making it unusable. This however happens even if the overflow register is not set
             int totalPacketCount = 0;
             List<byte> completeBuffer = new List<byte>(4000);
+
             while (totalPacketCount < 50)
             {
-                ////byte intStatus = ReadByte(Register.INT_STATUS);
-
-                ////if ((intStatus & 0x10) == 0x10)
-                ////{
-                ////    throw new IOException("Buffer overflow during calibration. Use a faster CPU");
-                ////}
-
-                // How many sets of full gyro and accelerometer data for averaging
+                // How many sets of full gyro and accelerometer data for averaging (reading two data sets at once)
                 int packetCount = (int)(FifoCount / 24);
 
                 for (uint reading = 0; reading < packetCount; reading++)
@@ -595,64 +591,12 @@ namespace Iot.Device.Imu
                         throw new IOException("Buffer overflow during calibration. Use a faster CPU");
                     }
 
-                    ////Vector3 accel_temp = new Vector3();
-                    ////Vector3 gyro_temp = new Vector3();
                     ReadBytes(Register.FIFO_R_W, rawData);
 
                     completeBuffer.AddRange(rawData.ToArray());
 
-                    ////// Form signed 16-bit integer for each sample in FIFO
-                    ////accel_temp.X = BinaryPrimitives.ReadInt16BigEndian(rawData);
-                    ////accel_temp.Y = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(2));
-                    ////accel_temp.Z = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(4));
-                    ////gyro_temp.X = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(6));
-                    ////gyro_temp.Y = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(8));
-                    ////gyro_temp.Z = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(10));
-
-                    ////Console.Write("Raw Data:");
-                    ////for (int i = 0; i < rawData.Length; i++)
-                    ////{
-                    ////    Console.Write("{0:X} ", rawData[i]);
-                    ////}
-
-                    ////Console.WriteLine();
-
-                    ////if (gyroMax.X < gyro_temp.X)
-                    ////{
-                    ////    gyroMax.X = gyro_temp.X;
-                    ////}
-
-                    ////if (gyroMax.Y < gyro_temp.Y)
-                    ////{
-                    ////    gyroMax.Y = gyro_temp.Y;
-                    ////}
-
-                    ////if (gyroMax.Z < gyro_temp.Z)
-                    ////{
-                    ////    gyroMax.Z = gyro_temp.Z;
-                    ////}
-
-                    ////if (gyroMin.Y > gyro_temp.Y)
-                    ////{
-                    ////    gyroMin.Y = gyro_temp.Y;
-                    ////}
-
-                    ////if (gyroMin.X > gyro_temp.X)
-                    ////{
-                    ////    gyroMin.X = gyro_temp.X;
-                    ////}
-
-                    ////if (gyroMin.Z > gyro_temp.Z)
-                    ////{
-                    ////    gyroMin.Z = gyro_temp.Z;
-                    ////}
-
-                    ////acceBias += accel_temp;
-                    ////gyroBias += gyro_temp;
+                    totalPacketCount += packetCount;
                 }
-
-                totalPacketCount += packetCount;
-                // Thread.Sleep(20);
             }
 
             for (int i = 0; i < completeBuffer.Count / 12; i++)
@@ -665,24 +609,36 @@ namespace Iot.Device.Imu
                 }
 
                 Console.WriteLine();
+
+                Vector3 accel_temp = new Vector3();
+                Vector3 gyro_temp = new Vector3();
+                // Form signed 16-bit integer for each sample in FIFO
+                accel_temp.X = BinaryPrimitives.ReadInt16BigEndian(rawData);
+                accel_temp.Y = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(2));
+                accel_temp.Z = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(4));
+                gyro_temp.X = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(6));
+                gyro_temp.Y = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(8));
+                gyro_temp.Z = BinaryPrimitives.ReadInt16BigEndian(rawData.Slice(10));
+
+                acceBias += accel_temp;
+                gyroBias += gyro_temp;
             }
 
             // Make the average
             acceBias /= totalPacketCount;
             gyroBias /= totalPacketCount;
 
-            gyroMax *= GyroscopeScale;
-            gyroMin *= GyroscopeScale;
-
             // Output scaled gyro biases for display in the main program
             // needs to be done before we change the rates again
             _gyroscopeBias = gyroBias * GyroscopeScale;
+            _gyroscopeBias = -_gyroscopeBias;
 
             // Finally store the acceleration bias
             _accelerometerBias = acceBias * AccelerationScale;
 
             // As long as we are on earth, the vertical acceleration is 1G, we don't want to consider that an error.
-            _accelerometerBias -= new Vector3(0, 0, 1);
+            _accelerometerBias -= new Vector3(0, 0, 2);
+            _accelerometerBias.Z = -_accelerometerBias.Z;
 
             // We have our data, deactivate FIFO and restore old values
             FifoModes = FifoModes.None;
