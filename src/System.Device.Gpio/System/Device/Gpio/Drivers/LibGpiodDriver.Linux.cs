@@ -193,9 +193,11 @@ namespace System.Device.Gpio.Drivers
                 }
 
                 bool eventOccured = false;
+                PinEventTypes typeOfEventOccured = PinEventTypes.None;
                 void Callback(object o, PinValueChangedEventArgs e)
                 {
                     eventOccured = true;
+                    typeOfEventOccured = e.ChangeType;
                 }
 
                 WaitForEventResult(cancellationToken, eventHandler.CancellationTokenSource.Token, ref eventOccured);
@@ -204,7 +206,8 @@ namespace System.Device.Gpio.Drivers
                 return new WaitForEventResult
                 {
                     TimedOut = !eventOccured,
-                    EventTypes = eventTypes
+                    EventTypes = eventTypes,
+                    DetectedEventTypes = typeOfEventOccured,
                 };
             }
             else
