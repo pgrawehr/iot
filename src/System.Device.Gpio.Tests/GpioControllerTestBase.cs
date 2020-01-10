@@ -140,6 +140,35 @@ namespace System.Device.Gpio.Tests
         }
 
         [Fact]
+        public void ThrowsIfReadingClosedPin()
+        {
+            using (GpioController controller = new GpioController(GetTestNumberingScheme(), GetTestDriver()))
+            {
+                Assert.Throws<InvalidOperationException>(() => controller.Read(OutputPin));
+            }
+        }
+
+        [Fact]
+        public void ThrowsIfWritingClosedPin()
+        {
+            using (GpioController controller = new GpioController(GetTestNumberingScheme(), GetTestDriver()))
+            {
+                Assert.Throws<InvalidOperationException>(() => controller.Write(OutputPin, PinValue.High));
+            }
+        }
+
+        [Fact]
+        public void DoesNotThrowIfClosingNotOpenPins()
+        {
+            using (GpioController controller = new GpioController(GetTestNumberingScheme(), GetTestDriver()))
+            {
+                controller.OpenPin(OutputPin, PinMode.Output);
+                controller.ClosePin(OutputPin); // No exception here, of course
+                controller.ClosePin(OutputPin); // Still no exception
+            }
+        }
+
+        [Fact]
         [Trait("SkipOnTestRun", "Windows_NT")] // Currently, the Windows Driver is defaulting to InputPullDown instead of Input when Closed/Opened.
         public void OpenPinDefaultsModeToInput()
         {
@@ -322,6 +351,15 @@ namespace System.Device.Gpio.Tests
 
                 Assert.True(result.TimedOut);
                 Assert.Equal(PinEventTypes.Falling, result.EventTypes);
+            }
+        }
+
+        [Fact]
+        public void ThrowsIfWaitingOnClosedPin()
+        {
+            using (GpioController controller = new GpioController(GetTestNumberingScheme(), GetTestDriver()))
+            {
+                Assert.Throws<InvalidOperationException>(() => controller.WaitForEvent(InputPin, PinEventTypes.Falling, CancellationToken.None));
             }
         }
 
