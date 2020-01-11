@@ -36,6 +36,7 @@ namespace Iot.Device.Imu
             _dataMaskReceived = false;
             _outputModeReceived = false;
             _outputMode = 0;
+            EulerAnglesDegrees = true;
             _robinBuffer = new RoundRobinBuffer(4 * 1024 * 1024);
             _decoderThread = new Thread(MessageParser);
             _decoderThread.Start();
@@ -44,6 +45,19 @@ namespace Iot.Device.Imu
         public Vector3 Orientation
         {
             get;
+            private set;
+        }
+
+        public Vector4 Quaternion
+        {
+            get;
+            private set;
+        }
+
+        public bool EulerAnglesDegrees
+        {
+            get;
+            set;
         }
 
         private void MessageParser()
@@ -170,7 +184,6 @@ namespace Iot.Device.Imu
                 SendCommand(CommandIds.GetDefaultOutputMask, new byte[0], 0);
             }
 
-            Console.WriteLine($"Found a packet with command {command} of length {length}");
             switch (command)
             {
                 case CommandIds.Ack:
@@ -214,7 +227,49 @@ namespace Iot.Device.Imu
                     _outputMode = currentPacketBuffer[0];
                     _outputModeReceived = true;
                     break;
+
+                case CommandIds.ContinuousDefaultOutput when _dataMaskReceived == false:
+                    Console.WriteLine("Ignoring sentence, configuration not yet received");
+                    break;
+
+                case CommandIds.ContinuousDefaultOutput:
+                {
+                    // We know Euler angles and Quaternion angles are enabled (see above)
+                    int quaternionOffset = 0;
+                    int eulerOffset = 16;
+                    Vector4 quaternion = new Vector4();
+                    quaternion.X = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset);
+                    quaternion.Y = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 4);
+                    quaternion.Z = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 8);
+                    quaternion.W = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 12);
+                    Quaternion = quaternion;
+
+                    Vector3 euler = new Vector3();
+                    // The orientation order is resorted, to be equal to the BNO055: Heading, roll, pitch
+                    euler.Y = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset);
+                    euler.Z = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset + 4);
+                    euler.X = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset + 8);
+                    if (EulerAnglesDegrees)
+                    {
+                        euler *= (float)(180.0 / Math.PI);
+                    }
+
+                    Orientation = euler;
+                    break;
+                }
+
+                default:
+                    Console.WriteLine($"Found a unknown packet with command {command} of length {length}");
+                    break;
+
             }
+        }
+
+        private float ExtractFloatFromPacket(byte[] buffer, int offset)
+        {
+            // BinaryPrimitives.ReadFloatLittleEndian() doesn't exist yet, but see https://github.com/dotnet/corefx/issues/35791
+            Int32 intRepresentation = BinaryPrimitives.ReadInt32LittleEndian(new ReadOnlySpan<byte>(buffer, offset, 4));
+            return BitConverter.Int32BitsToSingle(intRepresentation);
         }
 
         private void SendDefaultConfiguration()
