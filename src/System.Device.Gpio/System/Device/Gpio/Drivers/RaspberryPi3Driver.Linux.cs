@@ -27,7 +27,7 @@ namespace System.Device.Gpio.Drivers
         private const string DeviceTreeRanges = "/proc/device-tree/soc/ranges";
         private const string ModelFilePath = "/proc/device-tree/model";
 
-        private readonly IDictionary<int, PinMode> _pinModes = new Dictionary<int, PinMode>();
+        private readonly IDictionary<int, (PinMode CurrentPinMode, bool InUseBySysFs)> _pinModes = new Dictionary<int, (PinMode, bool)>();
         private RegisterView* _registerViewPointer = null;
         private static readonly object s_initializationLock = new object();
         private static readonly object s_sysFsInitializationLock = new object();
@@ -56,20 +56,8 @@ namespace System.Device.Gpio.Drivers
                 _sysFSDriver.Dispose();
                 _sysFSDriver = null;
             }
-        }
 
-        private void ValidatePinIsOpen(int pinNumber)
-        {
-            ValidatePinNumber(pinNumber);
-            if (!IsPinOpen(pinNumber))
-            {
-                throw new InvalidOperationException($"Pin {pinNumber} is not open.");
-            }
-        }
-
-        private bool IsPinOpen(int pin)
-        {
-            return _pinModes.ContainsKey(pin);
+            _pinModes.Clear();
         }
 
         /// <summary>
@@ -100,10 +88,11 @@ namespace System.Device.Gpio.Drivers
         /// <param name="callback">Delegate that defines the structure for callbacks when a pin value changed event occurs.</param>
         protected internal override void AddCallbackForPinValueChangedEvent(int pinNumber, PinEventTypes eventTypes, PinChangeEventHandler callback)
         {
-            ValidatePinIsOpen(pinNumber);
+            ValidatePinNumber(pinNumber);
             InitializeSysFS();
 
             _sysFSDriver.OpenPin(pinNumber);
+            _pinModes[pinNumber] = (_pinModes[pinNumber].CurrentPinMode, true);
 
             _sysFSDriver.AddCallbackForPinValueChangedEvent(pinNumber, eventTypes, callback);
         }
@@ -118,7 +107,8 @@ namespace System.Device.Gpio.Drivers
 
             lock (s_sysFsInitializationLock)
             {
-                if (_sysFSDriver != null)
+                bool isOpen = _pinModes[pinNumber].InUseBySysFs;
+                if (_sysFSDriver != null && isOpen)
                 {
                     _sysFSDriver.ClosePin(pinNumber);
                 }
@@ -168,7 +158,7 @@ namespace System.Device.Gpio.Drivers
         /// <returns>The value of the pin.</returns>
         protected internal unsafe override PinValue Read(int pinNumber)
         {
-            ValidatePinIsOpen(pinNumber);
+            ValidatePinNumber(pinNumber);
 
             /*
              * There are two registers that contain the value of a pin. Each hold the value of 32
@@ -186,10 +176,11 @@ namespace System.Device.Gpio.Drivers
         /// <param name="callback">Delegate that defines the structure for callbacks when a pin value changed event occurs.</param>
         protected internal override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
         {
-            ValidatePinIsOpen(pinNumber);
+            ValidatePinNumber(pinNumber);
             InitializeSysFS();
 
             _sysFSDriver.OpenPin(pinNumber);
+            _pinModes[pinNumber] = (_pinModes[pinNumber].CurrentPinMode, true);
 
             _sysFSDriver.RemoveCallbackForPinValueChangedEvent(pinNumber, callback);
         }
@@ -227,11 +218,11 @@ namespace System.Device.Gpio.Drivers
 
             if (_pinModes.ContainsKey(pinNumber))
             {
-                _pinModes[pinNumber] = mode;
+                _pinModes[pinNumber] = (mode, _pinModes[pinNumber].InUseBySysFs);
             }
             else
             {
-                _pinModes.Add(pinNumber, mode);
+                _pinModes.Add(pinNumber, (mode, false));
             }
 
             if (mode != PinMode.Output)
@@ -335,10 +326,11 @@ namespace System.Device.Gpio.Drivers
         /// <returns>A structure that contains the result of the waiting operation.</returns>
         protected internal override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            ValidatePinIsOpen(pinNumber);
+            ValidatePinNumber(pinNumber);
             InitializeSysFS();
 
             _sysFSDriver.OpenPin(pinNumber);
+            _pinModes[pinNumber] = (_pinModes[pinNumber].CurrentPinMode, true);
 
             return _sysFSDriver.WaitForEvent(pinNumber, eventTypes, cancellationToken);
         }
@@ -352,10 +344,11 @@ namespace System.Device.Gpio.Drivers
         /// <returns>A task representing the operation of getting the structure that contains the result of the waiting operation</returns>
         protected internal override ValueTask<WaitForEventResult> WaitForEventAsync(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            ValidatePinIsOpen(pinNumber);
+            ValidatePinNumber(pinNumber);
             InitializeSysFS();
 
             _sysFSDriver.OpenPin(pinNumber);
+            _pinModes[pinNumber] = (_pinModes[pinNumber].CurrentPinMode, true);
 
             return _sysFSDriver.WaitForEventAsync(pinNumber, eventTypes, cancellationToken);
         }
@@ -367,7 +360,7 @@ namespace System.Device.Gpio.Drivers
         /// <param name="value">The value to be written to the pin.</param>
         protected internal override void Write(int pinNumber, PinValue value)
         {
-            ValidatePinIsOpen(pinNumber);
+            ValidatePinNumber(pinNumber);
 
             /*
              * If the value is High, GPSET register is used. Otherwise, GPCLR will be used. For
@@ -567,9 +560,14 @@ namespace System.Device.Gpio.Drivers
         /// <returns>The mode of the pin.</returns>
         protected internal override PinMode GetPinMode(int pinNumber)
         {
-            ValidatePinIsOpen(pinNumber);
+            ValidatePinNumber(pinNumber);
 
-            return _pinModes[pinNumber];
+            if (!_pinModes.ContainsKey(pinNumber))
+            {
+                throw new InvalidOperationException("Can not get a pin mode of a pin that is not open.");
+            }
+
+            return _pinModes[pinNumber].CurrentPinMode;
         }
     }
 }
