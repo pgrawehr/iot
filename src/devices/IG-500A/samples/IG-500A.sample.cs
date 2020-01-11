@@ -31,6 +31,12 @@ namespace Ig500.Sample
                 port.Open();
                 using (Ig500Sensor sensor = new Ig500Sensor(port.BaseStream))
                 {
+                    if (!sensor.WaitForSensorReady(out var errorMessage))
+                    {
+                        Console.WriteLine($"Error initializing device: {errorMessage}");
+                        return;
+                    }
+
                     while (!Console.KeyAvailable)
                     {
                         Console.WriteLine(sensor.Orientation);

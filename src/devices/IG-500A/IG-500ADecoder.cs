@@ -147,7 +147,7 @@ namespace Iot.Device.Imu
             sendData[3] = (byte)((length >> 8) & 0xFF);
             sendData[4] = (byte)(length & 0xFF);
             // Data
-            Array.ConstrainedCopy(data, 0, sendData, 4, length);
+            Array.ConstrainedCopy(data, 0, sendData, 5, length);
             UInt16 crc = CalcCrc(sendData, 2, length + 3);
             // CRC (from command to end of data)
             sendData[length + 5] = (byte)((crc >> 8) & 0xFF);
@@ -160,40 +160,98 @@ namespace Iot.Device.Imu
         private void DecodePacket(CommandIds command, byte[] currentPacketBuffer, int length)
         {
             // Ask fo the data mask if we haven't seen it yet
-            if (_currentDataMask == 0)
+            if (!_outputModeReceived)
             {
+                SendDefaultConfiguration();
+            }
+            else if (!_dataMaskReceived)
+            {
+                // We can only read the data mask once we are sure the sensor is set to little endian mode, otherwise the bits would be interpreted the wrong way round
                 SendCommand(CommandIds.GetDefaultOutputMask, new byte[0], 0);
             }
 
             Console.WriteLine($"Found a packet with command {command} of length {length}");
-            if (command == CommandIds.Ack)
+            switch (command)
             {
-                int ackCode = currentPacketBuffer[0];
-                if (ackCode != 0)
+                case CommandIds.Ack:
                 {
-                    Console.WriteLine($"Got a NACK reply with error code {ackCode}");
-                }
-            }
+                    int ackCode = currentPacketBuffer[0];
+                    if (ackCode != 0)
+                    {
+                        Console.WriteLine($"Got a NACK reply with error code {ackCode}");
+                    }
 
-            if (command == CommandIds.RetDefaultOutputMask)
-            {
-                if (length != 4)
-                {
+                    break;
+                }
+
+                case CommandIds.RetDefaultOutputMask when length != 4:
                     Console.WriteLine("Decoder Error. Payload length for Default Output Mask must be 4");
                     return;
+                case CommandIds.RetDefaultOutputMask:
+                {
+                    UInt32 mask = BinaryPrimitives.ReadUInt32LittleEndian(currentPacketBuffer);
+                    Console.WriteLine($"Configured data mask is {mask}.");
+                    _currentDataMask = mask;
+
+                    if ((_currentDataMask & 0x03) != 0x03)
+                    {
+                        mask = mask | 0x03;
+                        byte[] setMask = new byte[5];
+                        // Ensure bits 0 and 1 (Euler angles and Quaternion angles) are on
+                        setMask[0] = 0;
+                        BinaryPrimitives.WriteUInt32LittleEndian(new Span<byte>(setMask, 1, 4), mask);
+                        SendCommand(CommandIds.SetDefaultOutputMask, setMask, 5);
+                    }
+                    else
+                    {
+                        _dataMaskReceived = true;
+                    }
+
+                    break;
                 }
 
-                UInt32 mask = BinaryPrimitives.ReadUInt32LittleEndian(currentPacketBuffer);
-                Console.WriteLine($"Configured data mask is {mask}.");
-                _currentDataMask = mask;
-                _dataMaskReceived = true;
+                case CommandIds.RetOutputMode:
+                    _outputMode = currentPacketBuffer[0];
+                    _outputModeReceived = true;
+                    break;
+            }
+        }
+
+        private void SendDefaultConfiguration()
+        {
+            // Set the output mode to little endian, but don't make it permanent
+            SendCommand(CommandIds.SetOutputMode, new byte[2] { 0, 0x1 }, 2);
+            // And get it (note: Setting the mode will reply with an ack, but not return the current setting)
+            SendCommand(CommandIds.GetOutputMode, new byte[0], 0);
+        }
+
+        public bool WaitForSensorReady(out string errorMessage)
+        {
+            int timeOut = 500;
+            errorMessage = string.Empty;
+            while (timeOut-- > 0)
+            {
+                if (_outputModeReceived && _dataMaskReceived)
+                {
+                    break;
+                }
+
+                Thread.Sleep(10);
             }
 
-            if (command == CommandIds.RetOutputMode)
+            if (timeOut <= 0)
             {
-                _outputMode = currentPacketBuffer[0];
-                _outputModeReceived = true;
+                errorMessage = "No reply from device";
+                return false;
             }
+
+            if (_outputMode != 0x1)
+            {
+                errorMessage = "Could not set Output mode to little endian";
+                return false;
+            }
+
+            return true;
         }
 
         protected virtual void Dispose(bool disposing)
