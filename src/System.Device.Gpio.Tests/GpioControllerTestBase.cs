@@ -312,7 +312,6 @@ namespace System.Device.Gpio.Tests
         }
 
         [Fact]
-        [Trait("SkipOnTestRun", "Windows_NT")] // The windows driver is returning none as the event type.
         public void WaitForEventCancelAfter10MillisecondsTest()
         {
             using (GpioController controller = new GpioController(GetTestNumberingScheme(), GetTestDriver()))
@@ -325,7 +324,8 @@ namespace System.Device.Gpio.Tests
                 WaitForEventResult result = controller.WaitForEvent(InputPin, PinEventTypes.Falling, tokenSource.Token);
 
                 Assert.True(result.TimedOut);
-                Assert.Equal(PinEventTypes.Falling, result.EventTypes);
+                // Result is expected to be None if the timeout elapsed
+                Assert.Equal(PinEventTypes.None, result.EventTypes);
             }
         }
 
@@ -407,12 +407,10 @@ namespace System.Device.Gpio.Tests
                 // First event is falling, second is rising
                 WaitForEventResult result = controller.WaitForEvent(InputPin, PinEventTypes.Falling | PinEventTypes.Rising, tokenSource.Token);
                 Assert.False(result.TimedOut);
-                Assert.Equal(PinEventTypes.Falling | PinEventTypes.Rising, result.EventTypes);
-                Assert.Equal(PinEventTypes.Falling, result.DetectedEventTypes);
+                Assert.Equal(PinEventTypes.Falling, result.EventTypes);
                 result = controller.WaitForEvent(InputPin, PinEventTypes.Falling | PinEventTypes.Rising, tokenSource.Token);
                 Assert.False(result.TimedOut);
-                Assert.Equal(PinEventTypes.Falling | PinEventTypes.Rising, result.EventTypes);
-                Assert.Equal(PinEventTypes.Rising, result.DetectedEventTypes);
+                Assert.Equal(PinEventTypes.Rising, result.EventTypes);
                 Assert.True(task.Wait(TimeSpan.FromSeconds(30))); // Should end way before that
             }
         }
