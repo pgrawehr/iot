@@ -4,6 +4,7 @@
 
 using System;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Device.I2c;
 using System.IO;
@@ -28,6 +29,39 @@ namespace Iot.Device.Imu
         private bool _outputModeReceived;
         private byte _outputMode;
 
+        private List<OutputDataOffsets> _dataFields = new List<OutputDataOffsets>()
+        {
+            new OutputDataOffsets(OutputDataSets.Quaternion, "Estimate of attitude in quaternion form", 16),
+            new OutputDataOffsets(OutputDataSets.Euler, "Estimate of attitude in Euler angles form", 12),
+            new OutputDataOffsets(OutputDataSets.Matrix, "Estimate of attitude in Matrix form", 36),
+            new OutputDataOffsets(OutputDataSets.Gyroscopes, "Calibrated values of gyroscopes", 12),
+            new OutputDataOffsets(OutputDataSets.Accelerometers, "Calibrated values of accelerometers", 12),
+            new OutputDataOffsets(OutputDataSets.Magnetometers, "Calibrated values of magnetometers", 12),
+            new OutputDataOffsets(OutputDataSets.Temperatures, "Calibrated values of temperatures", 8),
+            new OutputDataOffsets(OutputDataSets.GyroscopesRaw, "Raw values of gyroscopes", 6),
+            new OutputDataOffsets(OutputDataSets.AccelerometersRaw, "Raw values of accelerometers", 6),
+            new OutputDataOffsets(OutputDataSets.MagnetometersRaw, "Raw values of magnetometers", 6),
+            new OutputDataOffsets(OutputDataSets.TemperaturesRaw, "Raw values of temperatures", 4),
+            new OutputDataOffsets(OutputDataSets.TimeSinceReset, "Time elapsed since the reset of the device", 4),
+            new OutputDataOffsets(OutputDataSets.DeviceStatus, "Device status Bit field", 4),
+            new OutputDataOffsets(OutputDataSets.GpsPosition, "Raw GPS position in WGS84 format", 12),
+            new OutputDataOffsets(OutputDataSets.GpsNavigation, "Raw GPS velocity in NED, heading", 16),
+            new OutputDataOffsets(OutputDataSets.GpsAccuracy, "Raw GPS horizontal, vertical and heading accuracies", 16),
+            new OutputDataOffsets(OutputDataSets.GpsInfo, "Raw GPS information such as available satellites", 6),
+            new OutputDataOffsets(OutputDataSets.BaroAltitude, "Barometric altitude referenced to a user defined value", 4),
+            new OutputDataOffsets(OutputDataSets.BaroPressure, "Absolute pressure in pascals", 4),
+            new OutputDataOffsets(OutputDataSets.Position, "Kalman enhanced 3d position", 24),
+            new OutputDataOffsets(OutputDataSets.Velocity, "Kalman enhanced 3d velocity", 12),
+            new OutputDataOffsets(OutputDataSets.AttitudeAccuracy, "Kalman estimated attitude accuracy", 4),
+            new OutputDataOffsets(OutputDataSets.NavigationAccuracy, "Kalman estimated position and velocity accuracy", 8),
+            new OutputDataOffsets(OutputDataSets.GyroTemperatures, "Calibrated internal gyro temperatures sensors output", 12),
+            new OutputDataOffsets(OutputDataSets.GyroTemperaturesRaw, "Raw internal gyro temperatures sensors", 12),
+            new OutputDataOffsets(OutputDataSets.UtcTimeReference, "UTC time reference", 10),
+            new OutputDataOffsets(OutputDataSets.MagCalibData, "Enable magnetometers Calibration data output", 12),
+            new OutputDataOffsets(OutputDataSets.GpsTrueHeading, "Enable raw true heading output", 8),
+            new OutputDataOffsets(OutputDataSets.OdoVelocity, "Enable Odometer raw velocity output", 8),
+        };
+
         public Ig500Sensor(Stream dataStream)
         {
             _dataStream = dataStream;
@@ -37,6 +71,7 @@ namespace Iot.Device.Imu
             _outputModeReceived = false;
             _outputMode = 0;
             EulerAnglesDegrees = true;
+            Temperature = Temperature.FromCelsius(0);
             _robinBuffer = new RoundRobinBuffer(4 * 1024 * 1024);
             _decoderThread = new Thread(MessageParser);
             _decoderThread.Start();
@@ -58,6 +93,12 @@ namespace Iot.Device.Imu
         {
             get;
             set;
+        }
+
+        public Temperature Temperature
+        {
+            get;
+            private set;
         }
 
         private void MessageParser()
@@ -229,14 +270,14 @@ namespace Iot.Device.Imu
                     break;
 
                 case CommandIds.ContinuousDefaultOutput when _dataMaskReceived == false:
-                    Console.WriteLine("Ignoring sentence, configuration not yet received");
+                    // Console.WriteLine("Ignoring sentence, configuration not yet received");
                     break;
 
                 case CommandIds.ContinuousDefaultOutput:
                 {
                     // We know Euler angles and Quaternion angles are enabled (see above)
-                    int quaternionOffset = 0;
-                    int eulerOffset = 16;
+                    int quaternionOffset = CalculateOutputOffset(OutputDataSets.Quaternion);
+                    int eulerOffset = CalculateOutputOffset(OutputDataSets.Euler);
                     Vector4 quaternion = new Vector4();
                     quaternion.X = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset);
                     quaternion.Y = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 4);
@@ -255,6 +296,11 @@ namespace Iot.Device.Imu
                     }
 
                     Orientation = euler;
+
+                    // We just pick the first temperature
+                    int temperatureOffset = CalculateOutputOffset(OutputDataSets.Temperatures);
+                    var temp = Temperature.FromCelsius(ExtractFloatFromPacket(currentPacketBuffer, temperatureOffset));
+                    Temperature = temp;
                     break;
                 }
 
@@ -263,6 +309,32 @@ namespace Iot.Device.Imu
                     break;
 
             }
+        }
+
+        private int CalculateOutputOffset(OutputDataSets dataSet)
+        {
+            if ((_currentDataMask & (uint)dataSet) == 0)
+            {
+                // The requested data set is not available
+                return -1;
+            }
+
+            // Iterate over all data sets from right to left
+            uint currentMask = 1;
+            int byteOffset = 0;
+            while (currentMask != (uint)dataSet)
+            {
+                if ((_currentDataMask & currentMask) != 0)
+                {
+                    // The active data mask contains this data set
+                    var dataSetProperties = _dataFields.Find(x => x.DataSet == (OutputDataSets)currentMask);
+                    byteOffset += dataSetProperties.Length;
+                }
+
+                currentMask <<= 1;
+            }
+
+            return byteOffset;
         }
 
         private float ExtractFloatFromPacket(byte[] buffer, int offset)
@@ -324,6 +396,21 @@ namespace Iot.Device.Imu
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        private sealed class OutputDataOffsets
+        {
+            public OutputDataOffsets(OutputDataSets dataSet, string name, int length)
+            {
+                DataSet = dataSet;
+                Name = name;
+                Length = length;
+            }
+
+            public OutputDataSets DataSet { get; }
+            public string Name { get; }
+            public int Length { get; }
+
         }
     }
 }

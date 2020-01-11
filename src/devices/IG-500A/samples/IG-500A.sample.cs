@@ -41,6 +41,7 @@ namespace Ig500.Sample
                     {
                         var orien = sensor.Orientation;
                         Console.WriteLine($"Orientation Heading: {orien.X:F2} Roll: {orien.Y:F2} Pitch: {orien.Z:F2}");
+                        Console.WriteLine($"Temperature {sensor.Temperature.Celsius}°C");
                         Thread.Sleep(100);
                         ////var magneto = bno055Sensor.Magnetometer;
                         ////Console.WriteLine($"Magnetomer X: {magneto.X} Y: {magneto.Y} Z: {magneto.Z}");
