@@ -21,10 +21,12 @@ namespace Iot.Device.Imu
     {
         private const int PacketSize = 512;
         private readonly Stream _dataStream;
+        private readonly OutputDataSets _enableDataSets;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly RoundRobinBuffer _robinBuffer;
         private Thread _decoderThread;
-        private UInt32 _currentDataMask;
+        private OutputDataSets _currentDataMask;
+        private bool _dataMaskSent;
         private bool _dataMaskReceived;
         private bool _outputModeReceived;
         private byte _outputMode;
@@ -62,14 +64,21 @@ namespace Iot.Device.Imu
             new OutputDataOffsets(OutputDataSets.OdoVelocity, "Enable Odometer raw velocity output", 8),
         };
 
-        public Ig500Sensor(Stream dataStream)
+        public Ig500Sensor(Stream dataStream, OutputDataSets enableDataSets)
         {
             _dataStream = dataStream;
+            if (enableDataSets == OutputDataSets.None)
+            {
+                throw new ArgumentOutOfRangeException(nameof(enableDataSets), "Must enable at least one data set");
+            }
+
+            _enableDataSets = enableDataSets;
             _cancellationTokenSource = new CancellationTokenSource();
             _currentDataMask = 0;
             _dataMaskReceived = false;
             _outputModeReceived = false;
             _outputMode = 0;
+            _dataMaskSent = false;
             EulerAnglesDegrees = true;
             Temperature = Temperature.FromCelsius(0);
             _robinBuffer = new RoundRobinBuffer(4 * 1024 * 1024);
@@ -84,6 +93,24 @@ namespace Iot.Device.Imu
         }
 
         public Vector4 Quaternion
+        {
+            get;
+            private set;
+        }
+
+        public Vector3 Magnetometer
+        {
+            get;
+            private set;
+        }
+
+        public Vector3 Gyroscope
+        {
+            get;
+            private set;
+        }
+
+        public Vector3 Accelerometer
         {
             get;
             private set;
@@ -245,16 +272,19 @@ namespace Iot.Device.Imu
                 {
                     UInt32 mask = BinaryPrimitives.ReadUInt32LittleEndian(currentPacketBuffer);
                     Console.WriteLine($"Configured data mask is {mask}.");
-                    _currentDataMask = mask;
+                    _currentDataMask = (OutputDataSets)mask;
 
-                    if ((_currentDataMask & 0x03) != 0x03)
+                    // We are only enabling data sets, not disabling them
+                    // We are also only doing this only once, because the sensor may reply with a smaller set than desired, if he's unable to handle all sets (depends on model)
+                    if (_dataMaskSent == false && (_currentDataMask & _enableDataSets) != _enableDataSets)
                     {
-                        mask = mask | 0x03;
+                        mask = mask | (uint)_enableDataSets;
                         byte[] setMask = new byte[5];
                         // Ensure bits 0 and 1 (Euler angles and Quaternion angles) are on
                         setMask[0] = 0;
                         BinaryPrimitives.WriteUInt32LittleEndian(new Span<byte>(setMask, 1, 4), mask);
                         SendCommand(CommandIds.SetDefaultOutputMask, setMask, 5);
+                        _dataMaskSent = true;
                     }
                     else
                     {
@@ -275,32 +305,7 @@ namespace Iot.Device.Imu
 
                 case CommandIds.ContinuousDefaultOutput:
                 {
-                    // We know Euler angles and Quaternion angles are enabled (see above)
-                    int quaternionOffset = CalculateOutputOffset(OutputDataSets.Quaternion);
-                    int eulerOffset = CalculateOutputOffset(OutputDataSets.Euler);
-                    Vector4 quaternion = new Vector4();
-                    quaternion.X = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset);
-                    quaternion.Y = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 4);
-                    quaternion.Z = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 8);
-                    quaternion.W = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 12);
-                    Quaternion = quaternion;
-
-                    Vector3 euler = new Vector3();
-                    // The orientation order is resorted, to be equal to the BNO055: Heading, roll, pitch
-                    euler.Y = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset);
-                    euler.Z = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset + 4);
-                    euler.X = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset + 8);
-                    if (EulerAnglesDegrees)
-                    {
-                        euler *= (float)(180.0 / Math.PI);
-                    }
-
-                    Orientation = euler;
-
-                    // We just pick the first temperature
-                    int temperatureOffset = CalculateOutputOffset(OutputDataSets.Temperatures);
-                    var temp = Temperature.FromCelsius(ExtractFloatFromPacket(currentPacketBuffer, temperatureOffset));
-                    Temperature = temp;
+                    ParseContinuousOutput(currentPacketBuffer);
                     break;
                 }
 
@@ -311,9 +316,86 @@ namespace Iot.Device.Imu
             }
         }
 
+        private void ParseContinuousOutput(byte[] currentPacketBuffer)
+        {
+            int quaternionOffset = CalculateOutputOffset(OutputDataSets.Quaternion);
+            if (quaternionOffset >= 0)
+            {
+                Vector4 quaternion = new Vector4();
+                quaternion.X = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset);
+                quaternion.Y = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 4);
+                quaternion.Z = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 8);
+                quaternion.W = ExtractFloatFromPacket(currentPacketBuffer, quaternionOffset + 12);
+                Quaternion = quaternion;
+            }
+
+            int eulerOffset = CalculateOutputOffset(OutputDataSets.Euler);
+            if (eulerOffset >= 0)
+            {
+                Vector3 euler = new Vector3();
+                // The orientation order is resorted, to be equal to the BNO055: Heading, roll, pitch
+                euler.Y = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset);
+                euler.Z = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset + 4);
+                euler.X = ExtractFloatFromPacket(currentPacketBuffer, eulerOffset + 8);
+                if (EulerAnglesDegrees)
+                {
+                    euler *= (float)(180.0 / Math.PI);
+                }
+
+                Orientation = euler;
+            }
+
+            // We just pick the first temperature
+            int temperatureOffset = CalculateOutputOffset(OutputDataSets.Temperatures);
+            if (temperatureOffset >= 0)
+            {
+                var temp = Temperature.FromCelsius(ExtractFloatFromPacket(currentPacketBuffer, temperatureOffset));
+                Temperature = temp;
+            }
+
+            int gyroOffset = CalculateOutputOffset(OutputDataSets.Gyroscopes);
+            if (gyroOffset >= 0)
+            {
+                Vector3 gyro = new Vector3();
+                gyro.X = ExtractFloatFromPacket(currentPacketBuffer, gyroOffset);
+                gyro.Y = ExtractFloatFromPacket(currentPacketBuffer, gyroOffset + 4);
+                gyro.Z = ExtractFloatFromPacket(currentPacketBuffer, gyroOffset + 8);
+                if (EulerAnglesDegrees)
+                {
+                    gyro *= (float)(180.0 / Math.PI);
+                }
+
+                Gyroscope = gyro;
+            }
+
+            int accelOffset = CalculateOutputOffset(OutputDataSets.Accelerometers);
+            if (accelOffset >= 0)
+            {
+                // Acceleration, in m/s^2
+                Vector3 accel = new Vector3();
+                accel.X = ExtractFloatFromPacket(currentPacketBuffer, accelOffset);
+                accel.Y = ExtractFloatFromPacket(currentPacketBuffer, accelOffset + 4);
+                accel.Z = ExtractFloatFromPacket(currentPacketBuffer, accelOffset + 8);
+
+                Accelerometer = accel;
+            }
+
+            int magOffset = CalculateOutputOffset(OutputDataSets.Magnetometers);
+            if (magOffset >= 0)
+            {
+                // Magnetic values, arbitrary unit
+                Vector3 mag = new Vector3();
+                mag.X = ExtractFloatFromPacket(currentPacketBuffer, magOffset);
+                mag.Y = ExtractFloatFromPacket(currentPacketBuffer, magOffset + 4);
+                mag.Z = ExtractFloatFromPacket(currentPacketBuffer, magOffset + 8);
+
+                Magnetometer = mag;
+            }
+        }
+
         private int CalculateOutputOffset(OutputDataSets dataSet)
         {
-            if ((_currentDataMask & (uint)dataSet) == 0)
+            if ((_currentDataMask & dataSet) == 0)
             {
                 // The requested data set is not available
                 return -1;
@@ -324,7 +406,7 @@ namespace Iot.Device.Imu
             int byteOffset = 0;
             while (currentMask != (uint)dataSet)
             {
-                if ((_currentDataMask & currentMask) != 0)
+                if ((_currentDataMask & (OutputDataSets)currentMask) != 0)
                 {
                     // The active data mask contains this data set
                     var dataSetProperties = _dataFields.Find(x => x.DataSet == (OutputDataSets)currentMask);
@@ -375,6 +457,13 @@ namespace Iot.Device.Imu
             if (_outputMode != 0x1)
             {
                 errorMessage = "Could not set Output mode to little endian";
+                return false;
+            }
+
+            if ((_currentDataMask & _enableDataSets) != _enableDataSets)
+            {
+                // Not all the elements that were requested are supported by this sensor
+                errorMessage = "Not all required data sets could be enabled";
                 return false;
             }
 

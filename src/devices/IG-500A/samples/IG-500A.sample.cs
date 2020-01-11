@@ -29,7 +29,10 @@ namespace Ig500.Sample
             using (SerialPort port = new SerialPort("COM3", 115200, Parity.None))
             {
                 port.Open();
-                using (Ig500Sensor sensor = new Ig500Sensor(port.BaseStream))
+                using (Ig500Sensor sensor = new Ig500Sensor(port.BaseStream,
+                    OutputDataSets.Euler | OutputDataSets.Magnetometers | OutputDataSets.Quaternion |
+                    OutputDataSets.Temperatures |
+                    OutputDataSets.Accelerometers | OutputDataSets.Gyroscopes))
                 {
                     if (!sensor.WaitForSensorReady(out var errorMessage))
                     {
@@ -40,26 +43,18 @@ namespace Ig500.Sample
                     while (!Console.KeyAvailable)
                     {
                         var orien = sensor.Orientation;
+                        var magneto = sensor.Magnetometer;
+                        var gyro = sensor.Gyroscope;
+                        var accele = sensor.Accelerometer;
+
+                        Console.Clear();
+
                         Console.WriteLine($"Orientation Heading: {orien.X:F2} Roll: {orien.Y:F2} Pitch: {orien.Z:F2}");
+                        Console.WriteLine($"Magnetometer X: {magneto.X} Y: {magneto.Y} Z: {magneto.Z}");
+                        Console.WriteLine($"Gyroscope X: {gyro.X} Y: {gyro.Y} Z: {gyro.Z}");
+                        Console.WriteLine($"Acceleration X: {accele.X} Y: {accele.Y} Z: {accele.Z}");
                         Console.WriteLine($"Temperature {sensor.Temperature.Celsius}°C");
                         Thread.Sleep(100);
-                        ////var magneto = bno055Sensor.Magnetometer;
-                        ////Console.WriteLine($"Magnetomer X: {magneto.X} Y: {magneto.Y} Z: {magneto.Z}");
-                        ////var gyro = bno055Sensor.Gyroscope;
-                        ////Console.WriteLine($"Gyroscope X: {gyro.X} Y: {gyro.Y} Z: {gyro.Z}");
-                        ////var accele = bno055Sensor.Accelerometer;
-                        ////Console.WriteLine($"Acceleration X: {accele.X} Y: {accele.Y} Z: {accele.Z}");
-                        ////var orien = bno055Sensor.Orientation;
-                        ////Console.WriteLine($"Orientation Heading: {orien.X} Roll: {orien.Y} Pitch: {orien.Z}");
-                        ////var line = bno055Sensor.LinearAcceleration;
-                        ////Console.WriteLine($"Linear acceleration X: {line.X} Y: {line.Y} Z: {line.Z}");
-                        ////var gravity = bno055Sensor.Gravity;
-                        ////Console.WriteLine($"Gravity X: {gravity.X} Y: {gravity.Y} Z: {gravity.Z}");
-                        ////var qua = bno055Sensor.Quaternion;
-                        ////Console.WriteLine($"Quaternion X: {qua.X} Y: {qua.Y} Z: {qua.Z} W: {qua.W}");
-                        ////var temp = bno055Sensor.Temperature.Celsius;
-                        ////Console.WriteLine($"Temperature: {temp} °C");
-                        ////Thread.Sleep(100);
                     }
                 }
             }
