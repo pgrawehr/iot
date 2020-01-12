@@ -25,9 +25,7 @@ namespace DisplayControl
         {
             _sensorValueSources = new List<SensorValueSource>();
         }
-
-        public event Action<DisplayButton, bool> ButtonPressed;
-
+        
         public IList<SensorValueSource> SensorValueSources => _sensorValueSources;
 
         public void Init(GpioController gpioController)
