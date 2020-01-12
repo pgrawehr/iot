@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Device.I2c;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Threading;
 using Iot.Units;
@@ -20,10 +21,13 @@ namespace Iot.Device.Imu
     public class Ig500Sensor : IDisposable
     {
         private const int PacketSize = 512;
+        private const int NumberOfErrorsToKeep = 20;
+        private const int InputBufferSize = 10 * 1024;
         private readonly Stream _dataStream;
         private readonly OutputDataSets _enableDataSets;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly RoundRobinBuffer _robinBuffer;
+        private readonly LinkedList<string> _recentParserErrors;
         private Thread _decoderThread;
         private OutputDataSets _currentDataMask;
         private bool _dataMaskSent;
@@ -81,7 +85,8 @@ namespace Iot.Device.Imu
             _dataMaskSent = false;
             EulerAnglesDegrees = true;
             Temperature = Temperature.FromCelsius(0);
-            _robinBuffer = new RoundRobinBuffer(4 * 1024 * 1024);
+            _recentParserErrors = new LinkedList<string>();
+            _robinBuffer = new RoundRobinBuffer(InputBufferSize);
             _decoderThread = new Thread(MessageParser);
             _decoderThread.Start();
         }
@@ -128,6 +133,17 @@ namespace Iot.Device.Imu
             private set;
         }
 
+        public IEnumerable<string> RecentParserErrors
+        {
+            get
+            {
+                lock (_recentParserErrors)
+                {
+                    return _recentParserErrors.ToArray(); // Clone list
+                }
+            }
+        }
+
         private void MessageParser()
         {
             // The maximum length of one packet
@@ -154,7 +170,22 @@ namespace Iot.Device.Imu
                     continue;
                 }
 
-                _robinBuffer.InsertBytes(inputBuffer, bytesReceived);
+                try
+                {
+                    _robinBuffer.InsertBytes(inputBuffer, bytesReceived);
+                }
+                catch (InvalidOperationException x)
+                {
+                    // Buffer overflow?
+                    AddParserError(x.Message);
+                }
+
+                if (_robinBuffer.PercentageUsed > 10)
+                {
+                    // This should always stay very low, or it will result in latency
+                    AddParserError($"Input buffer usage is {_robinBuffer.PercentageUsed}.");
+                }
+
                 int actualBytesReceived = _robinBuffer.GetBuffer(currentPacketBuffer, PacketSize);
                 if (actualBytesReceived > 8) // Minimum block size
                 {
@@ -168,6 +199,11 @@ namespace Iot.Device.Imu
                         bytesLeft--;
                     }
 
+                    if (bytesSkipped > 0)
+                    {
+                        AddParserError($"Resync required. Skipped {bytesSkipped} bytes from input");
+                    }
+
                     // Throw away the skipped bytes
                     _robinBuffer.ConsumeBytes(bytesSkipped);
                     if (bytesLeft < 8)
@@ -179,10 +215,24 @@ namespace Iot.Device.Imu
                     byte lenmsb = currentPacketBuffer[bytesSkipped + 3];
                     byte lenlsb = currentPacketBuffer[bytesSkipped + 4];
                     int length = lenmsb << 8 | lenlsb;
+
                     if (bytesLeft < length + 3)
                     {
                         // We need to resync first, this is a big packet (or synchronization is completely lost)
                         continue;
+                    }
+
+                    int crcCalculated = CalcCrc(currentPacketBuffer, 2, length + 3);
+                    byte crcmsb = currentPacketBuffer[bytesSkipped + length + 5];
+                    byte crclsb = currentPacketBuffer[bytesSkipped + length + 6];
+                    int effectiveCrc = crcmsb << 8 | crclsb;
+
+                    if (effectiveCrc != crcCalculated)
+                    {
+                        AddParserError($"CRC Error for received package {(CommandIds)command}. Should be 0x{crcCalculated:X}, but was 0x{effectiveCrc:X}.");
+                        // Remove anyway - there's nothing we can do here
+                        _robinBuffer.ConsumeBytes(length + 8);
+                        return;
                     }
 
                     Array.ConstrainedCopy(currentPacketBuffer, bytesSkipped + 5, currentDataSection, 0, length + 3);
@@ -190,6 +240,18 @@ namespace Iot.Device.Imu
                     // We have processed this many bytes
                     _robinBuffer.ConsumeBytes(length + 8);
                     DecodePacket((CommandIds)command, currentDataSection, length);
+                }
+            }
+        }
+
+        private void AddParserError(string message)
+        {
+            lock (_recentParserErrors)
+            {
+                _recentParserErrors.AddLast(message);
+                if (_recentParserErrors.Count > NumberOfErrorsToKeep)
+                {
+                    _recentParserErrors.RemoveFirst();
                 }
             }
         }
@@ -259,14 +321,14 @@ namespace Iot.Device.Imu
                     int ackCode = currentPacketBuffer[0];
                     if (ackCode != 0)
                     {
-                        Console.WriteLine($"Got a NACK reply with error code {ackCode}");
+                        AddParserError($"Got a NACK reply with error code {ackCode}");
                     }
 
                     break;
                 }
 
                 case CommandIds.RetDefaultOutputMask when length != 4:
-                    Console.WriteLine("Decoder Error. Payload length for Default Output Mask must be 4");
+                    AddParserError("Decoder Error. Payload length for Default Output Mask must be 4");
                     return;
                 case CommandIds.RetDefaultOutputMask:
                 {
@@ -294,13 +356,17 @@ namespace Iot.Device.Imu
                     break;
                 }
 
+                case CommandIds.RetOutputMode when length != 1:
+                    AddParserError("Decoder Error. Payload length for Output mode must be 1");
+                    return;
+
                 case CommandIds.RetOutputMode:
                     _outputMode = currentPacketBuffer[0];
                     _outputModeReceived = true;
                     break;
 
                 case CommandIds.ContinuousDefaultOutput when _dataMaskReceived == false:
-                    // Console.WriteLine("Ignoring sentence, configuration not yet received");
+                    AddParserError("Ignoring sentence, configuration not yet received");
                     break;
 
                 case CommandIds.ContinuousDefaultOutput:
@@ -310,7 +376,7 @@ namespace Iot.Device.Imu
                 }
 
                 default:
-                    Console.WriteLine($"Found a unknown packet with command {command} of length {length}");
+                    AddParserError($"Found a unknown packet with command {command} of length {length}");
                     break;
 
             }
@@ -436,7 +502,7 @@ namespace Iot.Device.Imu
 
         public bool WaitForSensorReady(out string errorMessage)
         {
-            int timeOut = 500;
+            int timeOut = 1000;
             errorMessage = string.Empty;
             while (timeOut-- > 0)
             {

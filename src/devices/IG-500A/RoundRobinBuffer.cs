@@ -24,6 +24,30 @@ namespace Iot.Device.Imu
             _sizeUsed = 0;
         }
 
+        public int BufferSize
+        {
+            get
+            {
+                return _bufferSizeInBytes;
+            }
+        }
+
+        public int BytesInBuffer
+        {
+            get
+            {
+                return _sizeUsed;
+            }
+        }
+
+        public float PercentageUsed
+        {
+            get
+            {
+                return (float)_sizeUsed / _bufferSizeInBytes * 100;
+            }
+        }
+
         public void InsertBytes(byte[] dataToInsert, int count)
         {
             int dataLen = count;
@@ -36,19 +60,17 @@ namespace Iot.Device.Imu
 
                 if (_nextWriteByte + dataLen <= _bufferSizeInBytes)
                 {
-                    dataToInsert.CopyTo(_array, _nextWriteByte);
+                    Array.ConstrainedCopy(dataToInsert, 0, _array, _nextWriteByte, dataLen);
                     _nextWriteByte = (_nextWriteByte + dataLen) % _bufferSizeInBytes;
                     _sizeUsed += dataLen;
                 }
                 else
                 {
-                    // Not very efficient, but let's get this running first, then optimize
-                    foreach (byte b in dataToInsert)
-                    {
-                        _array[_nextWriteByte] = b;
-                        _nextWriteByte = (_nextWriteByte + 1) % _bufferSizeInBytes;
-                        _sizeUsed += 1;
-                    }
+                    Array.ConstrainedCopy(dataToInsert, 0, _array, _nextWriteByte, _bufferSizeInBytes - _nextWriteByte);
+                    int remaining = dataLen - (_bufferSizeInBytes - _nextWriteByte);
+                    Array.ConstrainedCopy(dataToInsert, dataLen - remaining, _array, 0, remaining);
+                    _nextWriteByte = remaining;
+                    _sizeUsed += dataLen;
                 }
             }
         }

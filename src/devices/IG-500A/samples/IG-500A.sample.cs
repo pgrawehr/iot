@@ -37,6 +37,12 @@ namespace Ig500.Sample
                     if (!sensor.WaitForSensorReady(out var errorMessage))
                     {
                         Console.WriteLine($"Error initializing device: {errorMessage}");
+                        var errors = sensor.RecentParserErrors;
+                        foreach (string error in errors)
+                        {
+                            Console.WriteLine(error);
+                        }
+
                         return;
                     }
 
@@ -54,7 +60,13 @@ namespace Ig500.Sample
                         Console.WriteLine($"Gyroscope X: {gyro.X} Y: {gyro.Y} Z: {gyro.Z}");
                         Console.WriteLine($"Acceleration X: {accele.X} Y: {accele.Y} Z: {accele.Z}");
                         Console.WriteLine($"Temperature {sensor.Temperature.Celsius}°C");
-                        Thread.Sleep(100);
+                        var errors = sensor.RecentParserErrors;
+                        foreach (string error in errors)
+                        {
+                            Console.WriteLine(error);
+                        }
+
+                        Thread.Sleep(200);
                     }
                 }
             }
