@@ -21,6 +21,7 @@ namespace DisplayControl
 
         List<SensorValueSource> m_sensorValueSources;
         private DhtSensors m_dhtSensors;
+        private SystemSensors m_systemSensors;
 
         public DataContainer(GpioController controller)
         {
@@ -77,6 +78,10 @@ namespace DisplayControl
             m_dhtSensors.Init(Controller);
 
             allSources.AddRange(m_dhtSensors.SensorValueSources);
+
+            m_systemSensors = new SystemSensors();
+            m_systemSensors.Init(Controller);
+            allSources.AddRange(m_systemSensors.SensorValueSources);
 
             foreach(var sensor in allSources)
             {
