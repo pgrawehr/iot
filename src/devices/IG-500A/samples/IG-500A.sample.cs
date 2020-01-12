@@ -34,7 +34,7 @@ namespace Ig500.Sample
                     OutputDataSets.Temperatures |
                     OutputDataSets.Accelerometers | OutputDataSets.Gyroscopes))
                 {
-                    if (!sensor.WaitForSensorReady(out var errorMessage))
+                    if (!sensor.WaitForSensorReady(out var errorMessage, TimeSpan.FromSeconds(5)))
                     {
                         Console.WriteLine($"Error initializing device: {errorMessage}");
                         var errors = sensor.RecentParserErrors;

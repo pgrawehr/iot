@@ -222,7 +222,7 @@ namespace Iot.Device.Imu
                         continue;
                     }
 
-                    int crcCalculated = CalcCrc(currentPacketBuffer, 2, length + 3);
+                    int crcCalculated = CalcCrc(currentPacketBuffer, bytesSkipped + 2, length + 3);
                     byte crcmsb = currentPacketBuffer[bytesSkipped + length + 5];
                     byte crclsb = currentPacketBuffer[bytesSkipped + length + 6];
                     int effectiveCrc = crcmsb << 8 | crclsb;
@@ -256,7 +256,7 @@ namespace Iot.Device.Imu
             }
         }
 
-        private UInt16 CalcCrc(byte[] buffer, ushort startOffset, int bufferSize)
+        private UInt16 CalcCrc(byte[] buffer, int startOffset, int bufferSize)
         {
             UInt16 poly = 0x8408;
             UInt16 crc = 0;
@@ -500,11 +500,11 @@ namespace Iot.Device.Imu
             SendCommand(CommandIds.GetOutputMode, new byte[0], 0);
         }
 
-        public bool WaitForSensorReady(out string errorMessage)
+        public bool WaitForSensorReady(out string errorMessage, TimeSpan timeout)
         {
-            int timeOut = 1000;
             errorMessage = string.Empty;
-            while (timeOut-- > 0)
+            DateTime endTime = DateTime.Now + timeout;
+            while (endTime > DateTime.Now)
             {
                 if (_outputModeReceived && _dataMaskReceived)
                 {
@@ -514,7 +514,7 @@ namespace Iot.Device.Imu
                 Thread.Sleep(10);
             }
 
-            if (timeOut <= 0)
+            if (!(_outputModeReceived && _dataMaskReceived))
             {
                 errorMessage = "No reply from device";
                 return false;
