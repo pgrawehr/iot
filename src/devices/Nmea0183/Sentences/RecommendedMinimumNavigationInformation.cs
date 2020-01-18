@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -61,7 +61,9 @@ namespace Iot.Device.Nmea0183.Sentences
             get
             {
                 if (!_positiveMagneticVariationInDegrees.HasValue || !_magneticVariationTurn.HasValue)
+                {
                     return null;
+                }
 
                 return (double)(_positiveMagneticVariationInDegrees.Value * DirectionToSign(_magneticVariationTurn.Value));
             }
@@ -155,9 +157,13 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 string val = ReadString();
                 if (string.IsNullOrEmpty(val))
+                {
                     return null;
+                }
                 else
+                {
                     return double.Parse(val);
+                }
             }
 
             string time = ReadString();
@@ -169,13 +175,13 @@ namespace Iot.Device.Nmea0183.Sentences
             double? speed = ReadValue();
             double? track = ReadValue();
             string date = ReadString();
-            
+
             DateTimeOffset? dateTime = null;
-            
+
             if (time.Length != 0 && date.Length != 0)
             {
                 dateTime = DateTimeOffset.ParseExact(date + time, "ddMMyyHHmmss.ff", formatProvider: null);
-            } 
+            }
             else if (time.Length != 0)
             {
                 dateTime = DateTimeOffset.ParseExact(time, "HHmmss.ff", formatProvider: null);
@@ -246,7 +252,9 @@ namespace Iot.Device.Nmea0183.Sentences
         private static double? Nmea0183ToDegrees(double? degreesMinutes, CardinalDirection? direction)
         {
             if (!degreesMinutes.HasValue || !direction.HasValue)
+            {
                 return null;
+            }
 
             // ddddmm.mm
             double degrees = Math.Floor(degreesMinutes.Value / 100);
@@ -257,7 +265,9 @@ namespace Iot.Device.Nmea0183.Sentences
         private static (double? degreesMinutes, CardinalDirection? direction) DegreesToNmea0183(double? degrees, bool isLatitude)
         {
             if (!degrees.HasValue)
+            {
                 return (null, null);
+            }
 
             CardinalDirection? direction;
             double positiveDegrees;

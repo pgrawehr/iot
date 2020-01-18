@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -101,7 +101,7 @@ namespace Iot.Device.Nmea0183
             int lastFieldIdx = fields.Length - 1;
             (byte? checksum, string lastField) = GetChecksumAndLastField(fields[lastFieldIdx]);
             fields[lastFieldIdx] = lastField;
-            
+
             TalkerSentence result = new TalkerSentence(talkerId, sentenceId, fields);
 
             if (checksum.HasValue)

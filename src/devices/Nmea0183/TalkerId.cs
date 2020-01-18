@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -47,12 +47,12 @@ namespace Iot.Device.Nmea0183
             return Id1 == other.Id1 && Id2 == other.Id2;
         }
 
-        public static bool operator== (TalkerId obj1, TalkerId obj2)
+        public static bool operator ==(TalkerId obj1, TalkerId obj2)
         {
             return obj1.Equals(obj2);
         }
 
-        public static bool operator!= (TalkerId obj1, TalkerId obj2) => !(obj1 == obj2);
+        public static bool operator !=(TalkerId obj1, TalkerId obj2) => !(obj1 == obj2);
 
         // Below information is based on http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf page 3
         // Most up to date list can be found at
