@@ -9,10 +9,8 @@
   <ItemGroup>
     <Compile Include="*.cs" />
     <None Include="README.md" />
-    <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj">
-      <AdditionalProperties>$(AdditionalProperties);RuntimeIdentifier=linux</AdditionalProperties>
-    </ProjectReference>
     <ProjectReference Include="../Nmea0183/Nmea0183.csproj" />
+    <ProjectReference Include="..\..\System.Device.Gpio\System.Device.Gpio.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -9,6 +9,9 @@ using Iot.Device.Nmea0183.Sentences;
 
 namespace Iot.Device.Gps
 {
+    /// <summary>
+    /// A binding for NeoM8 GPS receiver
+    /// </summary>
     public sealed class NeoM8 : IDisposable
     {
         private SerialPort _sp;

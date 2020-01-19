@@ -5,7 +5,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Nmea0183.Sentences;
 
+#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf
@@ -14,7 +16,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// <summary>
     /// Represents RecommendedMinimumNavigationInformation NMEA0183 sentence
     /// </summary>
-    public class RecommendedMinimumNavigationInformation
+    public class RecommendedMinimumNavigationInformation : NmeaSentence
     {
         public static SentenceId Id => new SentenceId('R', 'M', 'C');
         private static bool Matches(SentenceId sentence) => Id == sentence;
@@ -126,22 +128,15 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         public RecommendedMinimumNavigationInformation(IEnumerable<string> fields)
+            : base(Id)
         {
             IEnumerator<string> field = fields.GetEnumerator();
-
-            void Done()
-            {
-                if (field.MoveNext())
-                {
-                    throw new ArgumentException("Too many elements", nameof(fields));
-                }
-            }
 
             string ReadString()
             {
                 if (!field.MoveNext())
                 {
-                    throw new ArgumentException("Insufficient number of elements", nameof(fields));
+                    return string.Empty;
                 }
 
                 return field.Current;
@@ -202,8 +197,6 @@ namespace Iot.Device.Nmea0183.Sentences
                 Status2 = string.IsNullOrEmpty(val) ? (NavigationStatus?)null : (NavigationStatus?)val.Single();
             }
 
-            Done();
-
             DateTime = dateTime;
             Status = status;
             _latitude = lat;
@@ -224,6 +217,7 @@ namespace Iot.Device.Nmea0183.Sentences
             double? speedOverGroundInKnots,
             double? trackMadeGoodInDegreesTrue,
             double? magneticVariationInDegrees)
+        : base(Id)
         {
             DateTime = dateTime;
             Status = status;

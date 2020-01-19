@@ -81,17 +81,19 @@ namespace Iot.Device.Nmea0183
 
             if (sentence.Length < SentenceHeaderLength)
             {
-                throw new ArgumentException($"Minimum required length is {SentenceHeaderLength}", nameof(sentence));
+                // TODO: Find a way of reporting error (i.e. dummy error sentence)
+                // We shall not throw, because that would crash the app on an invalid sentence
+                return null; // ($"Minimum required length is {SentenceHeaderLength}", nameof(sentence));
             }
 
             if (sentence.Length > MaxSentenceLength)
             {
-                throw new ArgumentException($"Maximum size of sentence is {MaxSentenceLength}", nameof(sentence));
+                return null; // throw new ArgumentException($"Maximum size of sentence is {MaxSentenceLength}", nameof(sentence));
             }
 
             if (sentence[0] != '$')
             {
-                throw new ArgumentException("Sentence must start with '$'", nameof(sentence));
+                return null; // throw new ArgumentException("Sentence must start with '$'", nameof(sentence));
             }
 
             TalkerId talkerId = new TalkerId(sentence[1], sentence[2]);
@@ -110,7 +112,7 @@ namespace Iot.Device.Nmea0183
 
                 if (realChecksum != checksum.Value)
                 {
-                    throw new InvalidOperationException($"Checksum in the sentence (0x{checksum:X2}) does not match calculated checksum (0x{realChecksum:X2}) for sentence `{sentence}`");
+                    return null; // throw new InvalidOperationException($"Checksum in the sentence (0x{checksum:X2}) does not match calculated checksum (0x{realChecksum:X2}) for sentence `{sentence}`");
                 }
             }
 
