@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
+using Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183
 {
@@ -16,15 +17,32 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public class TalkerSentence
     {
-        private static ConcurrentDictionary<SentenceId, Func<TalkerSentence, object>> s_registeredSentences = GetKnownSentences();
+        private static ConcurrentDictionary<SentenceId, Func<TalkerSentence, DateTimeOffset, NmeaSentence>> s_registeredSentences;
 
-        private static ConcurrentDictionary<SentenceId, Func<TalkerSentence, object>> GetKnownSentences()
+        private static ConcurrentDictionary<SentenceId, Func<TalkerSentence, DateTimeOffset, NmeaSentence>> GetKnownSentences()
         {
-            var knownSentences = new ConcurrentDictionary<SentenceId, Func<TalkerSentence, object>>();
+            var knownSentences = new ConcurrentDictionary<SentenceId, Func<TalkerSentence, DateTimeOffset, NmeaSentence>>();
 
-            knownSentences[RecommendedMinimumNavigationInformation.Id] = (sentence) => new RecommendedMinimumNavigationInformation(sentence);
+            knownSentences[RecommendedMinimumNavigationInformation.Id] = (sentence, time) => new RecommendedMinimumNavigationInformation(sentence, time);
+            knownSentences[TimeDate.Id] = (sentence, time) => new TimeDate(sentence, time);
 
             return knownSentences;
+        }
+
+        static TalkerSentence()
+        {
+            s_registeredSentences = GetKnownSentences();
+            LastMessageTime = DateTimeOffset.Now; // In case the messages contain no date, we have to assume the computer is right
+        }
+
+        /// <summary>
+        /// The date/time when the last message was seen.
+        /// Used to assign the incoming messages a timespan if they don't provide their own (or if they only provide the time but not the date)
+        /// </summary>
+        public static DateTimeOffset LastMessageTime
+        {
+            get;
+            private set;
         }
 
         /// <summary>
@@ -91,8 +109,9 @@ namespace Iot.Device.Nmea0183
                 return null; // throw new ArgumentException($"Maximum size of sentence is {MaxSentenceLength}", nameof(sentence));
             }
 
-            if (sentence[0] != '$')
+            if (sentence[0] != '$' && sentence[0] != '!')
             {
+                // Valid sentences start with $ or ! (for the AIS sentences)
                 return null; // throw new ArgumentException("Sentence must start with '$'", nameof(sentence));
             }
 
@@ -134,14 +153,20 @@ namespace Iot.Device.Nmea0183
         /// If not found returns null.
         /// </summary>
         /// <returns>Object corresponding to the identifier</returns>
-        public object TryGetTypedValue()
+        public NmeaSentence TryGetTypedValue()
         {
-            if (s_registeredSentences.TryGetValue(Id, out Func<TalkerSentence, object> producer))
+            NmeaSentence retVal = null;
+            if (s_registeredSentences.TryGetValue(Id, out Func<TalkerSentence, DateTimeOffset, NmeaSentence> producer))
             {
-                return producer(this);
+                retVal = producer(this, LastMessageTime);
             }
 
-            return null;
+            if (retVal?.DateTime != null)
+            {
+                LastMessageTime = retVal.DateTime.Value;
+            }
+
+            return retVal;
         }
 
         /// <summary>
@@ -149,7 +174,7 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="id">NMEA0183 sentence identifier</param>
         /// <param name="producer">Function which produces typed object given <see cref="TalkerSentence"/>.</param>
-        public static void RegisterSentence(SentenceId id, Func<TalkerSentence, object> producer)
+        public static void RegisterSentence(SentenceId id, Func<TalkerSentence, DateTimeOffset, NmeaSentence> producer)
         {
             s_registeredSentences[id] = producer;
         }

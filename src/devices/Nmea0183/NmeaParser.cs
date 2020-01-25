@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
+using Nmea0183.Sentences;
+using Units;
 
 #pragma warning disable CS1591
 namespace Nmea0183
@@ -37,7 +39,9 @@ namespace Nmea0183
             _lastSeenSentences = new Dictionary<SentenceId, TalkerSentence>();
         }
 
-        public event Action<IGeographicPosition, double, double> OnNewPosition;
+        public event Action<IGeographicPosition, double, Speed> OnNewPosition;
+
+        public event Action<DateTimeOffset> OnNewTime;
 
         public event Action<TalkerSentence> OnNewSequence;
 
@@ -61,7 +65,14 @@ namespace Nmea0183
             while (!_cancellationTokenSource.IsCancellationRequested)
             {
                 string currentLine = _reader.ReadLine();
+                Console.WriteLine(currentLine);
                 TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine);
+                if (sentence == null)
+                {
+                    Console.WriteLine($"Incorrect sentence detected: {currentLine}");
+                    continue;
+                }
+
                 OnNewSequence?.Invoke(sentence);
                 _lastSeenSentences[sentence.Id] = sentence;
 
@@ -80,12 +91,20 @@ namespace Nmea0183
 
                         if (rmc.TrackMadeGoodInDegreesTrue.HasValue && rmc.SpeedOverGroundInKnots.HasValue)
                         {
-                            OnNewPosition?.Invoke(position, rmc.TrackMadeGoodInDegreesTrue.Value, rmc.SpeedOverGroundInKnots.Value * 0.5144);
+                            OnNewPosition?.Invoke(position, rmc.TrackMadeGoodInDegreesTrue.Value, Speed.FromKnots(rmc.SpeedOverGroundInKnots.Value));
                         }
                         else
                         {
-                            OnNewPosition?.Invoke(position, 0, 0);
+                            OnNewPosition?.Invoke(position, 0, Speed.FromKnots(0));
                         }
+                    }
+                }
+                else if (typed is TimeDate td)
+                {
+                    if (td.ValidDate && td.DateTime.HasValue)
+                    {
+                        Console.WriteLine($"Current time: {td.DateTime.Value}");
+                        OnNewTime?.Invoke(td.DateTime.Value);
                     }
                 }
                 else

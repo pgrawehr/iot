@@ -22,7 +22,6 @@ namespace Iot.Device.Nmea0183.Sentences
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
-        public DateTimeOffset? DateTime { get; private set; }
         public NavigationStatus? Status { get; private set; }
 
         /// <summary>
@@ -122,72 +121,38 @@ namespace Iot.Device.Nmea0183.Sentences
             return $"{time},{status},{lat},{latTurn},{lon},{lonTurn},{speed},{track},{date},{mag},{magTurn}{status2}";
         }
 
-        public RecommendedMinimumNavigationInformation(TalkerSentence sentence)
-            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"))
+        public RecommendedMinimumNavigationInformation(TalkerSentence sentence, DateTimeOffset time)
+            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
-        public RecommendedMinimumNavigationInformation(IEnumerable<string> fields)
+        public RecommendedMinimumNavigationInformation(IEnumerable<string> fields, DateTimeOffset today)
             : base(Id)
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
-            string ReadString()
-            {
-                if (!field.MoveNext())
-                {
-                    return string.Empty;
-                }
+            string time = ReadString(field);
+            NavigationStatus? status = (NavigationStatus?)ReadChar(field);
+            double? lat = ReadValue(field);
+            CardinalDirection? latTurn = (CardinalDirection?)ReadChar(field);
+            double? lon = ReadValue(field);
+            CardinalDirection? lonTurn = (CardinalDirection?)ReadChar(field);
+            double? speed = ReadValue(field);
+            double? track = ReadValue(field);
+            string date = ReadString(field);
 
-                return field.Current;
+            DateTimeOffset dateTime;
+            if (date.Length != 0)
+            {
+                dateTime = ParseDateTime(date, time);
+            }
+            else
+            {
+                dateTime = ParseDateTime(today, time);
             }
 
-            char? ReadChar()
-            {
-                string val = ReadString();
-                return string.IsNullOrEmpty(val) ? (char?)null : val.Single();
-            }
-
-            double? ReadValue()
-            {
-                string val = ReadString();
-                if (string.IsNullOrEmpty(val))
-                {
-                    return null;
-                }
-                else
-                {
-                    return double.Parse(val);
-                }
-            }
-
-            string time = ReadString();
-            NavigationStatus? status = (NavigationStatus?)ReadChar();
-            double? lat = ReadValue();
-            CardinalDirection? latTurn = (CardinalDirection?)ReadChar();
-            double? lon = ReadValue();
-            CardinalDirection? lonTurn = (CardinalDirection?)ReadChar();
-            double? speed = ReadValue();
-            double? track = ReadValue();
-            string date = ReadString();
-
-            DateTimeOffset? dateTime = null;
-
-            if (time.Length != 0 && date.Length != 0)
-            {
-                dateTime = DateTimeOffset.ParseExact(date + time, "ddMMyyHHmmss.ff", formatProvider: null);
-            }
-            else if (time.Length != 0)
-            {
-                dateTime = DateTimeOffset.ParseExact(time, "HHmmss.ff", formatProvider: null);
-            }
-            else if (date.Length != 0)
-            {
-                dateTime = DateTimeOffset.ParseExact(date, "ddMMyy", formatProvider: null);
-            }
-
-            double? mag = ReadValue();
-            CardinalDirection? magTurn = (CardinalDirection?)ReadChar();
+            double? mag = ReadValue(field);
+            CardinalDirection? magTurn = (CardinalDirection?)ReadChar(field);
 
             // handle undocumented field
             // per spec we should not have any extra fields but NEO-M8 does have them
