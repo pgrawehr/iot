@@ -206,7 +206,7 @@ namespace System.Device.Gpio.Drivers
                 return new WaitForEventResult
                 {
                     TimedOut = !eventOccurred,
-                    EventTypes = eventOccured ? typeOfEventOccured : PinEventTypes.None,
+                    EventTypes = eventOccurred ? typeOfEventOccured : PinEventTypes.None,
                 };
             }
             else
