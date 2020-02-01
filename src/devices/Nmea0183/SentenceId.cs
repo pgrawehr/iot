@@ -31,6 +31,19 @@ namespace Iot.Device.Nmea0183
             Id3 = id3;
         }
 
+        /// <summary>
+        /// Constructs NMEA sentence identifier from string. Must be exactly 3 chars long
+        /// </summary>
+        /// <param name="identifier">Sentence identifier, i.e. GGA</param>
+        public SentenceId(string identifier)
+            : this(identifier[0], identifier[1], identifier[2])
+        {
+            if (identifier.Length != 3)
+            {
+                throw new ArgumentException("Identifier must be exactly 3 chars long", nameof(identifier));
+            }
+        }
+
         public override bool Equals(object obj)
         {
             if (obj is SentenceId other)

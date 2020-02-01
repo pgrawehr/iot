@@ -44,6 +44,16 @@ namespace Nmea0183.Sentences
         }
 
         /// <summary>
+        /// True if the contents of this message are valid / understood
+        /// This is false if the message type could be decoded, but the contents seem invalid or there's no useful data
+        /// </summary>
+        public bool Valid
+        {
+            get;
+            protected set;
+        }
+
+        /// <summary>
         /// Decodes the next field into a string
         /// </summary>
         protected string ReadString(IEnumerator<string> field)

@@ -25,6 +25,7 @@ namespace Iot.Device.Nmea0183
 
             knownSentences[RecommendedMinimumNavigationInformation.Id] = (sentence, time) => new RecommendedMinimumNavigationInformation(sentence, time);
             knownSentences[TimeDate.Id] = (sentence, time) => new TimeDate(sentence, time);
+            knownSentences[WindSpeedAndAngle.Id] = (sentence, time) => new WindSpeedAndAngle(sentence, time);
 
             return knownSentences;
         }

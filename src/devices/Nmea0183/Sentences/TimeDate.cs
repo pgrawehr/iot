@@ -12,19 +12,6 @@ namespace Nmea0183.Sentences
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
-        private bool _validDate;
-
-        /// <summary>
-        /// Represents the time of this instance. Returns null if the message did not contain a valid date and time instance
-        /// </summary>
-        public bool ValidDate
-        {
-            get
-            {
-                return _validDate;
-            }
-        }
-
         public TimeDate(TalkerSentence sentence, DateTimeOffset time)
             : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
@@ -72,12 +59,12 @@ namespace Nmea0183.Sentences
                 DateTimeOffset t = new DateTimeOffset((int)year, (int)month, (int)day, localTimeOfDay.Value.Hours, localTimeOfDay.Value.Minutes, localTimeOfDay.Value.Seconds,
                     localTimeOfDay.Value.Milliseconds, gregorianCalendar, TimeSpan.FromHours(offset));
                 DateTime = t;
-                _validDate = true;
+                Valid = true;
             }
             else
             {
                 // Set the reception time anyway, but tell clients that this was not a complete ZDA message
-                _validDate = false;
+                Valid = false;
                 DateTime = today;
             }
         }
@@ -86,13 +73,13 @@ namespace Nmea0183.Sentences
         : base(Id)
         {
             DateTime = dateTime;
-            _validDate = true;
+            Valid = true;
         }
 
         public override string ToString()
         {
             // seems nullable don't interpolate well
-            if (DateTime.HasValue && _validDate)
+            if (DateTime.HasValue && Valid)
             {
                 var t = DateTime.Value;
                 string time = $"{t.ToString("HHmmss.ff")}";

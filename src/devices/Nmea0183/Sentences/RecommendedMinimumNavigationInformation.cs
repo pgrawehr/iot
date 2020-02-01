@@ -172,6 +172,7 @@ namespace Iot.Device.Nmea0183.Sentences
             TrackMadeGoodInDegreesTrue = track;
             _positiveMagneticVariationInDegrees = mag;
             _magneticVariationTurn = magTurn;
+            Valid = true; // for this message, we need to check on the individual fields
         }
 
         public RecommendedMinimumNavigationInformation(
