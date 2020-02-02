@@ -331,29 +331,27 @@ namespace System.Device.Gpio.Drivers
             SetPinEventsToDetect(pinNumber, eventTypes);
             AddPinToPoll(pinNumber, ref valueFileDescriptor, ref pollFileDescriptor, out bool closePinValueFileDescriptor);
 
-            bool eventDetected = WasEventDetected(pollFileDescriptor, out _, cancellationToken);
-            if (_statusUpdateSleepTime > 0)
-            {
-                Thread.Sleep(_statusUpdateSleepTime); // Adding some delay to make sure that the value of the File has been updated so that we will get the right event type.
-            }
-
+            bool eventDetected = false;
             PinEventTypes detectedEventType = PinEventTypes.None;
-            if (eventDetected)
+
+            try
             {
-                // This is the only case where we need to read the new state. Although there are reports of this not being 100% reliable in all situations,
-                // it seems to be working fine most of the time.
-                if (eventTypes == (PinEventTypes.Rising | PinEventTypes.Falling))
+                eventDetected = WasEventDetected(pollFileDescriptor, out int detectedPin, cancellationToken);
+                if (_statusUpdateSleepTime > 0)
+                {
+                    Thread.Sleep(_statusUpdateSleepTime); // Adding some delay to make sure that the value of the File has been updated so that we will get the right event type.
+                }
+
+                if (eventDetected)
                 {
                     detectedEventType = (Read(pinNumber) == PinValue.High) ? PinEventTypes.Rising : PinEventTypes.Falling;
                 }
-                else if (eventTypes != PinEventTypes.None)
-                {
-                    // If we're only waiting for one event type, we know which one it has to be
-                    detectedEventType = eventTypes;
-                }
+            }
+            finally
+            {
+                RemovePinFromPoll(pinNumber, ref valueFileDescriptor, ref pollFileDescriptor, closePinValueFileDescriptor, closePollFileDescriptor: true, cancelEventDetectionThread: false);
             }
 
-            RemovePinFromPoll(pinNumber, ref valueFileDescriptor, ref pollFileDescriptor, closePinValueFileDescriptor, closePollFileDescriptor: true, cancelEventDetectionThread: false);
             return new WaitForEventResult
             {
                 TimedOut = !eventDetected,
@@ -469,7 +467,9 @@ namespace System.Device.Gpio.Drivers
             while (!cancellationToken.IsCancellationRequested)
             {
                 // Wait until something happens
-                int waitResult = Interop.epoll_wait(pollFileDescriptor, out epoll_event events, 1, _pollingTimeoutInMilliseconds);
+                epoll_event events = new epoll_event();
+                events.data.pinNumber = 0;
+                int waitResult = Interop.epoll_wait(pollFileDescriptor, out events, 1, _pollingTimeoutInMilliseconds);
                 if (waitResult == -1)
                 {
                     throw new IOException("Error while waiting for pin interrupts.");
