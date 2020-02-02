@@ -124,7 +124,8 @@ namespace Iot.Device.Nmea0183
 
             string[] fields = sentence.Substring(SentenceHeaderLength).Split(',');
             int lastFieldIdx = fields.Length - 1;
-            (byte? checksum, string lastField) = GetChecksumAndLastField(fields[lastFieldIdx]);
+            // This returns null as the checksum if there was none, or a very big number if the checksum couldn't be parsed
+            (int? checksum, string lastField) = GetChecksumAndLastField(fields[lastFieldIdx]);
             fields[lastFieldIdx] = lastField;
 
             TalkerSentence result = new TalkerSentence(talkerId, sentenceId, fields);
@@ -185,7 +186,7 @@ namespace Iot.Device.Nmea0183
             s_registeredSentences[id] = producer;
         }
 
-        private static (byte? checksum, string lastField) GetChecksumAndLastField(string lastEntry)
+        private static (int? checksum, string lastField) GetChecksumAndLastField(string lastEntry)
         {
             int lastStarIdx = lastEntry.LastIndexOf('*');
 
@@ -197,7 +198,7 @@ namespace Iot.Device.Nmea0183
 
             int lastIdx = lastEntry.Length - 1;
             int sum = HexDigitToDecimal(lastEntry[lastIdx - 1]) * 16 + HexDigitToDecimal(lastEntry[lastIdx]);
-            return ((byte)sum, lastEntry.Substring(0, lastStarIdx));
+            return (sum, lastEntry.Substring(0, lastStarIdx));
         }
 
         private static int HexDigitToDecimal(char c)
@@ -217,7 +218,7 @@ namespace Iot.Device.Nmea0183
                 return 10 + (int)(c - 'A');
             }
 
-            throw new ArgumentException($"{c} is not a hex digit", nameof(c));
+            return 0xFFFF; // Will later fail with "invalid checksum"
         }
 
         private static byte CalculateChecksumFromSentenceString(ReadOnlySpan<char> sentenceString)

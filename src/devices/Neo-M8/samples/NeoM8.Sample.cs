@@ -58,19 +58,26 @@ namespace Iot.Device.Gps.NeoM8Samples
 
         private static void UsingNetwork()
         {
-            // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-            using (TcpClient client = new TcpClient("127.0.0.1", 10110))
+            try
             {
-                Console.WriteLine("Connected!");
-                var stream = client.GetStream();
-                using (NmeaParser parser = new NmeaParser(stream, stream))
+                // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
+                using (TcpClient client = new TcpClient("127.0.0.1", 10110))
                 {
-                    parser.StartDecode();
-                    while (!Console.KeyAvailable)
+                    Console.WriteLine("Connected!");
+                    var stream = client.GetStream();
+                    using (NmeaParser parser = new NmeaParser(stream, stream))
                     {
-                        Thread.Sleep(1000);
+                        parser.StartDecode();
+                        while (!Console.KeyAvailable)
+                        {
+                            Thread.Sleep(1000);
+                        }
                     }
                 }
+            }
+            catch (SocketException x)
+            {
+                Console.WriteLine($"Error connecting to host: {x}");
             }
         }
     }
