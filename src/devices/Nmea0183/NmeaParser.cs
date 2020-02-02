@@ -80,11 +80,7 @@ namespace Nmea0183
                 _lastSeenSentences[sentence.Id] = sentence;
 
                 var typed = sentence.TryGetTypedValue();
-                if (typed == null)
-                {
-                    Console.WriteLine($"Sentence identifier `{sentence.Id}` is not known.");
-                }
-                else if (typed is RecommendedMinimumNavigationInformation rmc)
+                if (typed is RecommendedMinimumNavigationInformation rmc)
                 {
                     // Todo: This sentence is only interesting if we don't have GGA and VTG
                     if (rmc.LatitudeDegrees.HasValue && rmc.LongitudeDegrees.HasValue)
@@ -112,7 +108,7 @@ namespace Nmea0183
                 }
                 else
                 {
-                    Console.WriteLine($"Sentence of type `{typed.GetType().FullName}` not handled.");
+                    Console.WriteLine($"Sentence of type `${sentence.TalkerId}{sentence.Id}` not handled.");
                 }
             }
         }

@@ -183,6 +183,10 @@ namespace Iot.Device.Nmea0183
             {
                 retVal = producer(this, LastMessageTime);
             }
+            else
+            {
+                retVal = new UnknownSentence(Id, Fields);
+            }
 
             if (retVal?.DateTime != null)
             {

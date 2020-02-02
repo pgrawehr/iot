@@ -81,6 +81,7 @@ namespace Nmea0183.Tests
         [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
         [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
         [InlineData("$WIMWV,220.0,T,5.0,N,A*20")]
+        [InlineData("$SDDBS,177.7,f,54.2,M,29.6,F*09")] // Unknown sentence (for now)
         public void SentenceRoundTrip(string input)
         {
             var inSentence = TalkerSentence.FromSentenceString(input, out var error);
