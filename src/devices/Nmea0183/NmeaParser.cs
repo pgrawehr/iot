@@ -45,6 +45,8 @@ namespace Nmea0183
 
         public event Action<TalkerSentence> OnNewSequence;
 
+        public event Action<string, NmeaError> OnParserError;
+
         public void StartDecode()
         {
             lock (_lock)
@@ -66,10 +68,11 @@ namespace Nmea0183
             {
                 string currentLine = _reader.ReadLine();
                 Console.WriteLine(currentLine);
-                TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine);
+                TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, out var error);
                 if (sentence == null)
                 {
-                    Console.WriteLine($"Incorrect sentence detected: {currentLine}");
+                    Console.WriteLine($"Malformed sentence detected: {currentLine}: {error}");
+                    OnParserError?.Invoke(currentLine, error);
                     continue;
                 }
 
@@ -101,7 +104,7 @@ namespace Nmea0183
                 }
                 else if (typed is TimeDate td)
                 {
-                    if (td.ValidDate && td.DateTime.HasValue)
+                    if (td.Valid && td.DateTime.HasValue)
                     {
                         Console.WriteLine($"Current time: {td.DateTime.Value}");
                         OnNewTime?.Invoke(td.DateTime.Value);

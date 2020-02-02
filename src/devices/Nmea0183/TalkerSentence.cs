@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
+using Nmea0183;
 using Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183
@@ -83,9 +84,10 @@ namespace Iot.Device.Nmea0183
         /// Reads NMEA0183 talker sentence from provided string
         /// </summary>
         /// <param name="sentence">NMEA0183 talker sentence</param>
-        /// <returns>TalkerSentence instance</returns>
+        /// <param name="errorCode">Returns an error code, if the parsing failed</param>
+        /// <returns>TalkerSentence instance, or null in case of an error</returns>
         /// <remarks><paramref name="sentence"/> does not include new line characters</remarks>
-        public static TalkerSentence FromSentenceString(string sentence)
+        public static TalkerSentence FromSentenceString(string sentence, out NmeaError errorCode)
         {
             // $XXYYY, ...
             const int SentenceHeaderLength = 7;
@@ -100,20 +102,21 @@ namespace Iot.Device.Nmea0183
 
             if (sentence.Length < SentenceHeaderLength)
             {
-                // TODO: Find a way of reporting error (i.e. dummy error sentence)
-                // We shall not throw, because that would crash the app on an invalid sentence
-                return null; // ($"Minimum required length is {SentenceHeaderLength}", nameof(sentence));
+                errorCode = NmeaError.MessageToShort;
+                return null;
             }
 
             if (sentence.Length > MaxSentenceLength)
             {
-                return null; // throw new ArgumentException($"Maximum size of sentence is {MaxSentenceLength}", nameof(sentence));
+                errorCode = NmeaError.MessageToLong;
+                return null;
             }
 
             if (sentence[0] != '$' && sentence[0] != '!')
             {
                 // Valid sentences start with $ or ! (for the AIS sentences)
-                return null; // throw new ArgumentException("Sentence must start with '$'", nameof(sentence));
+                errorCode = NmeaError.NoSyncByte;
+                return null;
             }
 
             TalkerId talkerId = new TalkerId(sentence[1], sentence[2]);
@@ -132,10 +135,12 @@ namespace Iot.Device.Nmea0183
 
                 if (realChecksum != checksum.Value)
                 {
-                    return null; // throw new InvalidOperationException($"Checksum in the sentence (0x{checksum:X2}) does not match calculated checksum (0x{realChecksum:X2}) for sentence `{sentence}`");
+                    errorCode = NmeaError.InvalidChecksum;
+                    return null;
                 }
             }
 
+            errorCode = NmeaError.None;
             return result;
         }
 

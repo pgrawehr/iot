@@ -38,7 +38,7 @@ namespace Iot.Device.Gps
         public TalkerSentence Read()
         {
             string sentence = _sp.ReadLine();
-            return TalkerSentence.FromSentenceString(sentence);
+            return TalkerSentence.FromSentenceString(sentence, out _);
         }
 
         /// <inheritdoc/>
