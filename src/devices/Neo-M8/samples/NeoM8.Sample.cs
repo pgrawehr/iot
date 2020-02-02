@@ -9,6 +9,7 @@ using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Gps;
 using Nmea0183;
+using Nmea0183.Sentences;
 
 namespace Iot.Device.Gps.NeoM8Samples
 {
@@ -67,6 +68,8 @@ namespace Iot.Device.Gps.NeoM8Samples
                     var stream = client.GetStream();
                     using (NmeaParser parser = new NmeaParser(stream, stream))
                     {
+                        parser.OnParserError += (s, error) => { Console.WriteLine($"Error while parsing message '{s}': {error}"); };
+                        parser.OnNewSequence += ParserOnOnNewSequence;
                         parser.StartDecode();
                         while (!Console.KeyAvailable)
                         {
@@ -79,6 +82,11 @@ namespace Iot.Device.Gps.NeoM8Samples
             {
                 Console.WriteLine($"Error connecting to host: {x}");
             }
+        }
+
+        private static void ParserOnOnNewSequence(NmeaSentence sentence)
+        {
+            Console.WriteLine(sentence.ToReadableContent());
         }
     }
 }

@@ -39,5 +39,11 @@ namespace Nmea0183.Sentences
         {
             return string.Join(',', _fields);
         }
+
+        /// <inheritdoc />
+        public override string ToReadableContent()
+        {
+            return $"$XX{SentenceId}{ToString()}"; // Cannot do much else here
+        }
     }
 }

@@ -43,7 +43,7 @@ namespace Nmea0183
 
         public event Action<DateTimeOffset> OnNewTime;
 
-        public event Action<TalkerSentence> OnNewSequence;
+        public event Action<NmeaSentence> OnNewSequence;
 
         public event Action<string, NmeaError> OnParserError;
 
@@ -71,22 +71,25 @@ namespace Nmea0183
                 TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, out var error);
                 if (sentence == null)
                 {
-                    Console.WriteLine($"Malformed sentence detected: {currentLine}: {error}");
                     OnParserError?.Invoke(currentLine, error);
                     continue;
                 }
 
-                OnNewSequence?.Invoke(sentence);
                 _lastSeenSentences[sentence.Id] = sentence;
 
                 var typed = sentence.TryGetTypedValue();
+
+                if (typed != null)
+                {
+                    OnNewSequence?.Invoke(typed);
+                }
+
                 if (typed is RecommendedMinimumNavigationInformation rmc)
                 {
                     // Todo: This sentence is only interesting if we don't have GGA and VTG
                     if (rmc.LatitudeDegrees.HasValue && rmc.LongitudeDegrees.HasValue)
                     {
                         GeographicPosition position = new GeographicPosition(rmc.LatitudeDegrees.Value, rmc.LongitudeDegrees.Value, 0);
-                        Console.WriteLine($"Your location: {position}");
 
                         if (rmc.TrackMadeGoodInDegreesTrue.HasValue && rmc.SpeedOverGroundInKnots.HasValue)
                         {
@@ -102,13 +105,8 @@ namespace Nmea0183
                 {
                     if (td.Valid && td.DateTime.HasValue)
                     {
-                        Console.WriteLine($"Current time: {td.DateTime.Value}");
                         OnNewTime?.Invoke(td.DateTime.Value);
                     }
-                }
-                else
-                {
-                    Console.WriteLine($"Sentence of type `${sentence.TalkerId}{sentence.Id}` not handled.");
                 }
             }
         }

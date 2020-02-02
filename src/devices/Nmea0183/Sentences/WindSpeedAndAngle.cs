@@ -116,5 +116,23 @@ namespace Nmea0183.Sentences
 
             return string.Empty;
         }
+
+        /// <inheritdoc />
+        public override string ToReadableContent()
+        {
+            if (Valid)
+            {
+                if (Relative)
+                {
+                    return $"Relative wind direction: {Angle:F1}° Speed: {Speed.Knots:F1}Kts";
+                }
+                else
+                {
+                    return $"Absolute wind direction: {Angle:F1}° Speed: {Speed.Knots:F1}Kts";
+                }
+            }
+
+            return "Wind speed/direction unknown";
+        }
     }
 }

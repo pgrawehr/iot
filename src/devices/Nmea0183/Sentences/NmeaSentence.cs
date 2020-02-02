@@ -148,5 +148,10 @@ namespace Nmea0183.Sentences
 
             return dateTime;
         }
+
+        /// <summary>
+        /// Gets an user-readable string about this message
+        /// </summary>
+        public abstract string ToReadableContent();
     }
 }

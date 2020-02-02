@@ -119,5 +119,17 @@ namespace Nmea0183.Sentences
 
             return $",,,,00,";
         }
+
+        public override string ToReadableContent()
+        {
+            if (DateTime.HasValue)
+            {
+                return $"Date/Time: {DateTime.Value:G}";
+            }
+            else
+            {
+                return "Unknown date/time";
+            }
+        }
     }
 }

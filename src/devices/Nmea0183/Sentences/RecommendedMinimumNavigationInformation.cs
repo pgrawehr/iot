@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Nmea0183;
 using Nmea0183.Sentences;
 
 #pragma warning disable CS1591
@@ -220,6 +221,17 @@ namespace Iot.Device.Nmea0183.Sentences
             double degrees = Math.Floor(degreesMinutes.Value / 100);
             double minutes = degreesMinutes.Value - (degrees * 100);
             return ((double)degrees + (double)minutes / 60.0) * DirectionToSign(direction.Value);
+        }
+
+        public override string ToReadableContent()
+        {
+            if (LatitudeDegrees.HasValue && LongitudeDegrees.HasValue)
+            {
+                GeographicPosition position = new GeographicPosition(LatitudeDegrees.Value, LongitudeDegrees.Value, 0);
+                return $"Position: {position} / Speed {SpeedOverGroundInKnots} / Track {TrackMadeGoodInDegreesTrue}";
+            }
+
+            return "Position unknown";
         }
 
         private static (double? degreesMinutes, CardinalDirection? direction) DegreesToNmea0183(double? degrees, bool isLatitude)
