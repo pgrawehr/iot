@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
@@ -19,6 +20,8 @@ namespace Iot.Device.Nmea0183
     public class TalkerSentence
     {
         private static ConcurrentDictionary<SentenceId, Func<TalkerSentence, DateTimeOffset, NmeaSentence>> s_registeredSentences;
+
+        private string[] _fields;
 
         private static ConcurrentDictionary<SentenceId, Func<TalkerSentence, DateTimeOffset, NmeaSentence>> GetKnownSentences()
         {
@@ -57,15 +60,19 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public SentenceId Id { get; private set; }
 
-        private string[] _fields;
-
         /// <summary>
         /// Fields of the NMEA0183 sentence
         /// </summary>
         public IEnumerable<string> Fields => _fields;
 
         /// <inheritdoc/>
-        public override string ToString() => $"${TalkerId}{Id},{string.Join(",", Fields)}*{CalculateChecksum():X2}";
+        public override string ToString()
+        {
+            string mainPart = string.Format(CultureInfo.InvariantCulture, "{0}{1},{2}", TalkerId, Id, string.Join(",", Fields));
+            byte checksum = CalculateChecksum(mainPart);
+            string fullString = string.Format(CultureInfo.InvariantCulture, "${0}*{1:X2}", mainPart, checksum);
+            return fullString;
+        }
 
         /// <summary>
         /// Constructs NMEA0183 talker identifier
@@ -78,6 +85,24 @@ namespace Iot.Device.Nmea0183
             TalkerId = talkerId;
             Id = sentenceId;
             _fields = fields.ToArray();
+        }
+
+        /// <summary>
+        /// Constructs a message from a typed sentence
+        /// </summary>
+        /// <param name="talkerId">Talker Id with which the message is to be sent</param>
+        /// <param name="sentence">Sentence to send. It must be valid</param>
+        public TalkerSentence(TalkerId talkerId, NmeaSentence sentence)
+        {
+            TalkerId = talkerId;
+            Id = sentence.SentenceId;
+            var content = sentence.ToString();
+            if (string.IsNullOrWhiteSpace(content) || sentence.Valid == false)
+            {
+                throw new InvalidOperationException("Input sentence not valid or cannot be encoded");
+            }
+
+            _fields = content.Split(',', StringSplitOptions.None);
         }
 
         /// <summary>
@@ -143,15 +168,6 @@ namespace Iot.Device.Nmea0183
 
             errorCode = NmeaError.None;
             return result;
-        }
-
-        /// <summary>
-        /// Calculates the checksum of the data
-        /// </summary>
-        /// <returns>byte which represents the checksum of the sentence</returns>
-        public byte CalculateChecksum()
-        {
-            return CalculateChecksumFromSentenceString(ToString());
         }
 
         /// <summary>

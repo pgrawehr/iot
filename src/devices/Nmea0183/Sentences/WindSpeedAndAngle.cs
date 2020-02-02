@@ -66,6 +66,8 @@ namespace Nmea0183.Sentences
                     // Default, since that's what the actual wind instrument delivers
                     Relative = true;
                 }
+
+                Valid = true;
             }
             else
             {
@@ -109,7 +111,7 @@ namespace Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"{Angle},{(Relative ? "R" : "T")}, {Speed.Knots},N,A";
+                return $"{Angle:F1},{(Relative ? "R" : "T")},{Speed.Knots:F1},N,A";
             }
 
             return string.Empty;

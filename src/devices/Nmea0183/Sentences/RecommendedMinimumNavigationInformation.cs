@@ -103,7 +103,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public override string ToString()
         {
             // seems nullable don't interpolate well
-            string time = DateTime.HasValue ? $"{DateTime.Value.ToString("HHmmss.ff")}" : null;
+            string time = DateTime.HasValue ? $"{DateTime.Value.ToString("HHmmss.fff")}" : null;
             string status = Status.HasValue ? $"{(char)Status}" : null;
             string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000") : null;
             string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : null;

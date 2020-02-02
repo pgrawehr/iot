@@ -17,6 +17,12 @@ namespace Nmea0183.Sentences
         {
         }
 
+        public bool ReverseDateFormat
+        {
+            get;
+            set;
+        }
+
         /// <summary>
         /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
         /// </summary>
@@ -51,6 +57,7 @@ namespace Nmea0183.Sentences
                 double ytemp = day;
                 day = year;
                 year = ytemp;
+                ReverseDateFormat = true; // If the input format is exchanged, we by default send the message out the same way
             }
 
             // These may be undefined or zero if the GPS receiver is not receiving valid satellite data (i.e. the receiver works, but there's no antenna connected)
@@ -82,12 +89,32 @@ namespace Nmea0183.Sentences
             if (DateTime.HasValue && Valid)
             {
                 var t = DateTime.Value;
-                string time = $"{t.ToString("HHmmss.ff")}";
+                string time = $"{t.ToString("HHmmss.fff")}";
                 string year = $"{t.ToString("yyyy")}";
                 string month = $"{t.ToString("MM")}";
                 string day = $"{t.ToString("dd")}";
+                string offset = $"{t.Offset.Hours.ToString("00")}";
+                if (t.Offset >= TimeSpan.Zero)
+                {
+                    offset = "+" + offset;
+                }
+                else
+                {
+                    offset = "-" + offset;
+                }
+
+                string minuteOffset = $"{t.Offset.Minutes.ToString("00")}";
+
                 // Return as UTC for now
-                return $"{time},{year},{month},{day},00,00";
+                if (ReverseDateFormat)
+                {
+                    return $"{time},{day},{month},{year},{offset},{minuteOffset}";
+                }
+                else
+                {
+                    return $"{time},{year},{month},{day},{offset},{minuteOffset}";
+                }
+
             }
 
             return $",,,,00,";
