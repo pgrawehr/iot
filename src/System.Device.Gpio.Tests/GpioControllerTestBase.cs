@@ -191,6 +191,7 @@ namespace System.Device.Gpio.Tests
                 controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Falling, Callback);
                 controller.Write(OutputPin, PinValue.High);
                 Thread.Sleep(WaitMilliseconds);
+                controller.UnregisterCallbackForPinValueChangedEvent(InputPin, Callback);
                 Assert.False(wasCalled);
             }
 
@@ -201,7 +202,7 @@ namespace System.Device.Gpio.Tests
                     return;
                 }
 
-                Debug.WriteLine("Oops I was called!");
+                Console.WriteLine("Oops I was called!");
                 wasCalled = true;
             }
         }
