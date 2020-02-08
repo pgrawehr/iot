@@ -597,7 +597,7 @@ namespace System.Device.Gpio.Drivers
         {
             if (!_devicePins.ContainsKey(pinNumber))
             {
-                _devicePins.Add(pinNumber, new UnixDriverDevicePin());
+                _devicePins.Add(pinNumber, new UnixDriverDevicePin(Read(pinNumber)));
                 _pinsToDetectEventsCount++;
                 AddPinToPoll(pinNumber, ref _devicePins[pinNumber].FileDescriptor, ref _pollFileDescriptor, out _);
             }
@@ -649,18 +649,56 @@ namespace System.Device.Gpio.Drivers
                             Thread.Sleep(_statusUpdateSleepTime); // Adding some delay to make sure that the value of the File has been updated so that we will get the right event type.
                         }
 
-                        var activeEdges = _devicePins[pinNumber].ActiveEdges;
-                        PinEventTypes eventTypes = activeEdges;
-                        // If the active edges are both, we cannot detect for sure
+                        Write(13, PinValue.High);
+
+                        var currentPin = _devicePins[pinNumber];
+                        var activeEdges = currentPin.ActiveEdges;
+                        PinEventTypes eventType = activeEdges;
+                        PinEventTypes secondEvent = PinEventTypes.None;
+                        // Only if the active edges are both, we need to query the current state and guess about the change
                         if (activeEdges == (PinEventTypes.Falling | PinEventTypes.Rising))
                         {
-                            eventTypes = PinEventTypes.Unknown;
-                            Write(13, PinValue.High);
+                            var oldValue = currentPin.LastValue;
+                            var newValue = Read(pinNumber);
+                            if (oldValue == PinValue.Low && newValue == PinValue.High)
+                            {
+                                eventType = PinEventTypes.Rising;
+                            }
+                            else if (oldValue == PinValue.High && newValue == PinValue.Low)
+                            {
+                                eventType = PinEventTypes.Falling;
+                            }
+                            else if (oldValue == PinValue.High)
+                            {
+                                // Both high -> There must have been a low-active peak
+                                eventType = PinEventTypes.Falling;
+                                secondEvent = PinEventTypes.Rising;
+                            }
+                            else
+                            {
+                                // Both low -> There must have been a high-active peak
+                                eventType = PinEventTypes.Rising;
+                                secondEvent = PinEventTypes.Falling;
+                            }
+
+                            currentPin.LastValue = newValue;
+                        }
+                        else
+                        {
+                            // Update the value, in case we need it later
+                            currentPin.LastValue = Read(pinNumber);
                         }
 
-                        Console.WriteLine($"Got an event on pin {pinNumber} and it is {eventTypes}");
-                        var args = new PinValueChangedEventArgs(eventTypes, pinNumber);
-                        _devicePins[pinNumber]?.OnPinValueChanged(args);
+                        // Console.WriteLine($"Got an event on pin {pinNumber} and it is {eventType} (Active: {activeEdges})");
+                        // Thread.Sleep(10);
+                        var args = new PinValueChangedEventArgs(eventType, pinNumber);
+                        currentPin.OnPinValueChanged(args);
+                        if (secondEvent != PinEventTypes.None)
+                        {
+                            args = new PinValueChangedEventArgs(secondEvent, pinNumber);
+                            currentPin.OnPinValueChanged(args);
+                        }
+
                         Write(13, PinValue.Low);
                     }
                 }
