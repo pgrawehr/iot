@@ -43,7 +43,7 @@ namespace Nmea0183.Sentences
         /// <inheritdoc />
         public override string ToReadableContent()
         {
-            return $"$XX{SentenceId}{ToString()}"; // Cannot do much else here
+            return $"$XX{SentenceId},{ToString()}"; // Cannot do much else here
         }
     }
 }

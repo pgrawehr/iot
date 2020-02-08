@@ -32,6 +32,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[WindSpeedAndAngle.Id] = (sentence, time) => new WindSpeedAndAngle(sentence, time);
             knownSentences[HeadingTrue.Id] = (sentence, time) => new HeadingTrue(sentence, time);
             knownSentences[HeadingMagnetic.Id] = (sentence, time) => new HeadingMagnetic(sentence, time);
+            knownSentences[CrossTrackError.Id] = (sentence, time) => new CrossTrackError(sentence, time);
 
             return knownSentences;
         }
