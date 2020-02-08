@@ -25,9 +25,7 @@ namespace System.Device.Gpio.Drivers
 
         protected internal override PinValue Read(int pinNumber)
         {
-            var currentValue = _gpioDriver.Read(pinNumber);
-            base.Read(pinNumber);
-            return currentValue;
+            return _gpioDriver.Read(pinNumber);
         }
 
         protected internal override void AddCallbackForPinValueChangedEvent(int pinNumber, PinEventTypes eventTypes, PinChangeEventHandler callback)

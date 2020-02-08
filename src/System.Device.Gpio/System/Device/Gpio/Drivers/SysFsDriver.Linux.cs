@@ -478,7 +478,7 @@ namespace System.Device.Gpio.Drivers
                 if (waitResult > 0)
                 {
                     pinNumber = events.data.pinNumber;
-
+                    /*
                     // valueFileDescriptor will be -1 when using the callback eventing. For WaitForEvent, the value will be set.
                     if (valueFileDescriptor == -1)
                     {
@@ -496,7 +496,7 @@ namespace System.Device.Gpio.Drivers
                     {
                         throw new IOException("Error while trying to initialize pin interrupts.");
                     }
-
+                    */
                     return true;
                 }
             }
@@ -634,7 +634,9 @@ namespace System.Device.Gpio.Drivers
 
         private void DetectEvents()
         {
-            PinValue previousValue = Read(6);
+            OpenPin(13);
+            SetPinMode(13, PinMode.Output);
+            Write(13, PinValue.Low);
             while (_pinsToDetectEventsCount > 0)
             {
                 try
@@ -649,17 +651,17 @@ namespace System.Device.Gpio.Drivers
 
                         var activeEdges = _devicePins[pinNumber].ActiveEdges;
                         PinEventTypes eventTypes = activeEdges;
-                        // Only if the active edges are both, we need to query the current state
-                        PinValue currentValue = Read(pinNumber);
-                        eventTypes = (Read(pinNumber) == PinValue.High) ? PinEventTypes.Rising : PinEventTypes.Falling;
-                        if (currentValue == previousValue)
+                        // If the active edges are both, we cannot detect for sure
+                        if (activeEdges == (PinEventTypes.Falling | PinEventTypes.Rising))
                         {
-                            continue; // Nothing has happened?
+                            eventTypes = PinEventTypes.Unknown;
+                            Write(13, PinValue.High);
                         }
 
-                        previousValue = currentValue;
+                        Console.WriteLine($"Got an event on pin {pinNumber} and it is {eventTypes}");
                         var args = new PinValueChangedEventArgs(eventTypes, pinNumber);
                         _devicePins[pinNumber]?.OnPinValueChanged(args);
+                        Write(13, PinValue.Low);
                     }
                 }
                 catch (ObjectDisposedException)
