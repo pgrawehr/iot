@@ -22,7 +22,7 @@ namespace Nmea0183.Sentences
         /// Constructs a new MWV sentence
         /// </summary>
         public WindSpeedAndAngle(double angle, Speed speed, bool relative)
-            : base(new SentenceId())
+            : base(Id)
         {
             Angle = angle;
             Speed = speed;

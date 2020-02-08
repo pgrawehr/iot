@@ -24,7 +24,7 @@ namespace Nmea0183.Sentences
         /// Constructs a new MWV sentence
         /// </summary>
         public HeadingTrue(double angle)
-            : base(new SentenceId())
+            : base(Id)
         {
             Angle = angle;
         }

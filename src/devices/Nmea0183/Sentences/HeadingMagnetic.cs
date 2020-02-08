@@ -23,7 +23,7 @@ namespace Nmea0183.Sentences
         /// Constructs a new MWV sentence
         /// </summary>
         public HeadingMagnetic(double angle)
-            : base(new SentenceId())
+            : base(Id)
         {
             Angle = angle;
         }

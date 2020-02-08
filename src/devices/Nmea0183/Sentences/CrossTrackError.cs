@@ -22,7 +22,7 @@ namespace Nmea0183.Sentences
         /// Constructs a new MWV sentence
         /// </summary>
         public CrossTrackError(Distance distance, bool left)
-            : base(new SentenceId())
+            : base(Id)
         {
             Distance = distance;
             Left = left;
