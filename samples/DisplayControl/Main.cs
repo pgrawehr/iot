@@ -5,6 +5,7 @@
 using System;
 using System.Device.Gpio;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -35,8 +36,12 @@ namespace DisplayControl
 
         public static void Main(string[] args)
         {
-            Console.WriteLine("Press enter to start (waiting for debugger?)");
-            Console.ReadLine();
+            if (args.Any(x => x == "--debug"))
+            {
+                Console.WriteLine("Press enter to start (waiting for debugger)");
+                Console.ReadLine();
+            }
+
             Console.WriteLine($"Initializing Hardware...");
             using (GpioController controller = new GpioController())
             {

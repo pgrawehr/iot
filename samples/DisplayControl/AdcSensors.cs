@@ -20,6 +20,8 @@ namespace DisplayControl
         private ObservableValue<double> _currentSunBrightness;
         private VoltageWithLimits _button1;
         private VoltageWithLimits _button2;
+        private VoltageWithLimits _button3;
+        private VoltageWithLimits _button4;
 
         public AdcSensors()
         {
@@ -44,11 +46,17 @@ namespace DisplayControl
             _button1.LimitTriggered += LimitTriggered;
             _button2 = new VoltageWithLimits("Button 2 voltage", 0, 2.0);
             _button2.LimitTriggered += LimitTriggered;
+            _button3 = new VoltageWithLimits("Button 3 voltage", 0, 2.0);
+            _button3.LimitTriggered += LimitTriggered;
+            _button4 = new VoltageWithLimits("Button 4 voltage", 0, 2.0);
+            _button4.LimitTriggered += LimitTriggered;
 
             _sensorValueSources.Add(_voltage3_3V);
             _sensorValueSources.Add(_currentSunBrightness);
             _sensorValueSources.Add(_button1);
             _sensorValueSources.Add(_button2);
+            _sensorValueSources.Add(_button3);
+            _sensorValueSources.Add(_button4);
 
             m_cancellationTokenSource = new CancellationTokenSource();
             m_pollThread = new Thread(PollThread);
@@ -78,6 +86,28 @@ namespace DisplayControl
             if (sender == _button2)
             {
                 if (_button2.WarningLevel == WarningLevel.Error) // Button pressed
+                {
+                    cb.Invoke(DisplayButton.Next, true);
+                }
+                else
+                {
+                    cb.Invoke(DisplayButton.Next, false);
+                }
+            }
+            if (sender == _button3)
+            {
+                if (_button3.WarningLevel == WarningLevel.Error) // Button pressed
+                {
+                    cb.Invoke(DisplayButton.Next, true);
+                }
+                else
+                {
+                    cb.Invoke(DisplayButton.Next, false);
+                }
+            }
+            if (sender == _button4)
+            {
+                if (_button4.WarningLevel == WarningLevel.Error) // Button pressed
                 {
                     cb.Invoke(DisplayButton.Next, true);
                 }

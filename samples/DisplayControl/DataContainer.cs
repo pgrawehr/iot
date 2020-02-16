@@ -84,9 +84,9 @@ namespace DisplayControl
             m_systemSensors.Init(Controller);
             allSources.AddRange(m_systemSensors.SensorValueSources);
 
-            m_pressureSensor = new PressureSensor();
-            m_pressureSensor.Init(Controller);
-            allSources.AddRange(m_pressureSensor.SensorValueSources);
+            // m_pressureSensor = new PressureSensor();
+            // m_pressureSensor.Init(Controller);
+            // allSources.AddRange(m_pressureSensor.SensorValueSources);
 
             foreach(var sensor in allSources)
             {
