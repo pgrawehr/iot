@@ -11,12 +11,12 @@
     <StackPanel Orientation="Horizontal" Margin="5">
         <Border Background="{Binding StatusColor}">
             <StackPanel Orientation="Horizontal" Spacing="5">
-                <TextBlock VerticalAlignment="Center" Text="{Binding ValueDescription}"/>
-                <TextBox VerticalAlignment="Center" Text="{Binding ValueAsString}"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding Unit}"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding ValueDescription}" Width="500"/>
+                <TextBox VerticalAlignment="Center" Text="{Binding ValueAsString}" Width="70"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding Unit}" Width="20"/>
                 <Button Command="{Binding $parent[Window].DataContext.ActivateValue}" 
                         Content="Select" 
-                        CommandParameter="{Binding}"/>
+                        CommandParameter="{Binding}" Width="70"/>
                 </StackPanel>
         </Border>
      </StackPanel>

@@ -12,17 +12,19 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
     <StackPanel>
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_File">
+        <Menu DockPanel.Dock="Top" MinHeight="30">
+            <MenuItem Header="_File" VerticalAlignment="Center">
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
             </MenuItem>
         </Menu>
-        <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
-            <TextBlock Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" />
-        </StackPanel>
-        
-        <ItemsControl Items="{Binding SensorValues}">
-            
-        </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
+                <TextBlock Name="StatusBar" Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" />
+            </StackPanel>
+        <Panel ClipToBounds="True" Height="{Binding ClientHeight}">
+            <ScrollViewer VerticalScrollBarVisibility="Visible" DockPanel.Dock="Bottom" ClipToBounds="True">
+                <ItemsControl Items="{Binding SensorValues}">
+                </ItemsControl>
+            </ScrollViewer>
+        </Panel>
     </StackPanel>
 </Window>

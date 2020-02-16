@@ -23,6 +23,7 @@ namespace DisplayControl
         private DhtSensors m_dhtSensors;
         private SystemSensors m_systemSensors;
         private PressureSensor m_pressureSensor;
+        private ImuSensor _imuSensor;
 
         public DataContainer(GpioController controller)
         {
@@ -84,11 +85,15 @@ namespace DisplayControl
             m_systemSensors.Init(Controller);
             allSources.AddRange(m_systemSensors.SensorValueSources);
 
-            // m_pressureSensor = new PressureSensor();
-            // m_pressureSensor.Init(Controller);
-            // allSources.AddRange(m_pressureSensor.SensorValueSources);
+            m_pressureSensor = new PressureSensor();
+            m_pressureSensor.Init(Controller);
+            allSources.AddRange(m_pressureSensor.SensorValueSources);
 
-            foreach(var sensor in allSources)
+            _imuSensor = new ImuSensor();
+            _imuSensor.Init(Controller);
+            allSources.AddRange(_imuSensor.SensorValueSources);
+
+            foreach (var sensor in allSources)
             {
                 sensor.PropertyChanged += OnSensorValueChanged;
                 m_sensorValueSources.Add(sensor);
@@ -183,6 +188,9 @@ namespace DisplayControl
 
             m_pressureSensor.Dispose();
             m_pressureSensor = null;
+
+            _imuSensor.Dispose();
+            _imuSensor = null;
 
             m_lcdConsole.Dispose();
             m_lcdConsole = null;

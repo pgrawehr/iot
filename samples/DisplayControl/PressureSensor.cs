@@ -21,7 +21,7 @@ namespace DisplayControl
 
         public override void Init(GpioController gpioController)
         {
-            _bmp280 = new Bmp280(I2cDevice.Create(new I2cConnectionSettings(1, Bmp280.DefaultI2cAddress)));
+            _bmp280 = new Bmp280(I2cDevice.Create(new I2cConnectionSettings(1, Bmp280.SecondaryI2cAddress)));
             _bmp280.TemperatureSampling = Sampling.Standard;
             
             _bmp280.PressureSampling = Sampling.UltraHighResolution;

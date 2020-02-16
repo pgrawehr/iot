@@ -35,6 +35,8 @@ namespace Iot.Device.Imu
         private bool _outputModeReceived;
         private byte _outputMode;
 
+        public event Action<Vector3> OnNewData;
+
         private List<OutputDataOffsets> _dataFields = new List<OutputDataOffsets>()
         {
             new OutputDataOffsets(OutputDataSets.Quaternion, "Estimate of attitude in quaternion form", 16),
@@ -83,6 +85,13 @@ namespace Iot.Device.Imu
             _outputModeReceived = false;
             _outputMode = 0;
             _dataMaskSent = false;
+            Orientation = Vector3.Zero;
+            Quaternion = Vector4.Zero;
+            Magnetometer = Vector3.Zero;
+            Gyroscope = Vector3.Zero;
+            Accelerometer = Vector3.Zero;
+            Temperature = Temperature.FromCelsius(0);
+
             EulerAnglesDegrees = true;
             Temperature = Temperature.FromCelsius(0);
             _recentParserErrors = new LinkedList<string>();
@@ -161,6 +170,10 @@ namespace Iot.Device.Imu
                 catch (OperationCanceledException)
                 {
                     // Ignore, will probably abort shortly
+                    continue;
+                }
+                catch (ObjectDisposedException)
+                {
                     continue;
                 }
 
@@ -457,6 +470,8 @@ namespace Iot.Device.Imu
 
                 Magnetometer = mag;
             }
+
+            OnNewData?.Invoke(Orientation);
         }
 
         private int CalculateOutputOffset(OutputDataSets dataSet)

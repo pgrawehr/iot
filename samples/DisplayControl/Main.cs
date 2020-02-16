@@ -38,8 +38,15 @@ namespace DisplayControl
         {
             if (args.Any(x => x == "--debug"))
             {
-                Console.WriteLine("Press enter to start (waiting for debugger)");
-                Console.ReadLine();
+                Console.WriteLine("Press any key to start or attach debugger now");
+                while (!Console.KeyAvailable)
+                {
+                    if (Debugger.IsAttached)
+                    {
+                        break;
+                    }
+                    Thread.Sleep(10);
+                }
             }
 
             Console.WriteLine($"Initializing Hardware...");

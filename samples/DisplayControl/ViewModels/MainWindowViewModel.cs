@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Text;
+using Avalonia;
 using Avalonia.Media;
 using ReactiveUI;
 
@@ -15,6 +16,9 @@ namespace DisplayControl.ViewModels
         private bool m_cancel;
         private ObservableCollection<SensorValueViewModel> m_sensorValueViewModels;
         private SensorValueViewModel m_selectedViewModel;
+        private Size _size;
+        private double _clientHeight;
+        private Point _headerHeight;
 
         public MainWindowViewModel()
         {
@@ -26,6 +30,9 @@ namespace DisplayControl.ViewModels
         public MainWindowViewModel(DataContainer dataContainer)
             : this()
         {
+            _size = new Size(400, 350);
+            _clientHeight = 100;
+            _headerHeight = new Point(0, 50);
             DataContainer = dataContainer;
             m_sensorValueViewModels = new ObservableCollection<SensorValueViewModel>();
             foreach (var elem in dataContainer.SensorValueSources)
@@ -95,6 +102,43 @@ namespace DisplayControl.ViewModels
             private set
             {
                 this.RaiseAndSetIfChanged(ref m_selectedViewModel, value);
+            }
+        }
+
+        public Size Size
+        {
+            get
+            {
+                return _size;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _size, value);
+                ClientHeight = _size.Height - 50;
+            }
+        }
+
+        public Point HeaderHeight
+        {
+            get
+            {
+                return _headerHeight;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _headerHeight, value);
+            }
+        }
+
+        public double ClientHeight
+        {
+            get
+            {
+                return _clientHeight;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _clientHeight, value);
             }
         }
 
