@@ -76,22 +76,22 @@ namespace DisplayControl
             {
                 if (_button1.WarningLevel == WarningLevel.Error) // Button pressed
                 {
-                    cb.Invoke(DisplayButton.Previous, true);
+                    cb.Invoke(DisplayButton.Back, true);
                 }
                 else
                 {
-                    cb.Invoke(DisplayButton.Previous, false);
+                    cb.Invoke(DisplayButton.Back, false);
                 }
             }
             if (sender == _button2)
             {
                 if (_button2.WarningLevel == WarningLevel.Error) // Button pressed
                 {
-                    cb.Invoke(DisplayButton.Next, true);
+                    cb.Invoke(DisplayButton.Previous, true);
                 }
                 else
                 {
-                    cb.Invoke(DisplayButton.Next, false);
+                    cb.Invoke(DisplayButton.Previous, false);
                 }
             }
             if (sender == _button3)
@@ -109,11 +109,11 @@ namespace DisplayControl
             {
                 if (_button4.WarningLevel == WarningLevel.Error) // Button pressed
                 {
-                    cb.Invoke(DisplayButton.Next, true);
+                    cb.Invoke(DisplayButton.Enter, true);
                 }
                 else
                 {
-                    cb.Invoke(DisplayButton.Next, false);
+                    cb.Invoke(DisplayButton.Enter, false);
                 }
             }
         }
@@ -132,6 +132,8 @@ namespace DisplayControl
 
                 _button1.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
                 _button2.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
+                _button3.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
+                _button4.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
                 m_cancellationTokenSource.Token.WaitHandle.WaitOne(500);
             }
         }

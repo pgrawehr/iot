@@ -74,9 +74,9 @@ namespace DisplayControl
 
         protected override void UpdateSensors()
         {
-            _pitch.Value = _lastEulerAngles.X;
+            _pitch.Value = _lastEulerAngles.Z;
             _roll.Value = _lastEulerAngles.Y;
-            _heading.Value = _lastEulerAngles.Z;
+            _heading.Value = _lastEulerAngles.X;
             _imuTemperature.Value = _imu.Temperature.Celsius;
         }
 
