@@ -11,6 +11,8 @@ using Units;
 #pragma warning disable CS1591
 namespace Nmea0183
 {
+    public delegate void PositionUpdate(IGeographicPosition position, double track, Speed speed);
+
     /// <summary>
     /// Parses Nmea Sequences
     /// </summary>
@@ -39,7 +41,7 @@ namespace Nmea0183
             _lastSeenSentences = new Dictionary<SentenceId, TalkerSentence>();
         }
 
-        public event Action<IGeographicPosition, double, Speed> OnNewPosition;
+        public event PositionUpdate OnNewPosition;
 
         public event Action<DateTimeOffset> OnNewTime;
 

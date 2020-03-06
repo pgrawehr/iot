@@ -24,6 +24,7 @@ namespace DisplayControl
         private SystemSensors m_systemSensors;
         private PressureSensor m_pressureSensor;
         private ImuSensor _imuSensor;
+        private NmeaSensor _nmeaSensor;
 
         public DataContainer(GpioController controller)
         {
@@ -93,6 +94,10 @@ namespace DisplayControl
             _imuSensor.Init(Controller);
             allSources.AddRange(_imuSensor.SensorValueSources);
 
+            _nmeaSensor = new NmeaSensor();
+            _nmeaSensor.Initialize();
+            allSources.AddRange(_nmeaSensor.SensorValueSources);
+
             foreach (var sensor in allSources)
             {
                 sensor.PropertyChanged += OnSensorValueChanged;
@@ -155,7 +160,17 @@ namespace DisplayControl
         public void DisplayValue(SensorValueSource valueSource)
         {
             m_lcdConsole.ReplaceLine(0, valueSource.ValueDescription);
-            m_lcdConsole.ReplaceLine(1, String.Format(CultureInfo.CurrentCulture, "{0} {1}", valueSource.ValueAsString, valueSource.Unit));
+            string text = valueSource.ValueAsString;
+            if (text.Contains("\n"))
+            {
+                m_lcdConsole.SetCursorPosition(0, 1);
+                m_lcdConsole.Write(valueSource.ValueAsString);
+            }
+            else
+            {
+                m_lcdConsole.ReplaceLine(1,
+                    String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSource.Unit));
+            }
         }
 
         public void Initialize()
@@ -177,6 +192,7 @@ namespace DisplayControl
             m_lcdConsole.Clear();
             m_lcdConsole.BacklightOn = false;
             m_lcdConsole.DisplayOn = false;
+            m_lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
             foreach(var sensor in m_sensorValueSources)
             {
                 sensor.PropertyChanged -= OnSensorValueChanged;
@@ -185,6 +201,9 @@ namespace DisplayControl
             m_adcSensors = null;
             m_dhtSensors.Dispose();
             m_dhtSensors = null;
+
+            _nmeaSensor.Dispose();
+            _nmeaSensor = null;
 
             m_pressureSensor.Dispose();
             m_pressureSensor = null;

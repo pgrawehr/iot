@@ -25,7 +25,7 @@ namespace DisplayControl
             _bmp280.TemperatureSampling = Sampling.Standard;
             
             _bmp280.PressureSampling = Sampling.UltraHighResolution;
-            _outsideTemperature = new ObservableValue<double>("Temperature outside", "°C", double.NaN);
+            _outsideTemperature = new ObservableValue<double>("Temperature BMP280", "°C", double.NaN);
             _presure = new ObservableValue<double>("Pressure", "hPa", double.NaN);
             
             _outsideTemperature.ValueFormatter = "{0:F1}";

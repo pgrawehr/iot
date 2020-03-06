@@ -36,7 +36,7 @@ namespace DisplayControl
             _pitch = new ObservableValue<double>("Ship Pitch", "°", 0);
             _roll = new ObservableValue<double>("Ship Roll", "°", 0);
             _heading = new ObservableValue<double>("Ship Magnetic Heading", "°", 0);
-            _imuTemperature = new ObservableValue<double>("IMU Temperature", "°", -273);
+            _imuTemperature = new ObservableValue<double>("IMU Temperature", "°C", -273);
 
             _serialPort = new SerialPort("/dev/ttyUSB0", 115200, Parity.None);
             _serialPort.Open();

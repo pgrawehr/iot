@@ -1,0 +1,24 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Nmea0183;
+
+namespace DisplayControl
+{
+    public class PositionValue : ObservableValue<IGeographicPosition>
+    {
+        public PositionValue(string valueDescription) : base(valueDescription, string.Empty, new GeographicPosition())
+        {
+        }
+
+        public override string ValueAsString
+        {
+            get
+            {
+                string north = GeographicPosition.GetLatitudeString(Value.Latitude);
+                string east = GeographicPosition.GetLongitudeString(Value.Longitude);
+                return north + "\n" + east;
+            }
+        }
+    }
+}

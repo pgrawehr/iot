@@ -11,9 +11,9 @@
     <StackPanel Orientation="Horizontal" Margin="5">
         <Border Background="{Binding StatusColor}">
             <StackPanel Orientation="Horizontal" Spacing="5">
-                <TextBlock VerticalAlignment="Center" Text="{Binding ValueDescription}" Width="500"/>
-                <TextBox VerticalAlignment="Center" Text="{Binding ValueAsString}" Width="70"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding Unit}" Width="20"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding ValueDescription}" Width="480"/>
+                <TextBox VerticalAlignment="Center" Text="{Binding ValueAsString}" Width="90"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding Unit}" Width="30"/>
                 <Button Command="{Binding $parent[Window].DataContext.ActivateValue}" 
                         Content="Select" 
                         CommandParameter="{Binding}" Width="70"/>
