@@ -18,9 +18,9 @@ namespace Nmea0183
     /// </summary>
     public sealed class NmeaParser : IDisposable
     {
-        private readonly Stream _dataSource;
-        private readonly Stream _dataSink;
         private readonly object _lock;
+        private Stream _dataSource;
+        private Stream _dataSink;
         private Thread _parserThread;
         private CancellationTokenSource _cancellationTokenSource;
         private StreamReader _reader;
@@ -60,6 +60,7 @@ namespace Nmea0183
 
                 _cancellationTokenSource = new CancellationTokenSource();
                 _parserThread = new Thread(Parser);
+                _parserThread.Name = "Nmea Parser";
                 _parserThread.Start();
             }
         }
@@ -69,7 +70,12 @@ namespace Nmea0183
             while (!_cancellationTokenSource.IsCancellationRequested)
             {
                 string currentLine = _reader.ReadLine();
-                Console.WriteLine(currentLine);
+                if (currentLine == null)
+                {
+                    continue; // Probably because the stream was closed.
+                }
+
+                // Console.WriteLine(currentLine);
                 TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, out var error);
                 if (sentence == null)
                 {
@@ -120,9 +126,15 @@ namespace Nmea0183
                 if (_parserThread != null && _parserThread.IsAlive && _cancellationTokenSource != null)
                 {
                     _cancellationTokenSource.Cancel();
+                    _dataSource.Dispose();
+                    _dataSink.Dispose();
+                    _reader.Dispose();
                     _parserThread.Join();
                     _cancellationTokenSource = null;
                     _parserThread = null;
+                    _dataSource = null;
+                    _dataSink = null;
+                    _reader = null;
                 }
             }
         }

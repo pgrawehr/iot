@@ -11,13 +11,20 @@
     <StackPanel Orientation="Horizontal" Margin="5">
         <Border Background="{Binding StatusColor}">
             <StackPanel Orientation="Horizontal" Spacing="5">
-                <TextBlock VerticalAlignment="Center" Text="{Binding ValueDescription}" Width="480"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding ValueDescription}" Width="400"/>
                 <TextBox VerticalAlignment="Center" Text="{Binding ValueAsString}" Width="90"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding Unit}" Width="30"/>
-                <Button Command="{Binding $parent[Window].DataContext.ActivateValue}" 
-                        Content="Select" 
+                <Button Command="{Binding $parent[Window].DataContext.ActivateValueSingle}" 
+                        Content="Big!" 
                         CommandParameter="{Binding}" Width="70"/>
-                </StackPanel>
+                <Button Command="{Binding $parent[Window].DataContext.ActivateValueUpper}"
+                        Content="Upper"
+                        CommandParameter="{Binding}" Width="70"/>
+                <Button Command="{Binding $parent[Window].DataContext.ActivateValueLower}"
+                        Content="Lower"
+                        CommandParameter="{Binding}" Width="70"/>
+
+            </StackPanel>
         </Border>
      </StackPanel>
 </UserControl>

@@ -21,6 +21,7 @@ namespace Iot.Device.CharacterLcd
     public class LcdValueUnitDisplay
     {
         private const string BigFontMap = "BigFontMap.txt";
+        private readonly object _lock;
         private readonly ICharacterLcd _lcd;
         private readonly CultureInfo _culture;
         private readonly Dictionary<char, byte[]> _font;
@@ -34,6 +35,7 @@ namespace Iot.Device.CharacterLcd
         /// <param name="culture">User culture</param>
         public LcdValueUnitDisplay(ICharacterLcd lcd, CultureInfo culture)
         {
+            _lock = new object();
             _lcd = lcd;
             _culture = culture;
             _font = new Dictionary<char, byte[]>();
@@ -72,28 +74,47 @@ namespace Iot.Device.CharacterLcd
                 factory = new LcdCharacterEncodingFactory();
             }
 
-            // Create the default encoding for the current ROM and culture, but leave the custom characters away.
-            var encoding = factory.Create(_culture, romName, ' ', 0);
-            Dictionary<byte, byte[]> specialGraphicsRequired = new Dictionary<byte, byte[]>();
-            CreateSpecialChars(specialGraphicsRequired);
-            for (byte i = 0; i < specialGraphicsRequired.Count; i++)
+            lock (_lock)
             {
-                _lcd.CreateCustomCharacter(i, specialGraphicsRequired[i]);
-            }
+                // Create the default encoding for the current ROM and culture, but leave the custom characters away.
+                var encoding = factory.Create(_culture, romName, ' ', 0);
+                Dictionary<byte, byte[]> specialGraphicsRequired = new Dictionary<byte, byte[]>();
+                CreateSpecialChars(specialGraphicsRequired);
+                for (byte i = 0; i < specialGraphicsRequired.Count; i++)
+                {
+                    _lcd.CreateCustomCharacter(i, specialGraphicsRequired[i]);
+                }
 
-            _currentSeparationChar = ' '; // To make sure the next function doesn't just skip the initialization
-            LoadSeparationChar(_currentSeparationChar);
-            _encoding = encoding;
-            _lcd.BlinkingCursorVisible = false;
-            _lcd.UnderlineCursorVisible = false;
-            _lcd.BacklightOn = true;
-            _lcd.DisplayOn = true;
-            _lcd.Clear();
-            ReadCharacterMap();
+                _currentSeparationChar = ' '; // To make sure the next function doesn't just skip the initialization
+                LoadSeparationChar(_currentSeparationChar);
+                _encoding = encoding;
+                _lcd.BlinkingCursorVisible = false;
+                _lcd.UnderlineCursorVisible = false;
+                _lcd.BacklightOn = true;
+                _lcd.DisplayOn = true;
+                _lcd.Clear();
+                ReadCharacterMap();
+            }
+        }
+
+        /// <summary>
+        /// Stop showing big characters.
+        /// This method can be used to signal that the display will be used for different purposes. Before a Display method is used,
+        /// <see cref="InitForRom"/> needs to be called again. This clears the display.
+        /// </summary>
+        public void StopShowing()
+        {
+            lock (_lock)
+            {
+                _lcd.Clear();
+                _font.Clear();
+                _encoding = null;
+            }
         }
 
         private void ReadCharacterMap()
         {
+            _font.Clear();
             var assembly = Assembly.GetExecutingAssembly();
             // Get our resource file (independent of default namespace of project)
             string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith("BigFontMap.txt"));
@@ -243,6 +264,11 @@ namespace Iot.Device.CharacterLcd
 
         private StringBuilder[] CreateLinesFromText(string bigText, string smallText, int startPosition, out int totalColumnsUsed)
         {
+            if (_encoding == null)
+            {
+                throw new InvalidOperationException("Font and encoding not loaded. Use InitForRom first.");
+            }
+
             int xPosition = startPosition; // The current x position during drawing. We draw 4-chars high letters, but with variable width
             int totalColumnsUsedInternal = 0;
             StringBuilder[] ret = new StringBuilder[_lcd.Size.Height];
@@ -307,9 +333,9 @@ namespace Iot.Device.CharacterLcd
             // Right allign the small text (i.e. an unit)
             // It will eventually overwrite the last row of the rightmost digits, but that presumably is still readable.
             int unitPosition = _lcd.Size.Width - smallText.Length;
-            xPosition = unitPosition;
+            xPosition = Math.Max(unitPosition, 0); // Safety check, if unit is longer than display width
             var encodedSmallText = _encoding.GetBytes(smallText);
-            for (int i = 0; i < encodedSmallText.Length; i++)
+            for (int i = 0; i < Math.Min(encodedSmallText.Length, _lcd.Size.Width); i++)
             {
                 ret[3][xPosition + i] = (char)encodedSmallText[i];
             }
@@ -320,11 +346,22 @@ namespace Iot.Device.CharacterLcd
 
         private void UpdateDisplay(StringBuilder[] lines)
         {
-            for (int i = 0; i < lines.Length; i++)
+            lock (_lock)
             {
-                _lcd.SetCursorPosition(0, i);
-                // Will again do a character translation, but that shouldn't hurt, as all characters in the input strings should be printable now.
-                _lcd.Write(lines[i].ToString());
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    _lcd.SetCursorPosition(0, i);
+                    // Will again do a character translation, but that shouldn't hurt, as all characters in the input strings should be printable now.
+                    _lcd.Write(lines[i].ToString());
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            lock (_lock)
+            {
+                _lcd.Clear();
             }
         }
 
@@ -420,52 +457,29 @@ namespace Iot.Device.CharacterLcd
                 return;
             }
 
-            switch (separationChar)
+            lock (_lock)
             {
-                case ':':
-                    _lcd.CreateCustomCharacter(7, new byte[]
-                    {
-                0b00000,
-                0b00000,
-                0b01110,
-                0b01110,
-                0b01110,
-                0b00000,
-                0b00000,
-                0b00000,
-                    });
-                    break;
-                case '.':
-                    _lcd.CreateCustomCharacter(7, new byte[]
-                    {
-                0b00000,
-                0b00000,
-                0b00000,
-                0b00000,
-                0b00000,
-                0b01110,
-                0b01110,
-                0b01110,
-                    });
-                    break;
-                case ',':
-                    _lcd.CreateCustomCharacter(7, new byte[]
-                    {
-                0b00000,
-                0b00000,
-                0b00000,
-                0b00000,
-                0b01110,
-                0b01110,
-                0b01100,
-                0b01000,
-                    });
-                    break;
-                default:
-                    throw new NotImplementedException("Unknown separation char: " + separationChar);
-            }
+                switch (separationChar)
+                {
+                    case ':':
+                        _lcd.CreateCustomCharacter(7,
+                            new byte[] { 0b00000, 0b00000, 0b01110, 0b01110, 0b01110, 0b00000, 0b00000, 0b00000 });
+                        break;
+                    case '.':
+                        _lcd.CreateCustomCharacter(7,
+                            new byte[] { 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b01110, 0b01110, 0b01110 });
+                        break;
+                    case ',':
+                        _lcd.CreateCustomCharacter(7,
+                            new byte[] { 0b00000, 0b00000, 0b00000, 0b00000, 0b01110, 0b01110, 0b01100, 0b01000 });
+                        break;
+                    default:
+                        throw new NotImplementedException("Unknown separation char: " + separationChar);
+                }
 
-            _currentSeparationChar = separationChar;
+                _currentSeparationChar = separationChar;
+            }
         }
+
     }
 }

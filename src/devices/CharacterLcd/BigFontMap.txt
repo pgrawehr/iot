@@ -12,6 +12,7 @@
 // 6: █ (full block)
 // 7: Either a dot, a comma or part of a colon, depending on what was last used as decimal separator
 // 9:   (Space, empty block)
+// (anything else): Ascii character code
 
 1:
 9, 0, 6
@@ -104,6 +105,18 @@
 9
 5
 9
+
+°:
+111
+9
+9
+9
+
+%:
+9, 9, 9
+111, 0, 3
+0, 3, 9
+3, 9, 111
 
 A:
 0, 6, 2

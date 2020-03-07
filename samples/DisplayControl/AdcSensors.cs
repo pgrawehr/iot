@@ -60,6 +60,7 @@ namespace DisplayControl
 
             m_cancellationTokenSource = new CancellationTokenSource();
             m_pollThread = new Thread(PollThread);
+            m_pollThread.Name = "AdcSensors";
             m_pollThread.IsBackground = true;
             m_pollThread.Start();
         }
@@ -128,7 +129,7 @@ namespace DisplayControl
             {
                 _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
                 // Todo: Voltage is not really the correct unit for this.
-                _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) - m_cpuAdc.ReadVoltage(InputMultiplexer.AIN0);
+                _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) - m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2);
 
                 _button1.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
                 _button2.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);

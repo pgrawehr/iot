@@ -142,10 +142,22 @@ namespace DisplayControl.ViewModels
             }
         }
 
-        public void ActivateValue(SensorValueViewModel vm)
+        public void ActivateValueSingle(SensorValueViewModel vm)
         {
             SelectedViewModel = vm;
-            DataContainer.ActiveValueSource = vm.Source;
+            DataContainer.ActiveValueSourceSingle = vm.Source;
+        }
+
+        public void ActivateValueUpper(SensorValueViewModel vm)
+        {
+            SelectedViewModel = vm;
+            DataContainer.ActiveValueSourceUpper = vm.Source;
+        }
+
+        public void ActivateValueLower(SensorValueViewModel vm)
+        {
+            SelectedViewModel = vm;
+            DataContainer.ActiveValueSourceLower = vm.Source;
         }
 
         public void SetStatus(string text, string color)

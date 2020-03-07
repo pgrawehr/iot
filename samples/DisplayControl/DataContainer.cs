@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -17,7 +18,10 @@ namespace DisplayControl
         ICharacterLcd m_characterLcd = null;
         LcdConsole m_lcdConsole = null;
         AdcSensors m_adcSensors = null;
-        SensorValueSource m_activeValueSource;
+        private bool m_lcdConsoleActive;
+        private SensorValueSource m_activeValueSourceUpper;
+        private SensorValueSource m_activeValueSourceLower;
+        private SensorValueSource m_activeValueSourceSingle;
 
         List<SensorValueSource> m_sensorValueSources;
         private DhtSensors m_dhtSensors;
@@ -25,30 +29,86 @@ namespace DisplayControl
         private PressureSensor m_pressureSensor;
         private ImuSensor _imuSensor;
         private NmeaSensor _nmeaSensor;
+        private CultureInfo m_activeEncoding;
+        private LcdValueUnitDisplay m_bigValueDisplay;
+        private Stopwatch m_timer;
 
         public DataContainer(GpioController controller)
         {
             Controller = controller;
             m_sensorValueSources = new List<SensorValueSource>();
-            m_activeValueSource = null;
+            m_activeValueSourceUpper = null;
+            m_activeValueSourceLower = null;
+            m_activeValueSourceSingle = null;
+            m_lcdConsoleActive = true;
+            m_bigValueDisplay = null;
+            m_timer = new Stopwatch();
+            m_activeEncoding = CultureInfo.CreateSpecificCulture("de-CH");
         }
 
         public GpioController Controller { get; }
 
         public List<SensorValueSource> SensorValueSources => m_sensorValueSources;
 
-        public SensorValueSource ActiveValueSource
+        public SensorValueSource ActiveValueSourceUpper
         {
             get
             {
-                return m_activeValueSource;
+                return m_activeValueSourceUpper;
             }
             set
             {
-                m_activeValueSource = value;
-                // Immediatelly show the new value
-                DisplayValue(value);
+                m_activeValueSourceUpper = value;
+                m_activeValueSourceSingle = null;
+                // Immediately show the new value
+                OnSensorValueChanged(value, null);
             }
+        }
+
+        public SensorValueSource ActiveValueSourceLower
+        {
+            get
+            {
+                return m_activeValueSourceLower;
+            }
+            set
+            {
+                m_activeValueSourceLower = value;
+                m_activeValueSourceSingle = null;
+                // Immediately show the new value
+                OnSensorValueChanged(value, null);
+            }
+        }
+
+        public SensorValueSource ActiveValueSourceSingle
+        {
+            get
+            {
+                return m_activeValueSourceSingle;
+            }
+            set
+            {
+                m_activeValueSourceSingle = value;
+                m_activeValueSourceUpper = null;
+                m_activeValueSourceLower = null;
+                m_timer.Restart();
+                // Immediately show the new value
+                OnSensorValueChanged(value, null);
+            }
+        }
+
+        private void NewSensorValueSource(SensorValueSource newValue)
+        {
+            if (m_lcdConsoleActive)
+            {
+                m_lcdConsole.Clear();
+            }
+            else
+            {
+                m_bigValueDisplay.Clear();
+            }
+
+            OnSensorValueChanged(newValue, null);
         }
 
         private void InitializeDisplay()
@@ -66,6 +126,8 @@ namespace DisplayControl
             LoadEncoding();
             m_lcdConsole.Clear();
             m_lcdConsole.Write("== Ready ==");
+            m_lcdConsoleActive = true;
+            m_bigValueDisplay = new LcdValueUnitDisplay(m_characterLcd, m_activeEncoding);
         }
 
         private void InitializeSensors()
@@ -113,63 +175,125 @@ namespace DisplayControl
                 return;
             }
 
+            var sourceToChange = ActiveValueSourceSingle;
+            if (sourceToChange == null)
+            {
+                sourceToChange = ActiveValueSourceLower;
+            }
             if (button == DisplayButton.Next)
             {
-                if (ActiveValueSource == null)
+                if (sourceToChange == null)
                 {
-                    ActiveValueSource = SensorValueSources.FirstOrDefault();
+                    sourceToChange = SensorValueSources.FirstOrDefault();
                 }
                 else
                 {
-                    int idx = SensorValueSources.IndexOf(ActiveValueSource);
+                    int idx = SensorValueSources.IndexOf(sourceToChange);
                     if (idx < 0)
                     {
                         idx = 0;
                     }
                     idx = (idx + 1) % SensorValueSources.Count;
-                    ActiveValueSource = SensorValueSources[idx];
+                    sourceToChange = SensorValueSources[idx];
                 }
             }
             if (button == DisplayButton.Previous)
             {
-                if (ActiveValueSource == null)
+                if (sourceToChange == null)
                 {
-                    ActiveValueSource = SensorValueSources.FirstOrDefault();
+                    sourceToChange = SensorValueSources.FirstOrDefault();
                 }
                 else
                 {
-                    int idx = SensorValueSources.IndexOf(ActiveValueSource);
+                    int idx = SensorValueSources.IndexOf(sourceToChange);
                     idx = (idx - 1);
                     if (idx < 0)
                     {
                         idx = SensorValueSources.Count - 1;
                     }
-                    ActiveValueSource = SensorValueSources[idx];
+                    sourceToChange = SensorValueSources[idx];
                 }
+            }
+
+            if (ActiveValueSourceSingle != null)
+            {
+                ActiveValueSourceSingle = sourceToChange;
+                m_timer.Restart();
+            }
+            else
+            {
+                ActiveValueSourceLower = sourceToChange;
             }
         }
 
         public void OnSensorValueChanged(object sender, PropertyChangedEventArgs args)
         {
-            if (m_activeValueSource == sender)
+            if (m_activeValueSourceUpper == sender || m_activeValueSourceLower == sender)
             {
-                DisplayValue(m_activeValueSource);
+                if (!m_lcdConsoleActive)
+                {
+                    LoadEncoding();
+                    m_lcdConsole.Clear();
+                    m_lcdConsoleActive = true;
+                }
+                Display2Values(m_activeValueSourceUpper, m_activeValueSourceLower);
+                return;
+            }
+            else if (m_activeValueSourceSingle == sender)
+            {
+                if (m_lcdConsoleActive)
+                {
+                    m_bigValueDisplay.InitForRom("A00");
+                    m_bigValueDisplay.Clear();
+                    m_lcdConsoleActive = false;
+                }
+
+                DisplayBigValue(m_activeValueSourceSingle);
             }
         }
 
-        public void DisplayValue(SensorValueSource valueSource)
+        public void DisplayBigValue(SensorValueSource valueSource)
         {
-            m_lcdConsole.ReplaceLine(0, valueSource.ValueDescription);
-            string text = valueSource.ValueAsString;
-            if (text.Contains("\n"))
+            if (valueSource == null)
             {
-                m_lcdConsole.SetCursorPosition(0, 1);
-                m_lcdConsole.Write(valueSource.ValueAsString);
+                m_bigValueDisplay.DisplayValue("N/A");
+                return;
+            }
+            string text = valueSource.ValueAsString + " " + valueSource.Unit;
+            if (m_timer.Elapsed < TimeSpan.FromSeconds(3))
+            {
+                // Display the value description for 3 seconds after changing
+                m_bigValueDisplay.DisplayValue(text, valueSource.ValueDescription);
             }
             else
             {
-                m_lcdConsole.ReplaceLine(1,
-                    String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSource.Unit));
+                m_bigValueDisplay.DisplayValue(text);
+            }
+        }
+
+        public void Display2Values(SensorValueSource valueSourceUpper, SensorValueSource valueSourceLower)
+        {
+            if (valueSourceUpper == null)
+            {
+                valueSourceUpper = new ObservableValue<string>(string.Empty, string.Empty, string.Empty);
+            }
+            m_lcdConsole.ReplaceLine(0, valueSourceUpper.ValueDescription);
+            string text = valueSourceUpper.ValueAsString;
+            if (text.Contains("\n"))
+            {
+                m_lcdConsole.SetCursorPosition(0, 1);
+                m_lcdConsole.Write(text);
+            }
+            else
+            {
+                m_lcdConsole.ReplaceLine(1, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceUpper.Unit));
+                // Only if the first entry is a 1-liner
+                if (valueSourceLower != null)
+                {
+                    m_lcdConsole.ReplaceLine(2, valueSourceLower.ValueDescription);
+                    text = valueSourceLower.ValueAsString;
+                    m_lcdConsole.ReplaceLine(3, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceLower.Unit));
+                }
             }
         }
 
@@ -184,7 +308,7 @@ namespace DisplayControl
         /// </summary>
         public void LoadEncoding()
         {
-            m_lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("de-CH"), "A00"));
+            m_lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(m_activeEncoding, "A00"));
         }
 
         public void ShutDown()

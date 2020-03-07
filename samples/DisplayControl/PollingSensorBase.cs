@@ -47,6 +47,7 @@ namespace DisplayControl
         {
             _cancellationTokenSource = new CancellationTokenSource();
             _pollThread = new Thread(PollThread);
+            _pollThread.Name = GetType().Name;
             _pollThread.IsBackground = true;
             _pollThread.Start();
         }
