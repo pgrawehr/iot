@@ -20,5 +20,18 @@ namespace DisplayControl
                 return north + "\n" + east;
             }
         }
+
+        protected override void ValueChanged()
+        {
+            base.ValueChanged();
+            if (Value.ContainsValidPosition() == false)
+            {
+                WarningLevel = WarningLevel.NoData;
+            }
+            else
+            {
+                WarningLevel = WarningLevel.None;
+            }
+        }
     }
 }

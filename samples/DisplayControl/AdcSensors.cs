@@ -75,7 +75,7 @@ namespace DisplayControl
             }
             if (sender == _button1)
             {
-                if (_button1.WarningLevel == WarningLevel.Error) // Button pressed
+                if (_button1.WarningLevel == WarningLevel.Warning) // Button pressed
                 {
                     cb.Invoke(DisplayButton.Back, true);
                 }
@@ -86,7 +86,7 @@ namespace DisplayControl
             }
             if (sender == _button2)
             {
-                if (_button2.WarningLevel == WarningLevel.Error) // Button pressed
+                if (_button2.WarningLevel == WarningLevel.Warning) // Button pressed
                 {
                     cb.Invoke(DisplayButton.Previous, true);
                 }
@@ -97,7 +97,7 @@ namespace DisplayControl
             }
             if (sender == _button3)
             {
-                if (_button3.WarningLevel == WarningLevel.Error) // Button pressed
+                if (_button3.WarningLevel == WarningLevel.Warning) // Button pressed
                 {
                     cb.Invoke(DisplayButton.Next, true);
                 }
@@ -108,7 +108,7 @@ namespace DisplayControl
             }
             if (sender == _button4)
             {
-                if (_button4.WarningLevel == WarningLevel.Error) // Button pressed
+                if (_button4.WarningLevel == WarningLevel.Warning) // Button pressed
                 {
                     cb.Invoke(DisplayButton.Enter, true);
                 }

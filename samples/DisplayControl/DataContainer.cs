@@ -18,12 +18,14 @@ namespace DisplayControl
         ICharacterLcd m_characterLcd = null;
         LcdConsole m_lcdConsole = null;
         AdcSensors m_adcSensors = null;
+        private ExtendedDisplayController _extendedDisplayController;
         private bool m_lcdConsoleActive;
         private SensorValueSource m_activeValueSourceUpper;
         private SensorValueSource m_activeValueSourceLower;
         private SensorValueSource m_activeValueSourceSingle;
+        private List<SensorValueSource> m_sensorsWithErrors;
 
-        List<SensorValueSource> m_sensorValueSources;
+        private List<SensorValueSource> m_sensorValueSources;
         private DhtSensors m_dhtSensors;
         private SystemSensors m_systemSensors;
         private PressureSensor m_pressureSensor;
@@ -36,7 +38,9 @@ namespace DisplayControl
         public DataContainer(GpioController controller)
         {
             Controller = controller;
+            _extendedDisplayController = null;
             m_sensorValueSources = new List<SensorValueSource>();
+            m_sensorsWithErrors = new List<SensorValueSource>();
             m_activeValueSourceUpper = null;
             m_activeValueSourceLower = null;
             m_activeValueSourceSingle = null;
@@ -58,10 +62,13 @@ namespace DisplayControl
             }
             set
             {
-                m_activeValueSourceUpper = value;
-                m_activeValueSourceSingle = null;
-                // Immediately show the new value
-                OnSensorValueChanged(value, null);
+                if (value != m_activeValueSourceUpper)
+                {
+                    m_activeValueSourceUpper = value;
+                    m_activeValueSourceSingle = null;
+                    // Immediately show the new value
+                    OnSensorValueChanged(value, null);
+                }
             }
         }
 
@@ -73,10 +80,13 @@ namespace DisplayControl
             }
             set
             {
-                m_activeValueSourceLower = value;
-                m_activeValueSourceSingle = null;
-                // Immediately show the new value
-                OnSensorValueChanged(value, null);
+                if (value != m_activeValueSourceLower)
+                {
+                    m_activeValueSourceLower = value;
+                    m_activeValueSourceSingle = null;
+                    // Immediately show the new value
+                    OnSensorValueChanged(value, null);
+                }
             }
         }
 
@@ -88,12 +98,15 @@ namespace DisplayControl
             }
             set
             {
-                m_activeValueSourceSingle = value;
-                m_activeValueSourceUpper = null;
-                m_activeValueSourceLower = null;
-                m_timer.Restart();
-                // Immediately show the new value
-                OnSensorValueChanged(value, null);
+                if (value != m_activeValueSourceSingle)
+                {
+                    m_activeValueSourceSingle = value;
+                    m_activeValueSourceUpper = null;
+                    m_activeValueSourceLower = null;
+                    m_timer.Restart();
+                    // Immediately show the new value
+                    OnSensorValueChanged(value, null);
+                }
             }
         }
 
@@ -165,6 +178,8 @@ namespace DisplayControl
                 sensor.PropertyChanged += OnSensorValueChanged;
                 m_sensorValueSources.Add(sensor);
             }
+
+            _extendedDisplayController = new ExtendedDisplayController(Controller);
         }
 
         private void DisplayButtonPressed(DisplayButton button, bool pressed)
@@ -228,6 +243,8 @@ namespace DisplayControl
 
         public void OnSensorValueChanged(object sender, PropertyChangedEventArgs args)
         {
+            CheckForTriggers(sender as SensorValueSource);
+        
             if (m_activeValueSourceUpper == sender || m_activeValueSourceLower == sender)
             {
                 if (!m_lcdConsoleActive)
@@ -249,6 +266,39 @@ namespace DisplayControl
                 }
 
                 DisplayBigValue(m_activeValueSourceSingle);
+            }
+        }
+
+        /// <summary>
+        /// Checks for any trigger/error conditions
+        /// </summary>
+        /// <param name="source">The value that has last changed</param>
+        private void CheckForTriggers(SensorValueSource source)
+        {
+            if (source == null)
+            {
+                return;
+            }
+
+            lock (m_sensorsWithErrors)
+            {
+                if (source.WarningLevel != WarningLevel.None)
+                {
+                    if (!m_sensorsWithErrors.Contains(source))
+                    {
+                        m_sensorsWithErrors.Add(source);
+                        _extendedDisplayController.SoundAlarm(true);
+                        ActiveValueSourceSingle = source;
+                    }
+                }
+                else if (m_sensorsWithErrors.Contains(source))
+                {
+                    m_sensorsWithErrors.RemoveAll(x => x == source);
+                    if (m_sensorsWithErrors.Count == 0)
+                    {
+                        _extendedDisplayController.SoundAlarm(false);
+                    }
+                }
             }
         }
 
@@ -334,6 +384,9 @@ namespace DisplayControl
 
             _imuSensor.Dispose();
             _imuSensor = null;
+
+            _extendedDisplayController.Dispose();
+            _extendedDisplayController = null;
 
             m_lcdConsole.Dispose();
             m_lcdConsole = null;

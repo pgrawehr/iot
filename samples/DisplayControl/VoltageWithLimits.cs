@@ -26,17 +26,17 @@ namespace DisplayControl
             }
             else if (Value < _lowerLimit)
             {
-                WarningLevel = WarningLevel.Error;
+                WarningLevel = WarningLevel.Warning;
             }
             else if (Value > _upperLimit)
             {
-                WarningLevel = WarningLevel.Error;
+                WarningLevel = WarningLevel.Warning;
             }
             else
             {
                 WarningLevel = WarningLevel.None;
             }
-            if (WarningLevel == WarningLevel.Error && _withinLimits)
+            if (WarningLevel == WarningLevel.Warning && _withinLimits)
             {
                 _withinLimits = false;
                 LimitTriggered?.Invoke(this, new EventArgs());

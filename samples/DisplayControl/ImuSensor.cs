@@ -34,9 +34,13 @@ namespace DisplayControl
         public override void Init(GpioController gpioController)
         {
             _pitch = new ObservableValue<double>("Ship Pitch", "°", 0);
+            _pitch.ValueFormatter = "{0:F1}";
             _roll = new ObservableValue<double>("Ship Roll", "°", 0);
-            _heading = new ObservableValue<double>("Ship Magnetic Heading", "°", 0);
+            _roll.ValueFormatter = "{0:F3}";
+            _heading = new ObservableValue<double>("Ship Mag Heading", "°", 0);
+            _heading.ValueFormatter = "{0:F3}";
             _imuTemperature = new ObservableValue<double>("IMU Temperature", "°C", -273);
+            _imuTemperature.ValueFormatter = "{0:F3}";
 
             _serialPort = new SerialPort("/dev/ttyUSB0", 115200, Parity.None);
             _serialPort.Open();

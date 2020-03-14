@@ -280,7 +280,7 @@ namespace Iot.Device.Mcp23xxx
         /// Reads interrupt value
         /// </summary>
         /// <param name="port">Port to read interrupt on</param>
-        /// <returns>Value of intterupt pin</returns>
+        /// <returns>Value of interrupt pin</returns>
         protected PinValue InternalReadInterrupt(Port port)
         {
             int pinNumber;
