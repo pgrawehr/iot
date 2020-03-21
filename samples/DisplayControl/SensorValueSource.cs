@@ -16,6 +16,7 @@ namespace DisplayControl
         {
             ValueDescription = valueDescription;
             Unit = unit;
+            SuppressWarnings = false;
         }
 
         public abstract object GenericValue
@@ -47,6 +48,12 @@ namespace DisplayControl
                 _warningLevel = value;
                 NotifyPropertyChanged();
             }
+        }
+
+        public bool SuppressWarnings
+        {
+            get;
+            set;
         }
 
         public string Unit

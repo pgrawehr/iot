@@ -284,7 +284,7 @@ namespace DisplayControl
             {
                 if (source.WarningLevel != WarningLevel.None)
                 {
-                    if (!m_sensorsWithErrors.Contains(source))
+                    if (!m_sensorsWithErrors.Contains(source) && !source.SuppressWarnings)
                     {
                         m_sensorsWithErrors.Add(source);
                         _extendedDisplayController.SoundAlarm(true);
