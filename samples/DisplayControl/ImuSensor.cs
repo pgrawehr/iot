@@ -15,6 +15,9 @@ namespace DisplayControl
     /// </summary>
     internal class ImuSensor : PollingSensorBase
     {
+        public const string ShipPitch = "Ship Pitch";
+        public const string ShipRoll = "Ship Roll";
+        public const string ShipMagneticHeading = "Ship Mag Heading";
         private Ig500Sensor _imu;
         private SerialPort _serialPort;
         private ObservableValue<double> _pitch;
@@ -33,11 +36,11 @@ namespace DisplayControl
 
         public override void Init(GpioController gpioController)
         {
-            _pitch = new ObservableValue<double>("Ship Pitch", "°", 0);
+            _pitch = new ObservableValue<double>(ShipPitch, "°", 0);
             _pitch.ValueFormatter = "{0:F1}";
-            _roll = new ObservableValue<double>("Ship Roll", "°", 0);
+            _roll = new ObservableValue<double>(ShipRoll, "°", 0);
             _roll.ValueFormatter = "{0:F3}";
-            _heading = new ObservableValue<double>("Ship Mag Heading", "°", 0);
+            _heading = new ObservableValue<double>(ShipMagneticHeading, "°", 0);
             _heading.ValueFormatter = "{0:F3}";
             _imuTemperature = new ObservableValue<double>("IMU Temperature", "°C", -273);
             _imuTemperature.ValueFormatter = "{0:F3}";

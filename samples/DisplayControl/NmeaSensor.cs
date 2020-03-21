@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
+using Iot.Device.Nmea0183;
 using Nmea0183;
+using Nmea0183.Sentences;
 using Units;
 
 namespace DisplayControl
@@ -16,6 +19,7 @@ namespace DisplayControl
         private ObservableValue<double> _speed;
         private ObservableValue<double> _track;
         private ObservableValue<string> _parserMsg;
+        private Stream _stream;
 
         public NmeaSensor()
         {
@@ -41,8 +45,8 @@ namespace DisplayControl
             SensorValueSources.Add(_speed);
             SensorValueSources.Add(_track);
             SensorValueSources.Add(_parserMsg);
-            var stream = _client.GetStream();
-            _parser = new NmeaParser(stream, stream);
+            _stream = _client.GetStream();
+            _parser = new NmeaParser(_stream, _stream);
             _parser.OnNewPosition += OnNewPosition;
             _parser.OnParserError += OnParserError;
             _parser.StartDecode();
@@ -68,6 +72,20 @@ namespace DisplayControl
             _track.Value = track;
         }
 
+        public void SendMagneticHeading(SensorValueSource value)
+        {
+            if (value.ValueDescription != ImuSensor.ShipMagneticHeading)
+            {
+                throw new InvalidOperationException("This operation should send magnetic heading values only");
+            }
+            
+            HeadingMagnetic mag = new HeadingMagnetic((double)value.GenericValue);
+            TalkerSentence ts = new TalkerSentence(Iot.Device.Nmea0183.TalkerId.ElectronicPositioningSystem, mag);
+            string dataToSend = ts.ToString();
+            byte[] buffer = Encoding.ASCII.GetBytes(dataToSend);
+            _stream.Write(buffer);
+        }
+
         public void Dispose()
         {
             _parser?.Dispose();
@@ -76,9 +94,11 @@ namespace DisplayControl
             {
                 _client.Close();
                 _client.Dispose();
+                _stream.Dispose();
             }
 
             _client = null;
+            _stream = null;
         }
     }
 }
