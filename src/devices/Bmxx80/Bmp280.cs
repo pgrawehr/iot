@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Device.I2c;
+using Iot.Device.Bmxx80.Register;
 
 namespace Iot.Device.Bmxx80
 {
@@ -24,6 +26,16 @@ namespace Iot.Device.Bmxx80
             : base(DeviceId, i2cDevice)
         {
             _communicationProtocol = CommunicationProtocol.I2c;
+        }
+
+        /// <summary>
+        /// Sets the default register configurations
+        /// </summary>
+        protected override void SetDefaultConfiguration()
+        {
+            _i2cDevice.Write(new byte[] { 0xF4, 0 });
+            _i2cDevice.Write(new byte[] { 0xF5, 0 });
+            base.SetDefaultConfiguration();
         }
     }
 }
