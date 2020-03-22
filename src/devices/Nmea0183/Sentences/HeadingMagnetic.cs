@@ -26,6 +26,7 @@ namespace Nmea0183.Sentences
             : base(Id)
         {
             Angle = angle;
+            Valid = true;
         }
 
         /// <summary>

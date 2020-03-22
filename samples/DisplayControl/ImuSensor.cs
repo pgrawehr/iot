@@ -45,7 +45,7 @@ namespace DisplayControl
             _imuTemperature = new ObservableValue<double>("IMU Temperature", "°C", -273);
             _imuTemperature.ValueFormatter = "{0:F3}";
 
-            _serialPort = new SerialPort("/dev/ttyUSB0", 115200, Parity.None);
+            _serialPort = new SerialPort("/dev/ttyUSB1", 115200, Parity.None);
             _serialPort.Open();
             Ig500Sensor imu = new Ig500Sensor(_serialPort.BaseStream, OutputDataSets.Euler | OutputDataSets.Magnetometers | OutputDataSets.Quaternion |
                                                                       OutputDataSets.Temperatures |
