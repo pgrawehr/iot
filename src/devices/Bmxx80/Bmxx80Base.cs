@@ -52,7 +52,7 @@ namespace Iot.Device.Bmxx80
         /// The variable TemperatureFine carries a fine resolution temperature value over to the
         /// pressure compensation formula and could be implemented as a global variable.
         /// </summary>
-        protected int TemperatureFine
+        protected double TemperatureFine
         {
             get;
             set;
@@ -178,11 +178,11 @@ namespace Iot.Device.Bmxx80
         {
             // The temperature is calculated using the compensation formula in the BMP280 datasheet.
             // See: https://cdn-shop.adafruit.com/datasheets/BST-BMP280-DS001-11.pdf
-            double var1 = ((adcTemperature / 16384.0) - (_calibrationData.DigT1 / 1024.0)) * _calibrationData.DigT2;
+            double var1 = ((((double)adcTemperature / 16384.0) - ((double)_calibrationData.DigT1) / 1024.0)) * (double)_calibrationData.DigT2;
             double var2 = (adcTemperature / 131072.0) - (_calibrationData.DigT1 / 8192.0);
             var2 *= var2 * _calibrationData.DigT3 * TempCalibrationFactor;
 
-            TemperatureFine = (int)(var1 + var2);
+            TemperatureFine = (var1 + var2);
 
             double temp = (var1 + var2) / 5120.0;
             return Temperature.FromCelsius(temp);
