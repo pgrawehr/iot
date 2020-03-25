@@ -40,7 +40,7 @@ namespace Iot.Device.CharacterLcd
 
         /// <summary>
         /// Returns the number of custom characters for this display.
-        /// A custom character is one that can be user-defined and assigned to a slot using <see cref="CreateCustomCharacter(byte, byte[])"/>
+        /// A custom character is one that can be user-defined and assigned to a slot using <see cref="CreateCustomCharacter"/>
         /// </summary>
         int NumberOfCustomCharactersSupported { get; }
 
@@ -90,30 +90,31 @@ namespace Iot.Device.CharacterLcd
         /// </remarks>
         /// <param name="location">Should be between 0 and <see cref="NumberOfCustomCharactersSupported"/>.</param>
         /// <param name="characterMap">Provide an array of 8 bytes containing the pattern</param>
-        void CreateCustomCharacter(byte location, params byte[] characterMap);
+        void CreateCustomCharacter(byte location, ReadOnlySpan<byte> characterMap);
 
         /// <summary>
         /// Moves the cursor to an explicit column and row position.
         /// </summary>
         /// <param name="left">The column position from left to right starting with 0.</param>
         /// <param name="top">The row position from the top starting with 0.</param>
+        /// <exception cref="ArgumentOutOfRangeException">The given position is not inside the display.</exception>
         void SetCursorPosition(int left, int top);
 
         /// <summary>
-        /// Write text to display.
+        /// Write text to the display, without any character translation.
         /// </summary>
-        /// <remarks>
-        /// There are only 256 characters available. There are chip variants
-        /// with different character sets. Characters from space ' ' (32) to
-        /// '}' are usually the same with the exception of '\', which is a
-        /// yen symbol on some chips '¥'.
-        /// </remarks>
         /// <param name="text">Text to be displayed.</param>
+        /// <remarks>
+        /// There are only 256 characters available. Different chip variants
+        /// have different character sets. Characters from space ' ' (32) to
+        /// '}' are usually the same with the exception of '\', which is a
+        /// yen symbol ('¥') on some chips.
+        /// </remarks>
         void Write(string text);
 
         /// <summary>
         /// Write a raw byte stream to the display.
-        /// Used if character translation already took place
+        /// Used if character translation already took place.
         /// </summary>
         /// <param name="text">Text to print</param>
         void Write(ReadOnlySpan<byte> text);

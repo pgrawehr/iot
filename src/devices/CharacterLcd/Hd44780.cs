@@ -4,9 +4,6 @@
 
 using System;
 using System.Buffers;
-using System.Collections.Generic;
-using System.Device;
-using System.Device.Gpio;
 using System.Drawing;
 
 namespace Iot.Device.CharacterLcd
@@ -26,11 +23,6 @@ namespace Iot.Device.CharacterLcd
     /// </remarks>
     public class Hd44780 : ICharacterLcd, IDisposable
     {
-        /// <summary>
-        /// Number of bytes required for a custom character
-        /// </summary>
-        private const int CharacterPixelHeight = 8;
-
         private bool _disposed;
 
         /// <summary>
@@ -94,7 +86,7 @@ namespace Iot.Device.CharacterLcd
 
         /// <summary>
         /// Returns the number of custom characters for this display.
-        /// A custom character is one that can be user-defined and assigned to a slot using <see cref="CreateCustomCharacter(byte, byte[])"/>
+        /// A custom character is one that can be user-defined and assigned to a slot using <see cref="CreateCustomCharacter"/>
         /// </summary>
         public virtual int NumberOfCustomCharactersSupported => 8;
 
@@ -386,21 +378,6 @@ namespace Iot.Device.CharacterLcd
         /// </remarks>
         /// <param name="location">Should be between 0 and 7</param>
         /// <param name="characterMap">Provide an array of 8 bytes containing the pattern</param>
-        public void CreateCustomCharacter(byte location, params byte[] characterMap)
-        {
-            if (characterMap == null)
-            {
-                throw new ArgumentNullException(nameof(characterMap));
-            }
-
-            CreateCustomCharacter(location, characterMap.AsSpan());
-        }
-
-        /// <summary>
-        /// Fill one of the 8 CGRAM locations (character codes 0 - 7) with custom characters.
-        /// </summary>
-        /// <param name="location">Should be between 0 and 7</param>
-        /// <param name="characterMap">Provide an array of 8 bytes containing the pattern</param>
         public void CreateCustomCharacter(byte location, ReadOnlySpan<byte> characterMap)
         {
             if (location >= NumberOfCustomCharactersSupported)
@@ -408,9 +385,9 @@ namespace Iot.Device.CharacterLcd
                 throw new ArgumentOutOfRangeException(nameof(location));
             }
 
-            if (characterMap.Length != CharacterPixelHeight)
+            if (characterMap.Length != 8)
             {
-                throw new ArgumentException($"The character map must be exactly {CharacterPixelHeight} bytes long", nameof(characterMap));
+                throw new ArgumentException("The character map must be exactly 8 bytes long", nameof(characterMap));
             }
 
             // The character address is set in bits 3-5 of the command byte

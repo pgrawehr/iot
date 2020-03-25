@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
 
 namespace Iot.Device.CharacterLcd
 {
@@ -22,28 +21,26 @@ namespace Iot.Device.CharacterLcd
         {
             // Default map which is used for unknown ROMs
             DefaultCustomMap = new Dictionary<char, byte>();
+            // The character map A00 contains the most used european letters, some greek math symbols plus japanese letters.
+            // Compare with the HD44780 specification sheet, page 17
+            DefaultA00Map = new Dictionary<char, byte>();
+
+            // Character map A02 contains about all characters used in western european languages, a few greek math symbols and some symbols.
+            // Compare with the HD44780 specification sheet, page 18.
+            // Note especially that this character map really uses the 8 pixel height of the characters, while the A00 map leaves the lowest
+            // pixel row usually empty for the cursor. The added space at the top of the character helps by better supporting diacritical symbols.
+            DefaultA02Map = new Dictionary<char, byte>();
+
             // Inserts ASCII characters ' ' to 'z', which are common to most known character sets
             for (char c = ' '; c <= 'z'; c++)
             {
                 DefaultCustomMap.Add(c, (byte)c);
+                DefaultA00Map.Add(c, (byte)c);
+                DefaultA02Map.Add(c, (byte)c);
             }
 
-            // The character map A00 contains the most used european letters, some greek math symbola plus japanese letters.
-            // Compare with the HD44780 specification sheet, page 17
-            DefaultA00Map = new Dictionary<char, byte>();
-            // Inserts ASCII characters ' ' to 'z', which are common to most known character sets
-            for (char c = ' '; c <= 'z'; c++)
-            {
-                if (c == '\\') // Instead of the backspace, the Yen letter is in the map, but we can use char 164 instead
-                {
-                    DefaultA00Map.Add('\\', 164);
-                }
-                else
-                {
-                    DefaultA00Map.Add(c, (byte)c);
-                }
-            }
-
+            DefaultA00Map.Remove('\\'); // Instead of the backspace, the Yen letter is in the map, but we can use char 164 instead
+            DefaultA00Map.Add('\\', 164);
             DefaultA00Map.Add('¥', 92);
             DefaultA00Map.Add('{', 123);
             DefaultA00Map.Add('|', 124);
@@ -147,13 +144,6 @@ namespace Iot.Device.CharacterLcd
             DefaultA00Map.Add('ヲ', 0b1010_0110); // This one is out of sequence
             DefaultA00Map.Add('゛', 0b1101_1110);
             DefaultA00Map.Add('゜', 0b1101_1111);
-
-            DefaultA02Map = new Dictionary<char, byte>();
-            // Inserts ASCII characters ' ' to 'z', which are common to most known character sets
-            for (char c = ' '; c <= 'z'; c++)
-            {
-                DefaultA02Map.Add(c, (byte)c);
-            }
 
             // This map contains wide arrow characters. They could be helpful for menus, but not sure where to map them.
             DefaultA02Map.Add('{', 123);
@@ -402,7 +392,7 @@ namespace Iot.Device.CharacterLcd
         /// A maximum of 8 extra characters can be added to the ones in the ROM.
         /// </summary>
         /// <param name="culture">Culture to support</param>
-        /// <param name="characterMapping">The character map, pre-loaded with the characters from the character ROM. This may be extended by explicity adding direct mappings
+        /// <param name="characterMapping">The character map, pre-loaded with the characters from the character ROM. This may be extended by explicitly adding direct mappings
         /// where an alternative is allowed (i.e. mapping capital diacritics to normal capital letters É -> E, when there's not enough room to put É into character RAM.</param>
         /// <returns>A string with the set of special characters for a language, i.e. "äöüß€ÄÖÜ" for German</returns>
         protected virtual string SpecialLettersForCulture(CultureInfo culture, Dictionary<char, byte> characterMapping)
@@ -492,409 +482,409 @@ namespace Iot.Device.CharacterLcd
             {
                 case '€':
                     return CreateCustomCharacter(
-                        0b_00111,
-                        0b_01000,
-                        0b_11111,
-                        0b_01000,
-                        0b_11111,
-                        0b_01000,
-                        0b_00111,
-                        0b_00000);
+                    0b_00111,
+                    0b_01000,
+                    0b_11111,
+                    0b_01000,
+                    0b_11111,
+                    0b_01000,
+                    0b_00111,
+                    0b_00000);
                 case '£':
                     return CreateCustomCharacter(
-                        0b_00110,
-                        0b_01001,
-                        0b_01000,
-                        0b_11111,
-                        0b_01000,
-                        0b_01000,
-                        0b_11111,
-                        0b_00000);
+                    0b_00110,
+                    0b_01001,
+                    0b_01000,
+                    0b_11111,
+                    0b_01000,
+                    0b_01000,
+                    0b_11111,
+                    0b_00000);
 
                 case 'Ä':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_00000,
-                        0b_00100,
-                        0b_01010,
-                        0b_11111,
-                        0b_10001,
-                        0b_10001,
-                        0b_00000);
+                    0b_01010,
+                    0b_00000,
+                    0b_00100,
+                    0b_01010,
+                    0b_11111,
+                    0b_10001,
+                    0b_10001,
+                    0b_00000);
 
                 case 'Ö':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_01110,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_01110,
-                        0b_00000);
+                    0b_01010,
+                    0b_01110,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_01110,
+                    0b_00000);
 
                 case 'Ü':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_00000,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_01110,
-                        0b_00000);
+                    0b_01010,
+                    0b_00000,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_01110,
+                    0b_00000);
 
                 case 'ß':
                     return CreateCustomCharacter(
-                        0b_00000,
-                        0b_00110,
-                        0b_01001,
-                        0b_01110,
-                        0b_01001,
-                        0b_01001,
-                        0b_10110,
-                        0b_00000);
+                    0b_00000,
+                    0b_00110,
+                    0b_01001,
+                    0b_01110,
+                    0b_01001,
+                    0b_01001,
+                    0b_10110,
+                    0b_00000);
 
                 case 'Å':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01010,
-                        0b_00100,
-                        0b_01010,
-                        0b_11111,
-                        0b_10001,
-                        0b_10001,
-                        0b_00000);
+                    0b_00100,
+                    0b_01010,
+                    0b_00100,
+                    0b_01010,
+                    0b_11111,
+                    0b_10001,
+                    0b_10001,
+                    0b_00000);
 
                 case 'Â': // Same as above, cannot really distinguish them in the 7-pixel font (but they would not normally be used by the same languages)
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01010,
-                        0b_00100,
-                        0b_01010,
-                        0b_11111,
-                        0b_10001,
-                        0b_10001,
-                        0b_00000);
+                    0b_00100,
+                    0b_01010,
+                    0b_00100,
+                    0b_01010,
+                    0b_11111,
+                    0b_10001,
+                    0b_10001,
+                    0b_00000);
 
                 case 'æ':
                     return CreateCustomCharacter(
-                        0b_00000,
-                        0b_00000,
-                        0b_11010,
-                        0b_00101,
-                        0b_01111,
-                        0b_10100,
-                        0b_01011,
-                        0b_00000);
+                    0b_00000,
+                    0b_00000,
+                    0b_11010,
+                    0b_00101,
+                    0b_01111,
+                    0b_10100,
+                    0b_01011,
+                    0b_00000);
 
                 case 'Æ':
                     return CreateCustomCharacter(
-                        0b_00111,
-                        0b_00100,
-                        0b_01100,
-                        0b_10111,
-                        0b_11100,
-                        0b_10100,
-                        0b_10111,
-                        0b_00000);
+                    0b_00111,
+                    0b_00100,
+                    0b_01100,
+                    0b_10111,
+                    0b_11100,
+                    0b_10100,
+                    0b_10111,
+                    0b_00000);
 
                 case 'ø':
                     return CreateCustomCharacter(
-                        0b_00000,
-                        0b_00000,
-                        0b_01110,
-                        0b_10011,
-                        0b_10101,
-                        0b_11001,
-                        0b_01110,
-                        0b_00000);
+                    0b_00000,
+                    0b_00000,
+                    0b_01110,
+                    0b_10011,
+                    0b_10101,
+                    0b_11001,
+                    0b_01110,
+                    0b_00000);
 
                 case 'Ø':
                     return CreateCustomCharacter(
-                        0b_01110,
-                        0b_10011,
-                        0b_10011,
-                        0b_10101,
-                        0b_10101,
-                        0b_11001,
-                        0b_01110,
-                        0b_00000);
+                    0b_01110,
+                    0b_10011,
+                    0b_10011,
+                    0b_10101,
+                    0b_10101,
+                    0b_11001,
+                    0b_01110,
+                    0b_00000);
 
                 case 'à':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_00010,
-                        0b_01110,
-                        0b_00001,
-                        0b_01111,
-                        0b_10001,
-                        0b_01111,
-                        0b_00000);
+                    0b_00100,
+                    0b_00010,
+                    0b_01110,
+                    0b_00001,
+                    0b_01111,
+                    0b_10001,
+                    0b_01111,
+                    0b_00000);
 
                 case 'á':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01000,
-                        0b_01110,
-                        0b_00001,
-                        0b_01111,
-                        0b_10001,
-                        0b_01111,
-                        0b_00000);
+                    0b_00100,
+                    0b_01000,
+                    0b_01110,
+                    0b_00001,
+                    0b_01111,
+                    0b_10001,
+                    0b_01111,
+                    0b_00000);
 
                 case 'â':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01010,
-                        0b_01110,
-                        0b_00001,
-                        0b_01111,
-                        0b_10001,
-                        0b_01111,
-                        0b_00000);
+                    0b_00100,
+                    0b_01010,
+                    0b_01110,
+                    0b_00001,
+                    0b_01111,
+                    0b_10001,
+                    0b_01111,
+                    0b_00000);
 
                 case 'ä':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_00000,
-                        0b_01110,
-                        0b_00001,
-                        0b_01111,
-                        0b_10001,
-                        0b_01111,
-                        0b_00000);
+                     0b_01010,
+                     0b_00000,
+                     0b_01110,
+                     0b_00001,
+                     0b_01111,
+                     0b_10001,
+                     0b_01111,
+                     0b_00000);
 
                 case 'å':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01010,
-                        0b_01110,
-                        0b_00001,
-                        0b_01111,
-                        0b_10001,
-                        0b_01111,
-                        0b_00000);
+                     0b_00100,
+                     0b_01010,
+                     0b_01110,
+                     0b_00001,
+                     0b_01111,
+                     0b_10001,
+                     0b_01111,
+                     0b_00000);
 
                 case 'ç':
                     return CreateCustomCharacter(
-                        0b_00000,
-                        0b_00000,
-                        0b_01110,
-                        0b_10000,
-                        0b_10000,
-                        0b_01111,
-                        0b_00010,
-                        0b_00110);
+                     0b_00000,
+                     0b_00000,
+                     0b_01110,
+                     0b_10000,
+                     0b_10000,
+                     0b_01111,
+                     0b_00010,
+                     0b_00110);
 
                 case 'é':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01000,
-                        0b_01110,
-                        0b_10001,
-                        0b_11111,
-                        0b_10000,
-                        0b_01111,
-                        0b_00000);
+                    0b_00100,
+                    0b_01000,
+                    0b_01110,
+                    0b_10001,
+                    0b_11111,
+                    0b_10000,
+                    0b_01111,
+                    0b_00000);
 
                 case 'è':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_00010,
-                        0b_01110,
-                        0b_10001,
-                        0b_11111,
-                        0b_10000,
-                        0b_01111,
-                        0b_00000);
+                    0b_00100,
+                    0b_00010,
+                    0b_01110,
+                    0b_10001,
+                    0b_11111,
+                    0b_10000,
+                    0b_01111,
+                    0b_00000);
 
                 case 'ê':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01010,
-                        0b_01110,
-                        0b_10001,
-                        0b_11111,
-                        0b_10000,
-                        0b_01111,
-                        0b_00000);
+                    0b_00100,
+                    0b_01010,
+                    0b_01110,
+                    0b_10001,
+                    0b_11111,
+                    0b_10000,
+                    0b_01111,
+                    0b_00000);
 
                 case 'ë':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_00000,
-                        0b_01110,
-                        0b_10001,
-                        0b_11111,
-                        0b_10000,
-                        0b_01111,
-                        0b_00000);
+                    0b_01010,
+                    0b_00000,
+                    0b_01110,
+                    0b_10001,
+                    0b_11111,
+                    0b_10000,
+                    0b_01111,
+                    0b_00000);
 
                 case 'ï':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_00000,
-                        0b_01100,
-                        0b_00100,
-                        0b_00100,
-                        0b_00100,
-                        0b_01110,
-                        0b_00000);
+                    0b_01010,
+                    0b_00000,
+                    0b_01100,
+                    0b_00100,
+                    0b_00100,
+                    0b_00100,
+                    0b_01110,
+                    0b_00000);
 
                 case 'ì':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_00010,
-                        0b_01100,
-                        0b_00100,
-                        0b_00100,
-                        0b_00100,
-                        0b_01110,
-                        0b_00000);
+                    0b_00100,
+                    0b_00010,
+                    0b_01100,
+                    0b_00100,
+                    0b_00100,
+                    0b_00100,
+                    0b_01110,
+                    0b_00000);
 
                 case 'í':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01000,
-                        0b_01100,
-                        0b_00100,
-                        0b_00100,
-                        0b_00100,
-                        0b_01110,
-                        0b_00000);
+                    0b_00100,
+                    0b_01000,
+                    0b_01100,
+                    0b_00100,
+                    0b_00100,
+                    0b_00100,
+                    0b_01110,
+                    0b_00000);
 
                 case 'î':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01010,
-                        0b_01100,
-                        0b_00100,
-                        0b_00100,
-                        0b_00100,
-                        0b_01110,
-                        0b_00000);
+                    0b_00100,
+                    0b_01010,
+                    0b_01100,
+                    0b_00100,
+                    0b_00100,
+                    0b_00100,
+                    0b_01110,
+                    0b_00000);
 
                 case 'ñ':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_00101,
-                        0b_10000,
-                        0b_11110,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_00000);
+                    0b_01010,
+                    0b_00101,
+                    0b_10000,
+                    0b_11110,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_00000);
 
                 case 'ö':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_00000,
-                        0b_01110,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_01110,
-                        0b_00000);
+                    0b_01010,
+                    0b_00000,
+                    0b_01110,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_01110,
+                    0b_00000);
 
                 case 'ô':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01010,
-                        0b_01110,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_01110,
-                        0b_00000);
+                    0b_00100,
+                    0b_01010,
+                    0b_01110,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_01110,
+                    0b_00000);
 
                 case 'ò':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_00010,
-                        0b_01110,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_01110,
-                        0b_00000);
+                    0b_00100,
+                    0b_00010,
+                    0b_01110,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_01110,
+                    0b_00000);
 
                 case 'ó':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01000,
-                        0b_01110,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_01110,
-                        0b_00000);
+                    0b_00100,
+                    0b_01000,
+                    0b_01110,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_01110,
+                    0b_00000);
 
                 case 'ú':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01000,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_10011,
-                        0b_01101,
-                        0b_00000);
+                    0b_00100,
+                    0b_01000,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_10011,
+                    0b_01101,
+                    0b_00000);
 
                 case 'ù':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_00010,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_10011,
-                        0b_01101,
-                        0b_00000);
+                    0b_00100,
+                    0b_00010,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_10011,
+                    0b_01101,
+                    0b_00000);
 
                 case 'û':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_01010,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_10011,
-                        0b_01101,
-                        0b_00000);
+                    0b_00100,
+                    0b_01010,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_10011,
+                    0b_01101,
+                    0b_00000);
 
                 case 'ü':
                     return CreateCustomCharacter(
-                        0b_01010,
-                        0b_00000,
-                        0b_10001,
-                        0b_10001,
-                        0b_10001,
-                        0b_10011,
-                        0b_01101,
-                        0b_00000);
+                    0b_01010,
+                    0b_00000,
+                    0b_10001,
+                    0b_10001,
+                    0b_10001,
+                    0b_10011,
+                    0b_01101,
+                    0b_00000);
 
                 case '¡':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_00000,
-                        0b_00100,
-                        0b_00100,
-                        0b_00100,
-                        0b_00100,
-                        0b_00100,
-                        0b_00000);
+                    0b_00100,
+                    0b_00000,
+                    0b_00100,
+                    0b_00100,
+                    0b_00100,
+                    0b_00100,
+                    0b_00100,
+                    0b_00000);
 
                 case '¿':
                     return CreateCustomCharacter(
-                        0b_00100,
-                        0b_00000,
-                        0b_00100,
-                        0b_01000,
-                        0b_10000,
-                        0b_10001,
-                        0b_01110,
-                        0b_00000);
+                    0b_00100,
+                    0b_00000,
+                    0b_00100,
+                    0b_01000,
+                    0b_10000,
+                    0b_10001,
+                    0b_01110,
+                    0b_00000);
 
             }
 
@@ -921,7 +911,7 @@ namespace Iot.Device.CharacterLcd
         /// <example>
         /// Use as follows to create letter 'ü':
         /// <code>
-        ///        CreateCustomCharacter(
+        /// CreateCustomCharacter(
         ///            0b_01010,
         ///            0b_00000,
         ///            0b_10001,
@@ -930,7 +920,7 @@ namespace Iot.Device.CharacterLcd
         ///            0b_10011,
         ///            0b_01101,
         ///            0b_00000)
-        ///            </code>
+        /// </code>
         /// </example>
         protected byte[] CreateCustomCharacter(byte byte0, byte byte1, byte byte2, byte byte3, byte byte4, byte byte5, byte byte6, byte byte7)
         {
