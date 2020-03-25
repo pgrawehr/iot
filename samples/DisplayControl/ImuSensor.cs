@@ -39,11 +39,11 @@ namespace DisplayControl
             _pitch = new ObservableValue<double>(ShipPitch, "°", 0);
             _pitch.ValueFormatter = "{0:F1}";
             _roll = new ObservableValue<double>(ShipRoll, "°", 0);
-            _roll.ValueFormatter = "{0:F3}";
-            _heading = new ObservableValue<double>(ShipMagneticHeading, "°", 0);
-            _heading.ValueFormatter = "{0:F3}";
+            _roll.ValueFormatter = "{0:F1}";
+            _heading = new ObservableValue<double>(ShipMagneticHeading, "°M", 0);
+            _heading.ValueFormatter = "{0:F1}";
             _imuTemperature = new ObservableValue<double>("IMU Temperature", "°C", -273);
-            _imuTemperature.ValueFormatter = "{0:F3}";
+            _imuTemperature.ValueFormatter = "{0:F1}";
 
             _serialPort = new SerialPort("/dev/ttyUSB1", 115200, Parity.None);
             _serialPort.Open();
