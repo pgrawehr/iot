@@ -357,6 +357,9 @@ namespace Iot.Device.CharacterLcd
             }
         }
 
+        /// <summary>
+        /// Clears the display
+        /// </summary>
         public void Clear()
         {
             lock (_lock)
