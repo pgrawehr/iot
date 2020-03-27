@@ -119,6 +119,14 @@ namespace Nmea0183
             }
         }
 
+        public void SendSentence(NmeaSentence sentence)
+        {
+            TalkerSentence ts = new TalkerSentence(Iot.Device.Nmea0183.TalkerId.ElectronicPositioningSystem, sentence);
+            string dataToSend = ts.ToString() + "\r\n";
+            byte[] buffer = Encoding.ASCII.GetBytes(dataToSend);
+            _dataSink.Write(buffer);
+        }
+
         public void StopDecode()
         {
             lock (_lock)

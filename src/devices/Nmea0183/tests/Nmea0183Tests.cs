@@ -76,12 +76,38 @@ namespace Nmea0183.Tests
             Assert.Equal(21, decoded.DateTime.Value.Hour);
         }
 
+        [Fact]
+        public void CorrectlyDecodesXdrEvenIfExtraChars()
+        {
+            // Seen in one example (the last "A" shouldn't be there)
+            string sentence = "$IIXDR,A,4,D,ROLL,A,-2,D,PTCH,A*1A";
+            var inSentence = TalkerSentence.FromSentenceString(sentence, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(inSentence);
+            var decoded = (TransducerMeasurement)inSentence.TryGetTypedValue();
+            Assert.NotNull(decoded);
+            var roll = decoded.DataSets[0];
+            Assert.Equal(4.0, roll.Value);
+            Assert.Equal("A", roll.DataType);
+            Assert.Equal("D", roll.Unit);
+            Assert.Equal("ROLL", roll.DataName);
+
+            var pitch = decoded.DataSets[1];
+            Assert.Equal(-2.0, pitch.Value);
+            Assert.Equal("A", pitch.DataType);
+            Assert.Equal("D", pitch.Unit);
+            Assert.Equal("PTCH", pitch.DataName);
+        }
+
         [Theory]
         [InlineData("$GPRMC,211730.997,A,3511.28000,S,13823.26000,E,7.000,229.000,190120,,*19")]
         [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
         [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
         [InlineData("$WIMWV,220.0,T,5.0,N,A*20")]
         [InlineData("$SDDBS,177.9,f,54.21,M,29.3,F*33")]
+        [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
+        [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
+        [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
         [InlineData("$IIDBK,29.2,f,8.90,M,4.9,F*0B")] // Unknown sentence (for now)
         public void SentenceRoundTrip(string input)
         {

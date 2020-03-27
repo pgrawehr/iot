@@ -34,6 +34,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[HeadingMagnetic.Id] = (sentence, time) => new HeadingMagnetic(sentence, time);
             knownSentences[CrossTrackError.Id] = (sentence, time) => new CrossTrackError(sentence, time);
             knownSentences[DepthBelowSurface.Id] = (sentence, time) => new DepthBelowSurface(sentence, time);
+            knownSentences[TransducerMeasurement.Id] = (sentence, time) => new TransducerMeasurement(sentence, time);
 
             return knownSentences;
         }

@@ -80,10 +80,7 @@ namespace DisplayControl
             }
             
             HeadingMagnetic mag = new HeadingMagnetic((double)value.GenericValue);
-            TalkerSentence ts = new TalkerSentence(Iot.Device.Nmea0183.TalkerId.ElectronicPositioningSystem, mag);
-            string dataToSend = ts.ToString() + "\r\n";
-            byte[] buffer = Encoding.ASCII.GetBytes(dataToSend);
-            _stream.Write(buffer);
+            _parser.SendSentence(mag);
         }
 
         public void Dispose()
