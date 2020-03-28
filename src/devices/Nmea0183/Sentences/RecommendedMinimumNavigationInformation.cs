@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Nmea0183;
 using Nmea0183.Sentences;
+using Units;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
@@ -57,8 +58,17 @@ namespace Iot.Device.Nmea0183.Sentences
         private double? _longitude;
         private CardinalDirection? _longitudeTurn;
         public double? SpeedOverGroundInKnots { get; private set; }
-        public double? TrackMadeGoodInDegreesTrue { get; private set; }
-        public double? MagneticVariationInDegrees
+
+        public Speed Speed
+        {
+            get
+            {
+                return Speed.FromKnots(SpeedOverGroundInKnots.GetValueOrDefault(0));
+            }
+        }
+
+        public Angle? TrackMadeGoodInDegreesTrue { get; private set; }
+        public Angle? MagneticVariationInDegrees
         {
             get
             {
@@ -67,7 +77,7 @@ namespace Iot.Device.Nmea0183.Sentences
                     return null;
                 }
 
-                return (double)(_positiveMagneticVariationInDegrees.Value * DirectionToSign(_magneticVariationTurn.Value));
+                return _positiveMagneticVariationInDegrees.Value * DirectionToSign(_magneticVariationTurn.Value);
             }
             private set
             {
@@ -78,7 +88,7 @@ namespace Iot.Device.Nmea0183.Sentences
                     return;
                 }
 
-                if (value >= 0)
+                if (value >= Angle.Zero)
                 {
                     _positiveMagneticVariationInDegrees = value;
                     _magneticVariationTurn = CardinalDirection.East;
@@ -91,7 +101,7 @@ namespace Iot.Device.Nmea0183.Sentences
             }
         }
 
-        private double? _positiveMagneticVariationInDegrees;
+        private Angle? _positiveMagneticVariationInDegrees;
         private CardinalDirection? _magneticVariationTurn;
 
         // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf
@@ -170,8 +180,24 @@ namespace Iot.Device.Nmea0183.Sentences
             _longitude = lon;
             _longitudeTurn = lonTurn;
             SpeedOverGroundInKnots = speed;
-            TrackMadeGoodInDegreesTrue = track;
-            _positiveMagneticVariationInDegrees = mag;
+            if (track.HasValue)
+            {
+                TrackMadeGoodInDegreesTrue = Angle.FromDegrees(track.Value);
+            }
+            else
+            {
+                TrackMadeGoodInDegreesTrue = null;
+            }
+
+            if (mag.HasValue)
+            {
+                _positiveMagneticVariationInDegrees = Angle.FromDegrees(mag.Value);
+            }
+            else
+            {
+                _positiveMagneticVariationInDegrees = null;
+            }
+
             _magneticVariationTurn = magTurn;
             Valid = true; // for this message, we need to check on the individual fields
         }
@@ -182,8 +208,8 @@ namespace Iot.Device.Nmea0183.Sentences
             double? latitude,
             double? longitude,
             double? speedOverGroundInKnots,
-            double? trackMadeGoodInDegreesTrue,
-            double? magneticVariationInDegrees)
+            Angle? trackMadeGoodInDegreesTrue,
+            Angle? magneticVariationInDegrees)
         : base(Id)
         {
             DateTime = dateTime;

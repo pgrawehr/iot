@@ -4,12 +4,13 @@ using System.Globalization;
 using System.Text;
 
 #pragma warning disable CS1591
-namespace Nmea0183
+namespace Units
 {
     /// <summary>
-    /// Represents a position in WGS84 coordinates. Default implementation of <see cref="IGeographicPosition"/>.
+    /// Represents a position in WGS84 coordinates.
     /// </summary>
-    public class GeographicPosition : IGeographicPosition, ICloneable, IEquatable<GeographicPosition>
+    [Serializable]
+    public sealed class GeographicPosition : ICloneable, IEquatable<GeographicPosition>
     {
         private const string DegreesSymbol = "°";
         private const string MinutesSymbol = "\'";
@@ -24,18 +25,18 @@ namespace Nmea0183
             _latitude = _longitude = _height = 0;
         }
 
-        public GeographicPosition(IGeographicPosition pos)
+        public GeographicPosition(GeographicPosition pos)
         {
             _latitude = pos.Latitude;
             _longitude = pos.Longitude;
             _height = pos.EllipsoidalHeight;
         }
 
-        public GeographicPosition(double latitude, double longitude, double ellipsodialHeight)
+        public GeographicPosition(double latitude, double longitude, double ellipsoidalHeight)
         {
             _latitude = latitude;
             _longitude = longitude;
-            _height = ellipsodialHeight;
+            _height = ellipsoidalHeight;
         }
 
         public double EllipsoidalHeight
@@ -172,7 +173,7 @@ namespace Nmea0183
             return true;
         }
 
-        public bool EqualPosition(IGeographicPosition position)
+        public bool EqualPosition(GeographicPosition position)
         {
             if (position == null)
             {
@@ -194,7 +195,7 @@ namespace Nmea0183
 
         public override bool Equals(object obj)
         {
-            IGeographicPosition position = obj as IGeographicPosition;
+            GeographicPosition position = obj as GeographicPosition;
 
             if (position == null)
             {

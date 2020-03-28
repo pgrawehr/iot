@@ -300,11 +300,6 @@ namespace DisplayControl
                     }
                 }
             }
-
-            if (source.ValueDescription == ImuSensor.ShipMagneticHeading)
-            {
-                _nmeaSensor.SendMagneticHeading(source);
-            }
         }
 
         public void DisplayBigValue(SensorValueSource valueSource)

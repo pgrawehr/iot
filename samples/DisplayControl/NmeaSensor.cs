@@ -65,14 +65,14 @@ namespace DisplayControl
             }
         }
 
-        private void OnNewPosition(IGeographicPosition position, double track, Speed speed)
+        private void OnNewPosition(GeographicPosition position, Angle track, Speed speed)
         {
-            _position.Value = new GeographicPosition(position);
+            _position.Value = position;
             _speed.Value = speed.Knots;
-            _track.Value = track;
+            _track.Value = track.Degrees;
         }
 
-        public void SendMagneticHeading(SensorValueSource value)
+        public void SendImuData(SensorValueSource value)
         {
             if (value.ValueDescription != ImuSensor.ShipMagneticHeading)
             {
@@ -81,6 +81,8 @@ namespace DisplayControl
             
             HeadingMagnetic mag = new HeadingMagnetic((double)value.GenericValue);
             _parser.SendSentence(mag);
+            var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees((double)value.GenericValue),
+                Angle.FromDegrees((double)value.GenericValue));
         }
 
         public void Dispose()

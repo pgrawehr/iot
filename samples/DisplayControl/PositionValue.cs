@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 using Nmea0183;
+using Units;
 
 namespace DisplayControl
 {
-    public class PositionValue : ObservableValue<IGeographicPosition>
+    public class PositionValue : ObservableValue<GeographicPosition>
     {
         public PositionValue(string valueDescription) : base(valueDescription, string.Empty, new GeographicPosition())
         {

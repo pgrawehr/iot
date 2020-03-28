@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Iot.Device.Nmea0183;
+using Units;
 
 namespace Nmea0183.Sentences
 {
@@ -108,6 +109,19 @@ namespace Nmea0183.Sentences
             {
                 return _dataSets.AsReadOnly();
             }
+        }
+
+        /// <summary>
+        /// Creates a sentence from roll and pitch angles
+        /// </summary>
+        /// <param name="roll">Roll angle (positive right or left wing up)</param>
+        /// <param name="pitch">Pitch angle (positive nose up)</param>
+        /// <returns>A measurement sequence ready to send</returns>
+        public static TransducerMeasurement FromRollAndPitch(Angle roll, Angle pitch)
+        {
+            TransducerDataSet ds1 = new TransducerDataSet("A", roll.Normalize(false).Degrees, "D", "ROLL");
+            TransducerDataSet ds2 = new TransducerDataSet("A", pitch.Normalize(false).Degrees, "D", "PITCH");
+            return new TransducerMeasurement(new[] { ds1, ds2 });
         }
 
         /// <summary>

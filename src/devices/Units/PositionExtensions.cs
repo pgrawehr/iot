@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nmea0183
+namespace Units
 {
     /// <summary>
     /// Extensions for positions
@@ -12,7 +12,7 @@ namespace Nmea0183
         /// <summary>
         /// Normalizes the longitude to +/- 180°
         /// </summary>
-        public static IGeographicPosition NormalizeAngleTo180(this IGeographicPosition position)
+        public static GeographicPosition NormalizeAngleTo180(this GeographicPosition position)
         {
             return new GeographicPosition(position.Latitude, NormalizeAngleTo180(position.Longitude), position.EllipsoidalHeight);
         }
@@ -38,7 +38,7 @@ namespace Nmea0183
         /// <summary>
         /// Normalizes the longitude to [0..360°)
         /// </summary>
-        public static IGeographicPosition NormalizeAngleTo360(this IGeographicPosition position)
+        public static GeographicPosition NormalizeAngleTo360(this GeographicPosition position)
         {
             return new GeographicPosition(position.Latitude, NormalizeAngleTo360(position.Longitude), position.EllipsoidalHeight);
         }

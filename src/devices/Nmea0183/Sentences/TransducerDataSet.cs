@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Iot.Units;
+using Units;
 
 namespace Nmea0183.Sentences
 {
@@ -115,6 +117,34 @@ namespace Nmea0183.Sentences
         public string ToReadableContent()
         {
             return FormattableString.Invariant($"{DataName}: {Value:F2}{Unit}");
+        }
+
+        /// <summary>
+        /// Returns the value of the current instance as angle.
+        /// </summary>
+        /// <returns>An angle, null if this instance is not an angle</returns>
+        public Angle? AsAngle()
+        {
+            if (Unit == "D")
+            {
+                return Angle.FromDegrees(Value);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Returns the value of the current instance as temperature.
+        /// </summary>
+        /// <returns>A temperature, null if this instance is not a temperature</returns>
+        public Temperature? AsTemperature()
+        {
+            if (Unit == "C")
+            {
+                return Temperature.FromCelsius(Value);
+            }
+
+            return null;
         }
     }
 }

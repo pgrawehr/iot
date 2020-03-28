@@ -11,7 +11,7 @@ using Units;
 #pragma warning disable CS1591
 namespace Nmea0183
 {
-    public delegate void PositionUpdate(IGeographicPosition position, double track, Speed speed);
+    public delegate void PositionUpdate(GeographicPosition position, Angle track, Speed speed);
 
     /// <summary>
     /// Parses Nmea Sequences
@@ -105,7 +105,7 @@ namespace Nmea0183
                         }
                         else
                         {
-                            OnNewPosition?.Invoke(position, 0, Speed.FromKnots(0));
+                            OnNewPosition?.Invoke(position, Angle.Zero, Speed.FromKnots(0));
                         }
                     }
                 }
