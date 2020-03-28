@@ -7,8 +7,11 @@ using System.Device.I2c;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using Iot.Device.CharacterLcd;
+using Iot.Units;
+using Nmea0183.Sentences;
 
 namespace DisplayControl
 {
@@ -34,6 +37,7 @@ namespace DisplayControl
         private CultureInfo m_activeEncoding;
         private LcdValueUnitDisplay m_bigValueDisplay;
         private Stopwatch m_timer;
+        private int _numberOfImuSentencesSent = 0;
 
         public DataContainer(GpioController controller)
         {
@@ -167,6 +171,7 @@ namespace DisplayControl
 
             _imuSensor = new ImuSensor();
             _imuSensor.Init(Controller);
+            _imuSensor.OnNewOrientation += ImuSensorOnOnNewOrientation;
             allSources.AddRange(_imuSensor.SensorValueSources);
 
             _nmeaSensor = new NmeaSensor();
@@ -180,6 +185,20 @@ namespace DisplayControl
             }
 
             _extendedDisplayController = new ExtendedDisplayController(Controller);
+        }
+
+        private void ImuSensorOnOnNewOrientation(Vector3 orientation)
+        {
+            if (_nmeaSensor != null)
+            {
+                // Send only every second message (we currently get the data at 25Hz, this is a bit much)
+                if (_numberOfImuSentencesSent % 2 == 0)
+                {
+                    _nmeaSensor.SendImuData(orientation);
+                }
+
+                _numberOfImuSentencesSent++;
+            }
         }
 
         private void DisplayButtonPressed(DisplayButton button, bool pressed)
@@ -300,6 +319,16 @@ namespace DisplayControl
                     }
                 }
             }
+
+            if (source.ValueDescription == "Temperature BMP280")
+            {
+                _nmeaSensor.SendTemperature(Temperature.FromCelsius((double)source.GenericValue));
+            }
+
+            if (source.ValueDescription == "Pressure")
+            {
+                _nmeaSensor.SendPressure(Pressure.FromHectopascal((double)source.GenericValue));
+            }
         }
 
         public void DisplayBigValue(SensorValueSource valueSource)
@@ -376,14 +405,14 @@ namespace DisplayControl
             m_dhtSensors.Dispose();
             m_dhtSensors = null;
 
-            _nmeaSensor.Dispose();
-            _nmeaSensor = null;
-
             m_pressureSensor.Dispose();
             m_pressureSensor = null;
 
             _imuSensor.Dispose();
             _imuSensor = null;
+
+            _nmeaSensor.Dispose();
+            _nmeaSensor = null;
 
             _extendedDisplayController.Dispose();
             _extendedDisplayController = null;

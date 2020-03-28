@@ -148,7 +148,12 @@ namespace Units
             return strLatRet;
         }
 
-        public virtual object Clone()
+        object ICloneable.Clone()
+        {
+            return new GeographicPosition(this);
+        }
+
+        public GeographicPosition Clone()
         {
             return new GeographicPosition(this);
         }

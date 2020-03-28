@@ -245,7 +245,7 @@ namespace Iot.Device.Imu
                         AddParserError($"CRC Error for received package {(CommandIds)command}. Should be 0x{crcCalculated:X}, but was 0x{effectiveCrc:X}.");
                         // Remove anyway - there's nothing we can do here
                         _robinBuffer.ConsumeBytes(length + 8);
-                        return;
+                        continue;
                     }
 
                     Array.ConstrainedCopy(currentPacketBuffer, bytesSkipped + 5, currentDataSection, 0, length + 3);

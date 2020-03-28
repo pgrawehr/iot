@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Numerics;
 using System.Text;
 using Iot.Device.Nmea0183;
+using Iot.Units;
 using Nmea0183;
 using Nmea0183.Sentences;
 using Units;
@@ -72,17 +74,18 @@ namespace DisplayControl
             _track.Value = track.Degrees;
         }
 
-        public void SendImuData(SensorValueSource value)
+        public void SendImuData(Vector3 value)
         {
-            if (value.ValueDescription != ImuSensor.ShipMagneticHeading)
+            // Z is pitch, Y is roll, X is heading
+            if (_parser == null)
             {
-                throw new InvalidOperationException("This operation should send magnetic heading values only");
+                return;
             }
-            
-            HeadingMagnetic mag = new HeadingMagnetic((double)value.GenericValue);
+            HeadingMagnetic mag = new HeadingMagnetic(value.X);
             _parser.SendSentence(mag);
-            var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees((double)value.GenericValue),
-                Angle.FromDegrees((double)value.GenericValue));
+            var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees(value.Y),
+                Angle.FromDegrees(value.Z));
+            _parser.SendSentence(attitude);
         }
 
         public void Dispose()
@@ -98,6 +101,20 @@ namespace DisplayControl
 
             _client = null;
             _stream = null;
+        }
+
+        public void SendTemperature(Temperature value)
+        {
+            TransducerDataSet ds = new TransducerDataSet("C", value.Celsius, "C", "TEMP_OUTAIR_T");
+            var msg = new TransducerMeasurement(new[] { ds });
+            _parser.SendSentence(msg);
+        }
+
+        public void SendPressure(Pressure value)
+        {
+            TransducerDataSet ds = new TransducerDataSet("P", value.Hectopascal / 1000.0, "B", "Barometer");
+            var msg = new TransducerMeasurement(new[] { ds });
+            _parser.SendSentence(msg);
         }
     }
 }
