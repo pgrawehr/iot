@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Device.Gpio;
+using System.Linq;
 using System.Threading;
 
 #pragma warning disable CS1591
@@ -7,40 +9,59 @@ namespace Iot.Device.Arduino
 {
     public class ArduinoGpioControllerDriver : GpioDriver
     {
-        public ArduinoGpioControllerDriver(ArduinoBoard arduinoBoard)
+        private readonly ArduinoBoard _arduinoBoard;
+        private readonly List<SupportedPinConfiguration> _supportedPinConfigurations;
+
+        public ArduinoGpioControllerDriver(ArduinoBoard arduinoBoard, List<SupportedPinConfiguration> supportedPinConfigurations)
         {
-            throw new NotImplementedException();
+            _arduinoBoard = arduinoBoard;
+            _supportedPinConfigurations = supportedPinConfigurations;
+            PinCount = _supportedPinConfigurations.Count;
         }
 
         protected override int PinCount { get; }
+
+        /// <summary>
+        /// Arduino does not distinguish between logical and physical numbers, so this always returns identity
+        /// </summary>
         protected override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
         {
-            throw new NotImplementedException();
+            return pinNumber;
         }
 
         protected override void OpenPin(int pinNumber)
         {
-            throw new NotImplementedException();
         }
 
         protected override void ClosePin(int pinNumber)
         {
-            throw new NotImplementedException();
         }
 
         protected override void SetPinMode(int pinNumber, PinMode mode)
         {
-            throw new NotImplementedException();
+            var pinConfig = _supportedPinConfigurations.FirstOrDefault(x => x.Pin == pinNumber);
+            if (pinConfig == null || !pinConfig.PinModes.Contains(mode))
+            {
+                throw new NotSupportedException($"Mode {mode} is not supported on Pin {pinNumber}.");
+            }
+
+            _arduinoBoard.Firmata.SetPinMode(pinNumber, mode);
         }
 
         protected override PinMode GetPinMode(int pinNumber)
         {
-            throw new NotImplementedException();
+            return _arduinoBoard.Firmata.GetPinMode(pinNumber);
         }
 
         protected override bool IsPinModeSupported(int pinNumber, PinMode mode)
         {
-            throw new NotImplementedException();
+            var pinConfig = _supportedPinConfigurations.FirstOrDefault(x => x.Pin == pinNumber);
+            if (pinConfig == null || !pinConfig.PinModes.Contains(mode))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         protected override PinValue Read(int pinNumber)
@@ -50,7 +71,7 @@ namespace Iot.Device.Arduino
 
         protected override void Write(int pinNumber, PinValue value)
         {
-            throw new NotImplementedException();
+            _arduinoBoard.Firmata.WriteDigitalPin(pinNumber, value);
         }
 
         protected override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
