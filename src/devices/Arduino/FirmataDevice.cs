@@ -2,8 +2,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Device.Gpio;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -37,7 +39,7 @@ namespace Iot.Device.Arduino
         }
     }
 
-    public enum Command
+    public enum Command : byte
     {
         DIGITAL_MESSAGE = 144, // 0x00000090
         REPORT_ANALOG_PIN = 192, // 0x000000C0
@@ -45,6 +47,7 @@ namespace Iot.Device.Arduino
         ANALOG_MESSAGE = 224, // 0x000000E0
         START_SYSEX = 240, // 0x000000F0
         SET_PIN_MODE = 244, // 0x000000F4
+        SET_DIGITAL_VALUE = 0xF5,
         END_SYSEX = 247, // 0x000000F7
         PROTOCOL_VERSION = 249, // 0x000000F9
         SYSTEM_RESET = 255 // 0x000000FF
@@ -75,6 +78,22 @@ namespace Iot.Device.Arduino
         SYSEX_REALTIME = 0x7F
     }
 
+    public enum SupportedMode
+    {
+        DIGITAL_INPUT   =   (0x00),
+        DIGITAL_OUTPUT  =   (0x01),
+        ANALOG_INPUT    =   (0x02),
+        PWM             =   (0x03),
+        SERVO           =   (0x04),
+        SHIFT           =   (0x05),
+        I2C             =   (0x06),
+        ONEWIRE         =   (0x07),
+        STEPPER         =   (0x08),
+        ENCODER         =   (0x09),
+        SERIAL          =   (0x0A),
+        INPUT_PULLUP    =   (0x0B)
+    }
+
     public delegate void CallbackFunction(UwpFirmata caller, CallbackEventArgs argv);
 
     public delegate void StringCallbackFunction(UwpFirmata caller, string data);
@@ -101,6 +120,8 @@ namespace Iot.Device.Arduino
         private bool _connectionReady;
         private Thread _inputThread;
         private bool _inputThreadShouldExit;
+        private List<SupportedPinConfiguration> _supportedPinConfigurations;
+        private IList<byte> _lastResponse;
 
         // Event used when waiting for answers (i.e. after requesting firmware version)
         private AutoResetEvent _dataReceived;
@@ -110,10 +131,6 @@ namespace Iot.Device.Arduino
         public event CallbackFunction AnalogValueUpdated;
 
         public event StringCallbackFunction StringMessageReceived;
-
-        public event SysexCallbackFunction SysexMessageReceived;
-
-        public event SysexCallbackFunction PinCapabilityResponseReceived;
 
         public event I2cReplyCallbackFunction I2cReplyReceived;
 
@@ -135,6 +152,15 @@ namespace Iot.Device.Arduino
             _connectionReady = false;
             _inputThreadShouldExit = false;
             _dataReceived = new AutoResetEvent(false);
+            _supportedPinConfigurations = new List<SupportedPinConfiguration>();
+        }
+
+        internal List<SupportedPinConfiguration> PinConfigurations
+        {
+            get
+            {
+                return _supportedPinConfigurations;
+            }
         }
 
         public void begin(FirmataStream s_)
@@ -387,7 +413,42 @@ namespace Iot.Device.Arduino
 
                         case SysexCommand.CAPABILITY_RESPONSE:
 
-                            
+                            _supportedPinConfigurations.Clear();
+                        {
+                            int idx = 1;
+                            var currentPin = new SupportedPinConfiguration(0);
+                            int pin = 0;
+                            while (idx < raw_data.Length)
+                            {
+                                int mode = raw_data[idx++];
+                                if (mode == 0x7F)
+                                {
+                                    _supportedPinConfigurations.Add(currentPin);
+                                    currentPin = new SupportedPinConfiguration(++pin);
+                                    continue;
+                                }
+                                int resolution = raw_data[idx++];
+                                    switch ((SupportedMode)mode)
+                                    {
+                                        case SupportedMode.DIGITAL_INPUT:
+                                            currentPin.PinModes.Add(PinMode.Input);
+                                            break;
+                                        case SupportedMode.DIGITAL_OUTPUT:
+                                            currentPin.PinModes.Add(PinMode.Output);
+                                            break;
+                                        case SupportedMode.INPUT_PULLUP:
+                                            currentPin.PinModes.Add(PinMode.InputPullUp);
+                                            break;
+                                        case SupportedMode.ANALOG_INPUT:
+                                            currentPin.AnalogInputResolutionBits = resolution;
+                                            break;
+
+                                    }
+                            }
+
+                            _dataReceived.Set();
+                            // Do not add the last instance, should also be terminated by 0xF7
+                        }
 
                             break;
 
@@ -405,16 +466,14 @@ namespace Iot.Device.Arduino
                             I2cReplyReceived(this, new I2cCallbackEventArgs(raw_data[0], raw_data[1], writer));
                             break;
 
+                        case SysexCommand.PIN_STATE_RESPONSE:
+                            _lastResponse = raw_data; // the instance is constant, so we can just remember the pointer
+                            _dataReceived.Set();
+                            break;
+
                         default:
 
                             // we pass the data forward as-is for any other type of sysex command
-                            for (int i = 0; i < bytes_read; ++i)
-                            {
-                                writer.WriteByte(raw_data[i]);
-                            }
-
-                            writer.Seek(0, SeekOrigin.Begin);
-                            SysexMessageReceived(this, new SysexCallbackEventArgs(sysCommand, writer));
                             break;
                     }
 
@@ -508,6 +567,77 @@ namespace Iot.Device.Arduino
             _inputThreadShouldExit = true;
             _inputThread.Join();
             _inputThreadShouldExit = false;
+        }
+
+        public void SetPinMode(int pin, PinMode mode)
+        {
+            SupportedMode firmataMode;
+            switch (mode)
+            {
+                case PinMode.Output:
+                    firmataMode = SupportedMode.DIGITAL_OUTPUT;
+                    break;
+                case PinMode.InputPullUp:
+                    firmataMode = SupportedMode.INPUT_PULLUP;
+                    break;
+                case PinMode.Input:
+                    firmataMode = SupportedMode.DIGITAL_INPUT;
+                    break;
+                default: 
+                    throw new NotSupportedException($"Mode {mode} is not supported for this operation");
+            }
+
+            _firmataStream.WriteByte((byte)Command.SET_PIN_MODE);
+            _firmataStream.WriteByte((byte)pin);
+            _firmataStream.WriteByte((byte)firmataMode);
+            _firmataStream.Flush();
+        }
+
+        public PinMode GetPinMode(int pinNumber)
+        {
+            _dataReceived.Reset();
+            _firmataStream.WriteByte((byte)Command.START_SYSEX);
+            _firmataStream.WriteByte((byte)SysexCommand.PIN_STATE_QUERY);
+            _firmataStream.WriteByte((byte)pinNumber);
+            _firmataStream.WriteByte((byte)Command.END_SYSEX);
+            _firmataStream.Flush();
+            bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+            if (result == false)
+            {
+                throw new TimeoutException("Timeout waiting for pin mode.");
+            }
+
+            // The mode is byte 4
+            if (_lastResponse.Count < 4)
+            {
+                throw new InvalidOperationException("Not enough data in reply");
+            }
+
+            if (_lastResponse[1] != pinNumber)
+            {
+                throw new InvalidOperationException("The reply didn't match the query (another port was indicated)");
+            }
+
+            SupportedMode mode = (SupportedMode)(_lastResponse[2]);
+            switch (mode)
+            {
+                case SupportedMode.DIGITAL_OUTPUT:
+                    return PinMode.Output;
+                case SupportedMode.INPUT_PULLUP:
+                    return PinMode.InputPullUp;
+                case SupportedMode.DIGITAL_INPUT:
+                    return PinMode.Input;
+                default:
+                    return PinMode.Input; // TODO: Return "Unknown"
+            }
+        }
+
+        public void WriteDigitalPin(int pin, PinValue value)
+        {
+            _firmataStream.WriteByte((byte)Command.SET_DIGITAL_VALUE);
+            _firmataStream.WriteByte((byte)pin);
+            _firmataStream.WriteByte((byte)(value == PinValue.High ? 1 : 0));
+            _firmataStream.Flush();
         }
 
         private void reassembleByteString(byte[] byte_string_, int length_)

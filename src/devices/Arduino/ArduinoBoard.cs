@@ -22,6 +22,8 @@ namespace Iot.Device.Arduino
         private UwpFirmata _firmata;
         private Version _firmwareVersion;
         private string _firmwareName;
+        private List<SupportedPinConfiguration> _supportedPinConfigurations;
+
         public ArduinoBoard(Stream serialPortStream)
         {
             _serialPortStream = serialPortStream;
@@ -34,6 +36,9 @@ namespace Iot.Device.Arduino
             }
 
             _firmwareVersion = _firmata.QueryFirmwareVersion(out _firmwareName);
+
+            _firmata.QueryCapabilities();
+            _supportedPinConfigurations = _firmata.PinConfigurations; // Clone reference
         }
 
         public Version FirmwareVersion
@@ -52,9 +57,17 @@ namespace Iot.Device.Arduino
             }
         }
 
+        internal UwpFirmata Firmata
+        {
+            get
+            {
+                return _firmata;
+            }
+        }
+
         public GpioController GetGpioController(PinNumberingScheme pinNumberingScheme)
         {
-            return new GpioController(pinNumberingScheme, new ArduinoGpioControllerDriver(this));
+            return new GpioController(pinNumberingScheme, new ArduinoGpioControllerDriver(this, _supportedPinConfigurations));
         }
 
         protected virtual void Dispose(bool disposing)

@@ -111,31 +111,24 @@ namespace Ft4222.Samples
 
         public static void TestGpio(ArduinoBoard board)
         {
-            const int Gpio2 = 2;
+            // Use Pin 6
+            const int gpio = 6;
             var gpioController = board.GetGpioController(PinNumberingScheme.Board);
 
             // Opening GPIO2
-            gpioController.OpenPin(Gpio2);
-            gpioController.SetPinMode(Gpio2, PinMode.Output);
+            gpioController.OpenPin(gpio);
+            gpioController.SetPinMode(gpio, PinMode.Output);
 
-            Console.WriteLine("Blinking GPIO2");
+            Console.WriteLine("Blinking GPIO6");
             while (!Console.KeyAvailable)
             {
-                gpioController.Write(Gpio2, PinValue.High);
+                gpioController.Write(gpio, PinValue.High);
                 Thread.Sleep(500);
-                gpioController.Write(Gpio2, PinValue.Low);
+                gpioController.Write(gpio, PinValue.Low);
                 Thread.Sleep(500);
             }
 
             Console.ReadKey();
-            Console.WriteLine("Reading GPIO2 state");
-            gpioController.SetPinMode(Gpio2, PinMode.Input);
-            while (!Console.KeyAvailable)
-            {
-                Console.Write($"State: {gpioController.Read(Gpio2)} ");
-                Console.CursorLeft = 0;
-                Thread.Sleep(50);
-            }
         }
 
         public static void TestEvents(ArduinoBoard board)
