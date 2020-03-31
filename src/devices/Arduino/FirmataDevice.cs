@@ -20,12 +20,13 @@ namespace Iot.Device.Arduino
     }
 
     public class SysexCallbackEventArgs
-    { 
+    {
         public SysexCallbackEventArgs(
-    SysexCommand command_,
-    Stream sysex_string_
-    )
-        { }
+            SysexCommand command_,
+            Stream sysex_string_
+        )
+        {
+        }
     }
 
     public class I2cCallbackEventArgs
@@ -34,7 +35,7 @@ namespace Iot.Device.Arduino
         {
 
         }
-    } 
+    }
 
     public enum Command
     {
@@ -81,21 +82,28 @@ namespace Iot.Device.Arduino
     public delegate void SysexCallbackFunction(UwpFirmata caller, SysexCallbackEventArgs args);
 
     public delegate void I2cReplyCallbackFunction(UwpFirmata caller, I2cCallbackEventArgs args);
+
     public sealed class UwpFirmata : IDisposable
     {
-        private byte FIRMATA_PROTOCOL_MAJOR_VERSION;
-        private byte FIRMATA_PROTOCOL_MINOR_VERSION;
+        private const byte FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
+        private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 6;
+        private const int FIRMATA_INIT_TIMEOUT_SECONDS = 10;
         private double MESSAGE_TIMEOUT_MILLIS;
-        private byte firmwareVersionMajor;
-        private byte firmwareVersionMinor;
-        private string firmwareName;
+        private byte _firmwareVersionMajor;
+        private byte _firmwareVersionMinor;
+        private byte _actualFirmataProtocolMajorVersion;
+        private byte _actualFirmataProtocolMinorVersion;
+
+        private string _firmwareName;
         private ulong DATA_BUFFER_SIZE;
         private short[] _data_buffer;
-        private FirmataStream _firmata_stream;
-        private bool _connection_ready;
-        private object _firmata_lock;
-        private Thread _input_thread;
-        private bool _input_thread_should_exit;
+        private FirmataStream _firmataStream;
+        private bool _connectionReady;
+        private Thread _inputThread;
+        private bool _inputThreadShouldExit;
+
+        // Event used when waiting for answers (i.e. after requesting firmware version)
+        private AutoResetEvent _dataReceived;
 
         public event CallbackFunction DigitalPortValueUpdated;
 
@@ -109,8 +117,6 @@ namespace Iot.Device.Arduino
 
         public event I2cReplyCallbackFunction I2cReplyReceived;
 
-        public event CallbackFunction SystemResetRequested;
-
         public event Action FirmataConnectionReady;
 
         public event StringCallbackFunction FirmataConnectionFailed;
@@ -119,30 +125,23 @@ namespace Iot.Device.Arduino
 
         public UwpFirmata()
         {
-            FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
-            FIRMATA_PROTOCOL_MINOR_VERSION = 3;
             MESSAGE_TIMEOUT_MILLIS = 500.0;
-            firmwareVersionMajor = 0;
-            firmwareVersionMinor = 0;
+            _firmwareVersionMajor = 0;
+            _firmwareVersionMinor = 0;
             DATA_BUFFER_SIZE = 31UL;
             UwpFirmata uwpFirmata = this;
             uwpFirmata._data_buffer = new short[(int)uwpFirmata.DATA_BUFFER_SIZE];
-            _firmata_stream = null;
-            _connection_ready = false;
-            _firmata_lock = new object();
-            _input_thread_should_exit = false;
-        }
-
-        ~UwpFirmata()
-        {
-            finish();
+            _firmataStream = null;
+            _connectionReady = false;
+            _inputThreadShouldExit = false;
+            _dataReceived = new AutoResetEvent(false);
         }
 
         public void begin(FirmataStream s_)
         {
-            _firmata_stream = s_;
+            _firmataStream = s_;
 
-            if (_firmata_stream.CanRead && _firmata_stream.CanWrite)
+            if (_firmataStream.CanRead && _firmataStream.CanWrite)
             {
                 onConnectionEstablished();
             }
@@ -151,130 +150,99 @@ namespace Iot.Device.Arduino
                 throw new NotSupportedException("Need a read-write stream to the hardware device");
             }
 
-            //we always care about the connection being lost
-            // _firmata_stream.ConnectionLost += ref new Microsoft::Maker::Serial::IStreamConnectionCallbackWithMessage(this, &Microsoft::Maker::Firmata::UwpFirmata::onConnectionLost);
+            startListening();
         }
 
         public bool connectionReady()
         {
-            return _connection_ready;
+            return _connectionReady;
         }
 
         public void finish()
         {
-            Monitor.Enter(_firmata_lock);
             stopThreads();
-            _connection_ready = false;
-            _firmata_stream = null;
+            _connectionReady = false;
+            _firmataStream = null;
             _data_buffer = null;
-            if (_firmata_stream != null)
+            if (_firmataStream != null)
             {
-                _firmata_stream.flush();
-                _firmata_stream.end();
+                _firmataStream.Close();
             }
-            _firmata_stream = null;
-            Monitor.Exit(_firmata_lock);
+
+            _firmataStream = null;
+            if (_dataReceived != null)
+            {
+                _dataReceived.Dispose();
+                _dataReceived = null;
+            }
         }
 
-        public void flush()
+        public void sendAnalog(byte pin_, ushort value)
         {
-            _firmata_stream.flush();
+            _firmataStream.Write((byte)(pin_ & 15 | 224));
+            _firmataStream.Write((byte)(value & (uint)sbyte.MaxValue));
+            _firmataStream.Write((byte)(value >> 7 & sbyte.MaxValue));
+            _firmataStream.Flush();
         }
 
-        public void printFirmwareVersion()
+        public void sendDigitalPort(byte port_number_, byte port_data_)
         {
-            if (firmwareName == null)
+            _firmataStream.Write((byte)(port_number_ & 15 | 144));
+            _firmataStream.Write((byte)(port_data_ & (uint)sbyte.MaxValue));
+            _firmataStream.Write((byte)((uint)port_data_ >> 7));
+            _firmataStream.Flush();
+        }
+
+        public void sendString(byte command_, string string_)
+        {
+            byte[] bytes = Encoding.Unicode.GetBytes(string_);
+            _firmataStream.Write(240);
+            _firmataStream.Write((byte)(command_ & (uint)sbyte.MaxValue));
+            for (ulong index = 0; index < (ulong)bytes.Length; ++index)
+                sendValueAsTwo7bitBytes(bytes[(int)index]);
+            _firmataStream.Write(247);
+            _firmataStream.Flush();
+        }
+
+        private void sendString(string string_)
+        {
+            sendString(113, string_);
+        }
+
+        private void sendValueAsTwo7bitBytes(ushort value_)
+        {
+            _firmataStream.Write((byte)(value_ & (uint)sbyte.MaxValue));
+            _firmataStream.Write((byte)(value_ >> 7 & sbyte.MaxValue));
+        }
+
+        private void startListening()
+        {
+            if (_inputThread != null && _inputThread.IsAlive)
+            {
                 return;
-            _firmata_stream.write(240);
-            _firmata_stream.write(121);
-            _firmata_stream.write(firmwareVersionMajor);
-            _firmata_stream.write(firmwareVersionMinor);
-            for (ulong index = 0; index < (ulong)firmwareName.Length; ++index)
-            {
-                UwpFirmata uwpFirmata = this;
-                uwpFirmata.sendValueAsTwo7bitBytes((ushort)uwpFirmata.firmwareName.IndexOf((char)index));
             }
-            _firmata_stream.write(247);
-            _firmata_stream.flush();
+
+            _inputThreadShouldExit = false;
+            UwpFirmata uwpFirmata = this;
+            
+            uwpFirmata._inputThread = new Thread(inputThread);
+            uwpFirmata._inputThread.Start();
         }
 
-        public void printVersion()
+        private string createStringFromMbs(byte[] mbs_, int len_)
         {
-            _firmata_stream.write(249);
-            _firmata_stream.write(FIRMATA_PROTOCOL_MAJOR_VERSION);
-            _firmata_stream.write(FIRMATA_PROTOCOL_MINOR_VERSION);
-            _firmata_stream.flush();
+            return Encoding.Unicode.GetString(mbs_);
         }
 
-    public void sendAnalog(byte pin_, ushort value)
-    {
-      _firmata_stream.write((byte) (pin_ & 15 | 224));
-      _firmata_stream.write((byte) (value & (uint) sbyte.MaxValue));
-      _firmata_stream.write((byte) (value >> 7 & sbyte.MaxValue));
-      _firmata_stream.flush();
-    }
-
-    public void sendDigitalPort(byte port_number_, byte port_data_)
-    {
-      _firmata_stream.write((byte) (port_number_ & 15 | 144));
-      _firmata_stream.write((byte) (port_data_ & (uint) sbyte.MaxValue));
-      _firmata_stream.write((byte) ((uint) port_data_ >> 7));
-      _firmata_stream.flush();
-    }
-
-    public void sendString(byte command_, string string_)
-    {
-      byte[] bytes = Encoding.Unicode.GetBytes(string_);
-      _firmata_stream.write(240);
-      _firmata_stream.write((byte) (command_ & (uint) sbyte.MaxValue));
-      for (ulong index = 0; index < (ulong) bytes.Length; ++index)
-        sendValueAsTwo7bitBytes(bytes[(int) index]);
-      _firmata_stream.write(247);
-      _firmata_stream.flush();
-    }
-
-    public void sendString(string string_)
-    {
-      sendString(113, string_);
-    }
-
-    public void sendValueAsTwo7bitBytes(ushort value_)
-    {
-      _firmata_stream.write((byte) (value_ & (uint) sbyte.MaxValue));
-      _firmata_stream.write((byte) (value_ >> 7 & sbyte.MaxValue));
-    }
-
-    public void setFirmwareNameAndVersion(string name_, byte major_, byte minor_)
-    {
-      firmwareName = name_;
-      firmwareVersionMajor = major_;
-      firmwareVersionMinor = minor_;
-    }
-
-    public void startListening()
-    {
-      if (_input_thread.IsAlive)
-        return;
-      _input_thread_should_exit = false;
-      UwpFirmata uwpFirmata = this;
-      // ISSUE: method pointer
-      uwpFirmata._input_thread = new Thread(inputThread);
-      uwpFirmata._input_thread.Start();
-    }
-
-    public void write(byte c_)
-    {
-      _firmata_stream.write(c_);
-    }
-
-    private string createStringFromMbs(byte[] mbs_, int len_)
-    {
-      return Encoding.Unicode.GetString(mbs_);
-    }
-
-        void processInput()
+        private string createStringFromMbs(byte[] mbs_, int offset, int len_)
         {
-            ushort data = _firmata_stream.read();
+            return Encoding.Unicode.GetString(mbs_, offset, mbs_.Length - offset);
+        }
+
+        private void processInput()
+        {
+            // ReadByte reads one byte, but takes an int as an argument, so it can specify -1 for end-of-stream or timeout
+            int data = _firmataStream.ReadByte();
             if (data == (0xFFFF))
                 return;
 
@@ -328,7 +296,7 @@ namespace Iot.Device.Arduino
             Stopwatch timeout_start = Stopwatch.StartNew();
             while (bytes_remaining > 0 || isMessageSysex)
             {
-                data = _firmata_stream.read();
+                data = _firmataStream.ReadByte();
 
                 //if no data was available, check for timeout
                 if (data == 0xFFFF)
@@ -365,17 +333,23 @@ namespace Iot.Device.Arduino
                 case Command.SET_PIN_MODE:
                 case Command.END_SYSEX:
                 case Command.SYSTEM_RESET:
+                    return;
                 case Command.PROTOCOL_VERSION:
+                    _actualFirmataProtocolMajorVersion = message[0];
+                    _actualFirmataProtocolMinorVersion = message[1];
+                    _dataReceived.Set();
                     return;
 
                 case Command.ANALOG_MESSAGE:
                     //report analog commands store the pin number in the lower nibble of the command byte, the value is split over two 7-bit bytes
-                    AnalogValueUpdated(this, new CallbackEventArgs(lower_nibble, (ushort)(message[0] | (message[1] << 7))));
+                    AnalogValueUpdated(this,
+                        new CallbackEventArgs(lower_nibble, (ushort)(message[0] | (message[1] << 7))));
                     break;
 
                 case Command.DIGITAL_MESSAGE:
                     //digital messages store the port number in the lower nibble of the command byte, the port value is split over two 7-bit bytes
-                    DigitalPortValueUpdated(this, new CallbackEventArgs(lower_nibble, (ushort)(message[0] | (message[1] << 7))));
+                    DigitalPortValueUpdated(this,
+                        new CallbackEventArgs(lower_nibble, (ushort)(message[0] | (message[1] << 7))));
                     break;
 
                 case Command.START_SYSEX:
@@ -393,6 +367,15 @@ namespace Iot.Device.Arduino
                     MemoryStream writer = new MemoryStream();
                     switch (sysCommand)
                     {
+                        case SysexCommand.REPORT_FIRMWARE:
+                            // See https://github.com/firmata/protocol/blob/master/protocol.md
+                            // Byte 0 is the command (0x79) and can be skipped here, as we've already interpreted it
+                            _firmwareVersionMajor = raw_data[1];
+                            _firmwareVersionMinor = raw_data[2];
+                            _firmwareName = createStringFromMbs(raw_data, 3, message.Count - 3);
+                            _dataReceived.Set();
+                            return;
+
                         case SysexCommand.STRING_DATA:
 
                             //condense back into 1-byte data
@@ -404,14 +387,7 @@ namespace Iot.Device.Arduino
 
                         case SysexCommand.CAPABILITY_RESPONSE:
 
-                            //Firmata does not handle capability responses in the typical way (separating bytes), so we write them directly to the DataWriter
-                            for (int i = 0; i < bytes_read; ++i)
-                            {
-                                writer.WriteByte(raw_data[i]);
-                            }
-
-                            writer.Seek(0, SeekOrigin.Begin);
-                            PinCapabilityResponseReceived(this, new SysexCallbackEventArgs(sysCommand, writer));
+                            
 
                             break;
 
@@ -449,68 +425,115 @@ namespace Iot.Device.Arduino
         }
 
         private void inputThread()
-    {
-      while (!_input_thread_should_exit)
-      {
-        try
         {
-          processInput();
+            while (!_inputThreadShouldExit)
+            {
+                try
+                {
+                    processInput();
+                }
+                catch (Exception ex)
+                {
+                    onConnectionLost(ex.Message);
+                }
+            }
         }
-        catch (Exception ex)
+
+        public Version QueryFirmataVersion()
         {
-            onConnectionLost(ex.Message);
+            _dataReceived.Reset();
+            _firmataStream.Write((byte)Command.PROTOCOL_VERSION);
+            _firmataStream.Flush();
+            bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+            if (result == false)
+            {
+                throw new TimeoutException("Timeout waiting for firmata version");
+            }
+            return new Version(_actualFirmataProtocolMajorVersion, _actualFirmataProtocolMinorVersion);
         }
-      }
-    }
 
-    private void onConnectionEstablished()
-    {
-      _connection_ready = true;
-      FirmataConnectionReady?.Invoke();
-    }
-
-    private void onConnectionFailed(string message_)
-    {
-      FirmataConnectionFailed?.Invoke(this, message_);
-    }
-
-    private void onConnectionLost(string message_)
-    {
-      _connection_ready = false;
-      FirmataConnectionLost?.Invoke(this, message_);
-    }
-
-    private void stopThreads()
-    {
-      _input_thread_should_exit = true;
-      _input_thread.Join();
-      _input_thread_should_exit = false;
-    }
-
-    private void reassembleByteString(byte[] byte_string_, int length_)
-    {
-      int num;
-      for (num = 0; num < length_ / 2; ++num)
-      {
-          byte_string_[num] = (byte)(byte_string_[(num * 2)] |
-                                     byte_string_[(num * 2 + 1)] << 7);
-      }
-
-      byte_string_[num] = 0;
-    }
-
-    private void Dispose(bool disposing)
-    {
-        if (disposing)
+        public Version QuerySupportedFirmataVersion()
         {
-            finish();
+            return new Version(FIRMATA_PROTOCOL_MAJOR_VERSION, FIRMATA_PROTOCOL_MINOR_VERSION);
+        }
+
+        public Version QueryFirmwareVersion(out string firmwareName)
+        {
+            _dataReceived.Reset();
+            _firmataStream.Write((byte)Command.START_SYSEX);
+            _firmataStream.Write((byte)SysexCommand.REPORT_FIRMWARE);
+            _firmataStream.Write((byte)Command.END_SYSEX);
+            bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+            if (result == false)
+            {
+                throw new TimeoutException("Timeout waiting for firmata version");
+            }
+
+            firmwareName = _firmwareName;
+            return new Version(_firmwareVersionMajor, _firmwareVersionMinor);
+        }
+
+        public void QueryCapabilities()
+        {
+            _dataReceived.Reset();
+            _firmataStream.Write((byte)Command.START_SYSEX);
+            _firmataStream.Write((byte)SysexCommand.CAPABILITY_QUERY);
+            _firmataStream.Write((byte)Command.END_SYSEX);
+            bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+            if (result == false)
+            {
+                throw new TimeoutException("Timeout waiting for device capabilities");
+            }
+        }
+
+        private void onConnectionEstablished()
+        {
+            _connectionReady = true;
+            FirmataConnectionReady?.Invoke();
+        }
+
+        private void onConnectionFailed(string message_)
+        {
+            FirmataConnectionFailed?.Invoke(this, message_);
+        }
+
+        private void onConnectionLost(string message_)
+        {
+            _connectionReady = false;
+            FirmataConnectionLost?.Invoke(this, message_);
+        }
+
+        private void stopThreads()
+        {
+            _inputThreadShouldExit = true;
+            _inputThread.Join();
+            _inputThreadShouldExit = false;
+        }
+
+        private void reassembleByteString(byte[] byte_string_, int length_)
+        {
+            int num;
+            for (num = 0; num < length_ / 2; ++num)
+            {
+                byte_string_[num] = (byte)(byte_string_[(num * 2)] |
+                                           byte_string_[(num * 2 + 1)] << 7);
+            }
+
+            byte_string_[num] = 0;
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                finish();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
-
-    public void Dispose()
-    {
-      Dispose(true);
-      GC.SuppressFinalize(this);
-    }
-  }
 }
