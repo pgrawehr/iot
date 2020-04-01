@@ -39,6 +39,8 @@ namespace Iot.Device.Arduino
 
             _firmata.QueryCapabilities();
             _supportedPinConfigurations = _firmata.PinConfigurations; // Clone reference
+
+            _firmata.EnableDigitalReporting();
         }
 
         public Version FirmwareVersion
