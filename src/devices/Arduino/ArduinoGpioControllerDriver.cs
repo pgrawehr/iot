@@ -11,12 +11,20 @@ namespace Iot.Device.Arduino
     {
         private readonly ArduinoBoard _arduinoBoard;
         private readonly List<SupportedPinConfiguration> _supportedPinConfigurations;
+        private readonly Dictionary<int, CallbackContainer> _callbackContainers;
+        private readonly object _callbackContainersLock;
+        private readonly AutoResetEvent _waitForEventResetEvent;
 
         public ArduinoGpioControllerDriver(ArduinoBoard arduinoBoard, List<SupportedPinConfiguration> supportedPinConfigurations)
         {
-            _arduinoBoard = arduinoBoard;
-            _supportedPinConfigurations = supportedPinConfigurations;
+            _arduinoBoard = arduinoBoard ?? throw new ArgumentNullException(nameof(arduinoBoard));
+            _supportedPinConfigurations = supportedPinConfigurations ?? throw new ArgumentNullException(nameof(supportedPinConfigurations));
+            _callbackContainers = new Dictionary<int, CallbackContainer>();
+            _waitForEventResetEvent = new AutoResetEvent(false);
+            _callbackContainersLock = new object();
+
             PinCount = _supportedPinConfigurations.Count;
+            _arduinoBoard.Firmata.DigitalPortValueUpdated += FirmataOnDigitalPortValueUpdated;
         }
 
         protected override int PinCount { get; }
@@ -76,17 +84,155 @@ namespace Iot.Device.Arduino
 
         protected override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            PinEventTypes eventSeen = PinEventTypes.None;
+
+            void WaitForEventPortValueUpdated(int pin, PinValue newvalue)
+            {
+                if (pin == pinNumber)
+                {
+                    if ((eventTypes & PinEventTypes.Rising) == PinEventTypes.Rising && newvalue == PinValue.High)
+                    {
+                        eventSeen = PinEventTypes.Rising;
+                        _waitForEventResetEvent.Set();
+                    }
+                    else if ((eventTypes & PinEventTypes.Falling) == PinEventTypes.Falling && newvalue == PinValue.Low)
+                    {
+                        eventSeen = PinEventTypes.Falling;
+                        _waitForEventResetEvent.Set();
+                    }
+                }
+            }
+
+            _arduinoBoard.Firmata.DigitalPortValueUpdated += WaitForEventPortValueUpdated;
+            try
+            {
+                WaitHandle.WaitAny(new[] { cancellationToken.WaitHandle, _waitForEventResetEvent });
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return new WaitForEventResult()
+                    {
+                        EventTypes = PinEventTypes.None,
+                        TimedOut = true
+                    };
+                }
+            }
+            finally
+            {
+                _arduinoBoard.Firmata.DigitalPortValueUpdated -= WaitForEventPortValueUpdated;
+            }
+
+            return new WaitForEventResult()
+            {
+                EventTypes = eventSeen,
+                TimedOut = false
+            };
         }
 
         protected override void AddCallbackForPinValueChangedEvent(int pinNumber, PinEventTypes eventTypes, PinChangeEventHandler callback)
         {
-            throw new NotImplementedException();
+            lock (_callbackContainersLock)
+            {
+                if (_callbackContainers.TryGetValue(pinNumber, out var cb))
+                {
+                    cb.EventTypes = cb.EventTypes | eventTypes;
+                    cb.OnPinChanged += callback;
+                }
+                else
+                {
+                    var cb2 = new CallbackContainer(pinNumber, eventTypes);
+                    cb2.OnPinChanged += callback;
+                    _callbackContainers.Add(pinNumber, cb2);
+                }
+            }
         }
 
         protected override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
         {
-            throw new NotImplementedException();
+            lock (_callbackContainersLock)
+            {
+                if (_callbackContainers.TryGetValue(pinNumber, out var cb))
+                {
+                    cb.OnPinChanged -= callback;
+                    if (cb.NoEventsConnected)
+                    {
+                        _callbackContainers.Remove(pinNumber);
+                    }
+                }
+            }
+        }
+
+        private void FirmataOnDigitalPortValueUpdated(int pin, PinValue newvalue)
+        {
+            CallbackContainer cb = null;
+            PinEventTypes eventTypeToFire = PinEventTypes.None;
+            lock (_callbackContainersLock)
+            {
+                if (_callbackContainers.TryGetValue(pin, out cb))
+                {
+                    if (newvalue == PinValue.High && cb.EventTypes.HasFlag(PinEventTypes.Rising))
+                    {
+                        eventTypeToFire = PinEventTypes.Rising;
+                    }
+                    else if (newvalue == PinValue.Low && cb.EventTypes.HasFlag(PinEventTypes.Falling))
+                    {
+                        eventTypeToFire = PinEventTypes.Falling;
+                    }
+                }
+            }
+
+            if (eventTypeToFire != PinEventTypes.None && cb != null)
+            {
+                cb.FireOnPinChanged(eventTypeToFire);
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                lock (_callbackContainersLock)
+                {
+                    _callbackContainers.Clear();
+                }
+
+                _arduinoBoard.Firmata.DigitalPortValueUpdated -= FirmataOnDigitalPortValueUpdated;
+            }
+
+            base.Dispose(disposing);
+        }
+
+        private class CallbackContainer
+        {
+            public CallbackContainer(int pinNumber, PinEventTypes eventTypes)
+            {
+                PinNumber = pinNumber;
+                EventTypes = eventTypes;
+            }
+
+            public event PinChangeEventHandler OnPinChanged;
+
+            public int PinNumber { get; }
+
+            public PinEventTypes EventTypes
+            {
+                get;
+                set;
+            }
+
+            public bool NoEventsConnected
+            {
+                get
+                {
+                    return OnPinChanged == null;
+                }
+            }
+
+            public void FireOnPinChanged(PinEventTypes eventType)
+            {
+                // Copy event instance, prevents problems when elements are added or removed at the same time
+                var threadSafeCopy = OnPinChanged;
+                threadSafeCopy?.Invoke(PinNumber, new PinValueChangedEventArgs(eventType, PinNumber));
+            }
         }
     }
 }

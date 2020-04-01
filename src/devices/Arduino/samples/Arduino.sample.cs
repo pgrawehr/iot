@@ -50,8 +50,10 @@ namespace Ft4222.Samples
             Console.WriteLine("Select the test you want to run:");
             Console.WriteLine(" 1 Run I2C tests with a BNO055");
             Console.WriteLine(" 2 Run SPI tests with a simple HC595 with led blinking on all ports");
-            Console.WriteLine(" 3 Run GPIO tests with a simple led blinking on GPIO2 port and reading the port");
-            Console.WriteLine(" 4 Run callback test event on GPIO2 on Failing and Rising");
+            Console.WriteLine(" 3 Run GPIO tests with a simple led blinking on GPIO6 port");
+            Console.WriteLine(" 4 Run polling button test on GPIO2");
+            Console.WriteLine(" 5 Run event wait test event on GPIO2 on Falling and Rising");
+            Console.WriteLine(" 6 Run callback event test on GPIO2");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
@@ -73,7 +75,17 @@ namespace Ft4222.Samples
 
             if (key.KeyChar == '4')
             {
-                TestEvents(board);
+                TestInput(board);
+            }
+
+            if (key.KeyChar == '5')
+            {
+                TestEventsDirectWait(board);
+            }
+
+            if (key.KeyChar == '6')
+            {
+                TestEventsCallback(board);
             }
 
             if (key.KeyChar == 'x' || key.KeyChar == 'X')
@@ -131,7 +143,45 @@ namespace Ft4222.Samples
             Console.ReadKey();
         }
 
-        public static void TestEvents(ArduinoBoard board)
+        public static void TestInput(ArduinoBoard board)
+        {
+            const int gpio = 2;
+            var gpioController = board.GetGpioController(PinNumberingScheme.Board);
+
+            // Opening GPIO2
+            gpioController.OpenPin(gpio);
+            gpioController.SetPinMode(gpio, PinMode.Input);
+
+            if (gpioController.GetPinMode(gpio) != PinMode.Input)
+            {
+                throw new InvalidOperationException("Couldn't set pin mode");
+            }
+
+            Console.WriteLine("Polling input pin 2");
+            var lastState = gpioController.Read(gpio);
+            while (!Console.KeyAvailable)
+            {
+                var newState = gpioController.Read(gpio);
+                if (newState != lastState)
+                {
+                    if (newState == PinValue.High)
+                    {
+                        Console.WriteLine("Button pressed");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Button released");
+                    }
+                }
+
+                lastState = newState;
+                Thread.Sleep(10);
+            }
+
+            Console.ReadKey();
+        }
+
+        public static void TestEventsDirectWait(ArduinoBoard board)
         {
             const int Gpio2 = 2;
             var gpioController = board.GetGpioController(PinNumberingScheme.Board);
@@ -140,31 +190,18 @@ namespace Ft4222.Samples
             gpioController.OpenPin(Gpio2);
             gpioController.SetPinMode(Gpio2, PinMode.Input);
 
-            Console.WriteLine("Setting up events on GPIO2 for rising and failing");
-
-            gpioController.RegisterCallbackForPinValueChangedEvent(Gpio2, PinEventTypes.Falling | PinEventTypes.Rising, MyCallbackFailing);
-
-            Console.WriteLine("Event setup, press a key to remove the failing event");
+            Console.WriteLine("Waiting for both falling and rising events");
             while (!Console.KeyAvailable)
             {
-                var res = gpioController.WaitForEvent(Gpio2, PinEventTypes.Falling, new TimeSpan(0, 0, 0, 0, 50));
+                var res = gpioController.WaitForEvent(Gpio2, PinEventTypes.Falling | PinEventTypes.Rising, new TimeSpan(0, 0, 0, 0, 50));
                 if ((!res.TimedOut) && (res.EventTypes != PinEventTypes.None))
                 {
-                    MyCallbackFailing(gpioController, new PinValueChangedEventArgs(res.EventTypes, Gpio2));
-                }
-
-                res = gpioController.WaitForEvent(Gpio2, PinEventTypes.Rising, new TimeSpan(0, 0, 0, 0, 50));
-                if ((!res.TimedOut) && (res.EventTypes != PinEventTypes.None))
-                {
-                    MyCallbackFailing(gpioController, new PinValueChangedEventArgs(res.EventTypes, Gpio2));
+                    Console.WriteLine($"Event on GPIO {Gpio2}, event type: {res.EventTypes}");
                 }
             }
 
             Console.ReadKey();
-            gpioController.UnregisterCallbackForPinValueChangedEvent(Gpio2, MyCallbackFailing);
-            gpioController.RegisterCallbackForPinValueChangedEvent(Gpio2, PinEventTypes.Rising, MyCallback);
-
-            Console.WriteLine("Event removed, press a key to remove all events and quit");
+            Console.WriteLine("Waiting for only rising events");
             while (!Console.KeyAvailable)
             {
                 var res = gpioController.WaitForEvent(Gpio2, PinEventTypes.Rising, new TimeSpan(0, 0, 0, 0, 50));
@@ -173,16 +210,41 @@ namespace Ft4222.Samples
                     MyCallback(gpioController, new PinValueChangedEventArgs(res.EventTypes, Gpio2));
                 }
             }
+        }
+
+        public static void TestEventsCallback(ArduinoBoard board)
+        {
+            const int Gpio2 = 2;
+            var gpioController = board.GetGpioController(PinNumberingScheme.Board);
+
+            // Opening GPIO2
+            gpioController.OpenPin(Gpio2);
+            gpioController.SetPinMode(Gpio2, PinMode.Input);
+
+            Console.WriteLine("Setting up events on GPIO2 for rising and falling");
+
+            gpioController.RegisterCallbackForPinValueChangedEvent(Gpio2, PinEventTypes.Falling | PinEventTypes.Rising, MyCallback);
+            Console.WriteLine("Event setup, press a key to remove the falling event");
+            while (!Console.KeyAvailable)
+            {
+                // Nothing to do
+                Thread.Sleep(100);
+            }
+
+            Console.ReadKey();
+            gpioController.UnregisterCallbackForPinValueChangedEvent(Gpio2, MyCallback);
+            gpioController.RegisterCallbackForPinValueChangedEvent(Gpio2, PinEventTypes.Rising, MyCallback);
+            Console.WriteLine("Now only waiting for rising events, press a key to remove all events and quit");
+            while (!Console.KeyAvailable)
+            {
+                // Nothing to do
+                Thread.Sleep(100);
+            }
 
             gpioController.UnregisterCallbackForPinValueChangedEvent(Gpio2, MyCallback);
         }
 
         private static void MyCallback(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
-        {
-            Console.WriteLine($"Event on GPIO {pinValueChangedEventArgs.PinNumber}, event type: {pinValueChangedEventArgs.ChangeType}");
-        }
-
-        private static void MyCallbackFailing(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
         {
             Console.WriteLine($"Event on GPIO {pinValueChangedEventArgs.PinNumber}, event type: {pinValueChangedEventArgs.ChangeType}");
         }
