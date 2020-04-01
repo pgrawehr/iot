@@ -632,6 +632,40 @@ namespace Iot.Device.Arduino
             }
         }
 
+        public PinValue GetDigitalPinState(int pinNumber)
+        {
+            _dataReceived.Reset();
+            _firmataStream.WriteByte((byte)Command.START_SYSEX);
+            _firmataStream.WriteByte((byte)SysexCommand.PIN_STATE_QUERY);
+            _firmataStream.WriteByte((byte)pinNumber);
+            _firmataStream.WriteByte((byte)Command.END_SYSEX);
+            _firmataStream.Flush();
+            bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+            if (result == false)
+            {
+                throw new TimeoutException("Timeout waiting for pin mode.");
+            }
+
+            // The mode is byte 4
+            if (_lastResponse.Count < 4)
+            {
+                throw new InvalidOperationException("Not enough data in reply");
+            }
+
+            if (_lastResponse[1] != pinNumber)
+            {
+                throw new InvalidOperationException("The reply didn't match the query (another port was indicated)");
+            }
+
+            byte value = (_lastResponse[3]);
+            if (value == 0)
+            {
+                return PinValue.Low;
+            }
+
+            return PinValue.High;
+        }
+
         public void WriteDigitalPin(int pin, PinValue value)
         {
             _firmataStream.WriteByte((byte)Command.SET_DIGITAL_VALUE);

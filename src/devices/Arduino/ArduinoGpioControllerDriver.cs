@@ -66,7 +66,7 @@ namespace Iot.Device.Arduino
 
         protected override PinValue Read(int pinNumber)
         {
-            throw new NotImplementedException();
+            return _arduinoBoard.Firmata.GetDigitalPinState(pinNumber);
         }
 
         protected override void Write(int pinNumber, PinValue value)
