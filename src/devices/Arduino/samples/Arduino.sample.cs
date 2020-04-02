@@ -10,6 +10,7 @@ using System.Device.Spi;
 using System.IO.Ports;
 using System.Threading;
 using Iot.Device.Arduino;
+using Iot.Device.Bmxx80;
 
 namespace Ft4222.Samples
 {
@@ -33,57 +34,71 @@ namespace Ft4222.Samples
             using (var port = new SerialPort(portName, 57600))
             {
                 Console.WriteLine($"Connecting to Arduino on {portName}");
-                port.Open();
-                ArduinoBoard board = new ArduinoBoard(port.BaseStream);
-                Console.WriteLine($"Connection successful. Firmware version: {board.FirmwareVersion}, Builder: {board.FirmwareName}");
-                while (Menu(board))
+                try
                 {
+                    port.Open();
+                }
+                catch (UnauthorizedAccessException x)
+                {
+                    Console.WriteLine($"Could not open COM port: {x.Message} Possible reason: Arduino IDE connected or serial console open");
+                    return;
                 }
 
-                board.Dispose();
+                ArduinoBoard board = new ArduinoBoard(port.BaseStream);
+                try
+                {
+                    board.Initialize();
+                    Console.WriteLine($"Connection successful. Firmware version: {board.FirmwareVersion}, Builder: {board.FirmwareName}");
+                    while (Menu(board))
+                    {
+                    }
+                }
+                catch (TimeoutException x)
+                {
+                    Console.WriteLine($"No answer from board: {x.Message}. ");
+                }
+                finally
+                {
+                    port.Close();
+                    board?.Dispose();
+                }
             }
         }
 
         private static bool Menu(ArduinoBoard board)
         {
-            Console.WriteLine("Hello I2C, SPI and GPIO FTFI! FT4222");
+            Console.WriteLine("Hello I2C and GPIO on Arduino!");
             Console.WriteLine("Select the test you want to run:");
-            Console.WriteLine(" 1 Run I2C tests with a BNO055");
-            Console.WriteLine(" 2 Run SPI tests with a simple HC595 with led blinking on all ports");
-            Console.WriteLine(" 3 Run GPIO tests with a simple led blinking on GPIO6 port");
-            Console.WriteLine(" 4 Run polling button test on GPIO2");
-            Console.WriteLine(" 5 Run event wait test event on GPIO2 on Falling and Rising");
-            Console.WriteLine(" 6 Run callback event test on GPIO2");
+            Console.WriteLine(" 1 Run I2C tests with a BMP280");
+            Console.WriteLine(" 2 Run GPIO tests with a simple led blinking on GPIO6 port");
+            Console.WriteLine(" 3 Run polling button test on GPIO2");
+            Console.WriteLine(" 4 Run event wait test event on GPIO2 on Falling and Rising");
+            Console.WriteLine(" 5 Run callback event test on GPIO2");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
 
-            ////if (key.KeyChar == '1')
-            ////{
-            ////    TestI2c();
-            ////}
+            if (key.KeyChar == '1')
+            {
+                TestI2c(board);
+            }
 
-            ////if (key.KeyChar == '2')
-            ////{
-            ////    TestSpi();
-            ////}
-
-            if (key.KeyChar == '3')
+            if (key.KeyChar == '2')
             {
                 TestGpio(board);
             }
 
-            if (key.KeyChar == '4')
+            if (key.KeyChar == '3')
             {
                 TestInput(board);
             }
 
-            if (key.KeyChar == '5')
+            if (key.KeyChar == '4')
             {
                 TestEventsDirectWait(board);
             }
 
-            if (key.KeyChar == '6')
+            if (key.KeyChar == '5')
             {
                 TestEventsCallback(board);
             }
@@ -96,17 +111,25 @@ namespace Ft4222.Samples
             return true;
         }
 
-        ////private static void TestI2c()
-        ////{
-        ////    var ftI2c = new Ft4222I2c(new I2cConnectionSettings(0, Bno055Sensor.DefaultI2cAddress));
+        private static void TestI2c(ArduinoBoard board)
+        {
+            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, Bmp280.DefaultI2cAddress));
 
-        ////    var bno055Sensor = new Bno055Sensor(ftI2c);
+            var bmp = new Bmp280(device);
+            Console.WriteLine("Device open");
+            while (!Console.KeyAvailable)
+            {
+                bmp.TryReadTemperature(out var temperature);
+                bmp.TryReadPressure(out var pressure);
+                Console.Write($"\rTemperature: {temperature.Celsius:F2}°C. Pressure {pressure.Hectopascal:F1} hPa                  ");
+                Thread.Sleep(100);
+            }
 
-        ////    Console.WriteLine($"Id: {bno055Sensor.Info.ChipId}, AccId: {bno055Sensor.Info.AcceleratorId}, GyroId: {bno055Sensor.Info.GyroscopeId}, MagId: {bno055Sensor.Info.MagnetometerId}");
-        ////    Console.WriteLine($"Firmware version: {bno055Sensor.Info.FirmwareVersion}, Bootloader: {bno055Sensor.Info.BootloaderVersion}");
-        ////    Console.WriteLine($"Temperature source: {bno055Sensor.TemperatureSource}, Operation mode: {bno055Sensor.OperationMode}, Units: {bno055Sensor.Units}");
-        ////    Console.WriteLine($"Powermode: {bno055Sensor.PowerMode}");
-        ////}
+            bmp.Dispose();
+            device.Dispose();
+            Console.ReadKey();
+            Console.WriteLine();
+        }
 
         ////private static void TestSpi()
         ////{
@@ -125,7 +148,7 @@ namespace Ft4222.Samples
         {
             // Use Pin 6
             const int gpio = 6;
-            var gpioController = board.GetGpioController(PinNumberingScheme.Board);
+            var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
 
             // Opening GPIO2
             gpioController.OpenPin(gpio);
@@ -141,12 +164,13 @@ namespace Ft4222.Samples
             }
 
             Console.ReadKey();
+            gpioController.Dispose();
         }
 
         public static void TestInput(ArduinoBoard board)
         {
             const int gpio = 2;
-            var gpioController = board.GetGpioController(PinNumberingScheme.Board);
+            var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
 
             // Opening GPIO2
             gpioController.OpenPin(gpio);
@@ -179,12 +203,13 @@ namespace Ft4222.Samples
             }
 
             Console.ReadKey();
+            gpioController.Dispose();
         }
 
         public static void TestEventsDirectWait(ArduinoBoard board)
         {
             const int Gpio2 = 2;
-            var gpioController = board.GetGpioController(PinNumberingScheme.Board);
+            var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
 
             // Opening GPIO2
             gpioController.OpenPin(Gpio2);
@@ -210,12 +235,14 @@ namespace Ft4222.Samples
                     MyCallback(gpioController, new PinValueChangedEventArgs(res.EventTypes, Gpio2));
                 }
             }
+
+            gpioController.Dispose();
         }
 
         public static void TestEventsCallback(ArduinoBoard board)
         {
             const int Gpio2 = 2;
-            var gpioController = board.GetGpioController(PinNumberingScheme.Board);
+            var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
 
             // Opening GPIO2
             gpioController.OpenPin(Gpio2);
@@ -242,6 +269,7 @@ namespace Ft4222.Samples
             }
 
             gpioController.UnregisterCallbackForPinValueChangedEvent(Gpio2, MyCallback);
+            gpioController.Dispose();
         }
 
         private static void MyCallback(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)

@@ -109,7 +109,7 @@ namespace Iot.Device.Arduino
     {
         private const byte FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
         private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 6;
-        private const int FIRMATA_INIT_TIMEOUT_SECONDS = 10;
+        private const int FIRMATA_INIT_TIMEOUT_SECONDS = 4;
         private const ulong DATA_BUFFER_SIZE = 31;
         private const int MESSAGE_TIMEOUT_MILLIS = 500;
         private byte _firmwareVersionMajor;
@@ -136,10 +136,6 @@ namespace Iot.Device.Arduino
         public event DigitalPinValueChanged DigitalPortValueUpdated;
 
         public event CallbackFunction AnalogValueUpdated;
-
-        public event StringCallbackFunction StringMessageReceived;
-
-        public event I2cReplyCallbackFunction I2cReplyReceived;
 
         public event Action FirmataConnectionReady;
 
@@ -226,26 +222,20 @@ namespace Iot.Device.Arduino
             _firmataStream.Flush();
         }
 
-        public void sendString(byte command_, string string_)
+        /// <summary>
+        /// Used where?
+        /// </summary>
+        private void SendString(byte command_, string string_)
         {
             byte[] bytes = Encoding.Unicode.GetBytes(string_);
-            _firmataStream.Write(240);
-            _firmataStream.Write((byte)(command_ & (uint)sbyte.MaxValue));
-            for (ulong index = 0; index < (ulong)bytes.Length; ++index)
-                sendValueAsTwo7bitBytes(bytes[(int)index]);
-            _firmataStream.Write(247);
-            _firmataStream.Flush();
-        }
-
-        private void sendString(string string_)
-        {
-            sendString(113, string_);
-        }
-
-        private void sendValueAsTwo7bitBytes(ushort value_)
-        {
-            _firmataStream.Write((byte)(value_ & (uint)sbyte.MaxValue));
-            _firmataStream.Write((byte)(value_ >> 7 & sbyte.MaxValue));
+            lock (_synchronisationLock)
+            {
+                _firmataStream.Write(240);
+                _firmataStream.Write((byte)(command_ & (uint)sbyte.MaxValue));
+                SendValuesAsTwo7bitBytes(bytes);
+                _firmataStream.Write(247);
+                _firmataStream.Flush();
+            }
         }
 
         private void startListening()
@@ -433,9 +423,13 @@ namespace Iot.Device.Arduino
                         case SysexCommand.STRING_DATA:
 
                             //condense back into 1-byte data
-                            reassembleByteString(raw_data, bytes_read);
+                            int stringLength = (raw_data.Length - 1) / 2;
+                            Span<byte> bytesReceived = stackalloc byte[stringLength];
+                            ReassembleByteString(raw_data, 1, stringLength * 2, bytesReceived);
 
-                            StringMessageReceived(this, createStringFromMbs(raw_data, bytes_read / 2));
+                            string message1 = Encoding.ASCII.GetString(bytesReceived);
+                            Console.WriteLine(message1);
+                            // StringMessageReceived(this, createStringFromMbs(raw_data, bytes_read / 2));
 
                             break;
 
@@ -485,16 +479,8 @@ namespace Iot.Device.Arduino
 
                         case SysexCommand.I2C_REPLY:
 
-                            //condense back into 1-byte data
-                            reassembleByteString(raw_data, bytes_read);
-
-                            //if we're receiving an I2C reply, the first two bytes in our reply are the address and register
-                            for (int i = 2; i < bytes_read / 2; ++i)
-                            {
-                                writer.WriteByte(raw_data[i]);
-                            }
-
-                            I2cReplyReceived(this, new I2cCallbackEventArgs(raw_data[0], raw_data[1], writer));
+                            _lastResponse = raw_data;
+                            _dataReceived.Set();
                             break;
 
                         case SysexCommand.PIN_STATE_RESPONSE:
@@ -607,7 +593,6 @@ namespace Iot.Device.Arduino
         {
             _inputThreadShouldExit = true;
             _inputThread.Join();
-            _inputThreadShouldExit = false;
         }
 
         public void SetPinMode(int pin, PinMode mode)
@@ -686,11 +671,14 @@ namespace Iot.Device.Arduino
         public void EnableDigitalReporting()
         {
             int numPorts = (int)Math.Ceiling(PinConfigurations.Count / 8.0);
-            for (byte i = 0; i < numPorts; i++)
+            lock (_synchronisationLock)
             {
-                _firmataStream.WriteByte((byte)(0xD0 + i));
-                _firmataStream.WriteByte(1);
-                _firmataStream.Flush();
+                for (byte i = 0; i < numPorts; i++)
+                {
+                    _firmataStream.WriteByte((byte)(0xD0 + i));
+                    _firmataStream.WriteByte(1);
+                    _firmataStream.Flush();
+                }
             }
         }
 
@@ -713,16 +701,85 @@ namespace Iot.Device.Arduino
             }
         }
 
-        private void reassembleByteString(byte[] byte_string_, int length_)
+        public void WriteReadI2cData(int slaveAddress,  ReadOnlySpan<byte> writeData, Span<byte> replyData)
+        {
+            // See documentation at https://github.com/firmata/protocol/blob/master/i2c.md
+            lock (_synchronisationLock)
+            {
+                if (writeData != null && writeData.Length > 0)
+                {
+                    _firmataStream.WriteByte((byte)Command.START_SYSEX);
+                    _firmataStream.WriteByte((byte)SysexCommand.I2C_REQUEST);
+                    _firmataStream.WriteByte((byte)slaveAddress);
+                    _firmataStream.WriteByte(0); // Write flag is 0, all other bits as well
+                    SendValuesAsTwo7bitBytes(writeData);
+                    _firmataStream.WriteByte((byte)Command.END_SYSEX);
+                    _firmataStream.Flush();
+                }
+
+                if (replyData != null && replyData.Length > 0)
+                {
+                    _dataReceived.Reset();
+                    _firmataStream.WriteByte((byte)Command.START_SYSEX);
+                    _firmataStream.WriteByte((byte)SysexCommand.I2C_REQUEST);
+                    _firmataStream.WriteByte((byte)slaveAddress);
+                    _firmataStream.WriteByte(0b1000); // Read flag is 1, all other bits are 0
+                    byte length = (byte)replyData.Length;
+                    // Only write the length of the expected data.
+                    // We could insert the register to read here, but we assume that has been written already (the client is responsible for that)
+                    _firmataStream.Write((byte)(length & (uint)sbyte.MaxValue));
+                    _firmataStream.Write((byte)(length >> 7 & sbyte.MaxValue));
+                    _firmataStream.WriteByte((byte)Command.END_SYSEX);
+                    _firmataStream.Flush();
+                    bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(100));
+                    if (result == false)
+                    {
+                        throw new TimeoutException("Timeout waiting for device reply");
+                    }
+
+                    if (_lastResponse[0] != (byte)SysexCommand.I2C_REPLY)
+                    {
+                        // TODO: Provide specific exceptions for I2C
+                        throw new InvalidOperationException("Unexpected reply");
+                    }
+
+                    if (_lastResponse[1] != (byte)slaveAddress && slaveAddress != 0)
+                    {
+                        throw new InvalidOperationException("The wrong device did answer");
+                    }
+
+                    // Byte 0: I2C_REPLY
+                    // Bytes 1 & 2: Slave address (the MSB is always 0, since we're only supporting 7-bit addresses)
+                    // Bytes 3 & 4: Register. Often 0, and probably not needed
+                    // Anything after that: reply data, with 2 bytes for each byte in the data stream
+                    ReassembleByteString(_lastResponse, 5, _lastResponse.Count - 5, replyData);
+                }
+            }
+        }
+
+        private void SendValuesAsTwo7bitBytes(ReadOnlySpan<byte> values)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                _firmataStream.Write((byte)(values[i] & (uint)sbyte.MaxValue));
+                _firmataStream.Write((byte)(values[i] >> 7 & sbyte.MaxValue));
+            }
+        }
+
+        private void ReassembleByteString(IList<byte> byteStream, int startIndex, int length, Span<byte> reply)
         {
             int num;
-            for (num = 0; num < length_ / 2; ++num)
+            if (reply.Length < length / 2)
             {
-                byte_string_[num] = (byte)(byte_string_[(num * 2)] |
-                                           byte_string_[(num * 2 + 1)] << 7);
+                length = reply.Length * 2;
             }
 
-            byte_string_[num] = 0;
+            for (num = 0; num < length / 2; ++num)
+            {
+                reply[num] = (byte)(byteStream[startIndex + (num * 2)] |
+                                    byteStream[startIndex + (num * 2) + 1] << 7);
+            }
+
         }
 
         private void Dispose(bool disposing)

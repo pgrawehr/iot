@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Device.Gpio;
+using System.Device.I2c;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -27,8 +28,12 @@ namespace Iot.Device.Arduino
         public ArduinoBoard(Stream serialPortStream)
         {
             _serialPortStream = serialPortStream;
+        }
+
+        public virtual void Initialize()
+        {
             _firmata = new UwpFirmata();
-            _firmata.begin(new FirmataStream(serialPortStream));
+            _firmata.begin(new FirmataStream(_serialPortStream));
             var protocolVersion = _firmata.QueryFirmataVersion();
             if (protocolVersion != _firmata.QuerySupportedFirmataVersion())
             {
@@ -67,9 +72,14 @@ namespace Iot.Device.Arduino
             }
         }
 
-        public GpioController GetGpioController(PinNumberingScheme pinNumberingScheme)
+        public GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme)
         {
             return new GpioController(pinNumberingScheme, new ArduinoGpioControllerDriver(this, _supportedPinConfigurations));
+        }
+
+        public I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
+        {
+            return new ArduinoI2cDevice(this, connectionSettings);
         }
 
         protected virtual void Dispose(bool disposing)
