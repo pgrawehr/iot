@@ -27,7 +27,7 @@ namespace Iot.Device.Arduino
         private byte _actualFirmataProtocolMinorVersion;
 
         private string _firmwareName;
-        private FirmataStream _firmataStream;
+        private Stream _firmataStream;
         private Thread _inputThread;
         private bool _inputThreadShouldExit;
         private List<SupportedPinConfiguration> _supportedPinConfigurations;
@@ -64,7 +64,7 @@ namespace Iot.Device.Arduino
             }
         }
 
-        public void Open(FirmataStream stream)
+        public void Open(Stream stream)
         {
             _firmataStream = stream;
 
@@ -106,10 +106,10 @@ namespace Iot.Device.Arduino
             byte[] bytes = Encoding.Unicode.GetBytes(message);
             lock (_synchronisationLock)
             {
-                _firmataStream.Write(240);
-                _firmataStream.Write((byte)(command & (uint)sbyte.MaxValue));
+                _firmataStream.WriteByte(240);
+                _firmataStream.WriteByte((byte)(command & (uint)sbyte.MaxValue));
                 SendValuesAsTwo7bitBytes(bytes);
-                _firmataStream.Write(247);
+                _firmataStream.WriteByte(247);
                 _firmataStream.Flush();
             }
         }
@@ -392,7 +392,7 @@ namespace Iot.Device.Arduino
             lock (_synchronisationLock)
             {
                 _dataReceived.Reset();
-                _firmataStream.Write((byte)FirmataCommand.PROTOCOL_VERSION);
+                _firmataStream.WriteByte((byte)FirmataCommand.PROTOCOL_VERSION);
                 _firmataStream.Flush();
                 bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
                 if (result == false)
@@ -414,9 +414,9 @@ namespace Iot.Device.Arduino
             lock (_synchronisationLock)
             {
                 _dataReceived.Reset();
-                _firmataStream.Write((byte)FirmataCommand.START_SYSEX);
-                _firmataStream.Write((byte)FirmataSysexCommand.REPORT_FIRMWARE);
-                _firmataStream.Write((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.REPORT_FIRMWARE);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
                 if (result == false)
                 {
@@ -433,9 +433,9 @@ namespace Iot.Device.Arduino
             lock (_synchronisationLock)
             {
                 _dataReceived.Reset();
-                _firmataStream.Write((byte)FirmataCommand.START_SYSEX);
-                _firmataStream.Write((byte)FirmataSysexCommand.CAPABILITY_QUERY);
-                _firmataStream.Write((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.CAPABILITY_QUERY);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
                 if (result == false)
                 {
@@ -586,8 +586,8 @@ namespace Iot.Device.Arduino
                     byte length = (byte)replyData.Length;
                     // Only write the length of the expected data.
                     // We could insert the register to read here, but we assume that has been written already (the client is responsible for that)
-                    _firmataStream.Write((byte)(length & (uint)sbyte.MaxValue));
-                    _firmataStream.Write((byte)(length >> 7 & sbyte.MaxValue));
+                    _firmataStream.WriteByte((byte)(length & (uint)sbyte.MaxValue));
+                    _firmataStream.WriteByte((byte)(length >> 7 & sbyte.MaxValue));
                     _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                     _firmataStream.Flush();
                     bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(100));
@@ -619,8 +619,8 @@ namespace Iot.Device.Arduino
         {
             for (int i = 0; i < values.Length; i++)
             {
-                _firmataStream.Write((byte)(values[i] & (uint)sbyte.MaxValue));
-                _firmataStream.Write((byte)(values[i] >> 7 & sbyte.MaxValue));
+                _firmataStream.WriteByte((byte)(values[i] & (uint)sbyte.MaxValue));
+                _firmataStream.WriteByte((byte)(values[i] >> 7 & sbyte.MaxValue));
             }
         }
 
