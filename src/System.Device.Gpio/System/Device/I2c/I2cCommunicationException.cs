@@ -29,7 +29,6 @@ namespace System.Device.Gpio.I2c
             System.Runtime.Serialization.StreamingContext context)
             : base(info, context)
         {
-
         }
     }
 }
