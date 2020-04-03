@@ -12,7 +12,7 @@ namespace Iot.Device.Arduino
         public SupportedPinConfiguration(int pin)
         {
             Pin = pin;
-            PinModes = new List<PinMode>();
+            PinModes = new List<SupportedMode>();
             PwmResolutionBits = 0;
             AnalogInputResolutionBits = 1; // binary
         }
@@ -22,7 +22,7 @@ namespace Iot.Device.Arduino
             get;
         }
 
-        public List<PinMode> PinModes
+        public List<SupportedMode> PinModes
         {
             get;
         }

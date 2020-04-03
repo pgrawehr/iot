@@ -47,13 +47,29 @@ namespace Iot.Device.Arduino
 
         protected override void SetPinMode(int pinNumber, PinMode mode)
         {
+            SupportedMode firmataMode;
+            switch (mode)
+            {
+                case PinMode.Output:
+                    firmataMode = SupportedMode.DIGITAL_OUTPUT;
+                    break;
+                case PinMode.InputPullUp:
+                    firmataMode = SupportedMode.INPUT_PULLUP;
+                    break;
+                case PinMode.Input:
+                    firmataMode = SupportedMode.DIGITAL_INPUT;
+                    break;
+                default:
+                    throw new NotSupportedException($"Mode {mode} is not supported for this operation");
+            }
+
             var pinConfig = _supportedPinConfigurations.FirstOrDefault(x => x.Pin == pinNumber);
-            if (pinConfig == null || !pinConfig.PinModes.Contains(mode))
+            if (pinConfig == null || !pinConfig.PinModes.Contains(firmataMode))
             {
                 throw new NotSupportedException($"Mode {mode} is not supported on Pin {pinNumber}.");
             }
 
-            _arduinoBoard.Firmata.SetPinMode(pinNumber, mode);
+            _arduinoBoard.Firmata.SetPinMode(pinNumber, firmataMode);
         }
 
         protected override PinMode GetPinMode(int pinNumber)
@@ -63,8 +79,24 @@ namespace Iot.Device.Arduino
 
         protected override bool IsPinModeSupported(int pinNumber, PinMode mode)
         {
+            SupportedMode firmataMode;
+            switch (mode)
+            {
+                case PinMode.Output:
+                    firmataMode = SupportedMode.DIGITAL_OUTPUT;
+                    break;
+                case PinMode.InputPullUp:
+                    firmataMode = SupportedMode.INPUT_PULLUP;
+                    break;
+                case PinMode.Input:
+                    firmataMode = SupportedMode.DIGITAL_INPUT;
+                    break;
+                default:
+                    return false;
+            }
+
             var pinConfig = _supportedPinConfigurations.FirstOrDefault(x => x.Pin == pinNumber);
-            if (pinConfig == null || !pinConfig.PinModes.Contains(mode))
+            if (pinConfig == null || !pinConfig.PinModes.Contains(firmataMode))
             {
                 return false;
             }
