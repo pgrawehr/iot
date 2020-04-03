@@ -20,7 +20,7 @@ namespace Iot.Device.Arduino
     public class ArduinoBoard : IDisposable
     {
         private Stream _serialPortStream;
-        private UwpFirmata _firmata;
+        private FirmataDevice _firmata;
         private Version _firmwareVersion;
         private string _firmwareName;
         private List<SupportedPinConfiguration> _supportedPinConfigurations;
@@ -32,8 +32,8 @@ namespace Iot.Device.Arduino
 
         public virtual void Initialize()
         {
-            _firmata = new UwpFirmata();
-            _firmata.begin(new FirmataStream(_serialPortStream));
+            _firmata = new FirmataDevice();
+            _firmata.Open(new FirmataStream(_serialPortStream));
             var protocolVersion = _firmata.QueryFirmataVersion();
             if (protocolVersion != _firmata.QuerySupportedFirmataVersion())
             {
@@ -64,7 +64,7 @@ namespace Iot.Device.Arduino
             }
         }
 
-        internal UwpFirmata Firmata
+        internal FirmataDevice Firmata
         {
             get
             {
@@ -94,7 +94,7 @@ namespace Iot.Device.Arduino
             _serialPortStream = null;
             if (_firmata != null)
             {
-                _firmata.finish();
+                _firmata.Close();
                 _firmata.Dispose();
             }
 
