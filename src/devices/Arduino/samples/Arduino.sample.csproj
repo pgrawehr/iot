@@ -23,6 +23,7 @@
     <ProjectReference Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == 'Release'" Include="$(MainLibraryPath)System.Device.Gpio.csproj">
       <AdditionalProperties>$(AdditionalProperties);RuntimeIdentifier=linux</AdditionalProperties>
     </ProjectReference>
+    <ProjectReference Include="..\..\Bmxx80\Bmxx80.csproj" />
     <ProjectReference Include="..\Arduino.csproj" />
   </ItemGroup>
 
