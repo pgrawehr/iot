@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Device.Gpio;
+using System.Device.Gpio.I2c;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -141,7 +142,7 @@ namespace Iot.Device.Arduino
 
         public event StringCallbackFunction FirmataConnectionFailed;
 
-        public event StringCallbackFunction FirmataConnectionLost;
+        public event Action<string, Exception> OnError;
 
         public UwpFirmata()
         {
@@ -422,14 +423,13 @@ namespace Iot.Device.Arduino
 
                         case SysexCommand.STRING_DATA:
 
-                            //condense back into 1-byte data
+                            // condense back into 1-byte data
                             int stringLength = (raw_data.Length - 1) / 2;
                             Span<byte> bytesReceived = stackalloc byte[stringLength];
                             ReassembleByteString(raw_data, 1, stringLength * 2, bytesReceived);
 
                             string message1 = Encoding.ASCII.GetString(bytesReceived);
-                            Console.WriteLine(message1);
-                            // StringMessageReceived(this, createStringFromMbs(raw_data, bytes_read / 2));
+                            OnError?.Invoke(message1, null);
 
                             break;
 
@@ -510,7 +510,7 @@ namespace Iot.Device.Arduino
                 }
                 catch (Exception ex)
                 {
-                    onConnectionLost(ex.Message);
+                    OnError?.Invoke($"Firmata protocol error: Parser exception {ex.Message}", ex);
                 }
             }
         }
@@ -581,12 +581,6 @@ namespace Iot.Device.Arduino
         private void onConnectionFailed(string message_)
         {
             FirmataConnectionFailed?.Invoke(this, message_);
-        }
-
-        private void onConnectionLost(string message_)
-        {
-            _connectionReady = false;
-            FirmataConnectionLost?.Invoke(this, message_);
         }
 
         private void stopThreads()
@@ -734,18 +728,17 @@ namespace Iot.Device.Arduino
                     bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(100));
                     if (result == false)
                     {
-                        throw new TimeoutException("Timeout waiting for device reply");
+                        throw new I2cCommunicationException("Timeout waiting for device reply");
                     }
 
                     if (_lastResponse[0] != (byte)SysexCommand.I2C_REPLY)
                     {
-                        // TODO: Provide specific exceptions for I2C
-                        throw new InvalidOperationException("Unexpected reply");
+                        throw new I2cCommunicationException("Firmata protocol error: received incorrect query response");
                     }
 
                     if (_lastResponse[1] != (byte)slaveAddress && slaveAddress != 0)
                     {
-                        throw new InvalidOperationException("The wrong device did answer");
+                        throw new I2cCommunicationException($"Firmata protocol error: The wrong device did answer. Expected {slaveAddress} but got {_lastResponse[1]}.");
                     }
 
                     // Byte 0: I2C_REPLY
