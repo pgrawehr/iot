@@ -33,7 +33,7 @@ namespace Iot.Device.Arduino
         public virtual void Initialize()
         {
             _firmata = new FirmataDevice();
-            _firmata.Open(new FirmataStream(_serialPortStream));
+            _firmata.Open(_serialPortStream);
             var protocolVersion = _firmata.QueryFirmataVersion();
             if (protocolVersion != _firmata.QuerySupportedFirmataVersion())
             {
@@ -69,6 +69,14 @@ namespace Iot.Device.Arduino
             get
             {
                 return _firmata;
+            }
+        }
+
+        internal List<SupportedPinConfiguration> SupportedPinConfigurations
+        {
+            get
+            {
+                return _supportedPinConfigurations;
             }
         }
 

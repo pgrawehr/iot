@@ -328,18 +328,17 @@ namespace Iot.Device.Arduino
                                     switch ((SupportedMode)mode)
                                     {
                                         case SupportedMode.DIGITAL_INPUT:
-                                            currentPin.PinModes.Add(PinMode.Input);
-                                            break;
                                         case SupportedMode.DIGITAL_OUTPUT:
-                                            currentPin.PinModes.Add(PinMode.Output);
-                                            break;
                                         case SupportedMode.INPUT_PULLUP:
-                                            currentPin.PinModes.Add(PinMode.InputPullUp);
+                                            currentPin.PinModes.Add((SupportedMode)mode);
                                             break;
                                         case SupportedMode.ANALOG_INPUT:
+                                            currentPin.PinModes.Add(SupportedMode.ANALOG_INPUT);
                                             currentPin.AnalogInputResolutionBits = resolution;
                                             break;
-
+                                        case SupportedMode.PWM:
+                                            currentPin.PinModes.Add(SupportedMode.PWM);
+                                            break;
                                     }
                                 }
 
@@ -454,24 +453,8 @@ namespace Iot.Device.Arduino
             }
         }
 
-        public void SetPinMode(int pin, PinMode mode)
+        public void SetPinMode(int pin, SupportedMode firmataMode)
         {
-            SupportedMode firmataMode;
-            switch (mode)
-            {
-                case PinMode.Output:
-                    firmataMode = SupportedMode.DIGITAL_OUTPUT;
-                    break;
-                case PinMode.InputPullUp:
-                    firmataMode = SupportedMode.INPUT_PULLUP;
-                    break;
-                case PinMode.Input:
-                    firmataMode = SupportedMode.DIGITAL_INPUT;
-                    break;
-                default:
-                    throw new NotSupportedException($"Mode {mode} is not supported for this operation");
-            }
-
             lock (_synchronisationLock)
             {
                 _firmataStream.WriteByte((byte)FirmataCommand.SET_PIN_MODE);
@@ -612,6 +595,22 @@ namespace Iot.Device.Arduino
                     // Anything after that: reply data, with 2 bytes for each byte in the data stream
                     ReassembleByteString(_lastResponse, 5, _lastResponse.Count - 5, replyData);
                 }
+            }
+        }
+
+        public void SetPwmChannel(int pin, double dutyCycle)
+        {
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.EXTENDED_ANALOG);
+                _firmataStream.WriteByte((byte)pin);
+                // The arduino expects values between 0 and 255 for PWM channels.
+                // The frequency cannot be set.
+                int value = (int)Math.Max(0, Math.Min(dutyCycle * 255, 255));
+                _firmataStream.WriteByte((byte)(value & (uint)sbyte.MaxValue)); // lower 7 bits
+                _firmataStream.WriteByte((byte)(value >> 7 & sbyte.MaxValue)); // top bit (rest unused)
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
             }
         }
 
