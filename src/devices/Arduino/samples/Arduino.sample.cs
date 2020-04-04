@@ -47,6 +47,7 @@ namespace Ft4222.Samples
                 ArduinoBoard board = new ArduinoBoard(port.BaseStream);
                 try
                 {
+                    board.LogMessages += BoardOnLogMessages;
                     board.Initialize();
                     Console.WriteLine($"Connection successful. Firmware version: {board.FirmwareVersion}, Builder: {board.FirmwareName}");
                     while (Menu(board))
@@ -65,6 +66,15 @@ namespace Ft4222.Samples
             }
         }
 
+        private static void BoardOnLogMessages(string message, Exception exception)
+        {
+            Console.WriteLine("Log message: " + message);
+            if (exception != null)
+            {
+                Console.WriteLine(exception);
+            }
+        }
+
         private static bool Menu(ArduinoBoard board)
         {
             Console.WriteLine("Hello I2C and GPIO on Arduino!");
@@ -74,41 +84,70 @@ namespace Ft4222.Samples
             Console.WriteLine(" 3 Run polling button test on GPIO2");
             Console.WriteLine(" 4 Run event wait test event on GPIO2 on Falling and Rising");
             Console.WriteLine(" 5 Run callback event test on GPIO2");
+            Console.WriteLine(" 6 Run PWM test with a simple led dimming on GPIO6 port");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
 
-            if (key.KeyChar == '1')
+            switch (key.KeyChar)
             {
-                TestI2c(board);
-            }
-
-            if (key.KeyChar == '2')
-            {
-                TestGpio(board);
-            }
-
-            if (key.KeyChar == '3')
-            {
-                TestInput(board);
-            }
-
-            if (key.KeyChar == '4')
-            {
-                TestEventsDirectWait(board);
-            }
-
-            if (key.KeyChar == '5')
-            {
-                TestEventsCallback(board);
-            }
-
-            if (key.KeyChar == 'x' || key.KeyChar == 'X')
-            {
-                return false;
+                case '1':
+                    TestI2c(board);
+                    break;
+                case '2':
+                    TestGpio(board);
+                    break;
+                case '3':
+                    TestInput(board);
+                    break;
+                case '4':
+                    TestEventsDirectWait(board);
+                    break;
+                case '5':
+                    TestEventsCallback(board);
+                    break;
+                case '6':
+                    TestPwm(board);
+                    break;
+                case 'x':
+                case 'X':
+                    return false;
             }
 
             return true;
+        }
+
+        private static void TestPwm(ArduinoBoard board)
+        {
+            int pin = 6;
+            using (var pwm = board.CreatePwmChannel(0, pin, 100, 0))
+            {
+                Console.WriteLine("Now dimming LED. Press any key to exit");
+                while (!Console.KeyAvailable)
+                {
+                    pwm.Start();
+                    for (double fadeValue = 0; fadeValue <= 1.0; fadeValue += 0.05)
+                    {
+                        // sets the value (range from 0 to 255):
+                        pwm.DutyCycle = fadeValue;
+                        // wait for 30 milliseconds to see the dimming effect
+                        Thread.Sleep(30);
+                    }
+
+                    // fade out from max to min in increments of 5 points:
+                    for (double fadeValue = 1.0; fadeValue >= 0; fadeValue -= 0.05)
+                    {
+                        // sets the value (range from 0 to 255):
+                        pwm.DutyCycle = fadeValue;
+                        // wait for 30 milliseconds to see the dimming effect
+                        Thread.Sleep(30);
+                    }
+
+                }
+
+                Console.ReadKey();
+                pwm.Stop();
+            }
         }
 
         private static void TestI2c(ArduinoBoard board)

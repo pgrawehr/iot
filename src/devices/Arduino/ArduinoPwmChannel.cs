@@ -11,7 +11,6 @@ namespace Iot.Device.Arduino
         private readonly ArduinoBoard _board;
         // The digital pin used
         private readonly int _pin;
-        private readonly int _pwmOutputNo; // The number used by the firmata software
         private double _dutyCycle;
         private int _frequency;
         private bool _enabled;
@@ -32,6 +31,11 @@ namespace Iot.Device.Arduino
             double dutyCyclePercentage = 0.5)
         {
             Chip = chip;
+            if (chip != 0)
+            {
+                throw new NotSupportedException("No such chip: {0}");
+            }
+
             Channel = channel;
             _pin = channel;
             var caps = board.SupportedPinConfigurations.FirstOrDefault(x => x.Pin == _pin);
@@ -39,14 +43,6 @@ namespace Iot.Device.Arduino
             {
                 throw new NotSupportedException($"Pin {_pin} does not support PWM");
             }
-
-            var list = board.SupportedPinConfigurations.Where(x => x.PinModes.Contains(SupportedMode.PWM)).OrderBy(y => y.Pin).ToList();
-            if (channel < 0 || channel >= list.Count)
-            {
-                throw new NotSupportedException($"No PWM channel number {channel}. Number of PWM Channels: {list.Count}.");
-            }
-
-            _pwmOutputNo = list[channel].Pin;
 
             _frequency = frequency;
             _dutyCycle = dutyCyclePercentage;
@@ -103,6 +99,7 @@ namespace Iot.Device.Arduino
         public override void Start()
         {
             _enabled = true;
+            _board.Firmata.SetPinMode(_pin, SupportedMode.PWM);
             Update();
         }
 
@@ -110,6 +107,7 @@ namespace Iot.Device.Arduino
         public override void Stop()
         {
             _enabled = false;
+            _board.Firmata.SetPinMode(_pin, SupportedMode.DIGITAL_INPUT);
             Update();
         }
 
@@ -117,11 +115,11 @@ namespace Iot.Device.Arduino
         {
             if (_enabled)
             {
-                _board.Firmata.SetPwmChannel(_pwmOutputNo, _dutyCycle);
+                _board.Firmata.SetPwmChannel(_pin, _dutyCycle);
             }
             else
             {
-                _board.Firmata.SetPwmChannel(_pwmOutputNo, 0);
+                _board.Firmata.SetPwmChannel(_pin, 0);
             }
         }
 
