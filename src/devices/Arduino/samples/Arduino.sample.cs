@@ -85,6 +85,7 @@ namespace Ft4222.Samples
             Console.WriteLine(" 4 Run event wait test event on GPIO2 on Falling and Rising");
             Console.WriteLine(" 5 Run callback event test on GPIO2");
             Console.WriteLine(" 6 Run PWM test with a simple led dimming on GPIO6 port");
+            Console.WriteLine(" 7 Dim the LED according to the input on A1");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
@@ -108,6 +109,9 @@ namespace Ft4222.Samples
                     break;
                 case '6':
                     TestPwm(board);
+                    break;
+                case '7':
+                    TestAnalogIn(board);
                     break;
                 case 'x':
                 case 'X':
@@ -170,19 +174,6 @@ namespace Ft4222.Samples
             Console.WriteLine();
         }
 
-        ////private static void TestSpi()
-        ////{
-        ////    var ftSpi = new Ft4222Spi(new SpiConnectionSettings(0, 1) { ClockFrequency = 1_000_000, Mode = SpiMode.Mode0 });
-
-        ////    while (!Console.KeyAvailable)
-        ////    {
-        ////        ftSpi.WriteByte(0xFF);
-        ////        Thread.Sleep(500);
-        ////        ftSpi.WriteByte(0x00);
-        ////        Thread.Sleep(500);
-        ////    }
-        ////}
-
         public static void TestGpio(ArduinoBoard board)
         {
             // Use Pin 6
@@ -203,6 +194,33 @@ namespace Ft4222.Samples
             }
 
             Console.ReadKey();
+            gpioController.Dispose();
+        }
+
+        public static void TestAnalogIn(ArduinoBoard board)
+        {
+            // Use Pin 6
+            const int gpio = 6;
+            const int analogPin = 15;
+            var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
+            var analogController = board.CreateAnalogController(0);
+
+            analogController.OpenPin(analogPin);
+            gpioController.OpenPin(gpio);
+            gpioController.SetPinMode(gpio, PinMode.Output);
+
+            Console.WriteLine("Blinking GPIO6, based on analog input.");
+            while (!Console.KeyAvailable)
+            {
+                double voltage = analogController.ReadVoltage(analogPin);
+                gpioController.Write(gpio, PinValue.High);
+                Thread.Sleep((int)voltage * 100);
+                gpioController.Write(gpio, PinValue.Low);
+                Thread.Sleep((int)voltage * 100);
+            }
+
+            Console.ReadKey();
+            analogController.Dispose();
             gpioController.Dispose();
         }
 

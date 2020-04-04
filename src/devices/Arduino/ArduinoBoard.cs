@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Device.Analog;
 using System.Text;
 using System.Device.Gpio;
 using System.Device.I2c;
@@ -122,6 +123,11 @@ namespace Iot.Device.Arduino
             double dutyCyclePercentage = 0.5)
         {
             return new ArduinoPwmChannel(this, chip, channel, frequency, dutyCyclePercentage);
+        }
+
+        public AnalogController CreateAnalogController(int chip)
+        {
+            return new AnalogController(PinNumberingScheme.Logical, new ArduinoAnalogControllerDriver(this, _supportedPinConfigurations));
         }
 
         protected virtual void Dispose(bool disposing)
