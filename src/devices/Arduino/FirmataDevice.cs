@@ -15,6 +15,8 @@ namespace Iot.Device.Arduino
 {
     public delegate void DigitalPinValueChanged(int pin, PinValue newValue);
 
+    internal delegate void AnalogPinValueUpdated(int pin, uint rawValue);
+
     internal sealed class FirmataDevice : IDisposable
     {
         private const byte FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
@@ -33,13 +35,17 @@ namespace Iot.Device.Arduino
         private List<SupportedPinConfiguration> _supportedPinConfigurations;
         private IList<byte> _lastResponse;
         private List<PinValue> _lastPinValues;
+        private Dictionary<int, uint> _lastAnalogValues;
         private object _lastPinValueLock;
+        private object _lastAnalogValueLock;
         private object _synchronisationLock;
 
         // Event used when waiting for answers (i.e. after requesting firmware version)
         private AutoResetEvent _dataReceived;
 
         public event DigitalPinValueChanged DigitalPortValueUpdated;
+
+        public event AnalogPinValueUpdated AnalogPinValueUpdated;
 
         public event Action<string, Exception> OnError;
 
@@ -54,6 +60,8 @@ namespace Iot.Device.Arduino
             _synchronisationLock = new object();
             _lastPinValues = new List<PinValue>();
             _lastPinValueLock = new object();
+            _lastAnalogValues = new Dictionary<int, uint>();
+            _lastAnalogValueLock = new object();
         }
 
         internal List<SupportedPinConfiguration> PinConfigurations
@@ -244,6 +252,17 @@ namespace Iot.Device.Arduino
                     // report analog commands store the pin number in the lower nibble of the command byte, the value is split over two 7-bit bytes
                     // AnalogValueUpdated(this,
                     //    new CallbackEventArgs(lower_nibble, (ushort)(message[0] | (message[1] << 7))));
+                    {
+                        int pin = lower_nibble;
+                        uint value = (uint)(message[0] | (message[1] << 7));
+                        lock (_lastAnalogValueLock)
+                        {
+                            _lastAnalogValues[pin] = value;
+                        }
+
+                        AnalogPinValueUpdated?.Invoke(pin, value);
+                    }
+
                     break;
 
                 case FirmataCommand.DIGITAL_MESSAGE:
@@ -262,6 +281,7 @@ namespace Iot.Device.Arduino
                                 if (newValue != oldValue)
                                 {
                                     _lastPinValues[i + offset] = newValue;
+                                    // TODO: The callback should not be within the lock
                                     DigitalPortValueUpdated?.Invoke(i + offset, newValue);
                                 }
                             }
@@ -655,6 +675,36 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)(value >> 7 & sbyte.MaxValue)); // top bit (rest unused)
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
+            }
+        }
+
+        /// <summary>
+        /// This takes the pin number in Arduino's own Analog numbering scheme. So A0 shall be specifed as 0
+        /// </summary>
+        public void EnableAnalogReporting(int pinNumber)
+        {
+            lock (_synchronisationLock)
+            {
+                _lastAnalogValues[pinNumber] = 0; // to make sure this entry exists
+                _firmataStream.WriteByte((byte)((int)FirmataCommand.REPORT_ANALOG_PIN + pinNumber));
+                _firmataStream.WriteByte((byte)1);
+            }
+        }
+
+        public void DisableAnalogReporting(int pinNumber)
+        {
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)((int)FirmataCommand.REPORT_ANALOG_PIN + pinNumber));
+                _firmataStream.WriteByte((byte)0);
+            }
+        }
+
+        public uint GetAnalogRawValue(int pinNumber)
+        {
+            lock (_lastAnalogValueLock)
+            {
+                return _lastAnalogValues[pinNumber];
             }
         }
 
