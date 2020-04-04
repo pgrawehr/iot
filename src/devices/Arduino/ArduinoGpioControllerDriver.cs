@@ -7,7 +7,7 @@ using System.Threading;
 #pragma warning disable CS1591
 namespace Iot.Device.Arduino
 {
-    public class ArduinoGpioControllerDriver : GpioDriver
+    internal class ArduinoGpioControllerDriver : GpioDriver
     {
         private readonly ArduinoBoard _arduinoBoard;
         private readonly List<SupportedPinConfiguration> _supportedPinConfigurations;
@@ -15,7 +15,7 @@ namespace Iot.Device.Arduino
         private readonly object _callbackContainersLock;
         private readonly AutoResetEvent _waitForEventResetEvent;
 
-        public ArduinoGpioControllerDriver(ArduinoBoard arduinoBoard, List<SupportedPinConfiguration> supportedPinConfigurations)
+        internal ArduinoGpioControllerDriver(ArduinoBoard arduinoBoard, List<SupportedPinConfiguration> supportedPinConfigurations)
         {
             _arduinoBoard = arduinoBoard ?? throw new ArgumentNullException(nameof(arduinoBoard));
             _supportedPinConfigurations = supportedPinConfigurations ?? throw new ArgumentNullException(nameof(supportedPinConfigurations));

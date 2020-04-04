@@ -218,7 +218,7 @@ namespace Iot.Device.Arduino
             // process the message
             switch (command)
             {
-                // ignore these message types
+                // ignore these message types (they should not be in a reply)
                 default:
                 case FirmataCommand.REPORT_ANALOG_PIN:
                 case FirmataCommand.REPORT_DIGITAL_PIN:
@@ -227,6 +227,13 @@ namespace Iot.Device.Arduino
                 case FirmataCommand.SYSTEM_RESET:
                     return;
                 case FirmataCommand.PROTOCOL_VERSION:
+                    if (_actualFirmataProtocolMajorVersion != 0)
+                    {
+                        // Firmata sends this message automatically after a device reset (if you press the reset button on the arduino)
+                        // If we know the version already, this is unexpected.
+                        OnError?.Invoke("The device was unexpectedly reset. Please restart the communication.", null);
+                    }
+
                     _actualFirmataProtocolMajorVersion = message[0];
                     _actualFirmataProtocolMinorVersion = message[1];
                     _dataReceived.Set();
@@ -327,9 +334,7 @@ namespace Iot.Device.Arduino
                                     int resolution = raw_data[idx++];
                                     switch ((SupportedMode)mode)
                                     {
-                                        case SupportedMode.DIGITAL_INPUT:
-                                        case SupportedMode.DIGITAL_OUTPUT:
-                                        case SupportedMode.INPUT_PULLUP:
+                                        default:
                                             currentPin.PinModes.Add((SupportedMode)mode);
                                             break;
                                         case SupportedMode.ANALOG_INPUT:
@@ -338,6 +343,7 @@ namespace Iot.Device.Arduino
                                             break;
                                         case SupportedMode.PWM:
                                             currentPin.PinModes.Add(SupportedMode.PWM);
+                                            currentPin.PwmResolutionBits = resolution;
                                             break;
                                     }
                                 }
@@ -350,6 +356,31 @@ namespace Iot.Device.Arduino
 
                             break;
 
+                        case FirmataSysexCommand.ANALOG_MAPPING_RESPONSE:
+                            {
+                                // This needs to have been set up previously
+                                if (_supportedPinConfigurations.Count == 0)
+                                {
+                                    return;
+                                }
+
+                                int idx = 1;
+                                int pin = 0;
+                                while (idx < raw_data.Length)
+                                {
+                                    if (raw_data[idx] != 127)
+                                    {
+                                        _supportedPinConfigurations[pin].AnalogPinNumber = raw_data[idx];
+                                    }
+
+                                    idx++;
+                                    pin++;
+                                }
+
+                                _dataReceived.Set();
+                            }
+
+                            break;
                         case FirmataSysexCommand.I2C_REPLY:
 
                             _lastResponse = raw_data;
@@ -439,6 +470,16 @@ namespace Iot.Device.Arduino
                 if (result == false)
                 {
                     throw new TimeoutException("Timeout waiting for device capabilities");
+                }
+
+                _dataReceived.Reset();
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.ANALOG_MAPPING_QUERY);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+                if (result == false)
+                {
+                    throw new TimeoutException("Timeout waiting for PWM port mappings");
                 }
             }
         }
@@ -607,10 +648,13 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)pin);
                 // The arduino expects values between 0 and 255 for PWM channels.
                 // The frequency cannot be set.
-                int value = (int)Math.Max(0, Math.Min(dutyCycle * 255, 255));
+                int pwmMaxValue = _supportedPinConfigurations[pin].PwmResolutionBits; // This is 8 for most arduino boards
+                pwmMaxValue = (1 << pwmMaxValue) - 1;
+                int value = (int)Math.Max(0, Math.Min(dutyCycle * pwmMaxValue, pwmMaxValue));
                 _firmataStream.WriteByte((byte)(value & (uint)sbyte.MaxValue)); // lower 7 bits
                 _firmataStream.WriteByte((byte)(value >> 7 & sbyte.MaxValue)); // top bit (rest unused)
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
             }
         }
 

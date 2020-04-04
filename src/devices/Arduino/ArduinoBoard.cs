@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.Device.Pwm;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -30,20 +31,34 @@ namespace Iot.Device.Arduino
             _serialPortStream = serialPortStream;
         }
 
+        public event Action<string, Exception> LogMessages;
+
         public virtual void Initialize()
         {
             _firmata = new FirmataDevice();
             _firmata.Open(_serialPortStream);
+            _firmata.OnError += FirmataOnError;
             var protocolVersion = _firmata.QueryFirmataVersion();
             if (protocolVersion != _firmata.QuerySupportedFirmataVersion())
             {
                 throw new NotSupportedException($"Firmata version on board is {protocolVersion}. Expected {_firmata.QuerySupportedFirmataVersion()}. They must be equal.");
             }
 
+            Log($"Firmata version on board is {protocolVersion}.");
+
             _firmwareVersion = _firmata.QueryFirmwareVersion(out _firmwareName);
 
+            Log($"Firmware version on board is {_firmwareVersion}");
+
             _firmata.QueryCapabilities();
+
             _supportedPinConfigurations = _firmata.PinConfigurations; // Clone reference
+
+            Log("Device capabilities: ");
+            foreach (var pin in _supportedPinConfigurations)
+            {
+                Log(pin.ToString());
+            }
 
             _firmata.EnableDigitalReporting();
         }
@@ -80,6 +95,16 @@ namespace Iot.Device.Arduino
             }
         }
 
+        internal void Log(string message)
+        {
+            LogMessages?.Invoke(message, null);
+        }
+
+        private void FirmataOnError(string message, Exception innerException)
+        {
+            LogMessages?.Invoke(message, innerException);
+        }
+
         public GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme)
         {
             return new GpioController(pinNumberingScheme, new ArduinoGpioControllerDriver(this, _supportedPinConfigurations));
@@ -88,6 +113,15 @@ namespace Iot.Device.Arduino
         public I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
         {
             return new ArduinoI2cDevice(this, connectionSettings);
+        }
+
+        public PwmChannel CreatePwmChannel(
+            int chip,
+            int channel,
+            int frequency = 400,
+            double dutyCyclePercentage = 0.5)
+        {
+            return new ArduinoPwmChannel(this, chip, channel, frequency, dutyCyclePercentage);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -102,6 +136,7 @@ namespace Iot.Device.Arduino
             _serialPortStream = null;
             if (_firmata != null)
             {
+                _firmata.OnError -= FirmataOnError;
                 _firmata.Close();
                 _firmata.Dispose();
             }
