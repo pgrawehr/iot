@@ -61,6 +61,7 @@ namespace Iot.Device.Arduino
                 Log(pin.ToString());
             }
 
+            _firmata.SetSamplingInterval(TimeSpan.FromMilliseconds(1000));
             _firmata.EnableDigitalReporting();
         }
 

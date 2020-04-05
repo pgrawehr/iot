@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Linq;
@@ -12,6 +13,7 @@ namespace Iot.Device.Arduino
         private readonly ArduinoBoard _arduinoBoard;
         private readonly List<SupportedPinConfiguration> _supportedPinConfigurations;
         private readonly Dictionary<int, CallbackContainer> _callbackContainers;
+        private readonly ConcurrentDictionary<int, PinMode> _pinModes;
         private readonly object _callbackContainersLock;
         private readonly AutoResetEvent _waitForEventResetEvent;
 
@@ -22,6 +24,7 @@ namespace Iot.Device.Arduino
             _callbackContainers = new Dictionary<int, CallbackContainer>();
             _waitForEventResetEvent = new AutoResetEvent(false);
             _callbackContainersLock = new object();
+            _pinModes = new ConcurrentDictionary<int, PinMode>();
 
             PinCount = _supportedPinConfigurations.Count;
             _arduinoBoard.Firmata.DigitalPortValueUpdated += FirmataOnDigitalPortValueUpdated;
@@ -43,6 +46,7 @@ namespace Iot.Device.Arduino
 
         protected override void ClosePin(int pinNumber)
         {
+            _pinModes.TryRemove(pinNumber, out _);
         }
 
         protected override void SetPinMode(int pinNumber, PinMode mode)
@@ -70,11 +74,40 @@ namespace Iot.Device.Arduino
             }
 
             _arduinoBoard.Firmata.SetPinMode(pinNumber, firmataMode);
+
+            // Cache this value. Since the GpioController calls GetPinMode when trying to write a pin (to verify whether it is set to output),
+            // that would be very expensive here. And setting output pins should be cheap.
+            _pinModes[pinNumber] = mode;
         }
 
         protected override PinMode GetPinMode(int pinNumber)
         {
-            return _arduinoBoard.Firmata.GetPinMode(pinNumber);
+            if (_pinModes.TryGetValue(pinNumber, out var existingValue))
+            {
+                return existingValue;
+            }
+
+            SupportedMode mode = _arduinoBoard.Firmata.GetPinMode(pinNumber);
+
+            PinMode ret;
+            switch (mode)
+            {
+                case SupportedMode.DIGITAL_OUTPUT:
+                    ret = PinMode.Output;
+                    break;
+                case SupportedMode.INPUT_PULLUP:
+                    ret = PinMode.InputPullUp;
+                    break;
+                case SupportedMode.DIGITAL_INPUT:
+                    ret = PinMode.Input;
+                    break;
+                default:
+                    ret = PinMode.Input; // TODO: Return "Unknown"
+                    break;
+            }
+
+            _pinModes[pinNumber] = ret;
+            return ret;
         }
 
         protected override bool IsPinModeSupported(int pinNumber, PinMode mode)

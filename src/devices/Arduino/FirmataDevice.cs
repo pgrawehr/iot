@@ -39,6 +39,7 @@ namespace Iot.Device.Arduino
         private object _lastPinValueLock;
         private object _lastAnalogValueLock;
         private object _synchronisationLock;
+        private Queue<byte> _dataQueue;
 
         // Event used when waiting for answers (i.e. after requesting firmware version)
         private AutoResetEvent _dataReceived;
@@ -62,6 +63,7 @@ namespace Iot.Device.Arduino
             _lastPinValueLock = new object();
             _lastAnalogValues = new Dictionary<int, uint>();
             _lastAnalogValueLock = new object();
+            _dataQueue = new Queue<byte>();
         }
 
         internal List<SupportedPinConfiguration> PinConfigurations
@@ -133,6 +135,9 @@ namespace Iot.Device.Arduino
 
             _inputThread = new Thread(InputThread);
             _inputThread.Start();
+
+            // Reset device, in case it is still sending data from an aborted process
+            _firmataStream.WriteByte((byte)FirmataCommand.SYSTEM_RESET);
         }
 
         private void ProcessInput()
@@ -144,6 +149,7 @@ namespace Iot.Device.Arduino
                 return;
             }
 
+            OnError?.Invoke($"0x{data:X}", null);
             byte b = (byte)(data & 0x00FF);
             byte upper_nibble = (byte)(data & 0xF0);
             byte lower_nibble = (byte)(data & 0x0F);
@@ -195,7 +201,7 @@ namespace Iot.Device.Arduino
             while (bytes_remaining > 0 || isMessageSysex)
             {
                 data = _firmataStream.ReadByte();
-
+                OnError?.Invoke($"0x{data:X}", null);
                 // if no data was available, check for timeout
                 if (data == 0xFFFF)
                 {
@@ -486,7 +492,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.CAPABILITY_QUERY);
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
-                bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+                bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(MESSAGE_TIMEOUT_MILLIS));
                 if (result == false)
                 {
                     throw new TimeoutException("Timeout waiting for device capabilities");
@@ -496,7 +502,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.ANALOG_MAPPING_QUERY);
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
-                result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+                result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(MESSAGE_TIMEOUT_MILLIS));
                 if (result == false)
                 {
                     throw new TimeoutException("Timeout waiting for PWM port mappings");
@@ -514,58 +520,81 @@ namespace Iot.Device.Arduino
             }
         }
 
-        public void SetPinMode(int pin, SupportedMode firmataMode)
+        private T PerformRetries<T>(int numberOfRetries, Func<T> operation)
         {
-            lock (_synchronisationLock)
+            Exception lastException = null;
+            while (numberOfRetries-- > 0)
             {
-                _firmataStream.WriteByte((byte)FirmataCommand.SET_PIN_MODE);
-                _firmataStream.WriteByte((byte)pin);
-                _firmataStream.WriteByte((byte)firmataMode);
-                _firmataStream.Flush();
+                try
+                {
+                    T result = operation();
+                    return result;
+                }
+                catch (TimeoutException x)
+                {
+                    lastException = x;
+                    OnError?.Invoke("Timeout waiting for answer. Retries possible.", x);
+                }
             }
+
+            throw new TimeoutException("Timeout waiting for answer. Aborting. ", lastException);
         }
 
-        public PinMode GetPinMode(int pinNumber)
+        public void SetPinMode(int pin, SupportedMode firmataMode)
         {
-            lock (_synchronisationLock)
+            for (int i = 0; i < 3; i++)
             {
-                _dataReceived.Reset();
-                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
-                _firmataStream.WriteByte((byte)FirmataSysexCommand.PIN_STATE_QUERY);
-                _firmataStream.WriteByte((byte)pinNumber);
-                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
-                _firmataStream.Flush();
-                bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
-                if (result == false)
+                lock (_synchronisationLock)
                 {
-                    throw new TimeoutException("Timeout waiting for pin mode.");
+                    _firmataStream.WriteByte((byte)FirmataCommand.SET_PIN_MODE);
+                    _firmataStream.WriteByte((byte)pin);
+                    _firmataStream.WriteByte((byte)firmataMode);
+                    _firmataStream.Flush();
                 }
 
-                // The mode is byte 4
-                if (_lastResponse.Count < 4)
+                if (GetPinMode(pin) == firmataMode)
                 {
-                    throw new InvalidOperationException("Not enough data in reply");
-                }
-
-                if (_lastResponse[1] != pinNumber)
-                {
-                    throw new InvalidOperationException(
-                        "The reply didn't match the query (another port was indicated)");
-                }
-
-                SupportedMode mode = (SupportedMode)(_lastResponse[2]);
-                switch (mode)
-                {
-                    case SupportedMode.DIGITAL_OUTPUT:
-                        return PinMode.Output;
-                    case SupportedMode.INPUT_PULLUP:
-                        return PinMode.InputPullUp;
-                    case SupportedMode.DIGITAL_INPUT:
-                        return PinMode.Input;
-                    default:
-                        return PinMode.Input; // TODO: Return "Unknown"
+                    return;
                 }
             }
+
+            throw new TimeoutException($"Unable to set Pin mode to {firmataMode}. Looks like a communication problem.");
+        }
+
+        public SupportedMode GetPinMode(int pinNumber)
+        {
+            return PerformRetries(3, () =>
+            {
+                lock (_synchronisationLock)
+                {
+                    _dataReceived.Reset();
+                    _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                    _firmataStream.WriteByte((byte)FirmataSysexCommand.PIN_STATE_QUERY);
+                    _firmataStream.WriteByte((byte)pinNumber);
+                    _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                    _firmataStream.Flush();
+                    bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(MESSAGE_TIMEOUT_MILLIS));
+                    if (result == false)
+                    {
+                        throw new TimeoutException("Timeout waiting for pin mode.");
+                    }
+
+                    // The mode is byte 4
+                    if (_lastResponse.Count < 4)
+                    {
+                        throw new InvalidOperationException("Not enough data in reply");
+                    }
+
+                    if (_lastResponse[1] != pinNumber)
+                    {
+                        throw new InvalidOperationException(
+                            "The reply didn't match the query (another port was indicated)");
+                    }
+
+                    SupportedMode mode = (SupportedMode)(_lastResponse[2]);
+                    return mode;
+                }
+            });
         }
 
         /// <summary>
@@ -697,6 +726,21 @@ namespace Iot.Device.Arduino
             {
                 _firmataStream.WriteByte((byte)((int)FirmataCommand.REPORT_ANALOG_PIN + pinNumber));
                 _firmataStream.WriteByte((byte)0);
+            }
+        }
+
+        public void SetSamplingInterval(TimeSpan interval)
+        {
+            int millis = (int)interval.TotalMilliseconds;
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SAMPLING_INTERVAL);
+                int value = millis;
+                _firmataStream.WriteByte((byte)(value & (uint)sbyte.MaxValue)); // lower 7 bits
+                _firmataStream.WriteByte((byte)(value >> 7 & sbyte.MaxValue)); // top bits
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
             }
         }
 
