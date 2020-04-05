@@ -77,7 +77,6 @@ namespace Iot.Device.Arduino
         public void Open(Stream stream)
         {
             _firmataStream = stream;
-
             if (_firmataStream.CanRead && _firmataStream.CanWrite)
             {
                 StartListening();
@@ -142,14 +141,20 @@ namespace Iot.Device.Arduino
 
         private void ProcessInput()
         {
-            // ReadByte reads one byte, but takes an int as an argument, so it can specify -1 for end-of-stream or timeout
-            int data = _firmataStream.ReadByte();
-            if (data == (0xFFFF))
+            if (_dataQueue.Count == 0)
             {
+                FillQueue();
+            }
+
+            if (_dataQueue.Count == 0)
+            {
+                // Still no data? (End of stream or stream closed)
                 return;
             }
 
-            OnError?.Invoke($"0x{data:X}", null);
+            int data = _dataQueue.Dequeue();
+
+            // OnError?.Invoke($"0x{data:X}", null);
             byte b = (byte)(data & 0x00FF);
             byte upper_nibble = (byte)(data & 0xF0);
             byte lower_nibble = (byte)(data & 0x0F);
@@ -200,8 +205,23 @@ namespace Iot.Device.Arduino
             Stopwatch timeout_start = Stopwatch.StartNew();
             while (bytes_remaining > 0 || isMessageSysex)
             {
-                data = _firmataStream.ReadByte();
-                OnError?.Invoke($"0x{data:X}", null);
+                if (_dataQueue.Count == 0)
+                {
+                    int timeout = 10;
+                    while (!FillQueue() && timeout-- > 0)
+                    {
+                        Thread.Sleep(5);
+                    }
+
+                    if (timeout == 0)
+                    {
+                        // Synchronisation problem: The remainder of the expected message is missing
+                        return;
+                    }
+                }
+
+                data = _dataQueue.Dequeue();
+                // OnError?.Invoke($"0x{data:X}", null);
                 // if no data was available, check for timeout
                 if (data == 0xFFFF)
                 {
@@ -426,6 +446,18 @@ namespace Iot.Device.Arduino
 
                     break;
             }
+        }
+
+        private bool FillQueue()
+        {
+            Span<byte> rawData = stackalloc byte[32];
+            int bytesRead = _firmataStream.Read(rawData);
+            for (int i = 0; i < bytesRead; i++)
+            {
+                _dataQueue.Enqueue(rawData[i]);
+            }
+
+            return _dataQueue.Count > 0;
         }
 
         private void InputThread()
