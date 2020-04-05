@@ -31,7 +31,7 @@ namespace Ft4222.Samples
                 portName = args[1];
             }
 
-            using (var port = new SerialPort(portName, 57600))
+            using (var port = new SerialPort(portName, 115200))
             {
                 Console.WriteLine($"Connecting to Arduino on {portName}");
                 try
@@ -56,7 +56,7 @@ namespace Ft4222.Samples
                 }
                 catch (TimeoutException x)
                 {
-                    Console.WriteLine($"No answer from board: {x.Message}. ");
+                    Console.WriteLine($"No answer from board: {x.Message} ");
                 }
                 finally
                 {
@@ -215,6 +215,7 @@ namespace Ft4222.Samples
                 double voltage = analogController.ReadVoltage(analogPin);
                 gpioController.Write(gpio, PinValue.High);
                 Thread.Sleep((int)voltage * 100);
+                voltage = analogController.ReadVoltage(analogPin);
                 gpioController.Write(gpio, PinValue.Low);
                 Thread.Sleep((int)voltage * 100);
             }
