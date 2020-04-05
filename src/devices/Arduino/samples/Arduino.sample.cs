@@ -86,6 +86,7 @@ namespace Ft4222.Samples
             Console.WriteLine(" 5 Run callback event test on GPIO2");
             Console.WriteLine(" 6 Run PWM test with a simple led dimming on GPIO6 port");
             Console.WriteLine(" 7 Dim the LED according to the input on A1");
+            Console.WriteLine(" 8 Read analog channel as fast as possible");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
@@ -112,6 +113,9 @@ namespace Ft4222.Samples
                     break;
                 case '7':
                     TestAnalogIn(board);
+                    break;
+                case '8':
+                    TestAnalogCallback(board);
                     break;
                 case 'x':
                 case 'X':
@@ -223,6 +227,34 @@ namespace Ft4222.Samples
             Console.ReadKey();
             analogController.Dispose();
             gpioController.Dispose();
+        }
+
+        public static void TestAnalogCallback(ArduinoBoard board)
+        {
+            const int analogPin = 15;
+            var analogController = board.CreateAnalogController(0);
+
+            analogController.OpenPin(analogPin);
+            analogController.EnableAnalogValueChangedEvent(analogPin, null, 0);
+
+            analogController.ValueChanged += (sender, args) =>
+            {
+                if (args.PinNumber == analogPin)
+                {
+                    Console.WriteLine($"New voltage: {args.Value}.");
+                }
+            };
+
+            Console.WriteLine("Waiting for changes on the analog input");
+            while (!Console.KeyAvailable)
+            {
+                // Nothing to do
+                Thread.Sleep(100);
+            }
+
+            Console.ReadKey();
+            analogController.DisableAnalogValueChangedEvent(analogPin);
+            analogController.Dispose();
         }
 
         public static void TestInput(ArduinoBoard board)
