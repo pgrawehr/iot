@@ -12,14 +12,30 @@ namespace Iot.Device.Arduino
     {
         private readonly ArduinoBoard _board;
         private readonly List<SupportedPinConfiguration> _supportedPinConfigurations;
+        private readonly Dictionary<int, ValueChangeEventHandler> _callbacks;
+        private int _autoReportingReferenceCount;
+        private int _firstAnalogPin;
 
         public ArduinoAnalogControllerDriver(ArduinoBoard board,
             List<SupportedPinConfiguration> supportedPinConfigurations)
         {
             _board = board ?? throw new ArgumentNullException(nameof(board));
             _supportedPinConfigurations = supportedPinConfigurations ?? throw new ArgumentNullException(nameof(supportedPinConfigurations));
+            _callbacks = new Dictionary<int, ValueChangeEventHandler>();
+            _autoReportingReferenceCount = 0;
             PinCount = _supportedPinConfigurations.Count;
             VoltageReference = 5.0;
+            // Number of the first analog pin. Serves for converting between logical A0-based pin numbers and digital pin numbers.
+            // The value of this is 14 for most arduinos.
+            var firstPin = _supportedPinConfigurations.FirstOrDefault(x => x.PinModes.Contains(SupportedMode.ANALOG_INPUT));
+            if (firstPin != null)
+            {
+                _firstAnalogPin = firstPin.Pin;
+            }
+            else
+            {
+                _firstAnalogPin = 0;
+            }
         }
 
         public override int PinCount
@@ -29,18 +45,48 @@ namespace Iot.Device.Arduino
 
         protected override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
         {
-            var firstAnalogPin = _supportedPinConfigurations.FirstOrDefault(x => x.PinModes.Contains(SupportedMode.ANALOG_INPUT));
-            if (firstAnalogPin == null)
-            {
-                return 0;
-            }
+            return pinNumber - _firstAnalogPin;
+        }
 
-            return pinNumber - firstAnalogPin.Pin;
+        protected override int ConvertLogicalNumberingSchemeToPinNumber(int logicalPinNumber)
+        {
+            return logicalPinNumber + _firstAnalogPin;
         }
 
         public override bool SupportsAnalogInput(int pinNumber)
         {
             return _supportedPinConfigurations[pinNumber].PinModes.Contains(SupportedMode.ANALOG_INPUT);
+        }
+
+        public override void EnableAnalogValueChangedEvent(int pinNumber, GpioController masterController, int masterPin)
+        {
+            // The pin is already open, so analog reporting is enabled, we just need to forward it.
+            if (_autoReportingReferenceCount == 0)
+            {
+                _board.Firmata.AnalogPinValueUpdated += FirmataOnAnalogPinValueUpdated;
+            }
+
+            _autoReportingReferenceCount += 1;
+        }
+
+        public override void DisableAnalogValueChangedEvent(int pinNumber)
+        {
+            _autoReportingReferenceCount -= 1;
+            if (_autoReportingReferenceCount == 0)
+            {
+                _board.Firmata.AnalogPinValueUpdated -= FirmataOnAnalogPinValueUpdated;
+            }
+        }
+
+        private void FirmataOnAnalogPinValueUpdated(int pin, uint rawvalue)
+        {
+            if (_autoReportingReferenceCount > 0)
+            {
+                int physicalPin = ConvertLogicalNumberingSchemeToPinNumber(pin);
+                double voltage = ConvertToVoltage(physicalPin, rawvalue);
+                var message = new ValueChangedEventArgs(rawvalue, voltage, physicalPin, TriggerReason.Timed);
+                FireValueChanged(message);
+            }
         }
 
         public override void OpenPin(int pinNumber)
@@ -78,39 +124,10 @@ namespace Iot.Device.Arduino
             return _board.Firmata.GetAnalogRawValue(ConvertPinNumberToLogicalNumberingScheme(pinNumber));
         }
 
-        public override double ReadVoltage(int pinNumber)
+        protected override void Dispose(bool disposing)
         {
-            QueryResolution(pinNumber, out int numberOfBits, out double minVoltage, out double maxVoltage);
-            uint raw = ReadRaw(pinNumber);
-            if (minVoltage >= 0)
-            {
-                // The ADC can handle only positive values
-                int maxRawValue = (1 << numberOfBits) - 1;
-                double voltage = ((double)raw / maxRawValue) * maxVoltage;
-                return voltage;
-            }
-            else
-            {
-                // The ADC also handles negative values. This means that the number of bits includes the sign.
-                uint maxRawValue = (uint)((1 << (numberOfBits - 1)) - 1);
-                if (raw < maxRawValue)
-                {
-                    double voltage = ((double)raw / maxRawValue) * maxVoltage;
-                    return voltage;
-                }
-                else
-                {
-                    // This is a bitmask which has all the bits 1 that are not used in the data.
-                    // We use this to sign-extend our raw value. The mask also includes the sign bit itself,
-                    // but we know that this is already 1
-                    uint topBits = ~maxRawValue;
-                    raw |= topBits;
-                    int raw2 = (int)raw;
-                    double voltage = ((double)raw2 / maxRawValue) * maxVoltage;
-                    return voltage; // This is now negative
-                }
-            }
-
+            _callbacks.Clear();
+            base.Dispose(disposing);
         }
     }
 }

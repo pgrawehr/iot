@@ -8,6 +8,8 @@ namespace System.Device.Analog
         private readonly AnalogControllerDriver _driver;
         private readonly HashSet<int> _openPins;
 
+        public event ValueChangeEventHandler ValueChanged;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="GpioController"/> class that will use the specified numbering scheme and driver.
         /// </summary>
@@ -18,6 +20,7 @@ namespace System.Device.Analog
             _driver = driver;
             NumberingScheme = numberingScheme;
             _openPins = new HashSet<int>();
+            _driver.ValueChanged += DriverOnValueChanged;
         }
 
         /// <summary>
@@ -148,40 +151,48 @@ namespace System.Device.Analog
             return _driver.ReadVoltage(logicalPinNumber);
         }
 
-        /*
         /// <summary>
-        /// Adds a callback that will be invoked when pinNumber has an event of type eventType.
+        /// Enables the <see cref="ValueChanged"/> event.
+        /// Depending on the hardware, an external masterController is required to trigger input interrupts.
         /// </summary>
+        /// <remarks>
+        /// The event might report events for other pins as well, so clients must check whether the event received matches
+        /// the pin required.
+        /// </remarks>
         /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
-        /// <param name="eventTypes">The event types to wait for.</param>
-        /// <param name="callback">The callback method that will be invoked.</param>
-        public void RegisterCallbackForPinValueChangedEvent(int pinNumber, PinEventTypes eventTypes, PinChangeEventHandler callback)
+        /// <param name="masterController">The external interrupt controller (if needed)</param>
+        /// <param name="masterPin">The pin number on the external interrupt controller to check</param>
+        public void EnableAnalogValueChangedEvent(int pinNumber, GpioController masterController, int masterPin)
         {
             int logicalPinNumber = GetLogicalPinNumber(pinNumber);
             if (!_openPins.Contains(logicalPinNumber))
             {
-                throw new InvalidOperationException("Can not add callback for a pin that is not open.");
+                throw new InvalidOperationException("Can not enable callback for a pin that is not open.");
             }
 
-            _driver.AddCallbackForAnalogValueChangedEvent(logicalPinNumber, eventTypes, callback);
+            _driver.EnableAnalogValueChangedEvent(logicalPinNumber, masterController, masterPin);
+        }
+
+        private void DriverOnValueChanged(object sender, ValueChangedEventArgs pinValueChangedEventArgs)
+        {
+            ValueChanged?.Invoke(sender, pinValueChangedEventArgs);
         }
 
         /// <summary>
-        /// Removes a callback that was being invoked for pin at pinNumber.
+        /// Disables the <see cref="ValueChanged"/> event
         /// </summary>
         /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
-        /// <param name="callback">The callback method that will be invoked.</param>
-        public void UnregisterCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
+        public void DisableAnalogValueChangedEvent(int pinNumber)
         {
             int logicalPinNumber = GetLogicalPinNumber(pinNumber);
             if (!_openPins.Contains(logicalPinNumber))
             {
-                throw new InvalidOperationException("Can not add callback for a pin that is not open.");
+                throw new InvalidOperationException("Can not disable callback for a pin that is not open.");
             }
 
-            _driver.RemoveCallbackForPinValueChangedEvent(logicalPinNumber, callback);
+            _driver.DisableAnalogValueChangedEvent(logicalPinNumber);
         }
-        */
+
         private void Dispose(bool disposing)
         {
             foreach (int pin in _openPins)
@@ -190,6 +201,7 @@ namespace System.Device.Analog
             }
 
             _openPins.Clear();
+            _driver.ValueChanged -= DriverOnValueChanged;
             _driver.Dispose();
         }
 
