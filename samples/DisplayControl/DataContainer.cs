@@ -38,6 +38,7 @@ namespace DisplayControl
         private LcdValueUnitDisplay m_bigValueDisplay;
         private Stopwatch m_timer;
         private int _numberOfImuSentencesSent = 0;
+        private bool _menuMode;
 
         public DataContainer(GpioController controller)
         {
@@ -52,6 +53,7 @@ namespace DisplayControl
             m_bigValueDisplay = null;
             m_timer = new Stopwatch();
             m_activeEncoding = CultureInfo.CreateSpecificCulture("de-CH");
+            _menuMode = false;
         }
 
         public GpioController Controller { get; }
@@ -138,17 +140,17 @@ namespace DisplayControl
             m_characterLcd.BacklightOn = true;
             m_characterLcd.DisplayOn = true;
             m_characterLcd.Clear();
-            m_characterLcd.Write("== Startup ==");
             m_lcdConsole = new LcdConsole(m_characterLcd, "A00", false);
+            m_lcdConsole.WriteLine("== Startup ==");
             LoadEncoding();
-            m_lcdConsole.Clear();
-            m_lcdConsole.Write("== Ready ==");
+            m_lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
             m_lcdConsoleActive = true;
             m_bigValueDisplay = new LcdValueUnitDisplay(m_characterLcd, m_activeEncoding);
         }
 
         private void InitializeSensors()
         {
+            m_lcdConsole.WriteLine("ADC...");
             m_adcSensors = new AdcSensors();
             m_adcSensors.Init();
             m_adcSensors.ButtonPressed += DisplayButtonPressed;
@@ -156,24 +158,29 @@ namespace DisplayControl
             List<SensorValueSource> allSources = new List<SensorValueSource>();
             allSources.AddRange(m_adcSensors.SensorValueSources);
 
+            m_lcdConsole.WriteLine("DHT...");
             m_dhtSensors = new DhtSensors();
             m_dhtSensors.Init(Controller);
 
             allSources.AddRange(m_dhtSensors.SensorValueSources);
 
+            m_lcdConsole.WriteLine("CPU...");
             m_systemSensors = new SystemSensors();
             m_systemSensors.Init(Controller);
             allSources.AddRange(m_systemSensors.SensorValueSources);
 
+            m_lcdConsole.WriteLine("Environment...");
             m_pressureSensor = new PressureSensor();
             m_pressureSensor.Init(Controller);
             allSources.AddRange(m_pressureSensor.SensorValueSources);
 
+            m_lcdConsole.WriteLine("IMU...");
             _imuSensor = new ImuSensor();
             _imuSensor.Init(Controller);
             _imuSensor.OnNewOrientation += ImuSensorOnOnNewOrientation;
             allSources.AddRange(_imuSensor.SensorValueSources);
 
+            m_lcdConsole.WriteLine("NMEA Source...");
             _nmeaSensor = new NmeaSensor();
             _nmeaSensor.Initialize();
             allSources.AddRange(_nmeaSensor.SensorValueSources);
@@ -184,6 +191,7 @@ namespace DisplayControl
                 m_sensorValueSources.Add(sensor);
             }
 
+            m_lcdConsole.WriteLine("Display controller...");
             _extendedDisplayController = new ExtendedDisplayController(Controller);
         }
 
@@ -230,6 +238,8 @@ namespace DisplayControl
                     idx = (idx + 1) % SensorValueSources.Count;
                     sourceToChange = SensorValueSources[idx];
                 }
+
+                _extendedDisplayController.IncreaseBrightness(10);
             }
             if (button == DisplayButton.Previous)
             {
@@ -247,6 +257,8 @@ namespace DisplayControl
                     }
                     sourceToChange = SensorValueSources[idx];
                 }
+
+                _extendedDisplayController.DecreaseBrightness(10);
             }
 
             if (ActiveValueSourceSingle != null)
@@ -371,6 +383,12 @@ namespace DisplayControl
                 {
                     m_lcdConsole.ReplaceLine(2, valueSourceLower.ValueDescription);
                     text = valueSourceLower.ValueAsString;
+                    if (text.Contains("\n"))
+                    {
+                        // We can't display a two liner here
+                        text = text.Replace("\n", " ", StringComparison.OrdinalIgnoreCase);
+                    }
+
                     m_lcdConsole.ReplaceLine(3, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceLower.Unit));
                 }
             }
@@ -380,6 +398,8 @@ namespace DisplayControl
         {
             InitializeDisplay();
             InitializeSensors();
+            m_lcdConsole.Clear();
+            m_lcdConsole.ReplaceLine(0, "Startup successful");
         }
 
         /// <summary>
@@ -423,6 +443,21 @@ namespace DisplayControl
             m_characterLcd = null;
             m_displayDevice.Dispose();
             m_displayDevice = null;
+        }
+
+        private sealed class MenuController
+        {
+            private readonly DataContainer _control;
+
+            public MenuController(DataContainer control)
+            {
+                _control = control;
+            }
+
+            public void ButtonPressed(DisplayButton button)
+            {
+
+            }
         }
     }
 }
