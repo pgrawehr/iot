@@ -45,21 +45,53 @@ namespace DisplayControl
             _imuTemperature = new ObservableValue<double>("IMU Temperature", "°C", -273);
             _imuTemperature.ValueFormatter = "{0:F1}";
 
-            _serialPort = new SerialPort("/dev/ttyUSB1", 115200, Parity.None);
-            _serialPort.Open();
-            Ig500Sensor imu = new Ig500Sensor(_serialPort.BaseStream, OutputDataSets.Euler | OutputDataSets.Magnetometers | OutputDataSets.Quaternion |
-                                                                      OutputDataSets.Temperatures |
-                                                                      OutputDataSets.Accelerometers | OutputDataSets.Gyroscopes);
-
-            if (!imu.WaitForSensorReady(out var errorMessage, TimeSpan.FromSeconds(5)))
+            bool success = false;
+            string errorMessage = string.Empty;
+            Ig500Sensor imu = null;
+            for (int i = 0; i <= 4; i++)
             {
-                Console.WriteLine($"Error initializing device: {errorMessage}");
-                var errors = imu.RecentParserErrors;
-                foreach (string error in errors)
+                string port = "/dev/ttyUSB" + i;
+                _serialPort = new SerialPort(port, 115200, Parity.None);
+                try
                 {
-                    Console.WriteLine(error);
+                    _serialPort.Open();
+                }
+                catch (IOException x)
+                {
+                    Console.WriteLine($"Warning: Could not open {port}: {x.Message}");
+                    _serialPort.Dispose();
+                    _serialPort = null;
+                    continue;
                 }
 
+                imu = new Ig500Sensor(_serialPort.BaseStream,
+                    OutputDataSets.Euler | OutputDataSets.Magnetometers | OutputDataSets.Quaternion |
+                    OutputDataSets.Temperatures |
+                    OutputDataSets.Accelerometers | OutputDataSets.Gyroscopes);
+
+                if (!imu.WaitForSensorReady(out errorMessage, TimeSpan.FromSeconds(5)))
+                {
+                    Console.WriteLine($"Error initializing device: {errorMessage}");
+                    var errors = imu.RecentParserErrors;
+                    foreach (string error in errors)
+                    {
+                        Console.WriteLine(error);
+                    }
+                    imu.Dispose();
+                    imu = null;
+                    _serialPort.Dispose();
+                    _serialPort = null;
+                }
+                else
+                {
+                    Console.WriteLine($"Found and initialized IMU on {port}.");
+                    success = true;
+                    break;
+                }
+            }
+
+            if (!success)
+            {
                 throw new IOException($"Error initializing IMU {errorMessage}");
             }
 
