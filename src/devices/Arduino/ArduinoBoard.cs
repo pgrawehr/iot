@@ -5,9 +5,11 @@ using System.Text;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Device.Pwm;
+using System.Device.Spi;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Iot.Device.Spi;
 
 #pragma warning disable CS1591
 
@@ -115,6 +117,21 @@ namespace Iot.Device.Arduino
         public I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
         {
             return new ArduinoI2cDevice(this, connectionSettings);
+        }
+
+        /// <summary>
+        /// Firmata has no support for SPI, even though the Arduino basically has an SPI interface.
+        /// This therefore returns a Software SPI device for the default Arduino SPI port on pins 11, 12 and 13.
+        /// </summary>
+        /// <param name="settings">Spi Connection settings</param>
+        /// <returns></returns>
+        public SpiDevice CreateSpiDevice(SpiConnectionSettings settings)
+        {
+            int mosi = 11;
+            int miso = 12;
+            int sck = 13;
+            return new SoftwareSpi(sck, miso, mosi, settings.ChipSelectLine, settings,
+                CreateGpioController(PinNumberingScheme.Board));
         }
 
         public PwmChannel CreatePwmChannel(
