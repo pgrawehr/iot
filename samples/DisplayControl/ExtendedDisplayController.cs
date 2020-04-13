@@ -12,12 +12,24 @@ namespace DisplayControl
     {
         public enum PinUsage
         {
+            Led1Green = 0,
+            Led1Red = 3,
+            Led2Green = 2,
+            Led2Red = 1,
+            Led3Green = 6,
+            Led3Red = 5,
+            Led4Green = 4,
+            Led4Red = 7,
+            Led5Green = 8,
+            Led5Red = 9,
             DisplayBrightnessStep = 12,
             DisplayBrightnessDirection = 11,
             DisplayBrightnessChipSelect = 13,
             RedLed = 14,
             Buzzer = 15, // Pin 15 is connected to the alarm buzzer
         }
+
+
         private I2cDevice _device;
         private Mcp23017 _mcp23017;
         private GpioController _controllerUsingMcp;
@@ -37,6 +49,7 @@ namespace DisplayControl
             // Hardware implementation specific code (depends on actually attached hardware)
             _controllerUsingMcp.SetPinMode((int)PinUsage.Buzzer, PinMode.Output);
             _controllerUsingMcp.SetPinMode((int)PinUsage.RedLed, PinMode.Output);
+            SoundAlarm(false);
 
             _controllerUsingMcp.SetPinMode((int)PinUsage.DisplayBrightnessChipSelect, PinMode.Output);
             _controllerUsingMcp.SetPinMode((int)PinUsage.DisplayBrightnessDirection, PinMode.Output);
@@ -45,6 +58,8 @@ namespace DisplayControl
             // CS is low active, so set it high
             Write(PinUsage.DisplayBrightnessChipSelect, PinValue.High);
             Write(PinUsage.DisplayBrightnessStep, PinValue.High);
+
+            ClearLedDisplay();
         }
 
         public void SoundAlarm(bool enable)
@@ -76,6 +91,79 @@ namespace DisplayControl
                 Thread.SpinWait(100); // at least 1us
                 Write(PinUsage.DisplayBrightnessStep, PinValue.High);
                 Write(PinUsage.DisplayBrightnessChipSelect, PinValue.High);
+            }
+        }
+
+        public void ClearLedDisplay()
+        {
+            // Disable all color leds
+            for (int i = 0; i < 10; i++)
+            {
+                _controllerUsingMcp.SetPinMode(i, PinMode.Output);
+                _controllerUsingMcp.Write(i, PinValue.Low);
+            }
+        }
+
+        public void SelfTest()
+        {
+            ClearLedDisplay();
+            SoundAlarm(true);
+            Thread.Sleep(200);
+            SoundAlarm(false);
+            for (int i = 0; i < 5; i++)
+            {
+                Write(Led(i, true), PinValue.High);
+                Thread.Sleep(200);
+                Write(Led(i, true), PinValue.Low);
+                Thread.Sleep(200);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                Write(Led(i, false), PinValue.High);
+                Thread.Sleep(200);
+                Write(Led(i, false), PinValue.Low);
+                Thread.Sleep(200);
+            }
+        }
+
+        private PinUsage Led(int index, bool green)
+        {
+            if (green)
+            {
+                switch (index)
+                {
+                    case 0:
+                        return PinUsage.Led1Green;
+                    case 1:
+                        return PinUsage.Led2Green;
+                    case 2:
+                        return PinUsage.Led3Green;
+                    case 3:
+                        return PinUsage.Led4Green;
+                    case 4:
+                        return PinUsage.Led5Green;
+                    default:
+                        throw new InvalidOperationException("No such LED");
+                }
+            }
+            else
+            {
+                switch (index)
+                {
+                    case 0:
+                        return PinUsage.Led1Red;
+                    case 1:
+                        return PinUsage.Led2Red;
+                    case 2:
+                        return PinUsage.Led3Red;
+                    case 3:
+                        return PinUsage.Led4Red;
+                    case 4:
+                        return PinUsage.Led5Red;
+                    default:
+                        throw new InvalidOperationException("No such LED");
+                }
             }
         }
 

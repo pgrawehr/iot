@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading;
 using Iot.Device.CharacterLcd;
 using Iot.Units;
 using Nmea0183.Sentences;
@@ -39,6 +40,7 @@ namespace DisplayControl
         private Stopwatch m_timer;
         private int _numberOfImuSentencesSent = 0;
         private bool _menuMode;
+        private MenuController _menuController;
 
         public DataContainer(GpioController controller)
         {
@@ -141,16 +143,22 @@ namespace DisplayControl
             m_characterLcd.DisplayOn = true;
             m_characterLcd.Clear();
             m_lcdConsole = new LcdConsole(m_characterLcd, "A00", false);
-            m_lcdConsole.WriteLine("== Startup ==");
             LoadEncoding();
             m_lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
+            m_lcdConsole.WriteLine("== Startup ==");
             m_lcdConsoleActive = true;
+            _menuController = new MenuController(this);
+            _menuMode = false;
             m_bigValueDisplay = new LcdValueUnitDisplay(m_characterLcd, m_activeEncoding);
         }
 
         private void InitializeSensors()
         {
-            m_lcdConsole.WriteLine("ADC...");
+            WriteLineToConsoleAndDisplay("Display controller...");
+            _extendedDisplayController = new ExtendedDisplayController(Controller);
+            _extendedDisplayController.SelfTest();
+
+            WriteLineToConsoleAndDisplay("ADC...");
             m_adcSensors = new AdcSensors();
             m_adcSensors.Init();
             m_adcSensors.ButtonPressed += DisplayButtonPressed;
@@ -158,29 +166,29 @@ namespace DisplayControl
             List<SensorValueSource> allSources = new List<SensorValueSource>();
             allSources.AddRange(m_adcSensors.SensorValueSources);
 
-            m_lcdConsole.WriteLine("DHT...");
+            WriteLineToConsoleAndDisplay("DHT...");
             m_dhtSensors = new DhtSensors();
             m_dhtSensors.Init(Controller);
 
             allSources.AddRange(m_dhtSensors.SensorValueSources);
 
-            m_lcdConsole.WriteLine("CPU...");
+            WriteLineToConsoleAndDisplay("CPU...");
             m_systemSensors = new SystemSensors();
             m_systemSensors.Init(Controller);
             allSources.AddRange(m_systemSensors.SensorValueSources);
 
-            m_lcdConsole.WriteLine("Environment...");
+            WriteLineToConsoleAndDisplay("Environment...");
             m_pressureSensor = new PressureSensor();
             m_pressureSensor.Init(Controller);
             allSources.AddRange(m_pressureSensor.SensorValueSources);
 
-            m_lcdConsole.WriteLine("IMU...");
+            WriteLineToConsoleAndDisplay("IMU...");
             _imuSensor = new ImuSensor();
             _imuSensor.Init(Controller);
             _imuSensor.OnNewOrientation += ImuSensorOnOnNewOrientation;
             allSources.AddRange(_imuSensor.SensorValueSources);
 
-            m_lcdConsole.WriteLine("NMEA Source...");
+            WriteLineToConsoleAndDisplay("NMEA Source...");
             _nmeaSensor = new NmeaSensor();
             _nmeaSensor.Initialize();
             allSources.AddRange(_nmeaSensor.SensorValueSources);
@@ -191,8 +199,20 @@ namespace DisplayControl
                 m_sensorValueSources.Add(sensor);
             }
 
-            m_lcdConsole.WriteLine("Display controller...");
-            _extendedDisplayController = new ExtendedDisplayController(Controller);
+            WriteLineToConsoleAndDisplay($"Found {allSources.Count} sensors.");
+        }
+
+
+        /// <summary>
+        /// Writes a line to the console and the display (for logging)
+        /// </summary>
+        private void WriteLineToConsoleAndDisplay(string text)
+        {
+            Console.WriteLine(text);
+            if (m_lcdConsoleActive)
+            {
+                m_lcdConsole.WriteLine(text);
+            }
         }
 
         private void ImuSensorOnOnNewOrientation(Vector3 orientation)
@@ -214,6 +234,20 @@ namespace DisplayControl
             if (pressed == false)
             {
                 // React only on press events
+                return;
+            }
+
+            if (_menuMode)
+            {
+                _menuController.ButtonPressed(button);
+                return;
+            }
+
+            if (button == DisplayButton.Back)
+            {
+                _menuMode = true;
+                SwitchToConsoleMode();
+                _menuController.ShowMainMenu();
                 return;
             }
 
@@ -239,7 +273,7 @@ namespace DisplayControl
                     sourceToChange = SensorValueSources[idx];
                 }
 
-                _extendedDisplayController.IncreaseBrightness(10);
+                // _extendedDisplayController.IncreaseBrightness(10);
             }
             if (button == DisplayButton.Previous)
             {
@@ -258,7 +292,12 @@ namespace DisplayControl
                     sourceToChange = SensorValueSources[idx];
                 }
 
-                _extendedDisplayController.DecreaseBrightness(10);
+                // _extendedDisplayController.DecreaseBrightness(10);
+            }
+
+            if (button == DisplayButton.Enter)
+            {
+                SwitchToBigMode();
             }
 
             if (ActiveValueSourceSingle != null)
@@ -275,28 +314,42 @@ namespace DisplayControl
         public void OnSensorValueChanged(object sender, PropertyChangedEventArgs args)
         {
             CheckForTriggers(sender as SensorValueSource);
-        
+
+            if (_menuMode)
+            {
+                return;
+            }
+
             if (m_activeValueSourceUpper == sender || m_activeValueSourceLower == sender)
             {
-                if (!m_lcdConsoleActive)
-                {
-                    LoadEncoding();
-                    m_lcdConsole.Clear();
-                    m_lcdConsoleActive = true;
-                }
+                SwitchToConsoleMode();
                 Display2Values(m_activeValueSourceUpper, m_activeValueSourceLower);
                 return;
             }
             else if (m_activeValueSourceSingle == sender)
             {
-                if (m_lcdConsoleActive)
-                {
-                    m_bigValueDisplay.InitForRom("A00");
-                    m_bigValueDisplay.Clear();
-                    m_lcdConsoleActive = false;
-                }
-
+                SwitchToBigMode();
                 DisplayBigValue(m_activeValueSourceSingle);
+            }
+        }
+
+        private void SwitchToBigMode()
+        {
+            if (m_lcdConsoleActive)
+            {
+                m_bigValueDisplay.InitForRom("A00");
+                m_bigValueDisplay.Clear();
+                m_lcdConsoleActive = false;
+            }
+        }
+
+        private void SwitchToConsoleMode()
+        {
+            if (!m_lcdConsoleActive)
+            {
+                LoadEncoding();
+                m_lcdConsole.Clear();
+                m_lcdConsoleActive = true;
             }
         }
 
@@ -425,7 +478,7 @@ namespace DisplayControl
             m_dhtSensors.Dispose();
             m_dhtSensors = null;
 
-            m_pressureSensor.Dispose();
+            m_pressureSensor?.Dispose();
             m_pressureSensor = null;
 
             _imuSensor.Dispose();
@@ -448,15 +501,67 @@ namespace DisplayControl
         private sealed class MenuController
         {
             private readonly DataContainer _control;
+            private readonly LcdConsole _console;
+            private readonly List<(string, Action)> _options;
+
+            private string _title;
+            private int _activeItem = 0;
 
             public MenuController(DataContainer control)
             {
                 _control = control;
+                _console = control.m_lcdConsole;
+                _title = string.Empty;
+                _options = new List<(string, Action)>();
             }
 
             public void ButtonPressed(DisplayButton button)
             {
 
+            }
+
+            private void SetTitle(string title)
+            {
+                _title = "== " + title + " ==";
+                _console.ReplaceLine(0, title);
+            }
+
+            public void ShowMainMenu()
+            {
+                _console.Clear();
+                _options.Clear();
+                SetTitle("Main Menu");
+                AddOption("Values to display", () => ShowValueSelection(true));
+                AddOption("Big value to display", () => ShowValueSelection(false));
+                AddOption("Silence alarm", () => SilenceAlarm());
+                _activeItem = 0;
+                DrawMenuOptions();
+            }
+
+            private void DrawMenuOptions()
+            {
+                for (int i = _activeItem - 1; i < _activeItem + 1; i++)
+                {
+
+                }
+            }
+
+            private void ShowValueSelection(bool twoValues)
+            {
+                if (twoValues)
+                {
+                    SetTitle("Select upper value:");
+                }
+            }
+
+            private void SilenceAlarm()
+            {
+                _control._extendedDisplayController.SoundAlarm(false);
+            }
+
+            private void AddOption(string subMenuName, Action operation)
+            {
+                _options.Add((subMenuName, operation));
             }
         }
     }
