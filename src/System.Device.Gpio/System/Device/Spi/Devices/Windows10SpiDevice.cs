@@ -13,16 +13,15 @@ namespace System.Device.Spi
     /// </summary>
     internal class Windows10SpiDevice : SpiDevice
     {
-        private readonly SpiConnectionSettings _settings;
         private WinSpi.SpiDevice _winDevice;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Windows10SpiDevice"/> class that will use the specified settings to communicate with the SPI device.
         /// </summary>
-        /// <param name="settings">
-        /// The connection settings of a device on a SPI bus.
-        /// </param>
-        public Windows10SpiDevice(SpiConnectionSettings settings)
+        /// <param name="settings"> The connection settings of a device on a SPI bus. </param>
+        /// <param name="board">The board that created this instance</param>
+        public Windows10SpiDevice(SpiConnectionSettings settings, Board board)
+        : base(settings, board)
         {
             if (settings.DataFlow != DataFlow.MsbFirst || settings.ChipSelectLineActiveState != PinValue.Low)
             {
@@ -53,11 +52,11 @@ namespace System.Device.Spi
             _winDevice = WinSpi.SpiDevice.FromIdAsync(deviceInformationCollection[0].Id, winSettings).WaitForCompletion();
         }
 
-        /// <summary>
-        /// The connection settings of a device on a SPI bus. The connection settings are immutable after the device is created
-        /// so the object returned will be a clone of the settings object.
-        /// </summary>
-        public override SpiConnectionSettings ConnectionSettings => new SpiConnectionSettings(_settings);
+        [Obsolete]
+        public Windows10SpiDevice(SpiConnectionSettings settings)
+            : this(settings, null)
+        {
+        }
 
         /// <summary>
         /// Reads a byte from the SPI device.
