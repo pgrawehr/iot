@@ -16,9 +16,6 @@ namespace DisplayControl
 {
     internal sealed class Program : IDisposable
     {
-        const int LedPin = 5;
-        const int ValidationPin = 6;
-
         internal Program(GpioController controller)
         {
             Controller = controller;
@@ -52,22 +49,14 @@ namespace DisplayControl
             Console.WriteLine($"Initializing Hardware...");
             using (GpioController controller = new GpioController())
             {
-                controller.OpenPin(LedPin, PinMode.Output);
-                controller.OpenPin(ValidationPin, PinMode.Input);
                 Program prog = new Program(controller);
                 try
                 {
                     Trace.Listeners.Add(new ConsoleTraceListener());
-                    controller.Write(LedPin, PinValue.High);
-                    if (controller.Read(ValidationPin) != PinValue.High)
-                    {
-                        Console.WriteLine($"Could not detect high level on pin {ValidationPin}. Incorrect setup?");
-                    }
                     prog.Run(args);
                 }
                 finally
                 {
-                    controller.Write(LedPin, PinValue.Low);
                     prog.Dispose();
                 }
             }

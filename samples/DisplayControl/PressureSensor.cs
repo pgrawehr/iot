@@ -13,7 +13,7 @@ namespace DisplayControl
     {
         private Bmp280 _bmp280;
         private ObservableValue<double> _outsideTemperature;
-        private ObservableValue<double> _presure;
+        private ObservableValue<double> _pressure;
 
         public PressureSensor() : base(TimeSpan.FromSeconds(5))
         {
@@ -25,13 +25,13 @@ namespace DisplayControl
             _bmp280.TemperatureSampling = Sampling.Standard;
             
             _bmp280.PressureSampling = Sampling.UltraHighResolution;
-            _outsideTemperature = new ObservableValue<double>("Temperature BMP280", "°C", double.NaN);
-            _presure = new ObservableValue<double>("Pressure", "hPa", double.NaN);
+            _outsideTemperature = new ObservableValue<double>("Temperature Outside", "°C", double.NaN);
+            _pressure = new ObservableValue<double>("Pressure Outside", "hPa", double.NaN);
             
             _outsideTemperature.ValueFormatter = "{0:F1}";
-            _presure.ValueFormatter = "{0:F1}";
+            _pressure.ValueFormatter = "{0:F1}";
             SensorValueSources.Add(_outsideTemperature);
-            SensorValueSources.Add(_presure);
+            SensorValueSources.Add(_pressure);
 
             base.Init(gpioController);
         }
@@ -49,7 +49,7 @@ namespace DisplayControl
 
             if (_bmp280.TryReadPressure(out var preValue))
             {
-                _presure.Value = preValue.Hectopascal;
+                _pressure.Value = preValue.Hectopascal;
             }
         }
 

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading;
+using Avalonia.Controls;
 using Iot.Device.CharacterLcd;
 using Iot.Units;
 using Nmea0183.Sentences;
@@ -41,6 +42,14 @@ namespace DisplayControl
         private int _numberOfImuSentencesSent = 0;
         private bool _menuMode;
         private MenuController _menuController;
+
+        private enum MenuOptionResult
+        {
+            None,
+            Exit,
+            SubMenu,
+            TextUpdate
+        }
 
         public DataContainer(GpioController controller)
         {
@@ -239,7 +248,20 @@ namespace DisplayControl
 
             if (_menuMode)
             {
-                _menuController.ButtonPressed(button);
+                if (_menuController.ButtonPressed(button) == false)
+                {
+                    // Left the menu
+                    _menuMode = false;
+                    if (ActiveValueSourceSingle != null)
+                    {
+                        OnSensorValueChanged(ActiveValueSourceSingle, null);
+                    }
+                    else
+                    {
+                        OnSensorValueChanged(ActiveValueSourceUpper, null);
+                        OnSensorValueChanged(ActiveValueSourceLower, null);
+                    }
+                }
                 return;
             }
 
@@ -297,7 +319,7 @@ namespace DisplayControl
 
             if (button == DisplayButton.Enter)
             {
-                SwitchToBigMode();
+                SwitchToBigMode(m_activeValueSourceLower);
             }
 
             if (ActiveValueSourceSingle != null)
@@ -328,13 +350,15 @@ namespace DisplayControl
             }
             else if (m_activeValueSourceSingle == sender)
             {
-                SwitchToBigMode();
+                SwitchToBigMode(m_activeValueSourceSingle);
                 DisplayBigValue(m_activeValueSourceSingle);
             }
         }
 
-        private void SwitchToBigMode()
+        private void SwitchToBigMode(SensorValueSource withValue)
         {
+            m_activeValueSourceUpper = m_activeValueSourceLower = null;
+            m_activeValueSourceSingle = withValue;
             if (m_lcdConsoleActive)
             {
                 m_bigValueDisplay.InitForRom("A00");
@@ -345,6 +369,19 @@ namespace DisplayControl
 
         private void SwitchToConsoleMode()
         {
+            if (!m_lcdConsoleActive)
+            {
+                LoadEncoding();
+                m_lcdConsole.Clear();
+                m_lcdConsoleActive = true;
+            }
+        }
+
+        private void SwitchToConsoleMode(SensorValueSource upper, SensorValueSource lower)
+        {
+            m_activeValueSourceSingle = null;
+            m_activeValueSourceUpper = upper;
+            m_activeValueSourceLower = lower;
             if (!m_lcdConsoleActive)
             {
                 LoadEncoding();
@@ -385,7 +422,7 @@ namespace DisplayControl
                 }
             }
 
-            if (source.ValueDescription == "Temperature BMP280")
+            if (source.ValueDescription == "Temperature")
             {
                 _nmeaSensor.SendTemperature(Temperature.FromCelsius((double)source.GenericValue));
             }
@@ -502,28 +539,79 @@ namespace DisplayControl
         {
             private readonly DataContainer _control;
             private readonly LcdConsole _console;
-            private readonly List<(string, Action)> _options;
+            private readonly List<(string, SensorValueSource, Func<SensorValueSource, MenuOptionResult>)> _options;
 
             private string _title;
-            private int _activeItem = 0;
+            private int _activeItem;
+            private bool _subMenuActive;
 
             public MenuController(DataContainer control)
             {
                 _control = control;
                 _console = control.m_lcdConsole;
                 _title = string.Empty;
-                _options = new List<(string, Action)>();
+                _subMenuActive = false;
+                _activeItem = 0;
+                _options = new List<(string, SensorValueSource, Func<SensorValueSource, MenuOptionResult>)>();
             }
 
-            public void ButtonPressed(DisplayButton button)
+            public bool ButtonPressed(DisplayButton button)
             {
+                switch (button)
+                {
+                    case DisplayButton.Next:
+                        _activeItem = (_activeItem + 1) % _options.Count;
+                        DrawMenuOptions();
+                        break;
+                    case DisplayButton.Previous:
+                        if (_activeItem == 0)
+                        {
+                            _activeItem = _options.Count - 1;
+                        }
+                        else
+                        {
+                            _activeItem = (_activeItem - 1);
+                        }
+                        DrawMenuOptions();
+                        break;
+                    case DisplayButton.Back:
+                        if (_subMenuActive)
+                        {
+                            _subMenuActive = false;
+                            ShowMainMenu();
+                            return true;
+                        }
+                        return false;
+                    case DisplayButton.Enter:
+                    {
+                        var action = _options[_activeItem].Item3;
+                        MenuOptionResult mr = action.Invoke(_options[_activeItem].Item2);
+                        if (mr == MenuOptionResult.Exit)
+                        {
+                            _subMenuActive = false;
+                            return false;
+                        }
+                        else if (mr == MenuOptionResult.TextUpdate)
+                        {
+                            DrawMenuOptions();
+                        }
+                        else if (mr == MenuOptionResult.SubMenu)
+                        {
+                            _subMenuActive = true;
+                            _activeItem = 0;
+                            DrawMenuOptions();
+                        }
+                        break;
+                    }
+                }
 
+                return true;
             }
 
             private void SetTitle(string title)
             {
                 _title = "== " + title + " ==";
-                _console.ReplaceLine(0, title);
+                _console.ReplaceLine(0, _title);
             }
 
             public void ShowMainMenu()
@@ -531,37 +619,83 @@ namespace DisplayControl
                 _console.Clear();
                 _options.Clear();
                 SetTitle("Main Menu");
-                AddOption("Values to display", () => ShowValueSelection(true));
-                AddOption("Big value to display", () => ShowValueSelection(false));
-                AddOption("Silence alarm", () => SilenceAlarm());
+                AddOption("Values to display", null, x => ShowValueSelection(true));
+                AddOption("Big value to display", null, x => ShowValueSelection(false));
+                AddOption("Silence alarm", null, x => SilenceAlarm());
                 _activeItem = 0;
                 DrawMenuOptions();
             }
 
             private void DrawMenuOptions()
             {
-                for (int i = _activeItem - 1; i < _activeItem + 1; i++)
+                var previousOption = _activeItem == 0 ? (null, null, null) : _options[_activeItem - 1];
+                var currentOption = _options[_activeItem];
+                var nextOption = _activeItem == _options.Count - 1 ? (null, null, null) : _options[_activeItem + 1];
+                if (previousOption.Item1 == null)
                 {
-
+                    _console.ReplaceLine(1, string.Empty);
                 }
+                else
+                {
+                    _console.ReplaceLine(1, "  " + previousOption.Item1);
+                }
+
+                _console.ReplaceLine(2, "> " + currentOption.Item1);
+
+                if (nextOption.Item1 == null)
+                {
+                    _console.ReplaceLine(3, string.Empty);
+                }
+                else
+                {
+                    _console.ReplaceLine(3, "  " + nextOption.Item1);
+                }
+
             }
 
-            private void ShowValueSelection(bool twoValues)
+            private MenuOptionResult ShowValueSelection(bool twoValues)
             {
                 if (twoValues)
                 {
                     SetTitle("Select upper value:");
+                    _options.Clear();
+                    var sources = _control.SensorValueSources;
+                    foreach(var source in sources)
+                    {
+                        AddOption(source.ValueDescription, source, (s) =>
+                        {
+                            _control.SwitchToConsoleMode(s, null);
+                            return MenuOptionResult.Exit;
+                        });
+                    }
                 }
+                else
+                {
+                    SetTitle("Select big value:");
+                    _options.Clear();
+                    var sources = _control.SensorValueSources;
+                    foreach (var source in sources)
+                    {
+                        AddOption(source.ValueDescription, source, (s) =>
+                        {
+                            _control.SwitchToBigMode(source);
+                            return MenuOptionResult.Exit;
+                        });
+                    }
+                }
+
+                return MenuOptionResult.SubMenu;
             }
 
-            private void SilenceAlarm()
+            private MenuOptionResult SilenceAlarm()
             {
                 _control._extendedDisplayController.SoundAlarm(false);
+                return MenuOptionResult.TextUpdate;
             }
 
-            private void AddOption(string subMenuName, Action operation)
+            private void AddOption(string subMenuName, SensorValueSource source, Func<SensorValueSource, MenuOptionResult> operation)
             {
-                _options.Add((subMenuName, operation));
+                _options.Add((subMenuName, source, operation));
             }
         }
     }

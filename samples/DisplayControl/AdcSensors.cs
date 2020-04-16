@@ -22,6 +22,7 @@ namespace DisplayControl
         private VoltageWithLimits _button2;
         private VoltageWithLimits _button3;
         private VoltageWithLimits _button4;
+        private VoltageWithLimits _voltage5V;
 
         public AdcSensors()
         {
@@ -42,6 +43,7 @@ namespace DisplayControl
 
             _voltage3_3V = new VoltageWithLimits("3.3V Supply Voltage", 3.2, 3.4);
             _currentSunBrightness = new ObservableValue<double>("Sunlight strength", "V", 0.0);
+            _voltage5V = new VoltageWithLimits("5V Supply Voltage", 4.8, 5.2);
             _button1 = new VoltageWithLimits("Button 1 voltage", -0.1, 2.0);
             _button1.LimitTriggered += LimitTriggered;
             _button1.SuppressWarnings = true;
@@ -57,6 +59,7 @@ namespace DisplayControl
 
             _sensorValueSources.Add(_voltage3_3V);
             _sensorValueSources.Add(_currentSunBrightness);
+            _sensorValueSources.Add(_voltage5V);
             _sensorValueSources.Add(_button1);
             _sensorValueSources.Add(_button2);
             _sensorValueSources.Add(_button3);
@@ -129,17 +132,24 @@ namespace DisplayControl
         /// </summary>
         public void PollThread()
         {
+            int count = 0;
             while (!m_cancellationTokenSource.IsCancellationRequested)
             {
-                _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
-                // Todo: Voltage is not really the correct unit for this.
-                _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) - m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2);
+                if (count % 5 == 0)
+                {
+                    // Do this only every second
+                    _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
+                    // Todo: Voltage is not really the correct unit for this.
+                    _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) -
+                                                  m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2);
+                }
 
                 _button1.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
                 _button2.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
                 _button3.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
                 _button4.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
-                m_cancellationTokenSource.Token.WaitHandle.WaitOne(500);
+                m_cancellationTokenSource.Token.WaitHandle.WaitOne(200);
+                count++;
             }
         }
 
