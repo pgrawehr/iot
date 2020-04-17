@@ -73,7 +73,7 @@ namespace DisplayControl
             for (int i = 0; i < steps; i++)
             {
                 Write(PinUsage.DisplayBrightnessChipSelect, PinValue.Low);
-                Write(PinUsage.DisplayBrightnessDirection, PinValue.High);
+                Write(PinUsage.DisplayBrightnessDirection, PinValue.Low);
                 Write(PinUsage.DisplayBrightnessStep, PinValue.Low);
                 Thread.SpinWait(100); // at least 1us
                 Write(PinUsage.DisplayBrightnessStep, PinValue.High);
@@ -86,7 +86,7 @@ namespace DisplayControl
             for (int i = 0; i < steps; i++)
             {
                 Write(PinUsage.DisplayBrightnessChipSelect, PinValue.Low);
-                Write(PinUsage.DisplayBrightnessDirection, PinValue.Low);
+                Write(PinUsage.DisplayBrightnessDirection, PinValue.High);
                 Write(PinUsage.DisplayBrightnessStep, PinValue.Low);
                 Thread.SpinWait(100); // at least 1us
                 Write(PinUsage.DisplayBrightnessStep, PinValue.High);

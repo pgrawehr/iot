@@ -154,6 +154,7 @@ namespace DisplayControl
             m_lcdConsole = new LcdConsole(m_characterLcd, "A00", false);
             LoadEncoding();
             m_lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
+            m_lcdConsole.Clear();
             m_lcdConsole.WriteLine("== Startup ==");
             m_lcdConsoleActive = true;
             _menuController = new MenuController(this);
@@ -250,8 +251,11 @@ namespace DisplayControl
             {
                 if (_menuController.ButtonPressed(button) == false)
                 {
-                    // Left the menu
+                    // The user has left the menu
                     _menuMode = false;
+                    // Make sure the display is blank
+                    SwitchToConsoleMode();
+                    m_lcdConsole.Clear();
                     if (ActiveValueSourceSingle != null)
                     {
                         OnSensorValueChanged(ActiveValueSourceSingle, null);
@@ -619,8 +623,10 @@ namespace DisplayControl
                 _console.Clear();
                 _options.Clear();
                 SetTitle("Main Menu");
-                AddOption("Values to display", null, x => ShowValueSelection(true));
-                AddOption("Big value to display", null, x => ShowValueSelection(false));
+                AddOption("Upper value...", null, x => ShowValueSelection(true));
+                AddOption("Lower value...", null, x => ShowValueSelection(false));
+                AddOption("Big value...", null, x => ShowBigValueSelection());
+                AddOption("Display Brightness", null, x => ShowBrightnessMenu());
                 AddOption("Silence alarm", null, x => SilenceAlarm());
                 _activeItem = 0;
                 DrawMenuOptions();
@@ -653,36 +659,72 @@ namespace DisplayControl
 
             }
 
-            private MenuOptionResult ShowValueSelection(bool twoValues)
+            private MenuOptionResult ShowValueSelection(bool upper)
             {
-                if (twoValues)
+                if (upper)
                 {
-                    SetTitle("Select upper value:");
+                    SetTitle("Select upper value");
                     _options.Clear();
                     var sources = _control.SensorValueSources;
                     foreach(var source in sources)
                     {
                         AddOption(source.ValueDescription, source, (s) =>
                         {
-                            _control.SwitchToConsoleMode(s, null);
+                            _control.SwitchToConsoleMode(s, _control.ActiveValueSourceLower);
                             return MenuOptionResult.Exit;
                         });
                     }
                 }
                 else
                 {
-                    SetTitle("Select big value:");
+                    SetTitle("Select lower value");
                     _options.Clear();
                     var sources = _control.SensorValueSources;
                     foreach (var source in sources)
                     {
                         AddOption(source.ValueDescription, source, (s) =>
                         {
-                            _control.SwitchToBigMode(source);
+                            _control.SwitchToConsoleMode(_control.ActiveValueSourceUpper, s);
                             return MenuOptionResult.Exit;
                         });
                     }
                 }
+
+                return MenuOptionResult.SubMenu;
+            }
+
+            private MenuOptionResult ShowBigValueSelection()
+            {
+                SetTitle("Select big value:");
+                _options.Clear();
+                var sources = _control.SensorValueSources;
+                foreach (var source in sources)
+                {
+                    AddOption(source.ValueDescription, source, (s) =>
+                    {
+                        _control.SwitchToBigMode(source);
+                        return MenuOptionResult.Exit;
+                    });
+                }
+
+                return MenuOptionResult.SubMenu;
+            }
+
+            private MenuOptionResult ShowBrightnessMenu()
+            {
+                SetTitle("Display Backlight");
+                _options.Clear();
+                AddOption("Increase Brightness", null, x =>
+                {
+                    _control._extendedDisplayController.IncreaseBrightness(10);
+                    return MenuOptionResult.TextUpdate;
+                });
+
+                AddOption("Decrease Brightness", null, x =>
+                {
+                    _control._extendedDisplayController.DecreaseBrightness(10);
+                    return MenuOptionResult.TextUpdate;
+                });
 
                 return MenuOptionResult.SubMenu;
             }
