@@ -715,7 +715,12 @@ namespace Iot.Device.Arduino
                     // Bytes 1 & 2: Slave address (the MSB is always 0, since we're only supporting 7-bit addresses)
                     // Bytes 3 & 4: Register. Often 0, and probably not needed
                     // Anything after that: reply data, with 2 bytes for each byte in the data stream
-                    ReassembleByteString(_lastResponse, 5, _lastResponse.Count - 5, replyData);
+                    int bytesReceived = ReassembleByteString(_lastResponse, 5, _lastResponse.Count - 5, replyData);
+
+                    if (replyData.Length != bytesReceived)
+                    {
+                        throw new I2cCommunicationException($"Expected {replyData.Length} bytes, got only {bytesReceived}");
+                    }
                 }
             }
         }
@@ -793,7 +798,11 @@ namespace Iot.Device.Arduino
             }
         }
 
-        private void ReassembleByteString(IList<byte> byteStream, int startIndex, int length, Span<byte> reply)
+        /// <summary>
+        /// Firmata uses 2 bytes to encode 8-bit data, because byte values with the top bit set
+        /// are reserved for commands. This decodes such data chunks.
+        /// </summary>
+        private int ReassembleByteString(IList<byte> byteStream, int startIndex, int length, Span<byte> reply)
         {
             int num;
             if (reply.Length < length / 2)
@@ -807,6 +816,7 @@ namespace Iot.Device.Arduino
                                     byteStream[startIndex + (num * 2) + 1] << 7);
             }
 
+            return length / 2;
         }
 
         private void Dispose(bool disposing)
