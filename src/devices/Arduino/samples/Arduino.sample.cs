@@ -8,9 +8,12 @@ using System.Device.Gpio.Drivers;
 using System.Device.I2c;
 using System.Device.Spi;
 using System.IO.Ports;
+using System.Text;
 using System.Threading;
+using Iot.Device.Adc;
 using Iot.Device.Arduino;
 using Iot.Device.Bmxx80;
+using Iot.Device.Bmxx80.PowerMode;
 
 namespace Ft4222.Samples
 {
@@ -87,6 +90,8 @@ namespace Ft4222.Samples
             Console.WriteLine(" 6 Run PWM test with a simple led dimming on GPIO6 port");
             Console.WriteLine(" 7 Dim the LED according to the input on A1");
             Console.WriteLine(" 8 Read analog channel as fast as possible");
+            Console.WriteLine(" 9 Run SPI tests with an MCP3008");
+            Console.WriteLine(" 0 Detect all devices on the I2C bus");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
@@ -116,6 +121,12 @@ namespace Ft4222.Samples
                     break;
                 case '8':
                     TestAnalogCallback(board);
+                    break;
+                case '9':
+                    TestSpi(board);
+                    break;
+                case '0':
+                    ScanDeviceAddressesOnI2cBus(board);
                     break;
                 case 'x':
                 case 'X':
@@ -163,6 +174,8 @@ namespace Ft4222.Samples
             var device = board.CreateI2cDevice(new I2cConnectionSettings(0, Bmp280.DefaultI2cAddress));
 
             var bmp = new Bmp280(device);
+            bmp.StandbyTime = StandbyTime.Ms250;
+            bmp.SetPowerMode(Bmx280PowerMode.Normal);
             Console.WriteLine("Device open");
             while (!Console.KeyAvailable)
             {
@@ -176,6 +189,49 @@ namespace Ft4222.Samples
             device.Dispose();
             Console.ReadKey();
             Console.WriteLine();
+        }
+
+        private static void ScanDeviceAddressesOnI2cBus(ArduinoBoard board)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+
+            stringBuilder.Append("     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f");
+            stringBuilder.Append(Environment.NewLine);
+
+            for (int startingRowAddress = 0; startingRowAddress < 128; startingRowAddress += 16)
+            {
+                stringBuilder.Append($"{startingRowAddress:x2}: ");  // Beginning of row.
+
+                for (int rowAddress = 0; rowAddress < 16; rowAddress++)
+                {
+                    int deviceAddress = startingRowAddress + rowAddress;
+
+                    // Skip the unwanted addresses.
+                    if (deviceAddress < 0x3 || deviceAddress > 0x77)
+                    {
+                        stringBuilder.Append("   ");
+                        continue;
+                    }
+
+                    var connectionSettings = new I2cConnectionSettings(0, deviceAddress);
+                    using (var i2cDevice = board.CreateI2cDevice(connectionSettings))
+                    {
+                        try
+                        {
+                            i2cDevice.ReadByte();  // Only checking if device is present.
+                            stringBuilder.Append($"{deviceAddress:x2} ");
+                        }
+                        catch
+                        {
+                            stringBuilder.Append("-- ");
+                        }
+                    }
+                }
+
+                stringBuilder.Append(Environment.NewLine);
+            }
+
+            Console.WriteLine(stringBuilder.ToString());
         }
 
         public static void TestGpio(ArduinoBoard board)
@@ -358,6 +414,7 @@ namespace Ft4222.Samples
                 Thread.Sleep(100);
             }
 
+            Console.ReadKey();
             gpioController.UnregisterCallbackForPinValueChangedEvent(Gpio2, MyCallback);
             gpioController.Dispose();
         }
@@ -365,6 +422,31 @@ namespace Ft4222.Samples
         private static void MyCallback(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
         {
             Console.WriteLine($"Event on GPIO {pinValueChangedEventArgs.PinNumber}, event type: {pinValueChangedEventArgs.ChangeType}");
+        }
+
+        public static void TestSpi(ArduinoBoard board)
+        {
+            const double vssValue = 5; // Set this to the supply voltage of the arduino. Most boards have 5V, some newer ones run at 3.3V.
+            SpiConnectionSettings settings = new SpiConnectionSettings(0, 10);
+            using (var spi = board.CreateSpiDevice(settings))
+            using (Mcp3008 mcp = new Mcp3008(spi))
+            {
+                Console.WriteLine("SPI Device open");
+                while (!Console.KeyAvailable)
+                {
+                    double vdd = mcp.Read(5);
+                    double vss = mcp.Read(6);
+                    double middle = mcp.Read(7);
+                    Console.WriteLine($"Raw values: VSS {vss} VDD {vdd} Average {middle}");
+                    vdd = vssValue * vdd / 1024;
+                    vss = vssValue * vss / 1024;
+                    middle = vssValue * middle / 1024;
+                    Console.WriteLine($"Converted values: VSS {vss:F2}V, VDD {vdd:F2}V, Average {middle:F2}V");
+                    Thread.Sleep(200);
+                }
+            }
+
+            Console.ReadKey();
         }
     }
 }

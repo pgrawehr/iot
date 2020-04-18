@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bmxx80", "..\Bmxx80\Bmxx80.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SoftwareSpi", "..\SoftwareSpi\SoftwareSpi.csproj", "{C3481ACB-8599-4865-85D6-51C39E17F0D9}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mcp3xxx", "..\Mcp3xxx\Mcp3xxx.csproj", "{26911D2A-E303-4846-96A1-5ABC92F54445}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,7 +45,10 @@ Global
 		{C3481ACB-8599-4865-85D6-51C39E17F0D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C3481ACB-8599-4865-85D6-51C39E17F0D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C3481ACB-8599-4865-85D6-51C39E17F0D9}.Release|Any CPU.Build.0 = Release|Any CPU
-
+		{26911D2A-E303-4846-96A1-5ABC92F54445}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26911D2A-E303-4846-96A1-5ABC92F54445}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26911D2A-E303-4846-96A1-5ABC92F54445}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26911D2A-E303-4846-96A1-5ABC92F54445}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
