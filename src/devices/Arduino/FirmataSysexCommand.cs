@@ -8,6 +8,7 @@ namespace Iot.Device.Arduino
     public enum FirmataSysexCommand
     {
         ENCODER_DATA = 0x61,
+        SPI_DATA = 0x68,
         SERVO_CONFIG = 0x70,
         STRING_DATA = 0x71,
         STEPPER_DATA = 0x72,

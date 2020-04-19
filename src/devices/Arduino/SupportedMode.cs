@@ -64,6 +64,12 @@
         /// <summary>
         /// The pin can be set to input-pullup.
         /// </summary>
-        INPUT_PULLUP = (0x0B)
+        INPUT_PULLUP = (0x0B),
+
+        /// <summary>
+        /// The pin can be used for SPI transfer (Clock, MOSI, MISO and default CS pin)
+        /// For most Arduinos, MOSI=11, MISO=12 and Clock = 13. The default CS pin is 10.
+        /// </summary>
+        SPI = 0x0C
     }
 }

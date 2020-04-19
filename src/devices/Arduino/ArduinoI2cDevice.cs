@@ -42,6 +42,8 @@ namespace Iot.Device.Arduino
                 _board.Firmata.SetPinMode(supportedPinConfiguration.Pin, SupportedMode.I2C);
             }
 
+            _board.Firmata.SendI2cConfigCommand();
+
             // Sometimes, the very first I2C command fails (nothing happens), so try reading a byte
             int retries = 3;
             while (retries-- > 0)

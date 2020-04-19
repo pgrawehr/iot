@@ -26,12 +26,17 @@ namespace Iot.Device.Arduino
         private Stream _serialPortStream;
         private FirmataDevice _firmata;
         private Version _firmwareVersion;
+        private Version _protocolVersion;
         private string _firmwareName;
         private List<SupportedPinConfiguration> _supportedPinConfigurations;
+
+        // Counts how many spi devices are attached, to make sure we enable/disable the bus only when no devices are attached
+        private int _spiEnabled;
 
         public ArduinoBoard(Stream serialPortStream)
         {
             _serialPortStream = serialPortStream;
+            _spiEnabled = 0;
         }
 
         public event Action<string, Exception> LogMessages;
@@ -41,13 +46,13 @@ namespace Iot.Device.Arduino
             _firmata = new FirmataDevice();
             _firmata.Open(_serialPortStream);
             _firmata.OnError += FirmataOnError;
-            var protocolVersion = _firmata.QueryFirmataVersion();
-            if (protocolVersion != _firmata.QuerySupportedFirmataVersion())
+            _protocolVersion = _firmata.QueryFirmataVersion();
+            if (_protocolVersion < _firmata.QuerySupportedFirmataVersion())
             {
-                throw new NotSupportedException($"Firmata version on board is {protocolVersion}. Expected {_firmata.QuerySupportedFirmataVersion()}. They must be equal.");
+                throw new NotSupportedException($"Firmata version on board is {_protocolVersion}. Expected {_firmata.QuerySupportedFirmataVersion()}. They must be equal.");
             }
 
-            Log($"Firmata version on board is {protocolVersion}.");
+            Log($"Firmata version on board is {_protocolVersion}.");
 
             _firmwareVersion = _firmata.QueryFirmwareVersion(out _firmwareName);
 
@@ -127,11 +132,12 @@ namespace Iot.Device.Arduino
         /// <returns></returns>
         public SpiDevice CreateSpiDevice(SpiConnectionSettings settings)
         {
-            int mosi = 11;
-            int miso = 12;
-            int sck = 13;
-            return new SoftwareSpi(sck, miso, mosi, settings.ChipSelectLine, settings,
-                CreateGpioController(PinNumberingScheme.Board));
+            if (settings.BusId != 0)
+            {
+                throw new NotSupportedException("Only Bus Id 0 is supported");
+            }
+
+            return new ArduinoSpiDevice(this, settings);
         }
 
         public PwmChannel CreatePwmChannel(
@@ -172,6 +178,24 @@ namespace Iot.Device.Arduino
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        internal void EnableSpi()
+        {
+            _spiEnabled++;
+            if (_spiEnabled == 1)
+            {
+                _firmata.EnableSpi();
+            }
+        }
+
+        internal void DisableSpi()
+        {
+            _spiEnabled--;
+            if (_spiEnabled == 0)
+            {
+                _firmata.DisableSpi();
+            }
         }
     }
 }

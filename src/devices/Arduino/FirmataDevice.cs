@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.Gpio.I2c;
+using System.Device.Spi;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,13 +21,15 @@ namespace Iot.Device.Arduino
     internal sealed class FirmataDevice : IDisposable
     {
         private const byte FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
-        private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 6;
+        private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 5; // 2.5 works, but 2.6 is recommended
         private const int FIRMATA_INIT_TIMEOUT_SECONDS = 4;
         private const int MESSAGE_TIMEOUT_MILLIS = 500;
         private byte _firmwareVersionMajor;
         private byte _firmwareVersionMinor;
         private byte _actualFirmataProtocolMajorVersion;
         private byte _actualFirmataProtocolMinorVersion;
+
+        private int _lastRequestId;
 
         private string _firmwareName;
         private Stream _firmataStream;
@@ -64,6 +67,7 @@ namespace Iot.Device.Arduino
             _lastAnalogValues = new Dictionary<int, uint>();
             _lastAnalogValueLock = new object();
             _dataQueue = new Queue<byte>();
+            _lastRequestId = 1;
         }
 
         internal List<SupportedPinConfiguration> PinConfigurations
@@ -433,6 +437,11 @@ namespace Iot.Device.Arduino
                             _dataReceived.Set();
                             break;
 
+                        case FirmataSysexCommand.SPI_DATA:
+                            _lastResponse = raw_data;
+                            _dataReceived.Set();
+                            break;
+
                         case FirmataSysexCommand.PIN_STATE_RESPONSE:
                             _lastResponse = raw_data; // the instance is constant, so we can just remember the pointer
                             _dataReceived.Set();
@@ -665,6 +674,20 @@ namespace Iot.Device.Arduino
             }
         }
 
+        public void SendI2cConfigCommand()
+        {
+            lock (_synchronisationLock)
+            {
+                // The command is mandatory, even if the argument is typically ignored
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.I2C_CONFIG);
+                _firmataStream.WriteByte(0);
+                _firmataStream.WriteByte(0);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
+            }
+        }
+
         public void WriteReadI2cData(int slaveAddress,  ReadOnlySpan<byte> writeData, Span<byte> replyData)
         {
             // See documentation at https://github.com/firmata/protocol/blob/master/i2c.md
@@ -766,6 +789,65 @@ namespace Iot.Device.Arduino
             }
         }
 
+        public void EnableSpi()
+        {
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SPI_DATA);
+                _firmataStream.WriteByte((byte)FirmataSpiCommand.SPI_BEGIN);
+                _firmataStream.WriteByte((byte)0);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+            }
+        }
+
+        public void DisableSpi()
+        {
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SPI_DATA);
+                _firmataStream.WriteByte((byte)FirmataSpiCommand.SPI_END);
+                _firmataStream.WriteByte((byte)0);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+            }
+        }
+
+        public void SpiTransfer(int csPin, ReadOnlySpan<byte> writeBytes, Span<byte> readBytes)
+        {
+            lock (_synchronisationLock)
+            {
+                _dataReceived.Reset();
+                byte requestId = (byte)(_lastRequestId++ & 0x7F);
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SPI_DATA);
+                _firmataStream.WriteByte((byte)FirmataSpiCommand.SPI_TRANSFER);
+                _firmataStream.WriteByte((byte)(csPin << 3)); // Device ID / channel
+                _firmataStream.WriteByte(requestId);
+                _firmataStream.WriteByte(1); // Deselect CS after transfer (yes)
+                _firmataStream.WriteByte((byte)writeBytes.Length);
+                SendValuesAsTwo7bitBytes(writeBytes);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(100));
+                if (result == false)
+                {
+                    throw new I2cCommunicationException("Timeout waiting for device reply");
+                }
+
+                if (_lastResponse[0] != (byte)FirmataSysexCommand.SPI_DATA || _lastResponse[1] != (byte)FirmataSpiCommand.SPI_REPLY)
+                {
+                    throw new I2cCommunicationException("Firmata protocol error: received incorrect query response");
+                }
+
+                if (_lastResponse[3] != (byte)requestId)
+                {
+                    throw new I2cCommunicationException($"Firmata protocol sequence error.");
+                }
+
+                ReassembleByteString(_lastResponse, 5, _lastResponse[4] * 2, readBytes);
+            }
+        }
+
         public void SetSamplingInterval(TimeSpan interval)
         {
             int millis = (int)interval.TotalMilliseconds;
@@ -776,6 +858,36 @@ namespace Iot.Device.Arduino
                 int value = millis;
                 _firmataStream.WriteByte((byte)(value & (uint)sbyte.MaxValue)); // lower 7 bits
                 _firmataStream.WriteByte((byte)(value >> 7 & sbyte.MaxValue)); // top bits
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
+            }
+        }
+
+        public void ConfigureSpiDevice(SpiConnectionSettings connectionSettings)
+        {
+            if (connectionSettings.ChipSelectLine >= 15)
+            {
+                // this is currently because we derive the device id from the CS line, and that one has only 4 bits
+                throw new NotSupportedException("Only pins <=15 are allowed as CS line");
+            }
+
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SPI_DATA);
+                _firmataStream.WriteByte((byte)FirmataSpiCommand.SPI_DEVICE_CONFIG);
+                byte deviceIdChannel = (byte)(connectionSettings.ChipSelectLine << 3);
+                _firmataStream.WriteByte((byte)(deviceIdChannel));
+                _firmataStream.WriteByte((byte)1);
+                int clockSpeed = 1_000_000; // Hz
+                _firmataStream.WriteByte((byte)(clockSpeed & 0x7F));
+                _firmataStream.WriteByte((byte)((clockSpeed >> 7) & 0x7F));
+                _firmataStream.WriteByte((byte)((clockSpeed >> 15) & 0x7F));
+                _firmataStream.WriteByte((byte)((clockSpeed >> 22) & 0x7F));
+                _firmataStream.WriteByte((byte)((clockSpeed >> 29) & 0x7F));
+                _firmataStream.WriteByte(0); // Word size (default = 8)
+                _firmataStream.WriteByte(1); // Default CS pin control (enable)
+                _firmataStream.WriteByte((byte)(connectionSettings.ChipSelectLine));
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
             }
