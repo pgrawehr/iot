@@ -62,11 +62,6 @@ namespace System.Device.Gpio.Drivers
             }
         }
 
-        private bool IsPinOpen(int pin)
-        {
-            return _sysFSModes.ContainsKey(pin);
-        }
-
         /// <summary>
         /// Adds a handler for a pin value changed event.
         /// </summary>
@@ -159,7 +154,7 @@ namespace System.Device.Gpio.Drivers
         /// <param name="callback">Delegate that defines the structure for callbacks when a pin value changed event occurs.</param>
         protected internal override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
         {
-            ValidatePinIsInput(pinNumber);
+            ValidatePinNumber(pinNumber);
 
             _interruptDriver.OpenPin(pinNumber);
             _pinModes[pinNumber].InUseByInterruptDriver = true;
@@ -334,7 +329,7 @@ namespace System.Device.Gpio.Drivers
         /// <returns>A structure that contains the result of the waiting operation.</returns>
         protected internal override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            ValidatePinIsInput(pinNumber);
+            ValidatePinNumber(pinNumber);
 
             _interruptDriver.OpenPin(pinNumber);
             _pinModes[pinNumber].InUseByInterruptDriver = true;
@@ -351,7 +346,7 @@ namespace System.Device.Gpio.Drivers
         /// <returns>A task representing the operation of getting the structure that contains the result of the waiting operation</returns>
         protected internal override ValueTask<WaitForEventResult> WaitForEventAsync(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            ValidatePinIsInput(pinNumber);
+            ValidatePinNumber(pinNumber);
 
             _interruptDriver.OpenPin(pinNumber);
             _pinModes[pinNumber].InUseByInterruptDriver = true;

@@ -31,11 +31,6 @@ namespace System.Device.Gpio.Drivers
         private Thread _eventDetectionThread;
         private int _pinsToDetectEventsCount;
 
-        static SysFsDriver()
-        {
-            s_pinOffset = ReadOffset();
-        }
-
         private static int ReadOffset()
         {
             IEnumerable<string> fileNames = Directory.EnumerateFileSystemEntries(GpioBasePath);
@@ -466,7 +461,7 @@ namespace System.Device.Gpio.Drivers
 
                     // This entire section is probably not necessary, but this seems to be hard to validate.
                     // See https://github.com/dotnet/iot/pull/914#discussion_r389924106 and issue #1024.
-                    /* if (valueFileDescriptor == -1)
+                    if (valueFileDescriptor == -1)
                     {
                         // valueFileDescriptor will be -1 when using the callback eventing. For WaitForEvent, the value will be set.
                         valueFileDescriptor = _devicePins[pinNumber].FileDescriptor;
@@ -482,7 +477,7 @@ namespace System.Device.Gpio.Drivers
                     if (readResult != 1)
                     {
                         throw new IOException("Error while trying to read value file.");
-                    }*/
+                    }
 
                     return true;
                 }
@@ -615,7 +610,6 @@ namespace System.Device.Gpio.Drivers
                 {
                     IsBackground = true
                 };
-                _eventDetectionThread.Priority = ThreadPriority.Highest;
                 _eventDetectionThread.Start();
             }
         }
