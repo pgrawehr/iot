@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Device.I2c;
+using System.IO;
 using System.Text;
 using System.Threading;
 
@@ -138,10 +139,17 @@ namespace DisplayControl
                 if (count % 5 == 0)
                 {
                     // Do this only every second
-                    _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
-                    // Todo: Voltage is not really the correct unit for this.
-                    _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) -
-                                                  m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2);
+                    try
+                    {
+                        _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
+                        // Todo: Voltage is not really the correct unit for this.
+                        _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) -
+                                                      m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2);
+                    }
+                    catch (IOException x)
+                    {
+                        Console.WriteLine($"Local ADC communication error: {x.Message}");
+                    }
                 }
 
                 _button1.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
