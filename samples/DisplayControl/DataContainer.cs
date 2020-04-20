@@ -42,6 +42,7 @@ namespace DisplayControl
         private int _numberOfImuSentencesSent = 0;
         private bool _menuMode;
         private MenuController _menuController;
+        private Bmp680Environment _weatherSensor;
 
         private enum MenuOptionResult
         {
@@ -176,21 +177,26 @@ namespace DisplayControl
             List<SensorValueSource> allSources = new List<SensorValueSource>();
             allSources.AddRange(m_adcSensors.SensorValueSources);
 
-            WriteLineToConsoleAndDisplay("DHT...");
-            m_dhtSensors = new DhtSensors();
-            m_dhtSensors.Init(Controller);
+            //WriteLineToConsoleAndDisplay("DHT...");
+            //m_dhtSensors = new DhtSensors();
+            //m_dhtSensors.Init(Controller);
 
-            allSources.AddRange(m_dhtSensors.SensorValueSources);
+            //allSources.AddRange(m_dhtSensors.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("CPU...");
             m_systemSensors = new SystemSensors();
             m_systemSensors.Init(Controller);
             allSources.AddRange(m_systemSensors.SensorValueSources);
 
-            WriteLineToConsoleAndDisplay("Environment...");
+            WriteLineToConsoleAndDisplay("Cockpit Environment...");
             m_pressureSensor = new PressureSensor();
             m_pressureSensor.Init(Controller);
             allSources.AddRange(m_pressureSensor.SensorValueSources);
+
+            WriteLineToConsoleAndDisplay("Weather...");
+            _weatherSensor = new Bmp680Environment();
+            _weatherSensor.Init(Controller);
+            allSources.AddRange(_weatherSensor.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("IMU...");
             _imuSensor = new ImuSensor();
@@ -426,15 +432,27 @@ namespace DisplayControl
                 }
             }
 
-            if (source.ValueDescription == "Temperature")
+            if (source is PositionValue pos)
+            {
+                _weatherSensor.Altitude = pos.Value.EllipsoidalHeight;
+            }
+
+
+            if (source.ValueDescription == Bmp680Environment.MAIN_TEMP_SENSOR)
             {
                 _nmeaSensor.SendTemperature(Temperature.FromCelsius((double)source.GenericValue));
             }
 
-            if (source.ValueDescription == "Pressure")
+            if (source.ValueDescription == Bmp680Environment.MAIN_PRESSURE_SENSOR)
             {
                 _nmeaSensor.SendPressure(Pressure.FromHectopascal((double)source.GenericValue));
             }
+
+            if (source.ValueDescription == Bmp680Environment.MAIN_HUMIDITY_SENSOR)
+            {
+                _nmeaSensor.SendHumidity((double)source.GenericValue);
+            }
+
         }
 
         public void DisplayBigValue(SensorValueSource valueSource)
@@ -516,11 +534,14 @@ namespace DisplayControl
             }
             m_adcSensors.Dispose();
             m_adcSensors = null;
-            m_dhtSensors.Dispose();
+            m_dhtSensors?.Dispose();
             m_dhtSensors = null;
 
             m_pressureSensor?.Dispose();
             m_pressureSensor = null;
+
+            _weatherSensor?.Dispose();
+            _weatherSensor = null;
 
             _imuSensor.Dispose();
             _imuSensor = null;

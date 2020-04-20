@@ -105,7 +105,7 @@ namespace DisplayControl
 
         public void SendTemperature(Temperature value)
         {
-            TransducerDataSet ds = new TransducerDataSet("C", value.Celsius, "C", "TEMP_OUTAIR_T");
+            TransducerDataSet ds = new TransducerDataSet("C", value.Celsius, "C", "ENV_OUTAIR_T");
             var msg = new TransducerMeasurement(new[] { ds });
             _parser.SendSentence(msg);
         }
@@ -113,6 +113,13 @@ namespace DisplayControl
         public void SendPressure(Pressure value)
         {
             TransducerDataSet ds = new TransducerDataSet("P", value.Hectopascal / 1000.0, "B", "Barometer");
+            var msg = new TransducerMeasurement(new[] { ds });
+            _parser.SendSentence(msg);
+        }
+
+        public void SendHumidity(double value)
+        {
+            TransducerDataSet ds = new TransducerDataSet("H", value, "P", "ENV_INSIDE_H");
             var msg = new TransducerMeasurement(new[] { ds });
             _parser.SendSentence(msg);
         }

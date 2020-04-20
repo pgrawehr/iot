@@ -71,6 +71,7 @@ namespace Nmea0183.Sentences
         /// - ENV_WATER_T
         /// - ENV_OUTAIR_T, TempAir
         /// - ENV_ATMOS_P, barometer
+        /// - ENV_INSIDE_H
         /// - PTCH, PITCH
         /// - ROLL
         /// - ENGT - Engine temperature
