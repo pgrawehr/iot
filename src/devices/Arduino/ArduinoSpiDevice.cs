@@ -24,22 +24,30 @@ namespace Iot.Device.Arduino
         public override SpiConnectionSettings ConnectionSettings { get; }
         public override byte ReadByte()
         {
-            throw new NotImplementedException();
+            Span<byte> dummy = stackalloc byte[1];
+            Read(dummy);
+            return dummy[0];
         }
 
         public override void Read(Span<byte> buffer)
         {
-            throw new NotImplementedException();
+            ReadOnlySpan<byte> dummy = stackalloc byte[buffer.Length];
+            Board.Firmata.SpiTransfer(ConnectionSettings.ChipSelectLine, dummy, buffer);
         }
 
         public override void WriteByte(byte value)
         {
-            throw new NotImplementedException();
+            ReadOnlySpan<byte> span = stackalloc byte[1]
+            {
+                value
+            };
+
+            Write(span);
         }
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
-            throw new NotImplementedException();
+            Board.Firmata.SpiWrite(ConnectionSettings.ChipSelectLine, buffer);
         }
 
         public override void TransferFullDuplex(ReadOnlySpan<byte> writeBuffer, Span<byte> readBuffer)

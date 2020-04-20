@@ -813,21 +813,20 @@ namespace Iot.Device.Arduino
             }
         }
 
+        public void SpiWrite(int csPin, ReadOnlySpan<byte> writeBytes)
+        {
+            lock (_synchronisationLock)
+            {
+                SpiWrite(csPin, FirmataSpiCommand.SPI_WRITE, writeBytes);
+            }
+        }
+
         public void SpiTransfer(int csPin, ReadOnlySpan<byte> writeBytes, Span<byte> readBytes)
         {
             lock (_synchronisationLock)
             {
                 _dataReceived.Reset();
-                byte requestId = (byte)(_lastRequestId++ & 0x7F);
-                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
-                _firmataStream.WriteByte((byte)FirmataSysexCommand.SPI_DATA);
-                _firmataStream.WriteByte((byte)FirmataSpiCommand.SPI_TRANSFER);
-                _firmataStream.WriteByte((byte)(csPin << 3)); // Device ID / channel
-                _firmataStream.WriteByte(requestId);
-                _firmataStream.WriteByte(1); // Deselect CS after transfer (yes)
-                _firmataStream.WriteByte((byte)writeBytes.Length);
-                SendValuesAsTwo7bitBytes(writeBytes);
-                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                byte requestId = SpiWrite(csPin, FirmataSpiCommand.SPI_TRANSFER, writeBytes);
                 bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(100));
                 if (result == false)
                 {
@@ -846,6 +845,21 @@ namespace Iot.Device.Arduino
 
                 ReassembleByteString(_lastResponse, 5, _lastResponse[4] * 2, readBytes);
             }
+        }
+
+        private byte SpiWrite(int csPin, FirmataSpiCommand command, ReadOnlySpan<byte> writeBytes)
+        {
+            byte requestId = (byte)(_lastRequestId++ & 0x7F);
+            _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+            _firmataStream.WriteByte((byte)FirmataSysexCommand.SPI_DATA);
+            _firmataStream.WriteByte((byte)command);
+            _firmataStream.WriteByte((byte)(csPin << 3)); // Device ID / channel
+            _firmataStream.WriteByte(requestId);
+            _firmataStream.WriteByte(1); // Deselect CS after transfer (yes)
+            _firmataStream.WriteByte((byte)writeBytes.Length);
+            SendValuesAsTwo7bitBytes(writeBytes);
+            _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+            return requestId;
         }
 
         public void SetSamplingInterval(TimeSpan interval)
