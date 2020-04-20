@@ -26,7 +26,9 @@ namespace Iot.Device.Samples
         {
             Console.WriteLine("Hello Bmp280!");
 
-            // bus id on the raspberry pi 3
+            const double stationHeight = 640; // Elevation of the sensor, in meters
+
+            // bus id on the raspberry pi 3 and 4
             const int busId = 1;
             // set this to the current sea level pressure in the area for correct altitude readings
             var defaultSeaLevelPressure = Pressure.MeanSeaLevel;
@@ -60,7 +62,7 @@ namespace Iot.Device.Samples
                     // double altValue = WeatherHelper.CalculateAltitude(preValue, defaultSeaLevelPressure, tempValue) which would be more performant.
                     i2CBmp280.TryReadAltitude(out var altValue);
 
-                    Console.WriteLine($"Altitude: {altValue:0.##}m");
+                    Console.WriteLine($"Calculated Altitude: {altValue:0.##}m");
                     Thread.Sleep(1000);
 
                     // change sampling rate
@@ -84,7 +86,16 @@ namespace Iot.Device.Samples
                     // This time use altitude calculation
                     altValue = WeatherHelper.CalculateAltitude(preValue, defaultSeaLevelPressure, tempValue);
 
-                    Console.WriteLine($"Altitude: {altValue:0.##}m");
+                    Console.WriteLine($"Calculated Altitude: {altValue:0.##}m");
+
+                    // Calculate the barometric (corrected) pressure for the local position.
+                    // Change the stationHeight value above to get a correct reading, but do not be tempted to insert
+                    // the value obtained from the formula above. Since that estimates the altitude based on pressure,
+                    // using that altitude to correct the pressure won't work.
+                    var correctedPressure = WeatherHelper.CalculateBarometricPressure(preValue, tempValue, stationHeight);
+
+                    Console.WriteLine($"Pressure corrected for altitude {stationHeight:F0}m (with average humidity): {correctedPressure.Hectopascal:0.##} hPa");
+
                     Thread.Sleep(5000);
                 }
             }
