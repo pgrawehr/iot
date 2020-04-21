@@ -7,6 +7,7 @@ using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Nmea0183;
 using Nmea0183.Sentences;
+using Units;
 using Xunit;
 
 namespace Nmea0183.Tests
@@ -99,6 +100,41 @@ namespace Nmea0183.Tests
             Assert.Equal("PTCH", pitch.DataName);
         }
 
+        [Fact]
+        public void GgaDecode()
+        {
+            string msg = "$GPGGA,163810,4728.7027,N,00929.9666,E,2,12,0.6,397.4,M,46.8,M,,*4C";
+
+            var inSentence = TalkerSentence.FromSentenceString(msg, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(inSentence);
+            GlobalPositioningSystemFixData nmeaSentence = (GlobalPositioningSystemFixData)inSentence.TryGetTypedValue();
+            var expectedPos = new GeographicPosition(47.478378333333332, 9.4994433333333337, 397.4 + 46.8);
+            Assert.True(expectedPos.EqualPosition(nmeaSentence.Position));
+            Assert.Equal(GpsQuality.DifferentialFix, nmeaSentence.Status);
+            Assert.Equal(12, nmeaSentence.NumberOfSatellites);
+            Assert.Equal(0.6, nmeaSentence.Hdop);
+        }
+
+        [Theory]
+        // These were seen in actual NMEA data streams
+        [InlineData("$GPGGA,163806,,*4E")]
+        // GGA, but without elevation (basically valid, but rather useless if RMC is also provided)
+        [InlineData("$YDGGA,163804.00,4728.7001,N,00929.9640,E,1,10,1.00,,M,,M,,*68")]
+        public void DontCrashOnTheseInvalidSentences(string sentence)
+        {
+            var inSentence = TalkerSentence.FromSentenceString(sentence, out var error);
+            if (error == NmeaError.InvalidChecksum)
+            {
+                Assert.Null(inSentence);
+            }
+            else
+            {
+                Assert.NotNull(inSentence);
+                Assert.True(inSentence.Fields != null);
+            }
+        }
+
         [Theory]
         [InlineData("$GPRMC,211730.997,A,3511.28000,S,13823.26000,E,7.000,229.000,190120,,*19")]
         [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
@@ -108,6 +144,8 @@ namespace Nmea0183.Tests
         [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
         [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
         [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
+        // GGA with elevation
+        [InlineData("$GPGGA,163810.000,4728.70270,N,00929.96660,E,2,12,0.6,397.4,M,46.8,M,,*52")]
         [InlineData("$IIDBK,29.2,f,8.90,M,4.9,F*0B")] // Unknown sentence (for now)
         public void SentenceRoundTrip(string input)
         {

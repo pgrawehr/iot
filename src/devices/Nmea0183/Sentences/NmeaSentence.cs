@@ -87,7 +87,23 @@ namespace Nmea0183.Sentences
             }
             else
             {
-                return double.Parse(val);
+                return double.Parse(val, CultureInfo.InvariantCulture);
+            }
+        }
+
+        /// <summary>
+        /// Decodes the next field into an int
+        /// </summary>
+        protected int? ReadInt(IEnumerator<string> field)
+        {
+            string val = ReadString(field);
+            if (string.IsNullOrEmpty(val))
+            {
+                return null;
+            }
+            else
+            {
+                return int.Parse(val, CultureInfo.InvariantCulture);
             }
         }
 
@@ -102,10 +118,10 @@ namespace Nmea0183.Sentences
             if (time.Length != 0)
             {
                 // DateTimeOffset.Parse often fails for no apparent reason
-                int hour = int.Parse(time.Substring(0, 2));
-                int minute = int.Parse(time.Substring(2, 2));
-                int seconds = int.Parse(time.Substring(4, 2));
-                double millis = double.Parse("0" + time.Substring(6)) * 1000;
+                int hour = int.Parse(time.Substring(0, 2), CultureInfo.InvariantCulture);
+                int minute = int.Parse(time.Substring(2, 2), CultureInfo.InvariantCulture);
+                int seconds = int.Parse(time.Substring(4, 2), CultureInfo.InvariantCulture);
+                double millis = double.Parse("0" + time.Substring(6), CultureInfo.InvariantCulture) * 1000;
                 t1 = new TimeSpan(0, hour, minute, seconds, (int)millis);
             }
             else

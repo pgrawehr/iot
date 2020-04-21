@@ -35,6 +35,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[CrossTrackError.Id] = (sentence, time) => new CrossTrackError(sentence, time);
             knownSentences[DepthBelowSurface.Id] = (sentence, time) => new DepthBelowSurface(sentence, time);
             knownSentences[TransducerMeasurement.Id] = (sentence, time) => new TransducerMeasurement(sentence, time);
+            knownSentences[GlobalPositioningSystemFixData.Id] = (sentence, time) => new GlobalPositioningSystemFixData(sentence, time);
 
             return knownSentences;
         }
@@ -104,7 +105,7 @@ namespace Iot.Device.Nmea0183
             var content = sentence.ToString();
             if (string.IsNullOrWhiteSpace(content) || sentence.Valid == false)
             {
-                throw new InvalidOperationException("Input sentence not valid or cannot be encoded");
+                throw new InvalidOperationException("Input sentence not valid or cannot be decoded");
             }
 
             _fields = content.Split(',', StringSplitOptions.None);

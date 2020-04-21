@@ -236,7 +236,7 @@ namespace Iot.Device.Nmea0183.Sentences
             }
         }
 
-        private static double? Nmea0183ToDegrees(double? degreesMinutes, CardinalDirection? direction)
+        internal static double? Nmea0183ToDegrees(double? degreesMinutes, CardinalDirection? direction)
         {
             if (!degreesMinutes.HasValue || !direction.HasValue)
             {
@@ -260,7 +260,7 @@ namespace Iot.Device.Nmea0183.Sentences
             return "Position unknown";
         }
 
-        private static (double? degreesMinutes, CardinalDirection? direction) DegreesToNmea0183(double? degrees, bool isLatitude)
+        internal static (double? degreesMinutes, CardinalDirection? direction) DegreesToNmea0183(double? degrees, bool isLatitude)
         {
             if (!degrees.HasValue)
             {
@@ -294,15 +294,6 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             Valid = (byte)'A',
             NavigationReceiverWarning = (byte)'V',
-        }
-
-        private enum CardinalDirection : byte
-        {
-            None = 0,
-            North = (byte)'N',
-            South = (byte)'S',
-            West = (byte)'W',
-            East = (byte)'E',
         }
     }
 }
