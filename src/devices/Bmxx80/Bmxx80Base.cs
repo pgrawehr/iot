@@ -82,7 +82,7 @@ namespace Iot.Device.Bmxx80
 
             if (readSignature != deviceId)
             {
-                throw new IOException($"Unable to find a chip with id {deviceId}");
+                throw new IOException($"Unable to find a chip with id {deviceId}. Found one with id {readSignature}");
             }
 
             ReadCalibrationData();

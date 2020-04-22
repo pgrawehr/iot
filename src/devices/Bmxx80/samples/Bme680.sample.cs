@@ -29,87 +29,67 @@ namespace Iot.Device.Samples
             // set this to the current sea level pressure in the area for correct altitude readings
             var defaultSeaLevelPressure = Pressure.MeanSeaLevel;
 
+            double stationAltitude = 640; // Set this to the height of your place for correct pressure corrections
+
             var i2cSettings = new I2cConnectionSettings(busId, Bme680.DefaultI2cAddress);
             var i2cDevice = I2cDevice.Create(i2cSettings);
 
             using (var bme680 = new Bme680(i2cDevice))
             {
-                while (true)
+                double gasResistance = Double.NaN;
+
+                while (!Console.KeyAvailable)
                 {
                     // get the time a measurement will take with the current settings
-                    var measurementDuration = bme680.GetMeasurementDuration(bme680.HeaterProfile);
-
-                    // 10 consecutive measurement with default settings
-                    for (var i = 0; i < 10; i++)
-                    {
-                        // This instructs the sensor to take a measurement.
-                        bme680.SetPowerMode(Bme680PowerMode.Forced);
-
-                        // wait while measurement is being taken
-                        Thread.Sleep(measurementDuration);
-
-                        // Print out the measured data
-                        bme680.TryReadTemperature(out var tempValue);
-                        bme680.TryReadPressure(out var preValue);
-                        bme680.TryReadHumidity(out var humValue);
-                        bme680.TryReadGasResistance(out var gasResistance);
-                        var altValue = WeatherHelper.CalculateAltitude(preValue, defaultSeaLevelPressure, tempValue);
-
-                        Console.WriteLine($"Gas resistance: {gasResistance:0.##}Ohm");
-                        Console.WriteLine($"Temperature: {tempValue.Celsius:0.#}\u00B0C");
-                        Console.WriteLine($"Pressure: {preValue.Hectopascal:0.##}hPa");
-                        Console.WriteLine($"Altitude: {altValue:0.##}m");
-                        Console.WriteLine($"Relative humidity: {humValue:0.#}%");
-
-                        // WeatherHelper supports more calculations, such as the summer simmer index, saturated vapor pressure, actual vapor pressure and absolute humidity.
-                        Console.WriteLine($"Heat index: {WeatherHelper.CalculateHeatIndex(tempValue, humValue).Celsius:0.#}\u00B0C");
-                        Console.WriteLine($"Dew point: {WeatherHelper.CalculateDewPoint(tempValue, humValue).Celsius:0.#}\u00B0C");
-
-                        // when measuring the gas resistance on each cycle it is important to wait a certain interval
-                        // because a heating plate is activated which will heat up the sensor without sleep, this can
-                        // falsify all readings coming from the sensor
-                        Thread.Sleep(1000);
-                    }
-
                     // change the settings
                     bme680.TemperatureSampling = Sampling.HighResolution;
-                    bme680.HumiditySampling = Sampling.UltraHighResolution;
-                    bme680.PressureSampling = Sampling.Skipped;
+                    bme680.HumiditySampling = Sampling.HighResolution;
+                    bme680.PressureSampling = Sampling.HighResolution;
 
-                    bme680.ConfigureHeatingProfile(Bme680HeaterProfile.Profile2, 280, 80, 24);
-                    bme680.HeaterProfile = Bme680HeaterProfile.Profile2;
+                    bme680.SetPowerMode(Bme680PowerMode.Forced);
 
-                    measurementDuration = bme680.GetMeasurementDuration(bme680.HeaterProfile);
-
-                    // 10 consecutive measurements with custom settings
                     for (int i = 0; i < 10; i++)
                     {
                         // perform the measurement
                         bme680.SetPowerMode(Bme680PowerMode.Forced);
+
+                        var measurementDuration = bme680.GetMeasurementDuration(bme680.HeaterProfile);
                         Thread.Sleep(measurementDuration);
 
                         // Print out the measured data
                         bme680.TryReadTemperature(out var tempValue);
                         bme680.TryReadPressure(out var preValue);
                         bme680.TryReadHumidity(out var humValue);
-                        bme680.TryReadGasResistance(out var gasResistance);
-                        var altValue = WeatherHelper.CalculateAltitude(preValue, defaultSeaLevelPressure, tempValue);
+                        if (bme680.GasConversionIsEnabled)
+                        {
+                            int loops = 10;
+                            while (!bme680.TryReadGasResistance(out gasResistance) && loops-- > 0)
+                            {
+                                Thread.Sleep(10);
+                            }
+                        }
 
                         Console.WriteLine($"Gas resistance: {gasResistance:0.##}Ohm");
                         Console.WriteLine($"Temperature: {tempValue.Celsius:0.#}\u00B0C");
                         Console.WriteLine($"Pressure: {preValue.Hectopascal:0.##}hPa");
-                        Console.WriteLine($"Altitude: {altValue:0.##}m");
+                        Console.WriteLine($"Station altitude: {stationAltitude:0.##}m");
                         Console.WriteLine($"Relative humidity: {humValue:0.#}%");
 
                         // WeatherHelper supports more calculations, such as the summer simmer index, saturated vapor pressure, actual vapor pressure and absolute humidity.
                         Console.WriteLine($"Heat index: {WeatherHelper.CalculateHeatIndex(tempValue, humValue).Celsius:0.#}\u00B0C");
                         Console.WriteLine($"Dew point: {WeatherHelper.CalculateDewPoint(tempValue, humValue).Celsius:0.#}\u00B0C");
+
+                        var baroPress = WeatherHelper.CalculateBarometricPressure(preValue, tempValue, stationAltitude, humValue);
+                        Console.WriteLine($"Barometric pressure: {baroPress.Hectopascal:0.##}hPa");
                         Thread.Sleep(1000);
                     }
 
                     // reset will change settings back to default
                     bme680.Reset();
                 }
+
+                bme680.HeaterIsEnabled = false;
+                bme680.GasConversionIsEnabled = false;
             }
         }
     }

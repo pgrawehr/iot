@@ -450,7 +450,11 @@ namespace Iot.Device.Bmxx80
             FilterMode = Bme680FilteringMode.C0;
 
             _bme680Calibration = (Bme680CalibrationData)_calibrationData;
-            TryReadTemperature(out var temp);
+            if (!TryReadTemperature(out var temp))
+            {
+                temp = Temperature.FromCelsius(22.0);
+            }
+
             ConfigureHeatingProfile(Bme680HeaterProfile.Profile1, 320, 150, temp.Celsius);
             HeaterProfile = Bme680HeaterProfile.Profile1;
 
