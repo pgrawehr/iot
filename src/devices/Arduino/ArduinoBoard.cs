@@ -8,6 +8,7 @@ using System.Device.Pwm;
 using System.Device.Spi;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Ports;
 using System.Threading;
 using Iot.Device.Spi;
 
@@ -28,16 +29,74 @@ namespace Iot.Device.Arduino
         private Version _firmwareVersion;
         private string _firmwareName;
         private List<SupportedPinConfiguration> _supportedPinConfigurations;
+        private SerialPort _serialPort;
+        private string _serialPortName;
+        private int _baudRate;
 
+        /// <summary>
+        /// Create an instance of an <see cref="ArduinoBoard"/> using the given stream (typically a serial port connection)
+        /// Call <see cref="Initialize"/> to begin talking to the device.
+        /// </summary>
+        /// <param name="serialPortStream">Stream to the hardware</param>
+        /// <exception cref="InvalidOperationException">The given stream does not support reading and writing</exception>
+        /// <exception cref="ArgumentNullException">The provided stream was null</exception>
         public ArduinoBoard(Stream serialPortStream)
         {
-            _serialPortStream = serialPortStream;
+            _serialPortStream = serialPortStream ?? throw new ArgumentNullException(nameof(serialPortStream));
+            _serialPortName = null;
+            _baudRate = 0;
+            _serialPort = null;
+
+            if (!(_serialPortStream.CanRead && _serialPortStream.CanWrite))
+            {
+                throw new InvalidOperationException("The provided stream must support reading and writing");
+            }
+        }
+
+        /// <summary>
+        /// Create an instance of an <see cref="ArduinoBoard"/> using a serial port name.
+        /// Does not open the port yet. Call <see cref="Initialize"/> to begin talking to the device
+        /// </summary>
+        /// <param name="serialPort">Serial port name (try "COM4" on Windows or "/dev/ttyUSB1" on Linux)</param>
+        /// <param name="baudRate">Connection baudrate. Common values are 57600 or 115200</param>
+        /// <exception cref="ArgumentException">The serial port name was empty or the baudrate was invalid</exception>
+        public ArduinoBoard(string serialPort, int baudRate)
+        {
+            if (string.IsNullOrWhiteSpace(serialPort))
+            {
+                throw new ArgumentException("Serial port name cannot be empty.", nameof(serialPort));
+            }
+
+            if (_baudRate <= 0)
+            {
+                throw new ArgumentException("Baudrate cannot be 0 or negative");
+            }
+
+            _serialPortName = serialPort;
+            _baudRate = baudRate;
         }
 
         public event Action<string, Exception> LogMessages;
 
         public virtual void Initialize()
         {
+            if (_serialPortStream == null)
+            {
+                try
+                {
+                    _serialPort = new SerialPort(_serialPortName, _baudRate, Parity.None, 8, StopBits.One);
+                    _serialPort.Open();
+                }
+                catch (Exception)
+                {
+                    _serialPort.Dispose();
+                    _serialPort = null;
+                    throw;
+                }
+
+                _serialPortStream = _serialPort.BaseStream;
+            }
+
             _firmata = new FirmataDevice();
             _firmata.Open(_serialPortStream);
             _firmata.OnError += FirmataOnError;
@@ -155,6 +214,13 @@ namespace Iot.Device.Arduino
             {
                 _serialPortStream.Close();
                 _serialPortStream.Dispose();
+            }
+
+            if (_serialPort != null)
+            {
+                _serialPort.Close();
+                _serialPort.Dispose();
+                _serialPort = null;
             }
 
             _serialPortStream = null;
