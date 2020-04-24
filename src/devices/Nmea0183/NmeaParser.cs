@@ -11,7 +11,7 @@ using Units;
 #pragma warning disable CS1591
 namespace Nmea0183
 {
-    public delegate void PositionUpdate(GeographicPosition position, Angle track, Speed speed);
+    public delegate void PositionUpdate(GeographicPosition position, Angle? track, Speed? speed);
 
     /// <summary>
     /// Parses Nmea Sequences
@@ -45,7 +45,7 @@ namespace Nmea0183
 
         public event Action<DateTimeOffset> OnNewTime;
 
-        public event Action<NmeaSentence> OnNewSequence;
+        public event Action<NmeaParser, NmeaSentence> OnNewSequence;
 
         public event Action<string, NmeaError> OnParserError;
 
@@ -89,7 +89,7 @@ namespace Nmea0183
 
                 if (typed != null)
                 {
-                    OnNewSequence?.Invoke(typed);
+                    OnNewSequence?.Invoke(this, typed);
                 }
 
                 if (typed is RecommendedMinimumNavigationInformation rmc)

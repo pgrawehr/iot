@@ -84,7 +84,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             }
         }
 
-        private static void ParserOnOnNewSequence(NmeaSentence sentence)
+        private static void ParserOnOnNewSequence(NmeaParser parser, NmeaSentence sentence)
         {
             Console.WriteLine(sentence.ToReadableContent());
         }
