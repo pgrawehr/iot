@@ -195,8 +195,26 @@ namespace Nmea0183.Sentences
         }
 
         /// <summary>
+        /// Translates the properties of this instance into an NMEA message body,
+        /// without <see cref="TalkerId"/>, <see cref="SentenceId"/> and checksum.
+        /// </summary>
+        /// <returns></returns>
+        public abstract string ToNmeaMessage();
+
+        /// <summary>
         /// Gets an user-readable string about this message
         /// </summary>
         public abstract string ToReadableContent();
+
+        /// <summary>
+        /// Generates a readable instance of this string.
+        /// Not overridable, use <see cref="ToReadableContent"/> to override.
+        /// (this is to prevent confusion with <see cref="ToNmeaMessage"/>.)
+        /// </summary>
+        /// <returns></returns>
+        public sealed override string ToString()
+        {
+            return ToReadableContent();
+        }
     }
 }

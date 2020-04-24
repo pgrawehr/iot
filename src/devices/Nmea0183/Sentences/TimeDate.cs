@@ -82,7 +82,7 @@ namespace Nmea0183.Sentences
             set;
         }
 
-        public override string ToString()
+        public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
             if (DateTime.HasValue && Valid)

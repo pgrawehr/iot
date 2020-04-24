@@ -127,7 +127,7 @@ namespace Nmea0183.Sentences
         /// <summary>
         /// Presents this message as output
         /// </summary>
-        public override string ToString()
+        public override string ToNmeaMessage()
         {
             if (Valid)
             {

@@ -26,7 +26,7 @@ namespace Nmea0183.Sentences
         /// <summary>
         /// Returns the formatted payload
         /// </summary>
-        public override string ToString()
+        public override string ToNmeaMessage()
         {
             return string.Join(',', _fields);
         }

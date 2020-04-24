@@ -81,7 +81,7 @@ namespace Iot.Device.Nmea0183.Sentences
             get;
         }
 
-        public override string ToString()
+        public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
             string time = DateTime.HasValue ? $"{DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture)}" : null;

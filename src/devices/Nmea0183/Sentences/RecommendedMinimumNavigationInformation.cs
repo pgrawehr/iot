@@ -111,7 +111,7 @@ namespace Iot.Device.Nmea0183.Sentences
         // but this unofficial spec does not clarify it
         public NavigationStatus? Status2 { get; private set; }
 
-        public override string ToString()
+        public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
             string time = DateTime.HasValue ? $"{DateTime.Value.ToString("HHmmss.fff")}" : null;

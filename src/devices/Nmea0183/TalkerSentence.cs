@@ -102,7 +102,7 @@ namespace Iot.Device.Nmea0183
         {
             TalkerId = sentence.TalkerId;
             Id = sentence.SentenceId;
-            var content = sentence.ToString();
+            var content = sentence.ToNmeaMessage();
             if (string.IsNullOrWhiteSpace(content) || sentence.Valid == false)
             {
                 throw new InvalidOperationException("Input sentence not valid or cannot be decoded");
