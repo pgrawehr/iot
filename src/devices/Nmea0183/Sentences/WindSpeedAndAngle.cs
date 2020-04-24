@@ -22,7 +22,7 @@ namespace Nmea0183.Sentences
         /// Constructs a new MWV sentence
         /// </summary>
         public WindSpeedAndAngle(double angle, Speed speed, bool relative)
-            : base(Id)
+            : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Angle = angle;
             Speed = speed;
@@ -33,15 +33,15 @@ namespace Nmea0183.Sentences
         /// Internal constructor
         /// </summary>
         public WindSpeedAndAngle(TalkerSentence sentence, DateTimeOffset time)
-            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
         /// <summary>
         /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
         /// </summary>
-        public WindSpeedAndAngle(IEnumerable<string> fields, DateTimeOffset today)
-            : base(Id)
+        public WindSpeedAndAngle(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
 

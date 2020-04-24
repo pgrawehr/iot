@@ -22,7 +22,7 @@ namespace Nmea0183.Sentences
         /// Constructs a new MWV sentence
         /// </summary>
         public DepthBelowSurface(Distance depth)
-            : base(Id)
+            : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Depth = depth;
         }
@@ -31,18 +31,16 @@ namespace Nmea0183.Sentences
         /// Internal constructor
         /// </summary>
         public DepthBelowSurface(TalkerSentence sentence, DateTimeOffset time)
-            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
         /// <summary>
         /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
         /// </summary>
-        public DepthBelowSurface(IEnumerable<string> fields, DateTimeOffset today)
-            : base(Id)
+        public DepthBelowSurface(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
         {
-            DateTime = today;
-
             IEnumerator<string> field = fields.GetEnumerator();
 
             string feet = ReadString(field);

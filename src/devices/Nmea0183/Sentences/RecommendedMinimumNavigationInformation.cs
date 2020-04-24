@@ -133,16 +133,16 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         public RecommendedMinimumNavigationInformation(TalkerSentence sentence, DateTimeOffset time)
-            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
-        public RecommendedMinimumNavigationInformation(IEnumerable<string> fields, DateTimeOffset today)
-            : base(Id)
+        public RecommendedMinimumNavigationInformation(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
-            string time = ReadString(field);
+            string newTime = ReadString(field);
             NavigationStatus? status = (NavigationStatus?)ReadChar(field);
             double? lat = ReadValue(field);
             CardinalDirection? latTurn = (CardinalDirection?)ReadChar(field);
@@ -155,11 +155,11 @@ namespace Iot.Device.Nmea0183.Sentences
             DateTimeOffset dateTime;
             if (date.Length != 0)
             {
-                dateTime = ParseDateTime(date, time);
+                dateTime = ParseDateTime(date, newTime);
             }
             else
             {
-                dateTime = ParseDateTime(today, time);
+                dateTime = ParseDateTime(time, newTime);
             }
 
             double? mag = ReadValue(field);
@@ -210,7 +210,7 @@ namespace Iot.Device.Nmea0183.Sentences
             double? speedOverGroundInKnots,
             Angle? trackMadeGoodInDegreesTrue,
             Angle? magneticVariationInDegrees)
-        : base(Id)
+        : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
         {
             DateTime = dateTime;
             Status = status;

@@ -14,19 +14,10 @@ namespace Nmea0183.Sentences
         private string[] _fields;
 
         /// <summary>
-        /// Creates an unknown sentence
-        /// </summary>
-        public UnknownSentence(SentenceId id)
-            : base(id)
-        {
-            Valid = false;
-        }
-
-        /// <summary>
         /// Creates an unknown sentence from a split of parameters
         /// </summary>
-        public UnknownSentence(SentenceId id, IEnumerable<string> fields)
-            : base(id)
+        public UnknownSentence(TalkerId talkerId, SentenceId id, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, id, time)
         {
             _fields = fields.ToArray();
             Valid = true;
@@ -43,7 +34,7 @@ namespace Nmea0183.Sentences
         /// <inheritdoc />
         public override string ToReadableContent()
         {
-            return $"$XX{SentenceId},{ToString()}"; // Cannot do much else here
+            return $"${TalkerId}{SentenceId},{ToString()}"; // Cannot do much else here
         }
     }
 }

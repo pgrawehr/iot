@@ -17,13 +17,42 @@ namespace Nmea0183.Sentences
         /// </summary>
         protected static Calendar gregorianCalendar = new GregorianCalendar(GregorianCalendarTypes.USEnglish);
 
+        private static TalkerId _ownTalkerId = TalkerId.ElectronicChartDisplayAndInformationSystem;
+
+        /// <summary>
+        /// Our own talker ID (default when we send messages ourselves)
+        /// </summary>
+        public static TalkerId OwnTalkerId
+        {
+            get
+            {
+                return _ownTalkerId;
+            }
+            set
+            {
+                _ownTalkerId = value;
+            }
+        }
+
         /// <summary>
         /// Constructs an instance of this abstract class
         /// </summary>
+        /// <param name="talker">The talker (sender) of this message</param>
         /// <param name="id">Sentence Id</param>
-        protected NmeaSentence(SentenceId id)
+        /// <param name="time">Date/Time this message was valid (derived from last time message)</param>
+        protected NmeaSentence(TalkerId talker, SentenceId id, DateTimeOffset time)
         {
             SentenceId = id;
+            TalkerId = talker;
+            DateTime = time;
+        }
+
+        /// <summary>
+        /// The talker (sender) of this message
+        /// </summary>
+        public TalkerId TalkerId
+        {
+            get;
         }
 
         /// <summary>

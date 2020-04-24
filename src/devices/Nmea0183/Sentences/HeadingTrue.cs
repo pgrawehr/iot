@@ -24,7 +24,7 @@ namespace Nmea0183.Sentences
         /// Constructs a new MWV sentence
         /// </summary>
         public HeadingTrue(double angle)
-            : base(Id)
+            : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Angle = angle;
         }
@@ -33,15 +33,15 @@ namespace Nmea0183.Sentences
         /// Internal constructor
         /// </summary>
         public HeadingTrue(TalkerSentence sentence, DateTimeOffset time)
-            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
         /// <summary>
         /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
         /// </summary>
-        public HeadingTrue(IEnumerable<string> fields, DateTimeOffset today)
-            : base(Id)
+        public HeadingTrue(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
 

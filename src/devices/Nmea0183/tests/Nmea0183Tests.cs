@@ -146,6 +146,7 @@ namespace Nmea0183.Tests
         [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
         // GGA with elevation
         [InlineData("$GPGGA,163810.000,4728.70270,N,00929.96660,E,2,12,0.6,397.4,M,46.8,M,,*52")]
+        [InlineData("$YDVTG,124.0,T,121.2,M,0.0,N,0.0,K,A*2E")]
         [InlineData("$IIDBK,29.2,f,8.90,M,4.9,F*0B")] // Unknown sentence (for now)
         public void SentenceRoundTrip(string input)
         {
@@ -154,7 +155,7 @@ namespace Nmea0183.Tests
             Assert.NotNull(inSentence);
             var decoded = inSentence.TryGetTypedValue();
             Assert.NotNull(decoded);
-            TalkerSentence outSentence = new TalkerSentence(inSentence.TalkerId, decoded);
+            TalkerSentence outSentence = new TalkerSentence(decoded);
             string output = outSentence.ToString();
             Assert.Equal(input, output);
         }

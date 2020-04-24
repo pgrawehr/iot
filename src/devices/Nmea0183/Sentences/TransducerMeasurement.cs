@@ -26,7 +26,7 @@ namespace Nmea0183.Sentences
         /// Constructs a new basic XDR sentence with a single data set.
         /// </summary>
         public TransducerMeasurement(string dataName, string dataType, double value, string unit)
-            : base(Id)
+            : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             _dataSets = new List<TransducerDataSet>();
             _dataSets.Add(new TransducerDataSet()
@@ -40,10 +40,10 @@ namespace Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Constructs a new basic XDR sentence with a single data set.
+        /// Constructs a new basic XDR sentence with a list of data sets
         /// </summary>
         public TransducerMeasurement(IEnumerable<TransducerDataSet> dataSets)
-            : base(Id)
+            : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             if (dataSets == null)
             {
@@ -65,15 +65,15 @@ namespace Nmea0183.Sentences
         /// Decodes an XDR sentence
         /// </summary>
         public TransducerMeasurement(TalkerSentence sentence, DateTimeOffset time)
-            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
         /// <summary>
         /// Decodes an XDR sentence
         /// </summary>
-        internal TransducerMeasurement(IEnumerable<string> fields, DateTimeOffset today)
-            : base(Id)
+        internal TransducerMeasurement(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
         {
             _dataSets = new List<TransducerDataSet>();
             IEnumerator<string> field = fields.GetEnumerator();

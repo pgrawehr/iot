@@ -36,6 +36,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[DepthBelowSurface.Id] = (sentence, time) => new DepthBelowSurface(sentence, time);
             knownSentences[TransducerMeasurement.Id] = (sentence, time) => new TransducerMeasurement(sentence, time);
             knownSentences[GlobalPositioningSystemFixData.Id] = (sentence, time) => new GlobalPositioningSystemFixData(sentence, time);
+            knownSentences[TrackMadeGood.Id] = (sentence, time) => new TrackMadeGood(sentence, time);
 
             return knownSentences;
         }
@@ -59,7 +60,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// NMEA0183 talker identifier (identifier of the sender)
         /// </summary>
-        public TalkerId TalkerId { get; private set; }
+        public TalkerId TalkerId { get; }
 
         /// <summary>
         /// NMEA0183 sentence identifier
@@ -96,11 +97,10 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Constructs a message from a typed sentence
         /// </summary>
-        /// <param name="talkerId">Talker Id with which the message is to be sent</param>
         /// <param name="sentence">Sentence to send. It must be valid</param>
-        public TalkerSentence(TalkerId talkerId, NmeaSentence sentence)
+        public TalkerSentence(NmeaSentence sentence)
         {
-            TalkerId = talkerId;
+            TalkerId = sentence.TalkerId;
             Id = sentence.SentenceId;
             var content = sentence.ToString();
             if (string.IsNullOrWhiteSpace(content) || sentence.Valid == false)
@@ -191,7 +191,7 @@ namespace Iot.Device.Nmea0183
             }
             else
             {
-                retVal = new UnknownSentence(Id, Fields);
+                retVal = new UnknownSentence(TalkerId, Id, Fields, LastMessageTime);
             }
 
             if (retVal?.DateTime != null)

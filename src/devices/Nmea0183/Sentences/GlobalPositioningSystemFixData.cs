@@ -103,16 +103,16 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         public GlobalPositioningSystemFixData(TalkerSentence sentence, DateTimeOffset time)
-            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
-        public GlobalPositioningSystemFixData(IEnumerable<string> fields, DateTimeOffset today)
-            : base(Id)
+        public GlobalPositioningSystemFixData(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
-            string time = ReadString(field);
+            string timeString = ReadString(field);
             double? lat = ReadValue(field);
             CardinalDirection? latTurn = (CardinalDirection?)ReadChar(field);
             double? lon = ReadValue(field);
@@ -132,7 +132,7 @@ namespace Iot.Device.Nmea0183.Sentences
             char? unitOfUndulation = ReadChar(field);
 
             DateTimeOffset dateTime;
-            dateTime = ParseDateTime(today, time);
+            dateTime = ParseDateTime(time, timeString);
 
             DateTime = dateTime;
             Status = (GpsQuality)gpsStatus.GetValueOrDefault(0);
@@ -178,7 +178,7 @@ namespace Iot.Device.Nmea0183.Sentences
             double? ellipsoidAltitude,
             double hdop,
             int numberOfSatellites)
-        : base(Id)
+        : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
         {
             DateTime = dateTime;
             Status = status;

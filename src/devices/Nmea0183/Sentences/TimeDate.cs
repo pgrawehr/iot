@@ -13,39 +13,33 @@ namespace Nmea0183.Sentences
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
         public TimeDate(TalkerSentence sentence, DateTimeOffset time)
-            : this(Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
-        }
-
-        public bool ReverseDateFormat
-        {
-            get;
-            set;
         }
 
         /// <summary>
         /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
         /// </summary>
-        public TimeDate(IEnumerable<string> fields, DateTimeOffset today)
-            : base(Id)
+        public TimeDate(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
-            string time = ReadString(field);
+            string timeString = ReadString(field);
             TimeSpan? localTimeOfDay = null;
-            if (!string.IsNullOrWhiteSpace(time))
+            if (!string.IsNullOrWhiteSpace(timeString))
             {
                 // Can't use the base class methods here, because we just shouldn't rely on the input variable "today" here, as this message defines the date
-                int hour = int.Parse(time.Substring(0, 2));
-                int minute = int.Parse(time.Substring(2, 2));
-                int seconds = int.Parse(time.Substring(4, 2));
-                double millis = double.Parse("0" + time.Substring(6)) * 1000;
+                int hour = int.Parse(timeString.Substring(0, 2));
+                int minute = int.Parse(timeString.Substring(2, 2));
+                int seconds = int.Parse(timeString.Substring(4, 2));
+                double millis = double.Parse("0" + timeString.Substring(6)) * 1000;
                 localTimeOfDay = new TimeSpan(0, hour, minute, seconds, (int)millis);
             }
 
-            double year = ReadValue(field) ?? today.Year;
-            double month = ReadValue(field) ?? today.Month;
-            double day = ReadValue(field) ?? today.Day;
+            double year = ReadValue(field) ?? time.Year;
+            double month = ReadValue(field) ?? time.Month;
+            double day = ReadValue(field) ?? time.Day;
             // Offset hours and minutes (last two fields, optional and usually 0). Some sources say these fields are first, but that's apparently wrong
             double offset = ReadValue(field) ?? 0.0;
             offset += (ReadValue(field) ?? 0.0) / 60;
@@ -72,15 +66,20 @@ namespace Nmea0183.Sentences
             {
                 // Set the reception time anyway, but tell clients that this was not a complete ZDA message
                 Valid = false;
-                DateTime = today;
+                DateTime = time;
             }
         }
 
         public TimeDate(DateTimeOffset dateTime)
-        : base(Id)
+        : base(OwnTalkerId, Id, dateTime)
         {
-            DateTime = dateTime;
             Valid = true;
+        }
+
+        public bool ReverseDateFormat
+        {
+            get;
+            set;
         }
 
         public override string ToString()
