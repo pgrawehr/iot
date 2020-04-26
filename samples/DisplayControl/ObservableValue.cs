@@ -29,6 +29,22 @@ namespace DisplayControl
             m_observers = new List<IObserver<T>>();
         }
 
+        public ObservableValue(string valueDescription, string unit)
+            : base(valueDescription, unit)
+        {
+            m_value = default(T);
+
+            if (typeof(T) == typeof(double) || typeof(T) == typeof(float))
+            {
+                m_valueFormatter = "{0:F3}";
+            }
+            else
+            {
+                m_valueFormatter = "{0}";
+            }
+            m_observers = new List<IObserver<T>>();
+        }
+
         public IDisposable Subscribe(IObserver<T> observer)
         {
             if (!m_observers.Contains(observer))

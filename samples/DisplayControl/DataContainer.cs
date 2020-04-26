@@ -6,6 +6,7 @@ using System.Device.Gpio;
 using System.Device.I2c;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -22,7 +23,7 @@ namespace DisplayControl
         I2cDevice m_displayDevice = null;
         ICharacterLcd m_characterLcd = null;
         LcdConsole m_lcdConsole = null;
-        AdcSensors m_adcSensors = null;
+        AdcSensors _adcSensors = null;
         private ExtendedDisplayController _extendedDisplayController;
         private bool m_lcdConsoleActive;
         private SensorValueSource m_activeValueSourceUpper;
@@ -165,33 +166,43 @@ namespace DisplayControl
 
         private void InitializeSensors()
         {
-            WriteLineToConsoleAndDisplay("Display controller...");
-            _extendedDisplayController = new ExtendedDisplayController(Controller);
-            _extendedDisplayController.SelfTest();
-
-            WriteLineToConsoleAndDisplay("ADC...");
-            m_adcSensors = new AdcSensors();
-            m_adcSensors.Init();
-            m_adcSensors.ButtonPressed += DisplayButtonPressed;
-
             List<SensorValueSource> allSources = new List<SensorValueSource>();
-            allSources.AddRange(m_adcSensors.SensorValueSources);
-
-            //WriteLineToConsoleAndDisplay("DHT...");
-            //m_dhtSensors = new DhtSensors();
-            //m_dhtSensors.Init(Controller);
-
-            //allSources.AddRange(m_dhtSensors.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("CPU...");
             m_systemSensors = new SystemSensors();
             m_systemSensors.Init(Controller);
             allSources.AddRange(m_systemSensors.SensorValueSources);
 
-            WriteLineToConsoleAndDisplay("Cockpit Environment...");
-            m_pressureSensor = new PressureSensor();
-            m_pressureSensor.Init(Controller);
-            allSources.AddRange(m_pressureSensor.SensorValueSources);
+            WriteLineToConsoleAndDisplay("Display controller...");
+            try
+            {
+                var extendedDisplayController = new ExtendedDisplayController();
+                extendedDisplayController.Init(Controller);
+                extendedDisplayController.SelfTest();
+
+                WriteLineToConsoleAndDisplay("ADC...");
+                _adcSensors = new AdcSensors();
+                _adcSensors.Init();
+                _adcSensors.ButtonPressed += DisplayButtonPressed;
+
+                allSources.AddRange(_adcSensors.SensorValueSources);
+
+                WriteLineToConsoleAndDisplay("Cockpit Environment...");
+                m_pressureSensor = new PressureSensor();
+                m_pressureSensor.Init(Controller);
+                allSources.AddRange(m_pressureSensor.SensorValueSources);
+                WriteLineToConsoleAndDisplay("Remote display connected and ready");
+            }
+            catch (IOException x)
+            {
+                WriteLineToConsoleAndDisplay("Remote display not connected: " + x.Message);
+            }
+
+            //WriteLineToConsoleAndDisplay("DHT...");
+            //m_dhtSensors = new DhtSensors();
+            //m_dhtSensors.Init(Controller);
+
+            //allSources.AddRange(m_dhtSensors.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("Weather...");
             _weatherSensor = new Bmp680Environment();
@@ -227,7 +238,7 @@ namespace DisplayControl
             Console.WriteLine(text);
             if (m_lcdConsoleActive)
             {
-                m_lcdConsole.WriteLine(text);
+                m_lcdConsole?.WriteLine(text);
             }
         }
 
@@ -532,8 +543,8 @@ namespace DisplayControl
             {
                 sensor.PropertyChanged -= OnSensorValueChanged;
             }
-            m_adcSensors.Dispose();
-            m_adcSensors = null;
+            _adcSensors.Dispose();
+            _adcSensors = null;
             m_dhtSensors?.Dispose();
             m_dhtSensors = null;
 

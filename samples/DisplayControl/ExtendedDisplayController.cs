@@ -34,7 +34,7 @@ namespace DisplayControl
         private Mcp23017 _mcp23017;
         private GpioController _controllerUsingMcp;
 
-        public ExtendedDisplayController(GpioController gpioController)
+        public void Init(GpioController gpioController)
         {
             _device = I2cDevice.Create(new I2cConnectionSettings(1, 0x20));
             _mcp23017 = new Mcp23017(_device, -1, -1, -1, gpioController);
