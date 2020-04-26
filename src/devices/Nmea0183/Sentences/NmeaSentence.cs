@@ -12,11 +12,16 @@ namespace Iot.Device.Nmea0183.Sentences
     public abstract class NmeaSentence
     {
         /// <summary>
+        /// The default talker id of ourselves (applied when we send out messages)
+        /// </summary>
+        public static readonly TalkerId DefaultTalkerId = TalkerId.ElectronicChartDisplayAndInformationSystem;
+
+        /// <summary>
         /// The julian calendar (the one that most of the world uses)
         /// </summary>
         protected static Calendar gregorianCalendar = new GregorianCalendar(GregorianCalendarTypes.USEnglish);
 
-        private static TalkerId _ownTalkerId = TalkerId.ElectronicChartDisplayAndInformationSystem;
+        private static TalkerId _ownTalkerId = DefaultTalkerId;
 
         /// <summary>
         /// Our own talker ID (default when we send messages ourselves)

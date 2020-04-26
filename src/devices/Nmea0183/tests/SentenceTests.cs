@@ -10,8 +10,19 @@ using Xunit;
 
 namespace Iot.Device.Nmea0183.Tests
 {
-    public class SentenceTests
+    public class SentenceTests : IDisposable
     {
+        public SentenceTests()
+        {
+            NmeaSentence.OwnTalkerId = NmeaSentence.DefaultTalkerId;
+        }
+
+        public void Dispose()
+        {
+            // Make sure this is reset before the next test
+            NmeaSentence.OwnTalkerId = NmeaSentence.DefaultTalkerId;
+        }
+
         [Fact]
         public void SentenceIdentify()
         {
@@ -125,6 +136,61 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.NotEqual(default(TalkerId), sentence.TalkerId);
             Assert.NotEqual(default(SentenceId), sentence.SentenceId);
             Assert.False(string.IsNullOrWhiteSpace(sentence.ToReadableContent()));
+        }
+
+        [Fact]
+        public void ApparentWindSpeedDecode()
+        {
+            string msg = "$WIMWV,350.0,R,16.8,N,A*1A";
+
+            var decoded = TalkerSentence.FromSentenceString(msg, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(decoded);
+
+            WindSpeedAndAngle mwv = (WindSpeedAndAngle)decoded.TryGetTypedValue();
+
+            Assert.Equal(Angle.FromDegrees(-10), mwv.Angle);
+            Assert.True(mwv.Relative);
+            Assert.Equal(Speed.FromKnots(16.8), mwv.Speed);
+        }
+
+        [Fact]
+        public void TrueWindSpeedDecode()
+        {
+            string msg = "$WIMWV,220.0,T,5.0,N,A*20";
+
+            var decoded = TalkerSentence.FromSentenceString(msg, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(decoded);
+
+            WindSpeedAndAngle mwv = (WindSpeedAndAngle)decoded.TryGetTypedValue();
+
+            Assert.Equal(Angle.FromDegrees(220), mwv.Angle);
+            Assert.False(mwv.Relative);
+            Assert.Equal(Speed.FromKnots(5.0), mwv.Speed);
+        }
+
+        [Fact]
+        public void ApparentWindSpeedEncode()
+        {
+            NmeaSentence.OwnTalkerId = TalkerId.WeatherInstruments;
+            WindSpeedAndAngle mwv = new WindSpeedAndAngle(Angle.FromDegrees(-20), Speed.FromKnots(54), true);
+            Assert.True(mwv.Valid);
+            Assert.Equal(Angle.FromDegrees(-20), mwv.Angle);
+            Assert.Equal("340.0,R,54.0,N,A", mwv.ToNmeaMessage());
+            Assert.Contains("Apparent", mwv.ToReadableContent());
+        }
+
+        [Fact]
+        public void TrueWindSpeedEncode()
+        {
+            NmeaSentence.OwnTalkerId = TalkerId.WeatherInstruments;
+            WindSpeedAndAngle mwv = new WindSpeedAndAngle(Angle.FromDegrees(220), Speed.FromKnots(5.4), false);
+
+            Assert.True(mwv.Valid);
+            Assert.Equal(Angle.FromDegrees(220), mwv.Angle);
+            Assert.Equal("220.0,T,5.4,N,A", mwv.ToNmeaMessage());
+            Assert.Contains("Absolute", mwv.ToReadableContent());
         }
 
         [Theory]

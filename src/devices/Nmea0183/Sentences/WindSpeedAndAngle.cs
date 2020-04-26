@@ -20,12 +20,13 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs a new MWV sentence
         /// </summary>
-        public WindSpeedAndAngle(double angle, Speed speed, bool relative)
+        public WindSpeedAndAngle(Angle angle, Speed speed, bool relative)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
-            Angle = angle;
             Speed = speed;
             Relative = relative;
+            Angle = angle;
+            Valid = true;
         }
 
         /// <summary>
@@ -54,23 +55,26 @@ namespace Iot.Device.Nmea0183.Sentences
             // Other units than "N" (knots) not supported
             if (status == "A" && angle.HasValue && speed.HasValue && unit == "N")
             {
-                Angle = angle.Value;
+                Angle = Angle.FromDegrees(angle.Value);
                 Speed = Speed.FromKnots(speed.Value);
                 if (reference == "T")
                 {
                     Relative = false;
+                    Angle = Angle.Normalize(true);
                 }
                 else
                 {
                     // Default, since that's what the actual wind instrument delivers
                     Relative = true;
+                    // Relative angles are +/- 180
+                    Angle = Angle.Normalize(false);
                 }
 
                 Valid = true;
             }
             else
             {
-                Angle = 0;
+                Angle = Angle.Zero;
                 Speed = new Speed();
                 Valid = false;
             }
@@ -79,7 +83,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Angle of the wind
         /// </summary>
-        public double Angle
+        public Angle Angle
         {
             get;
             private set;
@@ -110,7 +114,9 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"{Angle:F1},{(Relative ? "R" : "T")},{Speed.Knots:F1},N,A";
+                // It seems that angles should always be written 0..360.
+                var normalized = Angle.Normalize(true);
+                return $"{normalized.Degrees:F1},{(Relative ? "R" : "T")},{Speed.Knots:F1},N,A";
             }
 
             return string.Empty;
@@ -123,11 +129,11 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 if (Relative)
                 {
-                    return $"Relative wind direction: {Angle:F1}° Speed: {Speed.Knots:F1}Kts";
+                    return $"Apparent wind direction: {Angle.Degrees:F1}° Speed: {Speed.Knots:F1}Kts";
                 }
                 else
                 {
-                    return $"Absolute wind direction: {Angle:F1}° Speed: {Speed.Knots:F1}Kts";
+                    return $"Absolute wind direction: {Angle.Degrees:F1}° Speed: {Speed.Knots:F1}Kts";
                 }
             }
 

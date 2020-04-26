@@ -272,7 +272,7 @@ namespace Iot.Device.Nmea0183
                 if (c >= 128)
                 {
                     // this should generally not be possible but checking for sanity
-                    throw new InvalidOperationException("Talker sentence must contain only ASCII characters");
+                    throw new InvalidOperationException($"Talker sentence must contain only ASCII characters, found {c}.");
                 }
 
                 ret ^= (byte)c;
