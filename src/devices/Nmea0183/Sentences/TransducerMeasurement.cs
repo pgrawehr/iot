@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Iot.Device.Nmea0183;
 using Units;
 
-namespace Nmea0183.Sentences
+namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
     /// Reading of a sensor, not covered by other sentences.

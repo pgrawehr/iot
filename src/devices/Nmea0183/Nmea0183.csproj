@@ -5,6 +5,7 @@
     <!--Disabling default items so samples source won't get build by the main library-->
     <EnableDefaultItems>false</EnableDefaultItems>
     <LangVersion>preview</LangVersion>
+    <RootNamespace>Iot.Device.Nmea0183</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

@@ -9,8 +9,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
-using Nmea0183;
-using Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183
 {

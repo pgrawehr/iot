@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Iot.Device.Nmea0183;
-using Nmea0183.Sentences;
+using Iot.Device.Nmea0183.Sentences;
 
-namespace Nmea0183
+namespace Iot.Device.Nmea0183
 {
     /// <summary>
     /// A filter rule for the <see cref="MessageRouter"/>.

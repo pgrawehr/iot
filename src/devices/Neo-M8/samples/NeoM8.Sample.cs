@@ -7,9 +7,6 @@ using System.Net.Sockets;
 using System.Threading;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
-using Iot.Device.Gps;
-using Nmea0183;
-using Nmea0183.Sentences;
 
 namespace Iot.Device.Gps.NeoM8Samples
 {

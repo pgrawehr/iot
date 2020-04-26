@@ -4,7 +4,7 @@
 
 using System;
 
-#pragma warning disable CS1591 // Fehledes XML-Kommentar für öffentlich sichtbaren Typ oder Element
+#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
     /// <summary>

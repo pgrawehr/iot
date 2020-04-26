@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Nmea0183.Sentences
+namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
     /// GPS Quality indicator (from GGA message)

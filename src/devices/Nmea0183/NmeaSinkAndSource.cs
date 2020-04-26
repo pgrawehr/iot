@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 using Iot.Device.Nmea0183.Sentences;
-using Nmea0183.Sentences;
 using Units;
 
 #pragma warning disable CS1591
-namespace Nmea0183
+namespace Iot.Device.Nmea0183
 {
     public abstract class NmeaSinkAndSource : IDisposable
     {

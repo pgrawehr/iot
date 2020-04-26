@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Iot.Device.Nmea0183;
-using Nmea0183.Sentences;
+using Iot.Device.Nmea0183.Sentences;
 
 #pragma warning disable CS1591
-namespace Nmea0183
+namespace Iot.Device.Nmea0183
 {
     /// <summary>
     ///  Message routing for NMEA messages

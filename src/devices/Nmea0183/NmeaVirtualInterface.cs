@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Nmea0183.Sentences;
+using Iot.Device.Nmea0183.Sentences;
 
 #pragma warning disable CS1591
 
-namespace Nmea0183
+namespace Iot.Device.Nmea0183
 {
     public class NmeaVirtualInterface : NmeaSinkAndSource
     {

@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
-using Xunit;
 using Moq;
-using Nmea0183.Sentences;
 using Units;
+using Xunit;
 
-namespace Nmea0183.Tests
+namespace Iot.Device.Nmea0183.Tests
 {
     public sealed class MessageRouterTests : IDisposable
     {

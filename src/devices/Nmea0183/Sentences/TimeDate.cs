@@ -4,7 +4,7 @@ using System.Globalization;
 using Iot.Device.Nmea0183;
 
 #pragma warning disable CS1591
-namespace Nmea0183.Sentences
+namespace Iot.Device.Nmea0183.Sentences
 {
     public class TimeDate : NmeaSentence
     {

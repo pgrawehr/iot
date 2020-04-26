@@ -4,7 +4,7 @@ using System.Text;
 using Iot.Device.Nmea0183;
 using Units;
 
-namespace Nmea0183.Sentences
+namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
     /// XTE sentence: Cross track error (one of the most important messages used to control autopilot)

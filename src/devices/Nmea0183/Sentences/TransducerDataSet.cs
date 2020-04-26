@@ -4,7 +4,7 @@ using System.Text;
 using Iot.Units;
 using Units;
 
-namespace Nmea0183.Sentences
+namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
     /// A single data set from an XDR sentence

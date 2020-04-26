@@ -4,14 +4,11 @@
 
 using System;
 using System.Linq;
-using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
-using Nmea0183;
-using Nmea0183.Sentences;
 using Units;
 using Xunit;
 
-namespace Nmea0183.Tests
+namespace Iot.Device.Nmea0183.Tests
 {
     public class SentenceTests
     {

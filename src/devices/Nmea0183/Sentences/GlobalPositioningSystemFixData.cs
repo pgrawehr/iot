@@ -5,9 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using Nmea0183;
-using Nmea0183.Sentences;
 using Units;
 
 #pragma warning disable CS1591

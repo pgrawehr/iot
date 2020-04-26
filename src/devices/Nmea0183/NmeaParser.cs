@@ -3,13 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
-using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
-using Nmea0183.Sentences;
 using Units;
 
 #pragma warning disable CS1591
-namespace Nmea0183
+namespace Iot.Device.Nmea0183
 {
     public delegate void PositionUpdate(GeographicPosition position, Angle? track, Speed? speed);
 
