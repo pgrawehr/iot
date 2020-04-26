@@ -87,8 +87,11 @@ namespace Nmea0183
                         return false;
                     }
                 }
+
+                return true;
             }
 
+            // Invalid sentences can't be routed anywhere
             return false;
         }
     }

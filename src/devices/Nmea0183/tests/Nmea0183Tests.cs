@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Linq;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
@@ -114,6 +115,19 @@ namespace Nmea0183.Tests
             Assert.Equal(GpsQuality.DifferentialFix, nmeaSentence.Status);
             Assert.Equal(12, nmeaSentence.NumberOfSatellites);
             Assert.Equal(0.6, nmeaSentence.Hdop);
+        }
+
+        [Fact]
+        public void CreatesValidGgaSentence()
+        {
+            DateTimeOffset time = DateTimeOffset.UtcNow;
+            GlobalPositioningSystemFixData sentence = new GlobalPositioningSystemFixData(time, GpsQuality.DifferentialFix, new GeographicPosition(47.49, 9.48, 720),
+                680, 2.4, 10);
+
+            Assert.True(sentence.Valid);
+            Assert.NotEqual(default(TalkerId), sentence.TalkerId);
+            Assert.NotEqual(default(SentenceId), sentence.SentenceId);
+            Assert.False(string.IsNullOrWhiteSpace(sentence.ToReadableContent()));
         }
 
         [Theory]

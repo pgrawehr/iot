@@ -10,10 +10,10 @@ namespace Nmea0183
 {
     public abstract class NmeaSinkAndSource : IDisposable
     {
-        public event PositionUpdate OnNewPosition;
-        public event Action<DateTimeOffset> OnNewTime;
-        public event Action<NmeaSinkAndSource, NmeaSentence> OnNewSequence;
-        public event Action<string, NmeaError> OnParserError;
+        public virtual event PositionUpdate OnNewPosition;
+        public virtual event Action<DateTimeOffset> OnNewTime;
+        public virtual event Action<NmeaSinkAndSource, NmeaSentence> OnNewSequence;
+        public virtual event Action<string, NmeaError> OnParserError;
 
         public abstract void StartDecode();
         public abstract void SendSentence(NmeaSentence sentence);

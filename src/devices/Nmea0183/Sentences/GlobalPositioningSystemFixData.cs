@@ -189,6 +189,7 @@ namespace Iot.Device.Nmea0183.Sentences
             Undulation = EllipsoidAltitude - geoidAltitude;
             Hdop = hdop;
             NumberOfSatellites = numberOfSatellites;
+            Valid = true;
         }
 
         public override string ToReadableContent()

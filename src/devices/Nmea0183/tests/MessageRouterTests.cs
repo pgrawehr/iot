@@ -57,7 +57,12 @@ namespace Nmea0183.Tests
             // This rule sends all messages from the local client to all (other) sinks
             FilterRule f = new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, StandardFilterAction.ForwardToAllOthers, false);
             _router.AddFilterRule(f);
-            _router.SendSentence(TypedTestSentence());
+
+            var sentence = TypedTestSentence();
+            _route1.Setup(x => x.SendSentence(sentence));
+            _route2.Setup(x => x.SendSentence(sentence));
+
+            _router.SendSentence(sentence);
         }
 
         [Fact]
@@ -82,12 +87,19 @@ namespace Nmea0183.Tests
             _router.AddFilterRule(f2);
 
             NmeaSentence.OwnTalkerId = new TalkerId('Y', 'D');
+            var gnssSentence = GnssSentence();
             // Discarded
-            _route1.Raise(x => x.OnNewSequence += null, _route1.Object, GnssSentence());
+            _route1.Raise(x => x.OnNewSequence += null, _route1.Object, gnssSentence);
 
             // Forwarded to all (including itself)
             NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
-            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, GnssSentence());
+
+            gnssSentence = GnssSentence();
+
+            _route1.Setup(x => x.SendSentence(gnssSentence));
+            _route2.Setup(x => x.SendSentence(gnssSentence));
+
+            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, gnssSentence);
         }
 
         [Fact]
@@ -96,11 +108,24 @@ namespace Nmea0183.Tests
             FilterRule f1 = new FilterRule("*", new TalkerId('G', 'P'), new SentenceId("GGA"), StandardFilterAction.ForwardToAllOthers, true);
 
             _router.AddFilterRule(f1);
+            bool received = false;
+            _router.OnNewSequence += (source, sentence) =>
+            {
+                Assert.Equal(_router, source);
+                received = true;
+            };
+
+            NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
+            var sentence1 = GnssSentence();
+            var sentence2 = GnssRawSentence();
+            // Only the raw message should be forwarded to the other sink (here sending from 2 to 1)
+            _route1.Setup(x => x.SendSentence(sentence2));
 
             // Forwarded to all, but only once
-            NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
-            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, GnssSentence());
-            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, GnssRawSentence());
+            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, sentence1);
+            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, sentence2);
+
+            Assert.True(received);
         }
 
         private RawSentence TestSentence()
