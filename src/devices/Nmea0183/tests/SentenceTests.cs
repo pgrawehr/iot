@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Nmea0183.Tests
 {
-    public class Nmea0183Tests
+    public class SentenceTests
     {
         [Fact]
         public void SentenceIdentify()
