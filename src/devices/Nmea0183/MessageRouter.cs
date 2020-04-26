@@ -14,15 +14,18 @@ namespace Nmea0183
     public sealed class MessageRouter : NmeaSinkAndSource
     {
         public const string LocalMessageSource = "LOCAL";
-        private Dictionary<string, NmeaSinkAndSource> _parsedStreams;
+        private readonly Dictionary<string, NmeaSinkAndSource> _sourcesAndSinks;
+        private readonly List<string> _sourceSinkOrder;
         private List<FilterRule> _filterRules;
         private bool _localInterfaceActive;
 
         public MessageRouter()
         {
-            _parsedStreams = new Dictionary<string, NmeaSinkAndSource>();
+            _sourcesAndSinks = new Dictionary<string, NmeaSinkAndSource>();
+            _sourceSinkOrder = new List<string>();
             // Always add ourselves as message source
-            _parsedStreams.Add(LocalMessageSource, this);
+            _sourcesAndSinks.Add(LocalMessageSource, this);
+            _sourceSinkOrder.Add(LocalMessageSource);
             _filterRules = new List<FilterRule>();
             _localInterfaceActive = true;
         }
@@ -31,15 +34,16 @@ namespace Nmea0183
         {
             get
             {
-                return _parsedStreams;
+                return _sourcesAndSinks;
             }
         }
 
         public bool AddEndPoint(string name, NmeaSinkAndSource parser)
         {
-            if (!_parsedStreams.ContainsKey(name))
+            if (!_sourcesAndSinks.ContainsKey(name))
             {
-                _parsedStreams.Add(name, parser);
+                _sourcesAndSinks.Add(name, parser);
+                _sourceSinkOrder.Add(name);
                 parser.OnNewSequence += OnSequenceReceived;
                 // Todo: Also monitor errors, should eventually attempt to reconnect
                 return true;
@@ -51,7 +55,7 @@ namespace Nmea0183
         private void OnSequenceReceived(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             // Get name of source for this message (as defined in the AddStream call)
-            string name = _parsedStreams.First(x => x.Value == source).Key;
+            string name = _sourcesAndSinks.First(x => x.Value == source).Key;
             foreach (var filter in _filterRules)
             {
                 if (filter.SentenceMatch(name, sentence))
@@ -61,13 +65,29 @@ namespace Nmea0183
                         case StandardFilterAction.DiscardMessage:
                             return;
                         case StandardFilterAction.ForwardToAllOthers:
-                            SendMessageTo(_parsedStreams.Values.Where(x => x != source), sentence);
+                            SendMessageTo(_sourcesAndSinks.Values.Where(x => x != source), sentence);
                             return;
                         case StandardFilterAction.ForwardToAll:
-                            SendMessageTo(_parsedStreams.Values, sentence);
+                            SendMessageTo(_sourcesAndSinks.Values, sentence);
                             return;
                         case StandardFilterAction.SendBack:
                             SendMessageTo(new[] { source }, sentence);
+                            return;
+                        case StandardFilterAction.ForwardToLocal:
+                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == LocalMessageSource)
+                                .Select(y => y.Value), sentence);
+                            return;
+                        case StandardFilterAction.ForwardToPrimary:
+                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[1])
+                                .Select(y => y.Value), sentence);
+                            return;
+                        case StandardFilterAction.ForwardToSecondary:
+                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[2])
+                                .Select(y => y.Value), sentence);
+                            return;
+                        case StandardFilterAction.ForwardToTernary:
+                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[3])
+                                .Select(y => y.Value), sentence);
                             return;
                     }
                 }
@@ -89,8 +109,34 @@ namespace Nmea0183
             }
         }
 
+        /// <summary>
+        /// Adds a filter rule to the end of the rule set
+        /// </summary>
+        /// <param name="rule">The rule to add</param>
+        /// <exception cref="ArgumentException">The filter rule cannot be added because it is invalid (i.e. an attempt to
+        /// add a rule for an inexistent interface was made)</exception>
         public void AddFilterRule(FilterRule rule)
         {
+            if (rule.StandardFilterAction == StandardFilterAction.ForwardToPrimary && _sourceSinkOrder.Count < 2)
+            {
+                throw new ArgumentException("Cannot create a rule that targets the primary interface without such an interface");
+            }
+
+            if (rule.StandardFilterAction == StandardFilterAction.ForwardToSecondary && _sourceSinkOrder.Count < 3)
+            {
+                throw new ArgumentException("Cannot create a rule that targets the secondary interface without such an interface");
+            }
+
+            if (rule.StandardFilterAction == StandardFilterAction.ForwardToTernary && _sourceSinkOrder.Count < 4)
+            {
+                throw new ArgumentException("Cannot create a rule that targets the ternary interface without such an interface");
+            }
+
+            if (rule.SourceName != "*" && !_sourceSinkOrder.Contains(rule.SourceName))
+            {
+                throw new ArgumentException($"Cannot define a rule for the unknown source {rule.SourceName}.");
+            }
+
             _filterRules.Add(rule);
         }
 

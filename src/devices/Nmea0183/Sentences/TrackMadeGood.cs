@@ -7,9 +7,7 @@ using Units;
 namespace Nmea0183.Sentences
 {
     /// <summary>
-    /// HDT Sentence: Heading true.
-    /// This is either a calculated message by using the HDT message and a magnetic variation model, or directly measured using a gyrocompass.
-    /// But since these are very expensive an power-hungry, they are only available in big ships or aircraft.
+    /// VTG Sentence: Speed and course
     /// </summary>
     public class TrackMadeGood : NmeaSentence
     {
@@ -21,7 +19,7 @@ namespace Nmea0183.Sentences
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
         /// <summary>
-        /// Constructs a new MWV sentence
+        /// Constructs a new VTG sentence
         /// </summary>
         public TrackMadeGood(Angle courseOverGroundTrue, Angle? courseOverGroundMagnetic, Speed speed)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
@@ -40,8 +38,11 @@ namespace Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
+        /// Creates a VTG sentence from decoded fields
         /// </summary>
+        /// <param name="talkerId">Talker Id</param>
+        /// <param name="fields">List of fields</param>
+        /// <param name="time">Time this message was valid</param>
         public TrackMadeGood(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {

@@ -11,6 +11,18 @@ namespace Nmea0183
         DiscardMessage,
         ForwardToAllOthers,
         ForwardToAll,
-        SendBack
+        SendBack,
+
+        /// <summary>
+        /// Forward to local instance only
+        /// </summary>
+        ForwardToLocal,
+
+        /// <summary>
+        /// Forward to primary interface (that is the first registered one)
+        /// </summary>
+        ForwardToPrimary,
+        ForwardToSecondary,
+        ForwardToTernary,
     }
 }
