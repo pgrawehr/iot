@@ -1,0 +1,131 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
+using Xunit;
+using Moq;
+using Nmea0183.Sentences;
+using Units;
+
+namespace Nmea0183.Tests
+{
+    public sealed class MessageRouterTests : IDisposable
+    {
+        private Mock<NmeaSinkAndSource> _route1;
+        private Mock<NmeaSinkAndSource> _route2;
+        private MessageRouter _router;
+
+        public MessageRouterTests()
+        {
+            _route1 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict);
+            _route2 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict);
+            _router = new MessageRouter();
+            _router.AddEndPoint("1", _route1.Object);
+            _router.AddEndPoint("2", _route2.Object);
+        }
+
+        public void Dispose()
+        {
+            _router.Dispose();
+            _route1.VerifyAll();
+            _route2.VerifyAll();
+        }
+
+        [Fact]
+        public void RoutingCanBeConstructed()
+        {
+            var route1 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict);
+            var route2 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict);
+            MessageRouter mr = new MessageRouter();
+            Assert.Equal(1, mr.EndPoints.Count); // Already has the default internal end point
+            mr.AddEndPoint("1", route1.Object);
+            mr.AddEndPoint("2", route2.Object);
+            Assert.Equal(3, mr.EndPoints.Count);
+        }
+
+        [Fact]
+        public void NothingHappensWhenNoFilter()
+        {
+            _route1.Raise(x => x.OnNewSequence += null, _router, TestSentence());
+            _router.SendSentence(TestSentence());
+        }
+
+        [Fact]
+        public void AddSimpleOutgoingFilter()
+        {
+            // This rule sends all messages from the local client to all (other) sinks
+            FilterRule f = new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, StandardFilterAction.ForwardToAllOthers, false);
+            _router.AddFilterRule(f);
+            _router.SendSentence(TypedTestSentence());
+        }
+
+        [Fact]
+        public void AddSimpleOutgoingFilterRawOnly()
+        {
+            // Configuring false for the last parameter here on the local outgoing rule is probably not useful, because
+            // the local sender will typically provide typed messages.
+            FilterRule f = new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, StandardFilterAction.ForwardToAllOthers, true);
+            _router.AddFilterRule(f);
+            _router.SendSentence(TypedTestSentence());
+        }
+
+        [Fact]
+        public void AddIncomingTalkerRule()
+        {
+            // These two rules define that messages with a YDGGA header (Navigation data from the NMEA2000 Gateway) shall be
+            // discarded and GPGGA messages used instead. These (in my test case) contain elevation as well.
+            FilterRule f1 = new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("GGA"), StandardFilterAction.DiscardMessage, false);
+            FilterRule f2 = new FilterRule("*", new TalkerId('G', 'P'), new SentenceId("GGA"), StandardFilterAction.ForwardToAll, false);
+
+            _router.AddFilterRule(f1);
+            _router.AddFilterRule(f2);
+
+            NmeaSentence.OwnTalkerId = new TalkerId('Y', 'D');
+            // Discarded
+            _route1.Raise(x => x.OnNewSequence += null, _route1.Object, GnssSentence());
+
+            // Forwarded to all (including itself)
+            NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
+            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, GnssSentence());
+        }
+
+        [Fact]
+        public void DecodableMessageIsOnlyForwardedOnce()
+        {
+            FilterRule f1 = new FilterRule("*", new TalkerId('G', 'P'), new SentenceId("GGA"), StandardFilterAction.ForwardToAllOthers, true);
+
+            _router.AddFilterRule(f1);
+
+            // Forwarded to all, but only once
+            NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
+            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, GnssSentence());
+            _route2.Raise(x => x.OnNewSequence += null, _route2.Object, GnssRawSentence());
+        }
+
+        private RawSentence TestSentence()
+        {
+            // A time message
+            return new RawSentence(TalkerId.GlobalPositioningSystem, new SentenceId("ZDA"),
+                new string[] { "135302.036", "02", "02", "2020", "+01", "00" }, DateTimeOffset.UtcNow);
+        }
+
+        private HeadingMagnetic TypedTestSentence()
+        {
+            return new HeadingMagnetic(12.2);
+        }
+
+        private GlobalPositioningSystemFixData GnssSentence()
+        {
+            return new GlobalPositioningSystemFixData(DateTimeOffset.UtcNow, GpsQuality.DifferentialFix, new GeographicPosition(47.49, 9.48, 720),
+                680, 2.4, 10);
+        }
+
+        private RawSentence GnssRawSentence()
+        {
+            return new RawSentence(TalkerId.GlobalPositioningSystem, new SentenceId("GGA"),
+                "163824, 4728.7024, N, 00929.9665, E, 2, 12, 0.6, 398.5, M, 46.8, M,,".Split(',', StringSplitOptions.None),
+                new DateTimeOffset(2020, 04, 26, 16, 38, 24, TimeSpan.Zero));
+        }
+    }
+}

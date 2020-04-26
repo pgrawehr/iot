@@ -264,5 +264,7 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <returns>TalkerId instance</returns>
         public static TalkerId TimekeeperRadioUpdateWwvOrWwvh => new TalkerId('Z', 'V');
+
+        public static TalkerId Any => new TalkerId('*', ' ');
     }
 }

@@ -175,7 +175,6 @@ namespace Iot.Device.Nmea0183.Sentences
             GpsQuality status,
             GeographicPosition position,
             double? geoidAltitude,
-            double? ellipsoidAltitude,
             double hdop,
             int numberOfSatellites)
         : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
@@ -185,7 +184,7 @@ namespace Iot.Device.Nmea0183.Sentences
             position = position.NormalizeAngleTo180();
             (_latitude, _latitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Latitude, true);
             (_longitude, _longitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Longitude, false);
-            EllipsoidAltitude = ellipsoidAltitude;
+            EllipsoidAltitude = position.EllipsoidalHeight;
             GeoidAltitude = geoidAltitude;
             Undulation = EllipsoidAltitude - geoidAltitude;
             Hdop = hdop;

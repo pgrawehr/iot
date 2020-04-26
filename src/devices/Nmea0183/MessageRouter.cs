@@ -11,34 +11,50 @@ namespace Nmea0183
     /// <summary>
     ///  Message routing for NMEA messages
     /// </summary>
-    public sealed class MessageRouter
+    public sealed class MessageRouter : NmeaSinkAndSource
     {
-        private Dictionary<string, NmeaParser> _parsedStreams;
+        public const string LocalMessageSource = "LOCAL";
+        private Dictionary<string, NmeaSinkAndSource> _parsedStreams;
         private List<FilterRule> _filterRules;
+        private bool _localInterfaceActive;
 
         public MessageRouter()
         {
-            _parsedStreams = new Dictionary<string, NmeaParser>();
+            _parsedStreams = new Dictionary<string, NmeaSinkAndSource>();
+            // Always add ourselves as message source
+            _parsedStreams.Add(LocalMessageSource, this);
             _filterRules = new List<FilterRule>();
+            _localInterfaceActive = true;
         }
 
-        public bool AddStream(string name, NmeaParser parser)
+        public IReadOnlyDictionary<string, NmeaSinkAndSource> EndPoints
+        {
+            get
+            {
+                return _parsedStreams;
+            }
+        }
+
+        public bool AddEndPoint(string name, NmeaSinkAndSource parser)
         {
             if (!_parsedStreams.ContainsKey(name))
             {
                 _parsedStreams.Add(name, parser);
                 parser.OnNewSequence += OnSequenceReceived;
+                // Todo: Also monitor errors, should eventually attempt to reconnect
                 return true;
             }
 
             return false;
         }
 
-        private void OnSequenceReceived(NmeaParser source, NmeaSentence sentence)
+        private void OnSequenceReceived(NmeaSinkAndSource source, NmeaSentence sentence)
         {
+            // Get name of source for this message (as defined in the AddStream call)
+            string name = _parsedStreams.First(x => x.Value == source).Key;
             foreach (var filter in _filterRules)
             {
-                if (filter.SentenceMatch(sentence))
+                if (filter.SentenceMatch(name, sentence))
                 {
                     switch (filter.StandardFilterAction)
                     {
@@ -58,9 +74,19 @@ namespace Nmea0183
             }
         }
 
-        private void SendMessageTo(IEnumerable<NmeaParser> sink, NmeaSentence sentence)
+        private void SendMessageTo(IEnumerable<NmeaSinkAndSource> sinks, NmeaSentence sentence)
         {
-            throw new NotImplementedException();
+            foreach (var sink in sinks)
+            {
+                if (sink == this)
+                {
+                    DispatchSentenceEvents(sentence);
+                }
+                else
+                {
+                    sink.SendSentence(sentence);
+                }
+            }
         }
 
         public void AddFilterRule(FilterRule rule)
@@ -68,30 +94,23 @@ namespace Nmea0183
             _filterRules.Add(rule);
         }
 
-        // Todo: Move outside this class
-        public class FilterRule
+        public override void StartDecode()
         {
-            public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, StandardFilterAction standardFilterAction)
+            _localInterfaceActive = true;
+        }
+
+        public override void SendSentence(NmeaSentence sentence)
+        {
+            if (_localInterfaceActive)
             {
-                SourceName = sourceName;
-                TalkerId = talkerId;
-                SentenceId = sentenceId;
-                StandardFilterAction = standardFilterAction;
+                // Forward to routing method with ourselves as source
+                OnSequenceReceived(this, sentence);
             }
+        }
 
-            public string SourceName { get; }
-            public TalkerId TalkerId { get; }
-            public SentenceId SentenceId { get; }
-            public StandardFilterAction StandardFilterAction { get; }
-
-            public bool SentenceMatch(NmeaSentence sentence)
-            {
-                if (sentence.Valid)
-                {
-                }
-
-                return true;
-            }
+        public override void StopDecode()
+        {
+            _localInterfaceActive = false;
         }
     }
 }

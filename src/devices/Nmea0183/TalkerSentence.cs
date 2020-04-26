@@ -191,7 +191,7 @@ namespace Iot.Device.Nmea0183
             }
             else
             {
-                retVal = new UnknownSentence(TalkerId, Id, Fields, LastMessageTime);
+                retVal = new RawSentence(TalkerId, Id, Fields, LastMessageTime);
             }
 
             if (retVal?.DateTime != null)
@@ -200,6 +200,15 @@ namespace Iot.Device.Nmea0183
             }
 
             return retVal;
+        }
+
+        /// <summary>
+        /// Returns this sentence without parsing its contents
+        /// </summary>
+        /// <returns>A raw sentence</returns>
+        public RawSentence GetAsRawSentence()
+        {
+            return new RawSentence(TalkerId, Id, Fields, LastMessageTime);
         }
 
         /// <summary>

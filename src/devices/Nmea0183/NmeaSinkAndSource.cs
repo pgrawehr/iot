@@ -1,0 +1,74 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Iot.Device.Nmea0183.Sentences;
+using Nmea0183.Sentences;
+using Units;
+
+#pragma warning disable CS1591
+namespace Nmea0183
+{
+    public abstract class NmeaSinkAndSource : IDisposable
+    {
+        public event PositionUpdate OnNewPosition;
+        public event Action<DateTimeOffset> OnNewTime;
+        public event Action<NmeaSinkAndSource, NmeaSentence> OnNewSequence;
+        public event Action<string, NmeaError> OnParserError;
+
+        public abstract void StartDecode();
+        public abstract void SendSentence(NmeaSentence sentence);
+        public abstract void StopDecode();
+
+        protected void FireOnParserError(string message, NmeaError error)
+        {
+            OnParserError?.Invoke(message, error);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                StopDecode();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected void DispatchSentenceEvents(NmeaSentence typed)
+        {
+            if (typed != null)
+            {
+                OnNewSequence?.Invoke(this, typed);
+            }
+
+            if (typed is RecommendedMinimumNavigationInformation rmc)
+            {
+                // Todo: This sentence is only interesting if we don't have GGA and VTG
+                if (rmc.LatitudeDegrees.HasValue && rmc.LongitudeDegrees.HasValue)
+                {
+                    GeographicPosition position = new GeographicPosition(rmc.LatitudeDegrees.Value, rmc.LongitudeDegrees.Value, 0);
+
+                    if (rmc.TrackMadeGoodInDegreesTrue.HasValue && rmc.SpeedOverGroundInKnots.HasValue)
+                    {
+                        OnNewPosition?.Invoke(position, rmc.TrackMadeGoodInDegreesTrue.Value, Speed.FromKnots(rmc.SpeedOverGroundInKnots.Value));
+                    }
+                    else
+                    {
+                        OnNewPosition?.Invoke(position, Angle.Zero, Speed.FromKnots(0));
+                    }
+                }
+            }
+            else if (typed is TimeDate td)
+            {
+                if (td.Valid && td.DateTime.HasValue)
+                {
+                    OnNewTime?.Invoke(td.DateTime.Value);
+                }
+            }
+        }
+    }
+}

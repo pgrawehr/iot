@@ -12,6 +12,8 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public struct SentenceId : IEquatable<SentenceId>
     {
+        public static SentenceId Any => new SentenceId('*', ' ', ' ');
+
         public char Id1 { get; private set; }
         public char Id2 { get; private set; }
         public char Id3 { get; private set; }

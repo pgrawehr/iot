@@ -11,6 +11,7 @@ namespace Nmea0183
         MessageToShort,
         InvalidChecksum,
         MessageToLong,
-        NoSyncByte
+        NoSyncByte,
+        PortClosed,
     }
 }

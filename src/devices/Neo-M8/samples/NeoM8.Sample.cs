@@ -61,17 +61,25 @@ namespace Iot.Device.Gps.NeoM8Samples
         {
             try
             {
-                using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                // using (TcpClient client = new TcpClient("127.0.0.1", 10110))
+                // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
+                using (TcpClient client = new TcpClient("127.0.0.1", 10110))
                 {
                     Console.WriteLine("Connected!");
                     var stream = client.GetStream();
+                    bool closed = false;
                     using (NmeaParser parser = new NmeaParser(stream, stream))
                     {
-                        parser.OnParserError += (s, error) => { Console.WriteLine($"Error while parsing message '{s}': {error}"); };
-                        parser.OnNewSequence += ParserOnOnNewSequence;
+                        parser.OnParserError += (s, error) =>
+                        {
+                            Console.WriteLine($"Error while parsing message '{s}': {error}");
+                            if (error == NmeaError.PortClosed)
+                            {
+                                closed = true;
+                            }
+                        };
+                        parser.OnNewSequence += ParserOnNewSequence;
                         parser.StartDecode();
-                        while (!Console.KeyAvailable)
+                        while (!Console.KeyAvailable && !closed)
                         {
                             Thread.Sleep(1000);
                         }
@@ -84,7 +92,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             }
         }
 
-        private static void ParserOnOnNewSequence(NmeaParser parser, NmeaSentence sentence)
+        private static void ParserOnNewSequence(NmeaSinkAndSource parser, NmeaSentence sentence)
         {
             Console.WriteLine(sentence.ToReadableContent());
         }

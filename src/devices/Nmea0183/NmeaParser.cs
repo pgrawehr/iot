@@ -16,7 +16,7 @@ namespace Nmea0183
     /// <summary>
     /// Parses Nmea Sequences
     /// </summary>
-    public sealed class NmeaParser : IDisposable
+    public sealed class NmeaParser : NmeaSinkAndSource, IDisposable
     {
         private readonly object _lock;
         private Stream _dataSource;
@@ -41,15 +41,7 @@ namespace Nmea0183
             _lastSeenSentences = new Dictionary<SentenceId, TalkerSentence>();
         }
 
-        public event PositionUpdate OnNewPosition;
-
-        public event Action<DateTimeOffset> OnNewTime;
-
-        public event Action<NmeaParser, NmeaSentence> OnNewSequence;
-
-        public event Action<string, NmeaError> OnParserError;
-
-        public void StartDecode()
+        public override void StartDecode()
         {
             lock (_lock)
             {
@@ -69,9 +61,24 @@ namespace Nmea0183
         {
             while (!_cancellationTokenSource.IsCancellationRequested)
             {
-                string currentLine = _reader.ReadLine();
+                string currentLine = null;
+                try
+                {
+                    currentLine = _reader.ReadLine();
+                }
+                catch (IOException x)
+                {
+                    FireOnParserError(x.Message, NmeaError.PortClosed);
+                }
+
                 if (currentLine == null)
                 {
+                    if (_reader.EndOfStream)
+                    {
+                        FireOnParserError("End of stream detected.", NmeaError.PortClosed);
+                    }
+
+                    Thread.Sleep(10); // to prevent busy-waiting
                     continue; // Probably because the stream was closed.
                 }
 
@@ -79,47 +86,25 @@ namespace Nmea0183
                 TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, out var error);
                 if (sentence == null)
                 {
-                    OnParserError?.Invoke(currentLine, error);
+                    FireOnParserError(currentLine, error);
                     continue;
                 }
 
                 _lastSeenSentences[sentence.Id] = sentence;
 
-                var typed = sentence.TryGetTypedValue();
+                NmeaSentence typed = sentence.TryGetTypedValue();
+                DispatchSentenceEvents(typed);
 
-                if (typed != null)
+                if (!(typed is RawSentence))
                 {
-                    OnNewSequence?.Invoke(this, typed);
-                }
-
-                if (typed is RecommendedMinimumNavigationInformation rmc)
-                {
-                    // Todo: This sentence is only interesting if we don't have GGA and VTG
-                    if (rmc.LatitudeDegrees.HasValue && rmc.LongitudeDegrees.HasValue)
-                    {
-                        GeographicPosition position = new GeographicPosition(rmc.LatitudeDegrees.Value, rmc.LongitudeDegrees.Value, 0);
-
-                        if (rmc.TrackMadeGoodInDegreesTrue.HasValue && rmc.SpeedOverGroundInKnots.HasValue)
-                        {
-                            OnNewPosition?.Invoke(position, rmc.TrackMadeGoodInDegreesTrue.Value, Speed.FromKnots(rmc.SpeedOverGroundInKnots.Value));
-                        }
-                        else
-                        {
-                            OnNewPosition?.Invoke(position, Angle.Zero, Speed.FromKnots(0));
-                        }
-                    }
-                }
-                else if (typed is TimeDate td)
-                {
-                    if (td.Valid && td.DateTime.HasValue)
-                    {
-                        OnNewTime?.Invoke(td.DateTime.Value);
-                    }
+                    // If we didn't dispatch it as raw sentence, do this as well
+                    RawSentence raw = sentence.GetAsRawSentence();
+                    DispatchSentenceEvents(raw);
                 }
             }
         }
 
-        public void SendSentence(NmeaSentence sentence)
+        public override void SendSentence(NmeaSentence sentence)
         {
             TalkerSentence ts = new TalkerSentence(sentence);
             string dataToSend = ts.ToString() + "\r\n";
@@ -127,7 +112,7 @@ namespace Nmea0183
             _dataSink.Write(buffer);
         }
 
-        public void StopDecode()
+        public override void StopDecode()
         {
             lock (_lock)
             {
@@ -145,11 +130,6 @@ namespace Nmea0183
                     _reader = null;
                 }
             }
-        }
-
-        public void Dispose()
-        {
-            StopDecode();
         }
     }
 }
