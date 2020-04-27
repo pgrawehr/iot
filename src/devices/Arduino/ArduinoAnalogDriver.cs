@@ -14,7 +14,12 @@ namespace Iot.Device.Arduino
         private readonly List<SupportedPinConfiguration> _supportedPinConfigurations;
         private readonly Dictionary<int, ValueChangeEventHandler> _callbacks;
         private int _autoReportingReferenceCount;
-        private int _firstAnalogPin;
+
+        /// <summary>
+        /// List of analog pins. The index is the analog number, the value the digital pin number.
+        /// I.e for an Arduino Uno, pin A0 has entry 0 as 14
+        /// </summary>
+        private List<int> _analogPins;
 
         public ArduinoAnalogDriver(ArduinoBoard board,
             List<SupportedPinConfiguration> supportedPinConfigurations)
@@ -23,18 +28,20 @@ namespace Iot.Device.Arduino
             _supportedPinConfigurations = supportedPinConfigurations ?? throw new ArgumentNullException(nameof(supportedPinConfigurations));
             _callbacks = new Dictionary<int, ValueChangeEventHandler>();
             _autoReportingReferenceCount = 0;
+            _analogPins = new List<int>();
             PinCount = _supportedPinConfigurations.Count;
             VoltageReference = 5.0;
             // Number of the first analog pin. Serves for converting between logical A0-based pin numbers and digital pin numbers.
             // The value of this is 14 for most arduinos.
-            var firstPin = _supportedPinConfigurations.FirstOrDefault(x => x.PinModes.Contains(SupportedMode.ANALOG_INPUT));
-            if (firstPin != null)
-            {
-                _firstAnalogPin = firstPin.Pin;
-            }
-            else
+            var collection = _supportedPinConfigurations.Where(x => x.PinModes.Contains(SupportedMode.ANALOG_INPUT));
+            if (!collection.Any())
             {
                 throw new NotSupportedException("No analog pins found or Firmata firmware has no analog pin support");
+            }
+
+            foreach (var pin in collection)
+            {
+                _analogPins.Add(pin.Pin);
             }
         }
 
@@ -45,12 +52,12 @@ namespace Iot.Device.Arduino
 
         protected override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
         {
-            return pinNumber - _firstAnalogPin;
+            return _analogPins.IndexOf(pinNumber);
         }
 
         protected override int ConvertLogicalNumberingSchemeToPinNumber(int logicalPinNumber)
         {
-            return logicalPinNumber + _firstAnalogPin;
+            return _analogPins[logicalPinNumber];
         }
 
         public override bool SupportsAnalogInput(int pinNumber)
