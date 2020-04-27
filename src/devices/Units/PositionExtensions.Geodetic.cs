@@ -156,7 +156,7 @@ namespace Units
             public double[] C2a = new double[6 + 1];
             public double[] C3a = new double[6];
             public double[] C4a = new double[6];
-            uint caps = 0;
+            public uint caps = 0;
         };
 
 
@@ -187,17 +187,16 @@ namespace Units
             }
         }
 
-        enum captype : UInt32
-        {
-            CAP_NONE = 0U,
-            CAP_C1 = 1U << 0,
-            CAP_C1p = 1U << 1,
-            CAP_C2 = 1U << 2,
-            CAP_C3 = 1U << 3,
-            CAP_C4 = 1U << 4,
-            CAP_ALL = 0x1FU,
-            OUT_ALL = 0x7F80U
-        };
+
+        private const uint CAP_NONE = 0U;
+        private const uint CAP_C1 = 1U << 0;
+        private const uint CAP_C1p = 1U << 1;
+        private const uint CAP_C2 = 1U << 2;
+        private const uint CAP_C3 = 1U << 3;
+        private const uint CAP_C4 = 1U << 4;
+        private const uint CAP_ALL = 0x1FU;
+        private const uint OUT_ALL = 0x7F80U;
+        
 
         /* Replacements for C math functions (to be inlined) */
 
@@ -234,6 +233,16 @@ namespace Units
         private static double atan(double x)
         {
             return Math.Atan(x);
+        }
+
+        private static double sin(double x)
+        {
+            return Math.Sin(x);
+        }
+
+        private static double cos(double x)
+        {
+            return Math.Cos(x);
         }
 
         /* Replacements for C99 math functions */
@@ -328,9 +337,9 @@ static double sq(double x) { return x * x; }
             return s;
         }
 
-        static double polyval(int N, double[] p, double x)
+        static double polyval(int N, double[] p, int startIndex, double x)
         {
-            int pIdx = 0;
+            int pIdx = startIndex;
             double y = N < 0 ? 0 : p[pIdx++];
             while (--N >= 0)
             {
@@ -504,7 +513,7 @@ l.a = g.a;
   l.c2 = g.c2;
   l.f1 = g.f1;
   /* If caps is 0 assume the standard direct calculation */
-  l.caps = (caps? caps : GEOD_DISTANCE_IN | GEOD_LONGITUDE) |
+  l.caps = (caps != 0 ? caps : GEOD_DISTANCE_IN | GEOD_LONGITUDE) |
     /* always allow latitude and azimuth and unrolling of longitude */
     GEOD_LATITUDE | GEOD_AZIMUTH | GEOD_LONG_UNROLL;
 
@@ -514,9 +523,9 @@ l.lon1 = lon1;
   l.salp1 = salp1;
   l.calp1 = calp1;
 
-  sincosdx(AngRound(l.lat1), &sbet1, &cbet1); sbet1 *= l.f1;
+  sincosdx(AngRound(l.lat1), out sbet1, out cbet1); sbet1 *= l.f1;
   /* Ensure cbet1 = +epsilon at poles */
-  norm2(&sbet1, &cbet1); cbet1 = maxx(tiny, cbet1);
+  norm2(ref sbet1, ref cbet1); cbet1 = maxx(tiny, cbet1);
 l.dn1 = sqrt(1 + g.ep2* sq(sbet1));
 
 /* Evaluate alp0 from sin(alp1) * cos(bet1) = sin(alp0), */
@@ -535,13 +544,13 @@ l.calp0 = hypotx(l.calp1, l.salp1* sbet1);
  * With alp0 = 0, omg1 = 0 for alp1 = 0, omg1 = pi for alp1 = pi. */
 l.ssig1 = sbet1; l.somg1 = l.salp0* sbet1;
 l.csig1 = l.comg1 = sbet1 != 0 || l.calp1 != 0 ? cbet1 * l.calp1 : 1;
-  norm2(&l.ssig1, &l.csig1); /* sig1 in (-pi, pi] */
+  norm2(ref l.ssig1, ref l.csig1); /* sig1 in (-pi, pi] */
 /* norm2(somg1, comg1); -- don't need to normalize! */
 
 l.k2 = sq(l.calp0) * g.ep2;
   eps = l.k2 / (2 * (1 + sqrt(1 + l.k2)) + l.k2);
 
-  if (l.caps & CAP_C1) {
+  if ((l.caps & CAP_C1) != 0) {
     double s, c;
 l.A1m1 = A1m1f(eps);
 C1f(eps, l.C1a);
@@ -595,7 +604,7 @@ public static void geod_gendirectline(out geod_geodesicline l,
                         uint flags, double s12_a12,
                         uint caps) {
   geod_lineinit(out l, g, lat1, lon1, azi1, caps);
-geod_gensetdistance(l, flags, s12_a12);
+  geod_gensetdistance(l, flags, s12_a12);
 }
 
 public static void geod_directline(out geod_geodesicline l,
@@ -605,37 +614,34 @@ public static void geod_directline(out geod_geodesicline l,
   geod_gendirectline(out l, g, lat1, lon1, azi1, GEOD_NOFLAGS, s12, caps);
 }
 
-double geod_genposition(geod_geodesicline* l,
+public static double geod_genposition(geod_geodesicline l,
                       uint flags, double s12_a12,
-                      double* plat2, double* plon2, double* pazi2,
-                      double* ps12, double* pm12,
-                      double* pM12, double* pM21,
-                      double* pS12) {
+                      out double plat2, out double plon2, out double pazi2,
+                      out double ps12, out double pm12,
+                      out double pM12, out double pM21,
+                      out double pS12) {
   double lat2 = 0, lon2 = 0, azi2 = 0, s12 = 0,
     m12 = 0, M12 = 0, M21 = 0, S12 = 0;
 /* Avoid warning about uninitialized B12. */
 double sig12, ssig12, csig12, B12 = 0, AB1 = 0;
 double omg12, lam12, lon12;
 double ssig2, csig2, sbet2, cbet2, somg2, comg2, salp2, calp2, dn2;
-uint outmask =
-  (plat2 ? GEOD_LATITUDE : GEOD_NONE) |
-  (plon2 ? GEOD_LONGITUDE : GEOD_NONE) |
-  (pazi2 ? GEOD_AZIMUTH : GEOD_NONE) |
-  (ps12 ? GEOD_DISTANCE : GEOD_NONE) |
-  (pm12 ? GEOD_REDUCEDLENGTH : GEOD_NONE) |
-  (pM12 || pM21 ? GEOD_GEODESICSCALE : GEOD_NONE) |
-  (pS12 ? GEOD_AREA : GEOD_NONE);
+uint outmask = GEOD_ALL;
 
-outmask &= l.caps & OUT_ALL;
-  if (!( /*Init() &&*/
-         (flags & GEOD_ARCMODE || (l.caps & (GEOD_DISTANCE_IN & OUT_ALL))) ))
+outmask &= l.caps & (int)captype.OUT_ALL;
+if (!( /*Init() &&*/
+        ((flags & GEOD_ARCMODE) != 0 || (l.caps & (GEOD_DISTANCE_IN & (int)captype.OUT_ALL)) != 0)))
     /* Uninitialized or impossible distance calculation requested */
+{
+    plat2 = plon2 = pazi2 = ps12 = pm12 = pM12 = pM21 = pS12 = 0;
     return NaN;
+}
 
-  if (flags & GEOD_ARCMODE) {
+if ((flags & GEOD_ARCMODE) != 0) 
+{
     /* Interpret s12_a12 as spherical arc length */
     sig12 = s12_a12* degree;
-sincosdx(s12_a12, &ssig12, &csig12);
+sincosdx(s12_a12, out ssig12, out csig12);
   } else {
     /* Interpret s12_a12 as distance */
     double
@@ -822,7 +828,7 @@ void geod_gensetdistance(geod_geodesicline l,
 }
 
 void geod_position(geod_geodesicline l, double s12,
-                   double* plat2, double* plon2, double* pazi2) {
+                   out double plat2, out double plon2, out double pazi2) {
   geod_genposition(l, FALSE, s12, plat2, plon2, pazi2,
                    nullptr, nullptr, nullptr, nullptr, nullptr);
 }
@@ -860,33 +866,29 @@ void geod_direct(geod_geodesic g,
 
 static double geod_geninverse_int(geod_geodesic g,
                                 double lat1, double lon1, double lat2, double lon2,
-                                double* ps12,
-                                double* psalp1, double* pcalp1,
-                                double* psalp2, double* pcalp2,
-                                double* pm12, double* pM12, double* pM21,
-                                double* pS12) {
+                                out double ps12,
+                                out double psalp1, out double pcalp1,
+                                out double psalp2, out double pcalp2,
+                                out double pm12, out double pM12, out double pM21,
+                                out double pS12) {
   double s12 = 0, m12 = 0, M12 = 0, M21 = 0, S12 = 0;
 double lon12, lon12s;
 int latsign, lonsign, swapp;
 double sbet1, cbet1, sbet2, cbet2, s12x = 0, m12x = 0;
 double dn1, dn2, lam12, slam12, clam12;
 double a12 = 0, sig12, calp1 = 0, salp1 = 0, calp2 = 0, salp2 = 0;
-double Ca[nC];
+double[] Ca = new double[nC];
 bool meridian;
 /* somg12 > 1 marks that it needs to be calculated */
 double omg12 = 0, somg12 = 2, comg12 = 0;
 
-uint outmask =
-  (ps12 ? GEOD_DISTANCE : GEOD_NONE) |
-  (pm12 ? GEOD_REDUCEDLENGTH : GEOD_NONE) |
-  (pM12 || pM21 ? GEOD_GEODESICSCALE : GEOD_NONE) |
-  (pS12 ? GEOD_AREA : GEOD_NONE);
+uint outmask = GEOD_DISTANCE | GEOD_REDUCEDLENGTH | GEOD_GEODESICSCALE | GEOD_AREA;
 
 outmask &= OUT_ALL;
   /* Compute longitude difference (AngDiff does this carefully).  Result is
    * in [-180, 180] but -180 is only for west-going geodesics.  180 is for
    * east-going and meridional geodesics. */
-  lon12 = AngDiff(lon1, lon2, &lon12s);
+  lon12 = AngDiff(lon1, lon2, out lon12s);
 /* Make longitude difference positive. */
 lonsign = lon12 >= 0 ? 1 : -1;
   /* If very close to being on the same half-meridian, then make it so. */
@@ -894,10 +896,10 @@ lonsign = lon12 >= 0 ? 1 : -1;
 lon12s = AngRound((180 - lon12) - lonsign* lon12s);
   lam12 = lon12* degree;
   if (lon12 > 90) {
-    sincosdx(lon12s, &slam12, &clam12);
+    sincosdx(lon12s, out slam12, out clam12);
 clam12 = -clam12;
   } else
-    sincosdx(lon12, &slam12, &clam12);
+    sincosdx(lon12, out slam12, out clam12);
 
 /* If really close to the equator, treat as on equator. */
 lat1 = AngRound(LatFix(lat1));
@@ -907,7 +909,7 @@ lat2 = AngRound(LatFix(lat2));
 swapp = fabs(lat1) < fabs(lat2) ? -1 : 1;
   if (swapp< 0) {
     lonsign *= -1;
-    swapx(&lat1, &lat2);
+    swapx(ref lat1, ref lat2);
   }
   /* Make lat1 <= 0 */
   latsign = lat1< 0 ? 1 : -1;
@@ -925,13 +927,13 @@ swapp = fabs(lat1) < fabs(lat2) ? -1 : 1;
    * check, e.g., on verifying quadrants in atan2.  In addition, this
    * enforces some symmetries in the results returned. */
 
-  sincosdx(lat1, &sbet1, &cbet1); sbet1 *= g.f1;
+  sincosdx(lat1, out sbet1, out cbet1); sbet1 *= g.f1;
   /* Ensure cbet1 = +epsilon at poles */
-  norm2(&sbet1, &cbet1); cbet1 = maxx(tiny, cbet1);
+  norm2(ref sbet1, ref cbet1); cbet1 = maxx(tiny, cbet1);
 
-sincosdx(lat2, &sbet2, &cbet2); sbet2 *= g.f1;
+sincosdx(lat2, out sbet2, out cbet2); sbet2 *= g.f1;
   /* Ensure cbet2 = +epsilon at poles */
-  norm2(&sbet2, &cbet2); cbet2 = maxx(tiny, cbet2);
+  norm2(ref sbet2, ref cbet2); cbet2 = maxx(tiny, cbet2);
 
   /* If cbet1 < -sbet1, then cbet2 - cbet1 is a sensitive measure of the
    * |bet1| - |bet2|.  Alternatively (cbet1 >= -sbet1), abs(sbet2) + sbet1 is
@@ -971,7 +973,7 @@ ssig2 = sbet2; csig2 = calp2* cbet2;
 sig12 = atan2(maxx((double)(0), csig1* ssig2 - ssig1* csig2),
                                   csig1* csig2 + ssig1* ssig2);
     Lengths(g, g.n, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2,
-            cbet1, cbet2, &s12x, &m12x, nullptr,
+            cbet1, cbet2, &s12x, &m12x, null,
             (outmask & GEOD_GEODESICSCALE) ? &M12 : nullptr,
             (outmask & GEOD_GEODESICSCALE) ? &M21 : nullptr,
             Ca);
@@ -1133,8 +1135,8 @@ double alp12;
         /* Multiplier = a^2 * e^2 * cos(alpha0) * sin(alpha0). */
         A4 = sq(g.a) * calp0 * salp0 * g.e2;
 double B41, B42;
-norm2(&ssig1, &csig1);
-norm2(&ssig2, &csig2);
+norm2(ref ssig1, ref csig1);
+norm2(ref ssig2, ref csig2);
 C4f(g, eps, Ca);
 B41 = SinCosSeries(FALSE, ssig1, csig1, Ca, nC4);
 B42 = SinCosSeries(FALSE, ssig2, csig2, Ca, nC4);
@@ -1181,72 +1183,70 @@ S12 += 0;
 
   /* Convert calp, salp to azimuth accounting for lonsign, swapp, latsign. */
   if (swapp< 0) {
-    swapx(&salp1, &salp2);
-swapx(&calp1, &calp2);
-    if (outmask & GEOD_GEODESICSCALE)
-      swapx(&M12, &M21);
+    swapx(ref salp1, ref salp2);
+swapx(ref calp1, ref calp2);
+    if ((outmask & GEOD_GEODESICSCALE) != 0)
+      swapx(ref M12, ref M21);
   }
 
   salp1 *= swapp* lonsign; calp1 *= swapp* latsign;
 salp2 *= swapp* lonsign; calp2 *= swapp* latsign;
 
-  if (psalp1) * psalp1 = salp1;
-  if (pcalp1) * pcalp1 = calp1;
-  if (psalp2) * psalp2 = salp2;
-  if (pcalp2) * pcalp2 = calp2;
+   psalp1 = salp1;
+   pcalp1 = calp1;
+   psalp2 = salp2;
+   pcalp2 = calp2;
 
-  if (outmask & GEOD_DISTANCE)
-    * ps12 = s12;
-  if (outmask & GEOD_REDUCEDLENGTH)
-    * pm12 = m12;
-  if (outmask & GEOD_GEODESICSCALE) {
-    if (pM12) * pM12 = M12;
-    if (pM21) * pM21 = M21;
-  }
-  if (outmask & GEOD_AREA)
-    * pS12 = S12;
+   ps12 = s12;
+   pm12 = m12;
+   pM12 = M12;
+    pM21 = M21;
+  pS12 = S12;
 
   /* Returned value in [0, 180] */
   return a12;
 }
 
-double geod_geninverse(geod_geodesic g,
+public static double geod_geninverse(geod_geodesic g,
                      double lat1, double lon1, double lat2, double lon2,
-                     double* ps12, double* pazi1, double* pazi2,
-                     double* pm12, double* pM12, double* pM21, double* pS12) {
-  double salp1, calp1, salp2, calp2,
-    a12 = geod_geninverse_int(g, lat1, lon1, lat2, lon2, ps12,
-                              &salp1, &calp1, &salp2, &calp2,
-                              pm12, pM12, pM21, pS12);
-  if (pazi1) * pazi1 = atan2dx(salp1, calp1);
-  if (pazi2) * pazi2 = atan2dx(salp2, calp2);
+                     out double ps12, out double pazi1, out double pazi2,
+                     out double pm12, out double pM12, out double pM21, out double pS12)
+{
+    double salp1, calp1, salp2, calp2;
+    double a12 = geod_geninverse_int(g, lat1, lon1, lat2, lon2, out ps12,
+                              out salp1, out calp1, out salp2, out calp2,
+                              out pm12, out pM12, out pM21, out pS12);
+  pazi1 = atan2dx(salp1, calp1);
+  pazi2 = atan2dx(salp2, calp2);
   return a12;
 }
 
-void geod_inverseline(geod_geodesicline l,
+public static void geod_inverseline(geod_geodesicline l,
                       geod_geodesic g,
                       double lat1, double lon1, double lat2, double lon2,
                       uint caps) {
   double salp1, calp1,
-    a12 = geod_geninverse_int(g, lat1, lon1, lat2, lon2, nullptr,
-                              &salp1, &calp1, nullptr, nullptr,
-                              nullptr, nullptr, nullptr, nullptr),
+    a12 = geod_geninverse_int(g, lat1, lon1, lat2, lon2, out _,
+                              out salp1, out calp1, out _, out _,
+                              out _, out _, out _, out _),
     azi1 = atan2dx(salp1, calp1);
-caps = caps? caps : GEOD_DISTANCE_IN | GEOD_LONGITUDE;
+caps = (caps != 0) ? caps : GEOD_DISTANCE_IN | GEOD_LONGITUDE;
   /* Ensure that a12 can be converted to a distance */
-  if (caps & (OUT_ALL & GEOD_DISTANCE_IN)) caps |= GEOD_DISTANCE;
-  geod_lineinit_int(l, g, lat1, lon1, azi1, salp1, calp1, caps);
+  if ((caps & (OUT_ALL & GEOD_DISTANCE_IN)) != 0) caps |= GEOD_DISTANCE;
+  geod_lineinit_int(out l, g, lat1, lon1, azi1, salp1, calp1, caps);
 geod_setarc(l, a12);
 }
 
-void geod_inverse(geod_geodesic g,
+public static void geod_inverse(geod_geodesic g,
                   double lat1, double lon1, double lat2, double lon2,
-                  double* ps12, double* pazi1, double* pazi2) {
-  geod_geninverse(g, lat1, lon1, lat2, lon2, ps12, pazi1, pazi2,
-                  nullptr, nullptr, nullptr, nullptr);
+                  out double ps12, out double pazi1, out double pazi2) 
+{
+            double? tmp = null;
+    geod_geninverse(g, lat1, lon1, lat2, lon2, out ps12, out pazi1, out pazi2,
+                  ref tmp, ref tmp, ref tmp, ref tmp);
 }
 
-double SinCosSeries(bool sinp, double sinx, double cosx, const double c[], int n)
+private static double SinCosSeries(bool sinp, double sinx, double cosx, double[] c, int n)
 {
     /* Evaluate
      * y = sinp ? sum(c[i] * sin( 2*i    * x), i, 1, n) :
@@ -1271,13 +1271,13 @@ double SinCosSeries(bool sinp, double sinx, double cosx, const double c[], int n
       : cosx * (y0 - y1);         /* cos(x) * (y0 - y1) */
 }
 
-void Lengths(geod_geodesic g,
+private static void Lengths(geod_geodesic g,
              double eps, double sig12,
              double ssig1, double csig1, double dn1,
              double ssig2, double csig2, double dn2,
              double cbet1, double cbet2,
-             double* ps12b, double* pm12b, double* pm0,
-             double* pM12, double* pM21,
+             out double ps12b, out double pm12b, out double pm0,
+             out double pM12, out double pM21,
              /* Scratch area of the right size */
              double Ca[]) {
   double m0 = 0, J12 = 0, A1 = 0, A2 = 0;
@@ -1395,11 +1395,11 @@ double InverseStart(geod_geodesic g,
                   double sbet1, double cbet1, double dn1,
                   double sbet2, double cbet2, double dn2,
                   double lam12, double slam12, double clam12,
-                  double* psalp1, double* pcalp1,
+                  out double psalp1, out double pcalp1,
                   /* Only updated if return val >= 0 */
-                  double* psalp2, double* pcalp2,
+                  out double psalp2, out double pcalp2,
                   /* Only updated for short lines */
-                  double* pdnm,
+                  out double pdnm,
                   /* Scratch area of the right size */
                   double Ca[]) {
   double salp1 = 0, calp1 = 0, salp2 = 0, calp2 = 0, dnm = 0;
@@ -1563,13 +1563,13 @@ double Lambda12(geod_geodesic g,
               double sbet2, double cbet2, double dn2,
               double salp1, double calp1,
               double slam120, double clam120,
-              double* psalp2, double* pcalp2,
-              double* psig12,
-              double* pssig1, double* pcsig1,
-              double* pssig2, double* pcsig2,
-              double* peps,
-              double* pdomg12,
-              bool diffp, double* pdlam12,
+              out double psalp2, out double pcalp2,
+              out double psig12,
+              out double pssig1, out double pcsig1,
+              out double pssig2, out double pcsig2,
+              out double peps,
+              out double pdomg12,
+              bool diffp, out double pdlam12,
               /* Scratch area of the right size */
               double Ca[]) {
   double salp2 = 0, calp2 = 0, sig12 = 0,
@@ -1665,27 +1665,31 @@ double A3f(geod_geodesic g, double eps) {
   return polyval(nA3 - 1, g.A3x, eps);
 }
 
-void C3f(geod_geodesic g, double eps, double c[]) {
-  /* Evaluate C3 coeffs
-   * Elements c[1] through c[nC3 - 1] are set */
-  double mult = 1;
-int o = 0, l;
-  for (l = 1; l<nC3; ++l) {   /* l is index of C3[l] */
-    int m = nC3 - l - 1;        /* order of polynomial in eps */
-mult *= eps;
-    c[l] = mult* polyval(m, g.C3x + o, eps);
-o += m + 1;
-  }
+private static void C3f(geod_geodesic g, double eps, double[] c)
+{
+    /* Evaluate C3 coeffs
+     * Elements c[1] through c[nC3 - 1] are set */
+    double mult = 1;
+    int o = 0, l;
+    for (l = 1; l < nC3; ++l)
+    {
+        /* l is index of C3[l] */
+        int m = nC3 - l - 1; /* order of polynomial in eps */
+        mult *= eps;
+        c[l] = mult * polyval(m, g.C3x, o, eps);
+        o += m + 1;
+    }
 }
 
-void C4f(geod_geodesic g, double eps, double c[]) {
+private static void C4f(geod_geodesic g, double eps, double[] c)
+{
   /* Evaluate C4 coeffs
    * Elements c[0] through c[nC4 - 1] are set */
   double mult = 1;
 int o = 0, l;
   for (l = 0; l<nC4; ++l) {   /* l is index of C4[l] */
     int m = nC4 - l - 1;        /* order of polynomial in eps */
-c[l] = mult* polyval(m, g.C4x + o, eps);
+c[l] = mult* polyval(m, g.C4x, o, eps);
 o += m + 1;
     mult *= eps;
   }
@@ -1699,12 +1703,12 @@ public static double A1m1f(double eps)
     1, 4, 64, 0, 256,
   };
     int m = nA1 / 2;
-    double t = polyval(m, coeff, sq(eps)) / coeff[m + 1];
+    double t = polyval(m, coeff, 0, sq(eps)) / coeff[m + 1];
     return (t + eps) / (1 - eps);
 }
 
 /* The coefficients C1[l] in the Fourier expansion of B1 */
-void C1f(double eps, double[] c)
+private static void C1f(double eps, double[] c)
 {
     double[] coeff = {
     /* C1[1]/eps^1, polynomial in eps2 of order 2 */
@@ -1727,14 +1731,14 @@ void C1f(double eps, double[] c)
     for (l = 1; l <= nC1; ++l)
     {  /* l is index of C1p[l] */
         int m = (nC1 - l) / 2;      /* order of polynomial in eps^2 */
-        c[l] = d * polyval(m, coeff + o, eps2) / coeff[o + m + 1];
+        c[l] = d * polyval(m, coeff, o, eps2) / coeff[o + m + 1];
         o += m + 2;
         d *= eps;
     }
 }
 
 /* The coefficients C1p[l] in the Fourier expansion of B1p */
-void C1pf(double eps, double[] c)
+private static void C1pf(double eps, double[] c)
 {
     double[] coeff = {
     /* C1p[1]/eps^1, polynomial in eps2 of order 2 */
@@ -1757,26 +1761,26 @@ void C1pf(double eps, double[] c)
     for (l = 1; l <= nC1p; ++l)
     { /* l is index of C1p[l] */
         int m = (nC1p - l) / 2;     /* order of polynomial in eps^2 */
-        c[l] = d * polyval(m, coeff + o, eps2) / coeff[o + m + 1];
+        c[l] = d * polyval(m, coeff, o, eps2) / coeff[o + m + 1];
         o += m + 2;
         d *= eps;
     }
 }
 
 /* The scale factor A2-1 = mean value of (d/dsigma)I2 - 1 */
-double A2m1f(double eps)
+private static double A2m1f(double eps)
 {
-    static const double coeff[] = {
+    double[] coeff = {
     /* (eps+1)*A2-1, polynomial in eps2 of order 3 */
     -11, -28, -192, 0, 256,
   };
     int m = nA2 / 2;
-    double t = polyval(m, coeff, sq(eps)) / coeff[m + 1];
+    double t = polyval(m, coeff, 0, sq(eps)) / coeff[m + 1];
     return (t - eps) / (1 + eps);
 }
 
 /* The coefficients C2[l] in the Fourier expansion of B2 */
-void C2f(double eps, double[] c)
+private static void C2f(double eps, double[] c)
 {
     double[] coeff = {
     /* C2[1]/eps^1, polynomial in eps2 of order 2 */
@@ -1799,7 +1803,7 @@ void C2f(double eps, double[] c)
     for (l = 1; l <= nC2; ++l)
     { /* l is index of C2[l] */
         int m = (nC2 - l) / 2;     /* order of polynomial in eps^2 */
-        c[l] = d * polyval(m, coeff + o, eps2) / coeff[o + m + 1];
+        c[l] = d * polyval(m, coeff, o, eps2) / coeff[o + m + 1];
         o += m + 2;
         d *= eps;
     }
@@ -1807,7 +1811,7 @@ void C2f(double eps, double[] c)
 
 /* The scale factor A3 = mean value of (d/dsigma)I3 */
 public static void A3coeff(geod_geodesic g) {
-  const double[] coeff = {
+  double[] coeff = {
     /* A3, coeff of eps^5, polynomial in n of order 0 */
     -3, 128,
     /* A3, coeff of eps^4, polynomial in n of order 1 */
@@ -1824,14 +1828,14 @@ public static void A3coeff(geod_geodesic g) {
 int o = 0, k = 0, j;
   for (j = nA3 - 1; j >= 0; --j) {             /* coeff of eps^j */
     int m = nA3 - j - 1 < j ? nA3 - j - 1 : j; /* order of polynomial in n */
-g.A3x[k++] = polyval(m, coeff + o, g.n) / coeff[o + m + 1];
+g.A3x[k++] = polyval(m, coeff, o, g.n) / coeff[o + m + 1];
     o += m + 2;
   }
 }
 
 /* The coefficients C3[l] in the Fourier expansion of B3 */
-void C3coeff(geod_geodesic g) {
-  static const double coeff[] = {
+private static void C3coeff(geod_geodesic g) {
+  double[] coeff = {
     /* C3[1], coeff of eps^5, polynomial in n of order 0 */
     3, 128,
     /* C3[1], coeff of eps^4, polynomial in n of order 1 */
@@ -1867,15 +1871,15 @@ int o = 0, k = 0, l, j;
   for (l = 1; l<nC3; ++l) {                    /* l is index of C3[l] */
     for (j = nC3 - 1; j >= l; --j) {             /* coeff of eps^j */
       int m = nC3 - j - 1 < j ? nC3 - j - 1 : j; /* order of polynomial in n */
-g.C3x[k++] = polyval(m, coeff + o, g.n) / coeff[o + m + 1];
+g.C3x[k++] = polyval(m, coeff, o, g.n) / coeff[o + m + 1];
       o += m + 2;
     }
   }
 }
 
 /* The coefficients C4[l] in the Fourier expansion of I4 */
-void C4coeff(geod_geodesic g) {
-  static const double coeff[] = {
+private static void C4coeff(geod_geodesic g) {
+  double[] coeff = {
     /* C4[0], coeff of eps^5, polynomial in n of order 0 */
     97, 15015,
     /* C4[0], coeff of eps^4, polynomial in n of order 1 */
@@ -1923,13 +1927,13 @@ int o = 0, k = 0, l, j;
   for (l = 0; l<nC4; ++l) {        /* l is index of C4[l] */
     for (j = nC4 - 1; j >= l; --j) { /* coeff of eps^j */
       int m = nC4 - j - 1;           /* order of polynomial in n */
-g.C4x[k++] = polyval(m, coeff + o, g.n) / coeff[o + m + 1];
+g.C4x[k++] = polyval(m, coeff, o, g.n) / coeff[o + m + 1];
       o += m + 2;
     }
   }
 }
 
-int transit(double lon1, double lon2)
+private static int transit(double lon1, double lon2)
 {
     double lon12;
     /* Return 1 or -1 if crossing prime meridian in east or west direction.
@@ -1937,12 +1941,12 @@ int transit(double lon1, double lon2)
     /* Compute lon12 the same way as Geodesic::Inverse. */
     lon1 = AngNormalize(lon1);
     lon2 = AngNormalize(lon2);
-    lon12 = AngDiff(lon1, lon2, nullptr);
+    lon12 = AngDiff(lon1, lon2, out _);
     return lon1 <= 0 && lon2 > 0 && lon12 > 0 ? 1 :
       (lon2 <= 0 && lon1 > 0 && lon12 < 0 ? -1 : 0);
 }
 
-int transitdirect(double lon1, double lon2)
+private static int transitdirect(double lon1, double lon2)
 {
     /* Compute exactly the parity of
        int(ceil(lon2 / 360)) - int(ceil(lon1 / 360)) */
@@ -1952,20 +1956,20 @@ int transitdirect(double lon1, double lon2)
              (lon1 <= 0 && lon1 > -360 ? 1 : 0));
 }
 
-void accini(double[] s)
+private static void accini(double[] s)
 {
     /* Initialize an accumulator; this is an array with two elements. */
     s[0] = s[1] = 0;
 }
 
-void acccopy(double[] s, double[] t)
+private static void acccopy(double[] s, double[] t)
 {
     /* Copy an accumulator; t = s. */
     t[0] = s[0];
     t[1] = s[1];
 }
 
-void accadd(double[] s, double y)
+private static void accadd(double[] s, double y)
 {
     /* Add y to an accumulator. */
     double u, z = sumx(y, s[1], &u);
@@ -1976,7 +1980,7 @@ void accadd(double[] s, double y)
         s[1] = s[1] + u;
 }
 
-double accsum(double[] s, double y)
+private static double accsum(double[] s, double y)
 {
     /* Return accumulator + y (but don't add to accumulator). */
     double t[2];
@@ -1985,33 +1989,33 @@ double accsum(double[] s, double y)
     return t[0];
 }
 
-void accneg(double[] s)
+private static void accneg(double[] s)
 {
     /* Negate an accumulator. */
     s[0] = -s[0];
     s[1] = -s[1];
 }
 
-void accrem(double s[], double y)
+private static void accrem(double s[], double y)
 {
     /* Reduce to [-y/2, y/2]. */
     s[0] = remainderx(s[0], y);
     accadd(s, (double)(0));
 }
 
-void geod_polygon_init(struct geod_polygon* p, bool polylinep) {
+private static void geod_polygon_init(struct geod_polygon* p, bool polylinep) {
   p.polyline = (polylinep != 0);
   geod_polygon_clear(p);
 }
 
-void geod_polygon_clear(struct geod_polygon* p) {
+private static void geod_polygon_clear(struct geod_polygon* p) {
   p.lat0 = p.lon0 = p.lat = p.lon = NaN;
   accini(p.P);
 accini(p.A);
 p.num = p.crossings = 0;
 }
 
-void geod_polygon_addpoint(geod_geodesic g,
+private static void geod_polygon_addpoint(geod_geodesic g,
                            struct geod_polygon* p,
                            double lat, double lon) {
   lon = AngNormalize(lon);
@@ -2033,7 +2037,7 @@ p.crossings += transit(p.lon, lon);
   ++p.num;
 }
 
-void geod_polygon_addedge(geod_geodesic g,
+                           private static void geod_polygon_addedge(geod_geodesic g,
                           geod_polygon* p,
                           double azi, double s) {
   if (p.num) {              /* Do nothing is num is zero */
@@ -2057,7 +2061,7 @@ p.crossings += transitdirect(p.lon, lon);
 uint geod_polygon_compute(geod_geodesic g,
                               geod_polygon* p,
                               bool reverse, bool sign,
-                              double* pA, double* pP) {
+                              out double pA, out double pP) {
   double s12, S12, t[2];
   if (p.num< 2) {
     if (pP) * pP = 0;
@@ -2083,7 +2087,7 @@ uint geod_polygon_testpoint(geod_geodesic g,
                                 geod_polygon* p,
                                 double lat, double lon,
                                 bool reverse, bool sign,
-                                double* pA, double* pP) {
+                                out double pA, out double pP) {
   double perimeter, tempsum;
 int crossings, i;
 uint num = p.num + 1;
@@ -2122,7 +2126,7 @@ uint geod_polygon_testedge(geod_geodesic g,
                                geod_polygon* p,
                                double azi, double s,
                                bool reverse, bool sign,
-                               double* pA, double* pP) {
+                               out double pA, out double pP) {
   double perimeter, tempsum;
 int crossings;
 uint num = p.num + 1;
@@ -2162,7 +2166,7 @@ perimeter += s12;
 
 void geod_polygonarea(geod_geodesic g,
                       double lats[], double lons[], int n,
-                      double* pA, double* pP) {
+                      out double pA, out double pP) {
   int i;
 struct geod_polygon p;
   geod_polygon_init(&p, FALSE);
