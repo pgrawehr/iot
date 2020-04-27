@@ -182,6 +182,22 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
+        public void XteDecode()
+        {
+            string msg = "$GPXTE,A,A,0.00,L,N,D*06";
+
+            var decoded = TalkerSentence.FromSentenceString(msg, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(decoded);
+
+            CrossTrackError xte = (CrossTrackError)decoded.TryGetTypedValue();
+
+            Assert.True(xte.Valid);
+            Assert.Equal(Distance.Zero, xte.Distance);
+            Assert.True(xte.Left);
+        }
+
+        [Fact]
         public void TrueWindSpeedEncode()
         {
             NmeaSentence.OwnTalkerId = TalkerId.WeatherInstruments;
@@ -218,8 +234,10 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
         [InlineData("$WIMWV,220.0,T,5.0,N,A*20")]
         [InlineData("$SDDBS,177.9,f,54.21,M,29.3,F*33")]
+        [InlineData("$YDDBS,10.3,f,3.14,M,1.7,F*09")]
         [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
         [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
+        [InlineData("$GPXTE,A,A,0.000,L,N,D*36")]
         [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
         // GGA with elevation
         [InlineData("$GPGGA,163810.000,4728.70270,N,00929.96660,E,2,12,0.6,397.4,M,46.8,M,,*52")]
