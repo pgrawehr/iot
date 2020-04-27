@@ -7,7 +7,7 @@ namespace Units
     /// <summary>
     /// Extensions for positions
     /// </summary>
-    public static class PositionExtensions
+    public static partial class PositionExtensions
     {
         /// <summary>
         /// Normalizes the longitude to +/- 180°
