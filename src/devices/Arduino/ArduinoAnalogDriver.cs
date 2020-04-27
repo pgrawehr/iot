@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace Iot.Device.Arduino
 {
-    internal class ArduinoAnalogControllerDriver : AnalogControllerDriver
+    internal class ArduinoAnalogDriver : AnalogControllerDriver
     {
         private readonly ArduinoBoard _board;
         private readonly List<SupportedPinConfiguration> _supportedPinConfigurations;
@@ -16,7 +16,7 @@ namespace Iot.Device.Arduino
         private int _autoReportingReferenceCount;
         private int _firstAnalogPin;
 
-        public ArduinoAnalogControllerDriver(ArduinoBoard board,
+        public ArduinoAnalogDriver(ArduinoBoard board,
             List<SupportedPinConfiguration> supportedPinConfigurations)
         {
             _board = board ?? throw new ArgumentNullException(nameof(board));
@@ -34,7 +34,7 @@ namespace Iot.Device.Arduino
             }
             else
             {
-                _firstAnalogPin = 0;
+                throw new NotSupportedException("No analog pins found or Firmata firmware has no analog pin support");
             }
         }
 

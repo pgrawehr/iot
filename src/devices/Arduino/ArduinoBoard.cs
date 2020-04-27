@@ -32,6 +32,7 @@ namespace Iot.Device.Arduino
         private SerialPort _serialPort;
         private string _serialPortName;
         private int _baudRate;
+        private bool _initialized = false;
 
         /// <summary>
         /// Create an instance of an <see cref="ArduinoBoard"/> using the given stream (typically a serial port connection)
@@ -80,6 +81,11 @@ namespace Iot.Device.Arduino
 
         public virtual void Initialize()
         {
+            if (_initialized)
+            {
+                return;
+            }
+
             if (_serialPortStream == null)
             {
                 try
@@ -101,9 +107,9 @@ namespace Iot.Device.Arduino
             _firmata.Open(_serialPortStream);
             _firmata.OnError += FirmataOnError;
             var protocolVersion = _firmata.QueryFirmataVersion();
-            if (protocolVersion != _firmata.QuerySupportedFirmataVersion())
+            if (protocolVersion < _firmata.QuerySupportedFirmataVersion())
             {
-                throw new NotSupportedException($"Firmata version on board is {protocolVersion}. Expected {_firmata.QuerySupportedFirmataVersion()}. They must be equal.");
+                throw new NotSupportedException($"Firmata version on board is {protocolVersion}. Expected at least {_firmata.QuerySupportedFirmataVersion()}. They must be equal.");
             }
 
             Log($"Firmata version on board is {protocolVersion}.");
@@ -124,12 +130,15 @@ namespace Iot.Device.Arduino
 
             // _firmata.SetSamplingInterval(TimeSpan.FromMilliseconds(100));
             _firmata.EnableDigitalReporting();
+
+            _initialized = true;
         }
 
         public Version FirmwareVersion
         {
             get
             {
+                CheckInitialized();
                 return _firmwareVersion;
             }
         }
@@ -138,6 +147,7 @@ namespace Iot.Device.Arduino
         {
             get
             {
+                CheckInitialized();
                 return _firmwareName;
             }
         }
@@ -146,6 +156,7 @@ namespace Iot.Device.Arduino
         {
             get
             {
+                CheckInitialized();
                 return _firmata;
             }
         }
@@ -154,27 +165,35 @@ namespace Iot.Device.Arduino
         {
             get
             {
+                CheckInitialized();
                 return _supportedPinConfigurations;
             }
         }
 
-        internal void Log(string message)
-        {
-            LogMessages?.Invoke(message, null);
-        }
-
-        private void FirmataOnError(string message, Exception innerException)
+        internal void Log(string message, Exception innerException = null)
         {
             LogMessages?.Invoke(message, innerException);
         }
 
+        private void FirmataOnError(string message, Exception innerException)
+        {
+            Log(message, innerException);
+        }
+
+        public GpioController CreateGpioController()
+        {
+            return CreateGpioController(PinNumberingScheme.Logical);
+        }
+
         public GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme)
         {
-            return new GpioController(pinNumberingScheme, new ArduinoGpioControllerDriver(this, _supportedPinConfigurations));
+            Initialize();
+            return new GpioController(pinNumberingScheme, new ArduinoGpioDriver(this, _supportedPinConfigurations));
         }
 
         public I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
         {
+            Initialize();
             return new ArduinoI2cDevice(this, connectionSettings);
         }
 
@@ -186,11 +205,8 @@ namespace Iot.Device.Arduino
         /// <returns></returns>
         public SpiDevice CreateSpiDevice(SpiConnectionSettings settings)
         {
-            int mosi = 11;
-            int miso = 12;
-            int sck = 13;
-            return new SoftwareSpi(sck, miso, mosi, settings.ChipSelectLine, settings,
-                CreateGpioController(PinNumberingScheme.Board));
+            Initialize();
+            throw new NotSupportedException("Firmata currently has no SPI support");
         }
 
         public PwmChannel CreatePwmChannel(
@@ -199,12 +215,22 @@ namespace Iot.Device.Arduino
             int frequency = 400,
             double dutyCyclePercentage = 0.5)
         {
+            Initialize();
             return new ArduinoPwmChannel(this, chip, channel, frequency, dutyCyclePercentage);
         }
 
         public AnalogController CreateAnalogController(int chip)
         {
-            return new AnalogController(PinNumberingScheme.Logical, new ArduinoAnalogControllerDriver(this, _supportedPinConfigurations));
+            Initialize();
+            return new AnalogController(PinNumberingScheme.Logical, new ArduinoAnalogDriver(this, _supportedPinConfigurations));
+        }
+
+        private void CheckInitialized()
+        {
+            if (!_initialized)
+            {
+                throw new InvalidOperationException("Device not initialized");
+            }
         }
 
         protected virtual void Dispose(bool disposing)
@@ -232,6 +258,7 @@ namespace Iot.Device.Arduino
             }
 
             _firmata = null;
+            _initialized = false;
         }
 
         public void Dispose()

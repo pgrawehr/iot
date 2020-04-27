@@ -36,10 +36,17 @@ namespace Iot.Device.Arduino
 
             ConnectionSettings = connectionSettings;
 
+            int pinsFound = 0;
             // Ensure the corresponding pins are set to I2C (not strictly necessary, but consistent)
             foreach (SupportedPinConfiguration supportedPinConfiguration in _board.SupportedPinConfigurations.Where(x => x.PinModes.Contains(SupportedMode.I2C)))
             {
                 _board.Firmata.SetPinMode(supportedPinConfiguration.Pin, SupportedMode.I2C);
+                pinsFound++;
+            }
+
+            if (pinsFound < 2)
+            {
+                throw new NotSupportedException("Need at least two I2C capable pins. Is I2C support disabled in Firmata?");
             }
 
             // Sometimes, the very first I2C command fails (nothing happens), so try reading a byte
@@ -53,6 +60,7 @@ namespace Iot.Device.Arduino
                 }
                 catch (Exception x) when (x is TimeoutException || x is I2cCommunicationException)
                 {
+                    // Ignore exception, just retry
                 }
             }
 

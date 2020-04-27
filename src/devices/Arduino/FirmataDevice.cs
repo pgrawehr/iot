@@ -19,8 +19,9 @@ namespace Iot.Device.Arduino
 
     internal sealed class FirmataDevice : IDisposable
     {
+        // Firmata version 2.5 or later should work
         private const byte FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
-        private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 6;
+        private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 5;
         private const int FIRMATA_INIT_TIMEOUT_SECONDS = 4;
         private const int MESSAGE_TIMEOUT_MILLIS = 500;
         private byte _firmwareVersionMajor;
@@ -104,22 +105,6 @@ namespace Iot.Device.Arduino
             {
                 _dataReceived.Dispose();
                 _dataReceived = null;
-            }
-        }
-
-        /// <summary>
-        /// Used where?
-        /// </summary>
-        private void SendString(byte command, string message)
-        {
-            byte[] bytes = Encoding.Unicode.GetBytes(message);
-            lock (_synchronisationLock)
-            {
-                _firmataStream.WriteByte(240);
-                _firmataStream.WriteByte((byte)(command & (uint)sbyte.MaxValue));
-                SendValuesAsTwo7bitBytes(bytes);
-                _firmataStream.WriteByte(247);
-                _firmataStream.Flush();
             }
         }
 
