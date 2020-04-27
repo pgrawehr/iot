@@ -8,14 +8,16 @@ using System.Device.Gpio.Drivers;
 using System.Device.I2c;
 using System.Device.Spi;
 using System.IO.Ports;
+using System.Text;
 using System.Threading;
 using Iot.Device.Arduino;
 using Iot.Device.Bmxx80;
+using Iot.Device.Bmxx80.PowerMode;
 
-namespace Ft4222.Samples
+namespace Arduino.Samples
 {
     /// <summary>
-    /// Sample application for Ft4222
+    /// Sample application for Arduino control over firmata
     /// </summary>
     internal class Program
     {
@@ -87,6 +89,7 @@ namespace Ft4222.Samples
             Console.WriteLine(" 6 Run PWM test with a simple led dimming on GPIO6 port");
             Console.WriteLine(" 7 Dim the LED according to the input on A1");
             Console.WriteLine(" 8 Read analog channel as fast as possible");
+            Console.WriteLine(" 0 Detect all devices on the I2C bus");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
@@ -116,6 +119,9 @@ namespace Ft4222.Samples
                     break;
                 case '8':
                     TestAnalogCallback(board);
+                    break;
+                case '0':
+                    ScanDeviceAddressesOnI2cBus(board);
                     break;
                 case 'x':
                 case 'X':
@@ -163,6 +169,8 @@ namespace Ft4222.Samples
             var device = board.CreateI2cDevice(new I2cConnectionSettings(0, Bmp280.DefaultI2cAddress));
 
             var bmp = new Bmp280(device);
+            bmp.StandbyTime = StandbyTime.Ms250;
+            bmp.SetPowerMode(Bmx280PowerMode.Normal);
             Console.WriteLine("Device open");
             while (!Console.KeyAvailable)
             {
@@ -176,6 +184,49 @@ namespace Ft4222.Samples
             device.Dispose();
             Console.ReadKey();
             Console.WriteLine();
+        }
+
+        private static void ScanDeviceAddressesOnI2cBus(ArduinoBoard board)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+
+            stringBuilder.Append("     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f");
+            stringBuilder.Append(Environment.NewLine);
+
+            for (int startingRowAddress = 0; startingRowAddress < 128; startingRowAddress += 16)
+            {
+                stringBuilder.Append($"{startingRowAddress:x2}: ");  // Beginning of row.
+
+                for (int rowAddress = 0; rowAddress < 16; rowAddress++)
+                {
+                    int deviceAddress = startingRowAddress + rowAddress;
+
+                    // Skip the unwanted addresses.
+                    if (deviceAddress < 0x3 || deviceAddress > 0x77)
+                    {
+                        stringBuilder.Append("   ");
+                        continue;
+                    }
+
+                    var connectionSettings = new I2cConnectionSettings(0, deviceAddress);
+                    using (var i2cDevice = board.CreateI2cDevice(connectionSettings))
+                    {
+                        try
+                        {
+                            i2cDevice.ReadByte();  // Only checking if device is present.
+                            stringBuilder.Append($"{deviceAddress:x2} ");
+                        }
+                        catch
+                        {
+                            stringBuilder.Append("-- ");
+                        }
+                    }
+                }
+
+                stringBuilder.Append(Environment.NewLine);
+            }
+
+            Console.WriteLine(stringBuilder.ToString());
         }
 
         public static void TestGpio(ArduinoBoard board)

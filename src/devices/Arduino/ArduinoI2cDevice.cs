@@ -44,6 +44,8 @@ namespace Iot.Device.Arduino
                 pinsFound++;
             }
 
+            _board.Firmata.SendI2cConfigCommand();
+
             if (pinsFound < 2)
             {
                 throw new NotSupportedException("Need at least two I2C capable pins. Is I2C support disabled in Firmata?");

@@ -650,6 +650,20 @@ namespace Iot.Device.Arduino
             }
         }
 
+        public void SendI2cConfigCommand()
+        {
+            lock (_synchronisationLock)
+            {
+                // The command is mandatory, even if the argument is typically ignored
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.I2C_CONFIG);
+                _firmataStream.WriteByte(0);
+                _firmataStream.WriteByte(0);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
+            }
+        }
+
         public void WriteReadI2cData(int slaveAddress,  ReadOnlySpan<byte> writeData, Span<byte> replyData)
         {
             // See documentation at https://github.com/firmata/protocol/blob/master/i2c.md
