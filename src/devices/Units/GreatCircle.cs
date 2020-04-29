@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
@@ -47,6 +48,36 @@ namespace Units
         public static void CalcCoords(double startLatitude, double startLongitude, double direction, double distance, out double resultLatitude, out double resultLongitude)
         {
             GeoidCalculations.geod_direct(_geod, startLatitude, startLongitude, direction, distance, out resultLatitude, out resultLongitude, out _);
+        }
+
+        public static IList<GeographicPosition> CalculateRoute(GeographicPosition start, GeographicPosition end, double distanceStep)
+        {
+            IList<GeographicPosition> ret = new List<GeographicPosition>();
+            GeoidCalculations.geod_geodesicline line;
+            GeoidCalculations.geod_inverseline(out line, _geod, start.Latitude, start.Longitude, end.Latitude, end.Longitude, 0);
+            double distanceTotal = line.s13;
+            for (double d = 0; d <= distanceTotal; d += distanceStep)
+            {
+                GeoidCalculations.geod_position(line, d, out double lat2, out double lon2, out _);
+                ret.Add(new GeographicPosition(lat2, lon2, 0));
+            }
+
+            return ret;
+        }
+
+        public static IList<GeographicPosition> CalculateRoute(GeographicPosition start, double direction, double distance, double distanceStep)
+        {
+            IList<GeographicPosition> ret = new List<GeographicPosition>();
+            GeoidCalculations.geod_geodesicline line;
+            GeoidCalculations.geod_directline(out line, _geod, start.Latitude, start.Longitude, direction, distance, 0);
+            double distanceTotal = distance;
+            for (double d = 0; d <= distanceTotal; d += distanceStep)
+            {
+                GeoidCalculations.geod_position(line, d, out double lat2, out double lon2, out _);
+                ret.Add(new GeographicPosition(lat2, lon2, 0));
+            }
+
+            return ret;
         }
 
         /// <summary>

@@ -8,8 +8,6 @@ using System.Text;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Units;
-using Nmea0183;
-using Nmea0183.Sentences;
 using Units;
 
 namespace DisplayControl
@@ -43,12 +41,15 @@ namespace DisplayControl
         private ObservableValue<double> _windDirectionRelative;
         private ObservableValue<double> _windSpeedAbsolute;
         private ObservableValue<double> _windDirectionAbsolute;
+        private ObservableValue<double> _magneticVariationField;
         private Stream _stream;
         private SerialPort _serialPort;
+        private Angle? _magneticVariation;
 
         public NmeaSensor()
         {
             _values = new List<SensorValueSource>();
+            _magneticVariation = null;
         }
 
         public List<SensorValueSource> SensorValueSources
@@ -103,6 +104,7 @@ namespace DisplayControl
             _windSpeedAbsolute = new ObservableValue<double>("Wahrer Wind", "kts");
             _windDirectionAbsolute = new ObservableValue<double>("Scheinbare Windrichtung", "°T");
             _windDirectionRelative = new ObservableValue<double>("Wahre Windrichtung", "°T");
+            _magneticVariationField = new ObservableValue<double>("Deklination", "°E");
             _client = new TcpClient("127.0.0.1", 10110);
             SensorValueSources.AddRange(new SensorValueSource[]
             {
@@ -147,6 +149,11 @@ namespace DisplayControl
             {
                 _speed.Value = rmc.Speed.Knots;
                 _track.Value = rmc.TrackMadeGoodInDegreesTrue.GetValueOrDefault(Angle.Zero).Degrees;
+                _magneticVariation = rmc.MagneticVariationInDegrees;
+                if (_magneticVariation.HasValue)
+                {
+                    _magneticVariationField.Value = _magneticVariation.Value.Degrees;
+                }
             }
 
             if (sentence is TrackMadeGood vtg)
@@ -160,12 +167,12 @@ namespace DisplayControl
                 if (mwv.Relative)
                 {
                     _windSpeedRelative.Value = mwv.Speed.Knots;
-                    _windDirectionRelative.Value = mwv.Angle;
+                    _windDirectionRelative.Value = mwv.Angle.Degrees;
                 }
                 else
                 {
                     _windSpeedAbsolute.Value = mwv.Speed.Knots;
-                    _windDirectionAbsolute.Value = mwv.Angle;
+                    _windDirectionAbsolute.Value = mwv.Angle.Degrees;
                 }
             }
         }
@@ -191,10 +198,17 @@ namespace DisplayControl
                 return;
             }
             HeadingMagnetic mag = new HeadingMagnetic(value.X);
-            _parserNetworkInterface.SendSentence(mag);
+            _router.SendSentence(mag);
+
+            if (_magneticVariation != null)
+            {
+                HeadingTrue hdt = new HeadingTrue(value.X + _magneticVariation.Value.Degrees);
+                _router.SendSentence(hdt);
+            }
+
             var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees(value.Y),
                 Angle.FromDegrees(value.Z));
-            _parserNetworkInterface.SendSentence(attitude);
+            _router.SendSentence(attitude);
         }
 
         public void Dispose()
@@ -227,21 +241,21 @@ namespace DisplayControl
         {
             TransducerDataSet ds = new TransducerDataSet("C", value.Celsius, "C", "ENV_OUTAIR_T");
             var msg = new TransducerMeasurement(new[] { ds });
-            _parserNetworkInterface.SendSentence(msg);
+            _router.SendSentence(msg);
         }
 
         public void SendPressure(Pressure value)
         {
             TransducerDataSet ds = new TransducerDataSet("P", value.Hectopascal / 1000.0, "B", "Barometer");
             var msg = new TransducerMeasurement(new[] { ds });
-            _parserNetworkInterface.SendSentence(msg);
+            _router.SendSentence(msg);
         }
 
         public void SendHumidity(double value)
         {
             TransducerDataSet ds = new TransducerDataSet("H", value, "P", "ENV_INSIDE_H");
             var msg = new TransducerMeasurement(new[] { ds });
-            _parserNetworkInterface.SendSentence(msg);
+            _router.SendSentence(msg);
         }
     }
 }

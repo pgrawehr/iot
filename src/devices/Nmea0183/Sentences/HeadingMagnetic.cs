@@ -48,7 +48,7 @@ namespace Iot.Device.Nmea0183.Sentences
             string reference = ReadString(field) ?? string.Empty;
 
             // The HDM sentence must have a "M" (Magnetic) reference, otherwise something is fishy
-            if (reference == "TM" && angle.HasValue)
+            if (reference == "M" && angle.HasValue)
             {
                 Angle = angle.Value;
                 Valid = true;

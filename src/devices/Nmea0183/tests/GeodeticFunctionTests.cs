@@ -266,5 +266,36 @@ namespace Iot.Device.Nmea0183.Tests
                 }
             }
         }
+
+        [Fact]
+        public void RouteCalculationInverse()
+        {
+            GeographicPosition start = new GeographicPosition(0, 1, 0);
+            GeographicPosition end = new GeographicPosition(0, 2, 0);
+            var points = GreatCircle.CalculateRoute(start, end, 1000);
+            Assert.Equal(112, points.Count);
+            double previousLon = 0.9;
+            foreach (var pt in points)
+            {
+                Assert.True(previousLon < pt.Longitude);
+                previousLon = pt.Longitude;
+                Assert.Equal(0, pt.Latitude);
+            }
+        }
+
+        [Fact]
+        public void RouteCalculationForward()
+        {
+            GeographicPosition start = new GeographicPosition(0, 1, 0);
+            var points = GreatCircle.CalculateRoute(start, 180, 1000, 100);
+            Assert.Equal(11, points.Count);
+            double previousLat = 1.1;
+            foreach (var pt in points)
+            {
+                Assert.True(previousLat > pt.Latitude);
+                previousLat = pt.Latitude;
+                Assert.Equal(1, pt.Longitude);
+            }
+        }
     }
 }

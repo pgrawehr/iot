@@ -198,6 +198,70 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
+        public void XteEncode()
+        {
+            string msg = "A,A,10.912,R,N,D";
+
+            NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
+            CrossTrackError mwv = new CrossTrackError(Distance.FromNauticalMiles(10.91234), false);
+            Assert.True(mwv.Valid);
+            Assert.False(mwv.Left);
+            Assert.Equal(msg, mwv.ToNmeaMessage());
+        }
+
+        [Fact]
+        public void HdtDecode()
+        {
+            string msg = "$GPHDT,99.9,T";
+
+            var decoded = TalkerSentence.FromSentenceString(msg, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(decoded);
+
+            HeadingTrue xte = (HeadingTrue)decoded.TryGetTypedValue();
+
+            Assert.True(xte.Valid);
+            Assert.Equal(99.9, xte.Angle, 1);
+        }
+
+        [Fact]
+        public void HdtEncode()
+        {
+            string msg = "99.9,T";
+
+            NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
+            HeadingTrue mwv = new HeadingTrue(99.9);
+            Assert.True(mwv.Valid);
+            Assert.Equal(msg, mwv.ToNmeaMessage());
+        }
+
+        [Fact]
+        public void HdmDecode()
+        {
+            string msg = "$GPHDM,99.9,M";
+
+            var decoded = TalkerSentence.FromSentenceString(msg, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(decoded);
+
+            HeadingMagnetic hdm = (HeadingMagnetic)decoded.TryGetTypedValue();
+
+            Assert.True(hdm.Valid);
+            Assert.Equal(99.9, hdm.Angle, 1);
+        }
+
+        [Fact]
+        public void HdmEncode()
+        {
+            string msg = "99.9,M";
+
+            NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
+            HeadingMagnetic hdm = new HeadingMagnetic(99.9);
+            Assert.True(hdm.Valid);
+            Assert.Equal(msg, hdm.ToNmeaMessage());
+        }
+
+        [Fact]
         public void TrueWindSpeedEncode()
         {
             NmeaSentence.OwnTalkerId = TalkerId.WeatherInstruments;
@@ -253,6 +317,9 @@ namespace Iot.Device.Nmea0183.Tests
             TalkerSentence outSentence = new TalkerSentence(decoded);
             string output = outSentence.ToString();
             Assert.Equal(input, output);
+
+            // Just test that this doesn't cause an exception
+            Assert.NotNull(decoded.ToReadableContent());
         }
     }
 }

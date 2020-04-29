@@ -26,6 +26,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             Distance = distance;
             Left = left;
+            Valid = true;
         }
 
         /// <summary>

@@ -27,6 +27,7 @@ namespace Iot.Device.Nmea0183.Sentences
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Angle = angle;
+            Valid = true;
         }
 
         /// <summary>

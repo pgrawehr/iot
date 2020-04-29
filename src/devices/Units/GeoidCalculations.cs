@@ -244,11 +244,6 @@ namespace Units
             return Math.Atan2(y, x);
         }
 
-        private static double atan(double x)
-        {
-            return Math.Atan(x);
-        }
-
         private static double sin(double x)
         {
             return Math.Sin(x);
@@ -527,7 +522,7 @@ namespace Units
             g.c2 = (sq(g.a) + sq(g.b) *
                     (g.e2 == 0
                         ? 1
-                        : (g.e2 > 0 ? atanhx(sqrt(g.e2)) : atan(sqrt(-g.e2))) /
+                        : (g.e2 > 0 ? atanhx(sqrt(g.e2)) : Math.Atan(sqrt(-g.e2))) /
                           sqrt(fabs(g.e2)))) / 2; /* authalic radius squared */
             /* The sig12 threshold for "really short".  Using the auxiliary sphere
              * solution with dnm computed at (bet1 + bet2) / 2, the relative error in the
@@ -1348,7 +1343,7 @@ namespace Units
             return a12;
         }
 
-        public static void geod_inverseline(geod_geodesicline l,
+        public static void geod_inverseline(out geod_geodesicline l,
             geod_geodesic g,
             double lat1, double lon1, double lat2, double lon2,
             uint caps)
