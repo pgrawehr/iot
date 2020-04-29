@@ -45,6 +45,12 @@ namespace Units
             GeoidCalculations.geod_inverse(_geod, latitude1, longitude1, latitude2, longitude2, out distance, out direction, out _);
         }
 
+        public static GeographicPosition CalcCoords(GeographicPosition start, double direction, double distance)
+        {
+            GeoidCalculations.geod_direct(_geod, start.Latitude, start.Longitude, direction, distance, out double resultLatitude, out double resultLongitude, out _);
+            return new GeographicPosition(resultLatitude, resultLongitude, start.EllipsoidalHeight);
+        }
+
         public static void CalcCoords(double startLatitude, double startLongitude, double direction, double distance, out double resultLatitude, out double resultLongitude)
         {
             GeoidCalculations.geod_direct(_geod, startLatitude, startLongitude, direction, distance, out resultLatitude, out resultLongitude, out _);

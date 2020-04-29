@@ -217,6 +217,7 @@ namespace Iot.Device.Nmea0183.Sentences
             SpeedOverGroundInKnots = speedOverGroundInKnots;
             TrackMadeGoodInDegreesTrue = trackMadeGoodInDegreesTrue;
             MagneticVariationInDegrees = magneticVariationInDegrees;
+            Valid = true;
         }
 
         private static int DirectionToSign(CardinalDirection direction)

@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Units", "..\Units\Units.csp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nmea0183.Tests", "..\Nmea0183\tests\Nmea0183.Tests.csproj", "{ED6C45AC-1EAE-4C55-82A3-EB2F693D2930}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nmea.Samples", "..\Nmea0183\samples\Nmea.Samples.csproj", "{B50647E2-B5A2-46F2-8B45-BD7D26597844}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{ED6C45AC-1EAE-4C55-82A3-EB2F693D2930}.Windows-Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ED6C45AC-1EAE-4C55-82A3-EB2F693D2930}.Windows-Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ED6C45AC-1EAE-4C55-82A3-EB2F693D2930}.Windows-Release|Any CPU.Build.0 = Release|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Linux-Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Linux-Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Linux-Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Linux-Release|Any CPU.Build.0 = Release|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Windows-Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Windows-Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Windows-Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B50647E2-B5A2-46F2-8B45-BD7D26597844}.Windows-Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

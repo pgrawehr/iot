@@ -103,7 +103,7 @@ namespace Iot.Device.Nmea0183
             var content = sentence.ToNmeaMessage();
             if (string.IsNullOrWhiteSpace(content) || sentence.Valid == false)
             {
-                throw new InvalidOperationException("Input sentence not valid or cannot be decoded");
+                throw new InvalidOperationException("Input sentence not valid or cannot be encoded");
             }
 
             _fields = content.Split(',', StringSplitOptions.None);

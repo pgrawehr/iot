@@ -85,9 +85,9 @@ namespace DisplayControl
             {
                 // TODO: Commented out for now, needs testing (we must make sure the autopilot gets sentences only from one nav device, or 
                 // it will get confused)
-                // rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId(autopilot), StandardFilterAction.ForwardToSecondary, true));
+                // rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(autopilot), StandardFilterAction.ForwardToSecondary, true));
                 // Send back (but physically different client)
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(autopilot), StandardFilterAction.ForwardToSecondary, true));
+                rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId(autopilot), StandardFilterAction.ForwardToSecondary, true));
             }
             
             return rules;
