@@ -16,7 +16,11 @@ namespace Iot.Device.Ads1115
     /// </summary>
     public class Ads1115 : IDisposable
     {
+        private readonly bool _shouldDispose;
+
         private I2cDevice _i2cDevice = null;
+
+        private GpioController _gpioController;
 
         private InputMultiplexer _inputMultiplexer;
 
@@ -25,12 +29,68 @@ namespace Iot.Device.Ads1115
         private DataRate _dataRate;
         private DeviceMode _deviceMode;
 
-        private GpioController _gpioController;
-        private int _alrtRdyPin;
-        private ComparatorMode _comparatorMode;
+        /// <summary>
+        /// The pin of the GPIO controller that is connected to the interrupt line of the ADS1115
+        /// </summary>
+        private int _gpioInterruptPin;
+
         private ComparatorPolarity _comparatorPolarity;
         private ComparatorLatching _comparatorLatching;
         private ComparatorQueue _comparatorQueue;
+
+        /// <summary>
+        /// Initialize a new Ads1115 device connected through I2C
+        /// </summary>
+        /// <param name="i2cDevice">The I2C device used for communication.</param>
+        /// <param name="inputMultiplexer">Input Multiplexer</param>
+        /// <param name="measuringRange">Programmable Gain Amplifier</param>
+        /// <param name="dataRate">Data Rate</param>
+        /// <param name="deviceMode">Initial device mode</param>
+        public Ads1115(I2cDevice i2cDevice, InputMultiplexer inputMultiplexer = InputMultiplexer.AIN0, MeasuringRange measuringRange = MeasuringRange.FS4096, DataRate dataRate = DataRate.SPS128,
+            DeviceMode deviceMode = DeviceMode.Continuous)
+        {
+            _i2cDevice = i2cDevice ?? throw new ArgumentNullException(nameof(i2cDevice));
+            _inputMultiplexer = inputMultiplexer;
+            _measuringRange = measuringRange;
+            _dataRate = dataRate;
+            _gpioController = null;
+            _gpioInterruptPin = -1;
+            _deviceMode = deviceMode;
+            ComparatorMode = ComparatorMode.Traditional;
+            _comparatorPolarity = ComparatorPolarity.Low;
+            _comparatorLatching = ComparatorLatching.NonLatching;
+            _comparatorQueue = ComparatorQueue.Disable;
+            _shouldDispose = false;
+
+            SetConfig();
+            DisableAlertReadyPin();
+        }
+
+        /// <summary>
+        /// Initialize a new Ads1115 device connected through I2C with an additional GPIO controller for interrupt handling.
+        /// </summary>
+        /// <param name="i2cDevice">The I2C device used for communication.</param>
+        /// <param name="gpioController">The GPIO Controller used for interrupt handling</param>
+        /// <param name="gpioInterruptPin">The pin number where the interrupt line is attached on the GPIO controller</param>
+        /// <param name="shouldDispose">True (the default) if the GPIO controller shall be disposed when disposing this instance</param>
+        /// <param name="inputMultiplexer">Input Multiplexer</param>
+        /// <param name="measuringRange">Programmable Gain Amplifier</param>
+        /// <param name="dataRate">Data Rate</param>
+        /// <param name="deviceMode">Initial device mode</param>
+        public Ads1115(I2cDevice i2cDevice,
+            GpioController gpioController, int gpioInterruptPin, bool shouldDispose = true, InputMultiplexer inputMultiplexer = InputMultiplexer.AIN0, MeasuringRange measuringRange = MeasuringRange.FS4096, DataRate dataRate = DataRate.SPS128,
+            DeviceMode deviceMode = DeviceMode.Continuous)
+            : this(i2cDevice, inputMultiplexer, measuringRange, dataRate, deviceMode)
+        {
+            _gpioController = gpioController ?? throw new ArgumentNullException(nameof(gpioController));
+            if (gpioInterruptPin < 0 || gpioInterruptPin >= gpioController.PinCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(gpioInterruptPin), $"The given GPIO Controller has no pin number {gpioInterruptPin}");
+            }
+
+            _gpioInterruptPin = gpioInterruptPin;
+            _shouldDispose = shouldDispose;
+        }
 
         /// <summary>
         /// ADS1115 Input Multiplexer.
@@ -81,9 +141,9 @@ namespace Iot.Device.Ads1115
 
         /// <summary>
         /// ADS1115 operation mode.
-        /// When set to <see cref="DeviceMode.Continuous"/> the chip constantly measures the input and the values can be read directly.
+        /// When set to <see cref="DeviceMode.Continuous"/> the chip continously measures the input and the values can be read directly.
         /// If set to <see cref="DeviceMode.PowerDown"/> the chip enters idle mode after each conversion and
-        /// a new value will be requested each time a read request is performed. This is the recommended setting when constantly
+        /// a new value will be requested each time a read request is performed. This is the recommended setting when frequently
         /// swapping between input channels, because a change of the channel requires a new conversion anyway.
         /// </summary>
         public DeviceMode DeviceMode
@@ -101,14 +161,12 @@ namespace Iot.Device.Ads1115
 
         /// <summary>
         /// Comparator mode.
-        /// Only relevant if the comparator trigger event is set up and is changed by <see cref="EnableComparator(short, short, ComparatorMode, ComparatorQueue, GpioController, int)"/>.
+        /// Only relevant if the comparator trigger event is set up and is changed by <see cref="EnableComparator(short, short, ComparatorMode, ComparatorQueue)"/>.
         /// </summary>
         public ComparatorMode ComparatorMode
         {
-            get
-            {
-                return _comparatorMode;
-            }
+            get;
+            private set;
         }
 
         /// <summary>
@@ -147,7 +205,7 @@ namespace Iot.Device.Ads1115
 
         /// <summary>
         /// Minimum number of samples exceeding the lower/upper threshold before the ALRT pin is asserted.
-        /// This can only be set with <see cref="EnableComparator(short, short, ComparatorMode, ComparatorQueue, GpioController, int)"/>.
+        /// This can only be set with <see cref="EnableComparator(short, short, ComparatorMode, ComparatorQueue)"/>.
         /// </summary>
         public ComparatorQueue ComparatorQueue
         {
@@ -159,36 +217,9 @@ namespace Iot.Device.Ads1115
 
         /// <summary>
         /// This event fires when a new value is available (in conversion ready mode) or the comparator threshold is exceeded.
-        /// Requires setup through <see cref="EnableConversionReady"/> or <see cref="EnableComparator(double, double, ComparatorMode, ComparatorQueue, GpioController, int)"/>.
+        /// Requires setup through <see cref="EnableConversionReady"/> or <see cref="EnableComparator(double, double, ComparatorMode, ComparatorQueue)"/>.
         /// </summary>
         public event Action AlertReadyAsserted;
-
-        /// <summary>
-        /// Initialize a new Ads1115 device connected through I2C
-        /// </summary>
-        /// <param name="i2cDevice">The I2C device used for communication.</param>
-        /// <param name="inputMultiplexer">Input Multiplexer</param>
-        /// <param name="measuringRange">Programmable Gain Amplifier</param>
-        /// <param name="dataRate">Data Rate</param>
-        /// <param name="deviceMode">Initial device mode</param>
-        public Ads1115(I2cDevice i2cDevice, InputMultiplexer inputMultiplexer = InputMultiplexer.AIN0, MeasuringRange measuringRange = MeasuringRange.FS4096, DataRate dataRate = DataRate.SPS128,
-            DeviceMode deviceMode = DeviceMode.Continuous)
-        {
-            _i2cDevice = i2cDevice;
-            _inputMultiplexer = inputMultiplexer;
-            _measuringRange = measuringRange;
-            _dataRate = dataRate;
-            _gpioController = null;
-            _alrtRdyPin = -1;
-            _deviceMode = deviceMode;
-            _comparatorMode = ComparatorMode.Traditional;
-            _comparatorPolarity = ComparatorPolarity.Low;
-            _comparatorLatching = ComparatorLatching.NonLatching;
-            _comparatorQueue = ComparatorQueue.Disable;
-
-            SetConfig();
-            DisableAlrtReadyPin();
-        }
 
         /// <summary>
         /// Set ADS1115 Config Register.
@@ -202,10 +233,10 @@ namespace Iot.Device.Ads1115
             byte configHi = (byte)(0x80 | // Set conversion enable bit, so we always do (at least) one conversion using the new settings
                             ((byte)_inputMultiplexer << 4) |
                             ((byte)_measuringRange << 1) |
-                            ((byte)_deviceMode));
+                            ((byte)DeviceMode.PowerDown)); // Always in powerdown mode, otherwise we can't wait properly
 
             byte configLo = (byte)(((byte)_dataRate << 5) |
-                            ((byte)_comparatorMode << 4) |
+                            ((byte)ComparatorMode << 4) |
                             ((byte)_comparatorPolarity << 3) |
                             ((byte)_comparatorLatching << 2) |
                             (byte)_comparatorQueue);
@@ -221,13 +252,24 @@ namespace Iot.Device.Ads1115
 
             // waiting for the sensor stability
             WaitWhileBusy();
+
+            if (_deviceMode == DeviceMode.Continuous)
+            {
+                // We need to wait two cycles when changing the configuration in continuous mode,
+                // otherwise we may be getting a value from the wrong input
+                _i2cDevice.Write(writeBuff);
+                WaitWhileBusy();
+                configHi &= 0xFE; // Clear last bit
+                writeBuff[1] = configHi;
+                _i2cDevice.Write(writeBuff); // And enable continuous mode
+            }
         }
 
         /// <summary>
         /// Resets the comparator registers to default values (effectively disabling the comparator) and disables the
         /// Alert / Ready pin (if configured)
         /// </summary>
-        private void DisableAlrtReadyPin()
+        private void DisableAlertReadyPin()
         {
             _comparatorQueue = ComparatorQueue.Disable;
             SetConfig();
@@ -244,10 +286,8 @@ namespace Iot.Device.Ads1115
             _i2cDevice.Write(writeBuff);
             if (_gpioController != null)
             {
-                _gpioController.UnregisterCallbackForPinValueChangedEvent(_alrtRdyPin, ConversionReadyCallback);
-                _gpioController.ClosePin(_alrtRdyPin);
-                _gpioController = null;
-                _alrtRdyPin = -1;
+                _gpioController.UnregisterCallbackForPinValueChangedEvent(_gpioInterruptPin, ConversionReadyCallback);
+                _gpioController.ClosePin(_gpioInterruptPin);
             }
         }
 
@@ -274,25 +314,19 @@ namespace Iot.Device.Ads1115
         /// Enable conversion ready event.
         /// The <see cref="AlertReadyAsserted"/> event fires each time a new value is available after this method is called.
         /// </summary>
-        /// <param name="gpioController">Reference to the GPIO controller</param>
-        /// <param name="pin">Pin to which the ALRT/RDY Pin is connected</param>
-        /// <exception cref="InvalidOperationException">The conversion ready event is already set up</exception>
-        public void EnableConversionReady(GpioController gpioController, int pin)
+        /// <exception cref="InvalidOperationException">The conversion ready event is already set up or no GPIO Controller configured
+        /// for interrupt handling.</exception>
+        public void EnableConversionReady()
         {
-            if (gpioController == null)
+            if (_gpioController == null)
             {
-                throw new ArgumentNullException(nameof(gpioController));
-            }
-
-            if (_gpioController != null)
-            {
-                throw new InvalidOperationException("Event mode already set.");
+                throw new InvalidOperationException("Must have provided a GPIO Controller for interrupt handling.");
             }
 
             try
             {
                 // The ALRT/RDY Pin requires a pull-up resistor
-                gpioController.OpenPin(pin, PinMode.InputPullUp);
+                _gpioController.OpenPin(_gpioInterruptPin, PinMode.InputPullUp);
 
                 // Must be set to something other than disable
                 _comparatorQueue = ComparatorQueue.AssertAfterOne;
@@ -302,17 +336,14 @@ namespace Iot.Device.Ads1115
                 // configures the ALRT/RDY pin to trigger after each conversion (with a transition from high to low, when ComparatorPolarity is Low)
                 WriteComparatorRegisters(short.MaxValue, short.MinValue);
 
-                gpioController.RegisterCallbackForPinValueChangedEvent(pin, ComparatorPolarity == ComparatorPolarity.Low ? PinEventTypes.Falling : PinEventTypes.Rising, ConversionReadyCallback);
+                _gpioController.RegisterCallbackForPinValueChangedEvent(_gpioInterruptPin, ComparatorPolarity == ComparatorPolarity.Low ? PinEventTypes.Falling : PinEventTypes.Rising, ConversionReadyCallback);
 
             }
             catch (Exception)
             {
-                gpioController.ClosePin(pin);
+                _gpioController.ClosePin(_gpioInterruptPin);
                 throw;
             }
-
-            _gpioController = gpioController;
-            _alrtRdyPin = pin;
         }
 
         private void ConversionReadyCallback(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
@@ -334,12 +365,11 @@ namespace Iot.Device.Ads1115
         /// <param name="upperValue">Upper value for the comparator</param>
         /// <param name="mode">Traditional or Window comparator mode</param>
         /// <param name="queueLength">Minimum number of samples that must exceed the threshold to trigger the event</param>
-        /// <param name="gpioController">The GPIO controller, to configure the pin</param>
-        /// <param name="pin">The pin where the ALRT/RDY pin is connected to. </param>
+        /// <exception cref="InvalidOperationException">The GPIO Controller for the interrupt handler has not been set up</exception>
         public void EnableComparator(double lowerValue, double upperValue, ComparatorMode mode,
-            ComparatorQueue queueLength, GpioController gpioController, int pin)
+            ComparatorQueue queueLength)
         {
-            EnableComparator(VoltageToRaw(lowerValue), VoltageToRaw(upperValue), mode, queueLength, gpioController, pin);
+            EnableComparator(VoltageToRaw(lowerValue), VoltageToRaw(upperValue), mode, queueLength);
         }
 
         /// <summary>
@@ -353,14 +383,13 @@ namespace Iot.Device.Ads1115
         /// <param name="upperValue">Upper value for the comparator</param>
         /// <param name="mode">Traditional or Window comparator mode</param>
         /// <param name="queueLength">Minimum number of samples that must exceed the threshold to trigger the event</param>
-        /// <param name="gpioController">The GPIO controller, to configure the pin</param>
-        /// <param name="pin">The pin where the ALRT/RDY pin is connected to. </param>
+        /// <exception cref="InvalidOperationException">The GPIO Controller for the interrupt handler has not been set up</exception>
         public void EnableComparator(short lowerValue, short upperValue, ComparatorMode mode,
-            ComparatorQueue queueLength, GpioController gpioController, int pin)
+            ComparatorQueue queueLength)
         {
-            if (gpioController == null)
+            if (_gpioController == null)
             {
-                throw new ArgumentNullException(nameof(gpioController));
+                throw new InvalidOperationException("GPIO Controller must have been provided in constructor for this operation to work");
             }
 
             if (queueLength == ComparatorQueue.Disable)
@@ -373,18 +402,13 @@ namespace Iot.Device.Ads1115
                 throw new ArgumentException("Lower comparator limit must be larger than upper comparator limit");
             }
 
-            if (_gpioController != null)
-            {
-                throw new InvalidOperationException("Event mode already set.");
-            }
-
             try
             {
                 // The ALRT/RDY Pin requires a pull-up resistor
-                gpioController.OpenPin(pin, PinMode.InputPullUp);
+                _gpioController.OpenPin(_gpioInterruptPin, PinMode.InputPullUp);
 
                 _comparatorQueue = queueLength;
-                _comparatorMode = mode;
+                ComparatorMode = mode;
                 // Event callback mode is only useful in Continuous mode
                 _deviceMode = DeviceMode.Continuous;
                 SetConfig();
@@ -392,17 +416,14 @@ namespace Iot.Device.Ads1115
                 // configures the ALRT/RDY pin to trigger after each conversion (with a transition from high to low, when ComparatorPolarity is Low)
                 WriteComparatorRegisters(lowerValue, upperValue);
 
-                gpioController.RegisterCallbackForPinValueChangedEvent(pin, ComparatorPolarity == ComparatorPolarity.Low ? PinEventTypes.Falling : PinEventTypes.Rising, ConversionReadyCallback);
+                _gpioController.RegisterCallbackForPinValueChangedEvent(_gpioInterruptPin, ComparatorPolarity == ComparatorPolarity.Low ? PinEventTypes.Falling : PinEventTypes.Rising, ConversionReadyCallback);
 
             }
             catch (Exception)
             {
-                gpioController.ClosePin(pin);
+                _gpioController.ClosePin(_gpioInterruptPin);
                 throw;
             }
-
-            _gpioController = gpioController;
-            _alrtRdyPin = pin;
         }
 
         private ushort ReadConfigRegister()
@@ -419,33 +440,25 @@ namespace Iot.Device.Ads1115
 
         /// <summary>
         /// Wait until the current conversion finishes.
+        /// This method must only be called in powerdown mode, otherwise it would timeout, since the busy bit never changes.
+        /// Due to that, we always write the configuration first in power down mode and then enable the continuous bit.
         /// </summary>
-        /// <exception cref="TimeoutException">A timeout occured waiting for the ADC to finish the conversion (in powerdown-mode only)</exception>
+        /// <exception cref="TimeoutException">A timeout occured waiting for the ADC to finish the conversion</exception>
         private void WaitWhileBusy()
         {
-            if (DeviceMode == DeviceMode.PowerDown)
+            // In powerdown-mode, wait until the busy bit goes high
+            ushort reg = ReadConfigRegister();
+            int timeout = 10000; // microseconds
+            while ((reg & 0x8000) == 0 && (timeout > 0))
             {
-                // In powerdown-mode, wait until the busy bit goes high
-                Span<byte> readBuff = stackalloc byte[2];
-                ushort reg = ReadConfigRegister();
-                int timeout = 5000;
-                while ((reg & 0x8000) == 0 && (timeout-- > 0))
-                {
-                    DelayHelper.DelayMicroseconds(2, true);
-                    reg = ReadConfigRegister();
-                }
-
-                if (timeout <= 0)
-                {
-                    throw new TimeoutException("Timeout waiting for ADC to complete conversion");
-                }
+                DelayHelper.DelayMicroseconds(2, true);
+                timeout -= 2;
+                reg = ReadConfigRegister();
             }
-            else
+
+            if (timeout <= 0)
             {
-                // In continuous mode, we have to wait two cycles, the current one needs to end and then another one.
-                // (Checking the busy bit is pointless, as it is always cleared, because a new conversion starts right after the last ended)
-                double waitTime = 2.0 * (1.0 / FrequencyFromDataRate(DataRate));
-                Thread.Sleep(TimeSpan.FromSeconds(waitTime));
+                throw new TimeoutException("Timeout waiting for ADC to complete conversion");
             }
         }
 
@@ -644,10 +657,17 @@ namespace Iot.Device.Ads1115
         {
             if (_i2cDevice != null)
             {
-                DisableAlrtReadyPin();
+                DisableAlertReadyPin();
                 _i2cDevice?.Dispose();
                 _i2cDevice = null;
             }
+
+            if (_shouldDispose && _gpioController != null)
+            {
+                _gpioController.Dispose();
+            }
+
+            _gpioController = null;
         }
     }
 }

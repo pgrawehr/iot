@@ -86,10 +86,13 @@ namespace Iot.Device.DHTxx
         /// </summary>
         /// <param name="pin">The pin number (GPIO number)</param>
         /// <param name="pinNumberingScheme">The GPIO pin numbering scheme</param>
-        public DhtBase(int pin, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical)
+        /// <param name="gpioController"><see cref="GpioController"/> related with operations on pins</param>
+        /// <param name="shouldDispose">True to dispose the Gpio Controller</param>
+        public DhtBase(int pin, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, GpioController gpioController = null, bool shouldDispose = true)
         {
             _protocol = CommunicationProtocol.OneWire;
-            _controller = new GpioController(pinNumberingScheme);
+            _shouldDispose = gpioController == null ? true : shouldDispose;
+            _controller = gpioController ?? new GpioController(pinNumberingScheme);
             _shouldDispose = true;
             _pin = pin;
 

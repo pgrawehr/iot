@@ -21,20 +21,16 @@
     <Compile Include="LcdInterface.I2c.cs" />
     <Compile Include="LcdInterface.I2c4Bit.cs" />
     <Compile Include="LcdRgb.cs" />
-    <Compile Include="LcdValueUnitDisplay.cs" />
     <Compile Include="LineWrapMode.cs" />
     <Compile Include="Registers.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="BigFontMap.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj">
-      <AdditionalProperties>$(AdditionalProperties);RuntimeIdentifier=linux</AdditionalProperties>
-    </ProjectReference>
+    <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="BigFontMap.txt" />
   </ItemGroup>
 
 </Project>
