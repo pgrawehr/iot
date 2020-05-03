@@ -152,10 +152,18 @@ namespace DisplayControl
                     }
                 }
 
-                _button1.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
-                _button2.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
-                _button3.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
-                _button4.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
+                try
+                {
+                    _button1.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
+                    _button2.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
+                    _button3.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
+                    _button4.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
+                }
+                catch (IOException x)
+                {
+                    Console.WriteLine($"Remote ADC communication error: {x.Message}");
+                }
+
                 m_cancellationTokenSource.Token.WaitHandle.WaitOne(200);
                 count++;
             }

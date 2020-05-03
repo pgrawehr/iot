@@ -14,7 +14,6 @@ using System.Threading;
 using Avalonia.Controls;
 using Iot.Device.CharacterLcd;
 using Iot.Units;
-using Nmea0183.Sentences;
 
 namespace DisplayControl
 {
@@ -44,6 +43,7 @@ namespace DisplayControl
         private bool _menuMode;
         private MenuController _menuController;
         private Bmp680Environment _weatherSensor;
+        private EngineSurveillance _engine;
 
         private enum MenuOptionResult
         {
@@ -179,6 +179,7 @@ namespace DisplayControl
                 var extendedDisplayController = new ExtendedDisplayController();
                 extendedDisplayController.Init(Controller);
                 extendedDisplayController.SelfTest();
+                _extendedDisplayController = extendedDisplayController;
 
                 WriteLineToConsoleAndDisplay("ADC...");
                 _adcSensors = new AdcSensors();
@@ -204,7 +205,7 @@ namespace DisplayControl
 
             //allSources.AddRange(m_dhtSensors.SensorValueSources);
 
-            WriteLineToConsoleAndDisplay("Weather...");
+            WriteLineToConsoleAndDisplay("Wetter...");
             _weatherSensor = new Bmp680Environment();
             _weatherSensor.Init(Controller);
             allSources.AddRange(_weatherSensor.SensorValueSources);
@@ -219,6 +220,11 @@ namespace DisplayControl
             _nmeaSensor = new NmeaSensor();
             _nmeaSensor.Initialize();
             allSources.AddRange(_nmeaSensor.SensorValueSources);
+
+            WriteLineToConsoleAndDisplay("Motor");
+            _engine = new EngineSurveillance();
+            _engine.Init(Controller);
+            allSources.AddRange(_engine.SensorValueSources);
 
             foreach (var sensor in allSources)
             {
@@ -559,6 +565,9 @@ namespace DisplayControl
 
             _nmeaSensor.Dispose();
             _nmeaSensor = null;
+
+            _engine?.Dispose();
+            _engine = null;
 
             _extendedDisplayController.Dispose();
             _extendedDisplayController = null;

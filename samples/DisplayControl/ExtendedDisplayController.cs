@@ -10,7 +10,7 @@ namespace DisplayControl
 {
     internal sealed class ExtendedDisplayController : IDisposable
     {
-        public enum PinUsage
+        private enum PinUsage
         {
             Led1Green = 0,
             Led1Red = 3,
@@ -167,7 +167,7 @@ namespace DisplayControl
             }
         }
 
-        public void Write(PinUsage pin, PinValue pinValue)
+        private void Write(PinUsage pin, PinValue pinValue)
         {
             _controllerUsingMcp.Write((int)pin, pinValue);
         }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Nmea0183;
 using Units;
 
 namespace DisplayControl

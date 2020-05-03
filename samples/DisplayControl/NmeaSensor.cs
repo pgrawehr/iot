@@ -122,7 +122,7 @@ namespace DisplayControl
 
             _parserHandheldInterface = new NmeaParser(_serialPort.BaseStream, _serialPort.BaseStream);
             _parserHandheldInterface.OnParserError += OnParserError;
-            _parserNetworkInterface.StartDecode();
+            _parserHandheldInterface.StartDecode();
 
             _router = new MessageRouter();
             _router.AddEndPoint(ShipSourceName, _parserNetworkInterface);
@@ -175,6 +175,9 @@ namespace DisplayControl
                     _windDirectionAbsolute.Value = mwv.Angle.Degrees;
                 }
             }
+
+            // Reset warning if we get a valid message again (TODO: Improve condition)
+            _parserMsg.WarningLevel = WarningLevel.None;
         }
 
         private void OnParserError(string error, NmeaError errorCode)
@@ -213,8 +216,15 @@ namespace DisplayControl
 
         public void Dispose()
         {
+            _router?.Dispose();
+            _router = null;
+
             _parserNetworkInterface?.Dispose();
             _parserNetworkInterface = null;
+
+            _parserHandheldInterface?.Dispose();
+            _parserHandheldInterface = null;
+
             if (_client != null)
             {
                 _client.Close();
@@ -228,10 +238,6 @@ namespace DisplayControl
                 _serialPort.Dispose();
                 _serialPort = null;
             }
-            _parserHandheldInterface?.Dispose();
-            _parserHandheldInterface = null;
-            _router?.Dispose();
-            _router = null;
 
             _client = null;
             _stream = null;
