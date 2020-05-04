@@ -168,7 +168,7 @@ namespace DisplayControl
         private void InitializeSensors()
         {
             List<SensorValueSource> allSources = new List<SensorValueSource>();
-
+            Thread.CurrentThread.Name = "Main Thread";
             WriteLineToConsoleAndDisplay("CPU...");
             m_systemSensors = new SystemSensors();
             m_systemSensors.Init(Controller);

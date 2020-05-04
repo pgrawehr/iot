@@ -55,6 +55,10 @@ namespace Iot.Device.Imu
             {
                 if (_sizeUsed + dataLen >= _bufferSizeInBytes)
                 {
+                    // Clear the buffer, otherwise the situation will never improve
+                    _nextWriteByte = 0;
+                    _nextReadByte = 0;
+                    _sizeUsed = 0;
                     throw new InvalidOperationException("Buffer overflow");
                 }
 

@@ -99,7 +99,7 @@ namespace DisplayControl
             _speed = new ObservableValue<double>("SOG", "kts", 0);
             _track = new ObservableValue<double>("Track", "°", 0);
             _elevation = new ObservableValue<double>("Höhe", "m", 0);
-            _parserMsg = new ObservableValue<string>("Nmea parser msg", string.Empty, string.Empty);
+            _parserMsg = new ObservableValue<string>("Nmea parser msg", string.Empty, "Ok");
             _windSpeedRelative = new ObservableValue<double>("Scheinbarer Wind", "kts");
             _windSpeedAbsolute = new ObservableValue<double>("Wahrer Wind", "kts");
             _windDirectionAbsolute = new ObservableValue<double>("Scheinbare Windrichtung", "°T");

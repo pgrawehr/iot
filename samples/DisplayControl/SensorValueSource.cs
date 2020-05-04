@@ -45,8 +45,11 @@ namespace DisplayControl
             }
             set
             {
-                _warningLevel = value;
-                NotifyPropertyChanged();
+                if (_warningLevel != value)
+                {
+                    _warningLevel = value;
+                    NotifyPropertyChanged();
+                }
             }
         }
 

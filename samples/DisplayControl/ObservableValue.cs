@@ -62,14 +62,18 @@ namespace DisplayControl
             }
             set
             {
-                m_value = value;
-                foreach (var observer in m_observers)
+                if (!m_value.Equals(value))
                 {
-                    observer.OnNext(m_value);
+                    m_value = value;
+                    foreach (var observer in m_observers)
+                    {
+                        observer.OnNext(m_value);
+                    }
+
+                    NotifyPropertyChanged();
+                    NotifyPropertyChanged(nameof(GenericValue));
+                    ValueChanged();
                 }
-                NotifyPropertyChanged();
-                NotifyPropertyChanged(nameof(GenericValue));
-                ValueChanged();
             }
         }
 

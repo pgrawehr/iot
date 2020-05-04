@@ -136,9 +136,9 @@ namespace DisplayControl
             int count = 0;
             while (!m_cancellationTokenSource.IsCancellationRequested)
             {
-                if (count % 5 == 0)
+                if (count % 10 == 0)
                 {
-                    // Do this only every second
+                    // Do this only every once in a while
                     try
                     {
                         _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
