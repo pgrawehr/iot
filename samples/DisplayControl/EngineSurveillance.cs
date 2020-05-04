@@ -23,11 +23,11 @@ namespace DisplayControl
             UpDown = 4,
             Reset = 5,
             CarryIn = 6, // Into the CD4510B
-            Q1 = 7,
-            Q2 = 8,
-            Q3 = 9,
-            Q4 = 10,
-            CarryOut = 11, // Out from the CD4510B
+            Q1 = 8,
+            Q2 = 9,
+            Q3 = 10,
+            Q4 = 11,
+            CarryOut = 12, // Out from the CD4510B
             PresetEnable = 15,
         }
 
@@ -56,7 +56,6 @@ namespace DisplayControl
 
         public override void Init(GpioController gpioController)
         {
-            base.Init(gpioController);
             MainController = gpioController;
             _device = I2cDevice.Create(new I2cConnectionSettings(1, 0x21));
             // Interrupt pin B is connected to GPIO pin 22
@@ -93,26 +92,45 @@ namespace DisplayControl
             _controllerUsingMcp.SetPinMode((int)PinUsage.P4, PinMode.Output);
             _controllerUsingMcp.SetPinMode((int)PinUsage.UpDown, PinMode.Output);
             // Set the initial value to something other than 0, so we are sure we're not stuck in reset mode
-            int initialValue = 1;
-            Write(PinUsage.P1, initialValue & 0x1);
-            Write(PinUsage.P2, initialValue & 0x2);
-            Write(PinUsage.P3, initialValue & 0x4);
-            Write(PinUsage.P4, initialValue & 0x8);
-            Write(PinUsage.UpDown, PinValue.High); // Count up. TODO: Check this is right (it may not properly roll over)
-
-            // Reset to 0
-            Write(PinUsage.PresetEnable, PinValue.High);
-            Thread.Sleep(1);
-            Write(PinUsage.PresetEnable, PinValue.Low);
-
-            int counter = ReadCurrentCounterValue();
-            if (counter != initialValue)
+            int initialValue = 0;
+            // Run trough all possible values, to check all bit lines are working
+            for (initialValue = 10; initialValue >= 0; initialValue--)
             {
-                throw new InvalidOperationException("Could not reset engine revolution counter");
+                Write(PinUsage.P1, initialValue & 0x1);
+                Write(PinUsage.P2, initialValue & 0x2);
+                Write(PinUsage.P3, initialValue & 0x4);
+                Write(PinUsage.P4, initialValue & 0x8);
+                Write(PinUsage.UpDown, PinValue.High); // Count up. TODO: Check this is right (it may not properly roll over)
+
+                // Reset to 0
+                Write(PinUsage.PresetEnable, PinValue.High);
+                Thread.Sleep(1);
+                Write(PinUsage.PresetEnable, PinValue.Low);
+
+                // Set all preset bits 0, to make sure there isn't a short between Ps and Qs (did occur to me - nasty to find)
+                Write(PinUsage.P1, 0);
+                Write(PinUsage.P2, 0);
+                Write(PinUsage.P3, 0);
+                Write(PinUsage.P4, 0);
+
+                int counter = ReadCurrentCounterValue();
+                if (counter != initialValue)
+                {
+                    throw new InvalidOperationException($"Engine revolution counter: Bit error (should be {initialValue} but was {counter}.)");
+                }
             }
 
             _lastCounterValue = 0;
-            gpioController.RegisterCallbackForPinValueChangedEvent(InterruptPin, PinEventTypes.Rising, Interrupt);
+            // Enable interrupt if Q1 (the lowest bit of the counter) changes
+            _mcp23017.EnableInterruptOnChange((int)PinUsage.Q1, PinEventTypes.Rising | PinEventTypes.Falling);
+            _mcp23017.EnableInterruptOnChange((int)PinUsage.Q2, PinEventTypes.Rising | PinEventTypes.Falling);
+            _mcp23017.EnableInterruptOnChange((int)PinUsage.Q3, PinEventTypes.Rising | PinEventTypes.Falling);
+            _mcp23017.EnableInterruptOnChange((int)PinUsage.Q4, PinEventTypes.Rising | PinEventTypes.Falling);
+            // The interrupt is signaled with a falling edge
+            gpioController.RegisterCallbackForPinValueChangedEvent(InterruptPin, PinEventTypes.Falling, Interrupt);
+            // To ensure the interrupt register is reset (if we missed a previous interrupt, a new one would never trigger)
+            ReadCurrentCounterValue(); 
+            base.Init(gpioController);
         }
 
         private void Interrupt(object sender, PinValueChangedEventArgs pinvaluechangedeventargs)
@@ -129,8 +147,6 @@ namespace DisplayControl
             }
 
             _rpm.Value = newValue; // TODO: Better calculation
-
-            _mcp23017.ReadInterrupt(Port.PortB);
         }
 
         private void Write(PinUsage pin, in PinValue value)
@@ -145,10 +161,16 @@ namespace DisplayControl
 
         protected override void UpdateSensors()
         {
+            // TODO: Remove this (for testing purposes only)
+            // Interrupt(this, new PinValueChangedEventArgs(PinEventTypes.Rising, 0));
         }
 
         protected override void Dispose(bool disposing)
         {
+            _mcp23017.DisableInterruptOnChange((int)PinUsage.Q1);
+            _mcp23017.DisableInterruptOnChange((int)PinUsage.Q2);
+            _mcp23017.DisableInterruptOnChange((int)PinUsage.Q3);
+            _mcp23017.DisableInterruptOnChange((int)PinUsage.Q4);
             MainController.UnregisterCallbackForPinValueChangedEvent(InterruptPin, Interrupt);
             _controllerUsingMcp.Dispose();
             _mcp23017.Dispose();
