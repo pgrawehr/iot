@@ -12,6 +12,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using Iot.Device.CharacterLcd;
 using Iot.Units;
 
@@ -264,6 +265,11 @@ namespace DisplayControl
 
         private void DisplayButtonPressed(DisplayButton button, bool pressed)
         {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.InvokeAsync(() => DisplayButtonPressed(button, pressed));
+                return;
+            }
             if (pressed == false)
             {
                 // React only on press events
@@ -362,6 +368,12 @@ namespace DisplayControl
 
         public void OnSensorValueChanged(object sender, PropertyChangedEventArgs args)
         {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.InvokeAsync(() => OnSensorValueChanged(sender, args));
+                return;
+            }
+
             CheckForTriggers(sender as SensorValueSource);
 
             if (_menuMode)

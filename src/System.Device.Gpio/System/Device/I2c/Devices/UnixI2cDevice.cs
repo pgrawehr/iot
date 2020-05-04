@@ -17,6 +17,7 @@ namespace System.Device.I2c
         private int _deviceFileDescriptor = -1;
         private I2cFunctionalityFlags _functionalities;
         private static readonly object s_initializationLock = new object();
+        private static readonly object s_transferLock = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UnixI2cDevice"/> class that will use the specified settings to communicate with the I2C device.
@@ -76,13 +77,16 @@ namespace System.Device.I2c
 
         private unsafe void Transfer(byte* writeBuffer, byte* readBuffer, int writeBufferLength, int readBufferLength)
         {
-            if ((_functionalities & I2cFunctionalityFlags.I2C_FUNC_I2C) != 0)
+            lock (s_transferLock)
             {
-                ReadWriteInterfaceTransfer(writeBuffer, readBuffer, writeBufferLength, readBufferLength);
-            }
-            else
-            {
-                FileInterfaceTransfer(writeBuffer, readBuffer, writeBufferLength, readBufferLength);
+                if ((_functionalities & I2cFunctionalityFlags.I2C_FUNC_I2C) != 0)
+                {
+                    ReadWriteInterfaceTransfer(writeBuffer, readBuffer, writeBufferLength, readBufferLength);
+                }
+                else
+                {
+                    FileInterfaceTransfer(writeBuffer, readBuffer, writeBufferLength, readBufferLength);
+                }
             }
         }
 
