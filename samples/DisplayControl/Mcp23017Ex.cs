@@ -16,18 +16,7 @@ namespace DisplayControl
 
         public int ReadPortB()
         {
-            Span<PinValuePair> data = stackalloc PinValuePair[]
-            {
-                new PinValuePair(8, default), new PinValuePair(9, default), new PinValuePair(10, default), new PinValuePair(11, default), new PinValuePair(12, default), new PinValuePair(13, default), new PinValuePair(14, default), new PinValuePair(15, default),
-            };
-
-            Read(data);
-
-            int value = 0;
-            for (int i = 0; i < data.Length; i++)
-            {
-                value = value | (((int)data[i].PinValue) << i);
-            }
+            int value = ReadByte(Register.GPIO, Port.PortB);
 
             return value;
         }
