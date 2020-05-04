@@ -319,6 +319,10 @@ namespace Iot.Device.Mcp23xxx
         /// </returns>
         public PinValue ReadInterrupt() => InternalReadInterrupt(Port.PortA);
 
+        private byte SetBit(byte data, int bitNumber) => (byte)(data | (1 << bitNumber));
+
+        private byte ClearBit(byte data, int bitNumber) => (byte)(data & ~(1 << bitNumber));
+
         /// <summary>
         /// Sets a mode to a pin.
         /// </summary>
@@ -332,10 +336,6 @@ namespace Iot.Device.Mcp23xxx
             }
 
             ValidatePin(pinNumber);
-
-            byte SetBit(byte data, int bitNumber) => (byte)(data | (1 << bitNumber));
-
-            byte ClearBit(byte data, int bitNumber) => (byte)(data & ~(1 << bitNumber));
 
             if (pinNumber < 8)
             {
@@ -553,6 +553,91 @@ namespace Iot.Device.Mcp23xxx
                 return IsBitSet(InternalReadByte(Register.IODIR, Port.PortB), pinNumber - 8)
                     ? PinMode.Input
                     : PinMode.Output;
+            }
+        }
+
+        /// <summary>
+        /// Enables interrupts for a specified pin. On 16-Pin devices, Pins 0-7 trigger the INTA pin and Pins 8-15
+        /// trigger the INTB pin. The interrupt signals are configured as active-low.
+        /// </summary>
+        /// <param name="pinNumber">The pin number for which an interrupt shall be triggered</param>
+        /// <param name="eventTypes">Event(s) that should trigger the interrupt on the given pin</param>
+        /// <exception cref="ArgumentException">eventTypes is not valid</exception>
+        public void EnableInterruptOnChange(int pinNumber, PinEventTypes eventTypes)
+        {
+            byte oldValue, newValue;
+            if (eventTypes == PinEventTypes.None)
+            {
+                throw new ArgumentException("No event type specified");
+            }
+
+            Port port = Port.PortA;
+            if (pinNumber >= 8)
+            {
+                pinNumber -= 8;
+                port = Port.PortB;
+            }
+
+            // Set the corresponding bit in the GPINTEN (Interrupt-on-Change) register
+            oldValue = InternalReadByte(Register.GPINTEN, port);
+            newValue = SetBit(oldValue, pinNumber);
+            InternalWriteByte(Register.GPINTEN, newValue, port);
+            oldValue = InternalReadByte(Register.INTCON, port);
+            // If the interrupt shall happen on either edge, we clear the INTCON (Interrupt-on-Change-Control) register,
+            // which will trigger an interrupt on every change. Otherwise, set the INTCON register bit and set the
+            // DefVal register.
+            if (eventTypes == (PinEventTypes.Falling | PinEventTypes.Rising))
+            {
+                newValue = ClearBit(oldValue, pinNumber);
+            }
+            else
+            {
+                newValue = SetBit(oldValue, pinNumber);
+            }
+
+            InternalWriteByte(Register.INTCON, newValue, port);
+
+            oldValue = InternalReadByte(Register.DEFVAL, port);
+            // If we clear the bit, the interrupt occurs on a rising edge, if we set it, it occurs on a falling edge.
+            // If INTCON is clear, the value is ignored.
+            if (eventTypes == PinEventTypes.Rising)
+            {
+                newValue = ClearBit(oldValue, pinNumber);
+            }
+            else
+            {
+                newValue = SetBit(oldValue, pinNumber);
+            }
+
+            InternalWriteByte(Register.DEFVAL, newValue, port);
+
+            // Finally make sure that IOCON.ODR is low and IOCON.INTPOL is low, too (interrupt is low-active, the default)
+            // For this register, it doesn't matter which port we use, it exists only once.
+            oldValue = InternalReadByte(Register.IOCON, Port.PortA);
+            newValue = ClearBit(oldValue, 1);
+            newValue = ClearBit(newValue, 2);
+            InternalWriteByte(Register.IOCON, newValue, Port.PortA);
+        }
+
+        /// <summary>
+        /// Disables triggering interrupts on a certain pin
+        /// </summary>
+        /// <param name="pinNumber">The pin number</param>
+        public void DisableInterruptOnChange(int pinNumber)
+        {
+            byte oldValue, newValue;
+            if (pinNumber < 8)
+            {
+                // Set the corresponding bit in the GPINTEN (Interrupt-on-Change) register
+                oldValue = InternalReadByte(Register.GPINTEN, Port.PortA);
+                newValue = ClearBit(oldValue, pinNumber);
+                InternalWriteByte(Register.GPINTEN, newValue, Port.PortA);
+            }
+            else
+            {
+                oldValue = InternalReadByte(Register.GPINTEN, Port.PortB);
+                newValue = ClearBit(oldValue, pinNumber);
+                InternalWriteByte(Register.GPINTEN, newValue, Port.PortB);
             }
         }
 
