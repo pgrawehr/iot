@@ -249,10 +249,10 @@ namespace Iot.Device.CharacterLcd
                 string line = lines[i];
                 string currentLine = line;
 
-                int remainingChars = Math.Min(currentLine.Length, Size.Width - CursorLeft);
-                if (remainingChars > 0)
+                lock (_lock)
                 {
-                    lock (_lock)
+                    int remainingChars = Math.Min(currentLine.Length, Size.Width - CursorLeft);
+                    if (remainingChars > 0)
                     {
                         WriteCurrentLine(currentLine.Substring(0, remainingChars));
                     }
@@ -462,11 +462,18 @@ namespace Iot.Device.CharacterLcd
         private void WriteCurrentLine(string line)
         {
             // Replace the existing chars at the given position with the new text
-            _currentData[CursorTop].Remove(CursorLeft, line.Length);
-            _currentData[CursorTop].Insert(CursorLeft, line);
-            byte[] buffer = MapChars(line);
-            _lcd.Write(buffer);
-            CursorLeft += line.Length;
+            try
+            {
+                _currentData[CursorTop].Remove(CursorLeft, line.Length);
+                _currentData[CursorTop].Insert(CursorLeft, line);
+                byte[] buffer = MapChars(line);
+                _lcd.Write(buffer);
+                CursorLeft += line.Length;
+            }
+            catch (Exception x)
+            {
+                Console.WriteLine($"this mus tnot happen: {x}   ");
+            }
         }
 
         /// <summary>
