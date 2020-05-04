@@ -106,6 +106,7 @@ namespace DisplayControl
         {
             if (disposing)
             {
+                StopThread();
                 _bme680.Dispose();
             }
             base.Dispose(disposing);

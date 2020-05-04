@@ -67,6 +67,12 @@ namespace Iot.Device.Nmea0183
                 catch (IOException x)
                 {
                     FireOnParserError(x.Message, NmeaError.PortClosed);
+                    continue;
+                }
+                catch (ObjectDisposedException x)
+                {
+                    FireOnParserError(x.Message, NmeaError.PortClosed);
+                    continue;
                 }
 
                 if (currentLine == null)
@@ -84,7 +90,7 @@ namespace Iot.Device.Nmea0183
                 TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, out var error);
                 if (sentence == null)
                 {
-                    FireOnParserError(currentLine, error);
+                    FireOnParserError($"Received invalid sentence: Error {error}.", error);
                     continue;
                 }
 

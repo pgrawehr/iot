@@ -71,14 +71,19 @@ namespace DisplayControl
         {
             if (disposing)
             {
-                if (_pollThread != null)
-                {
-                    _cancellationTokenSource.Cancel();
-                    _pollThread.Join();
-                    _cancellationTokenSource.Dispose();
-                    _pollThread = null;
-                    _cancellationTokenSource = null;
-                }
+                StopThread();
+            }
+        }
+
+        protected void StopThread()
+        {
+            if (_pollThread != null)
+            {
+                _cancellationTokenSource.Cancel();
+                _pollThread.Join();
+                _cancellationTokenSource.Dispose();
+                _pollThread = null;
+                _cancellationTokenSource = null;
             }
         }
 

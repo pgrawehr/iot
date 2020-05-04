@@ -219,12 +219,6 @@ namespace DisplayControl
             _router?.Dispose();
             _router = null;
 
-            _parserNetworkInterface?.Dispose();
-            _parserNetworkInterface = null;
-
-            _parserHandheldInterface?.Dispose();
-            _parserHandheldInterface = null;
-
             if (_client != null)
             {
                 _client.Close();
@@ -238,6 +232,12 @@ namespace DisplayControl
                 _serialPort.Dispose();
                 _serialPort = null;
             }
+
+            _parserNetworkInterface?.Dispose();
+            _parserNetworkInterface = null;
+
+            _parserHandheldInterface?.Dispose();
+            _parserHandheldInterface = null;
 
             _client = null;
             _stream = null;
