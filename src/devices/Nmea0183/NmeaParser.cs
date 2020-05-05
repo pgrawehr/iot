@@ -22,7 +22,6 @@ namespace Iot.Device.Nmea0183
         private Thread _parserThread;
         private CancellationTokenSource _cancellationTokenSource;
         private StreamReader _reader;
-        private Dictionary<SentenceId, TalkerSentence> _lastSeenSentences;
 
         /// <summary>
         /// Creates a new instance of the NmeaParser, taking an input and an output stream
@@ -36,7 +35,6 @@ namespace Iot.Device.Nmea0183
             _reader = new StreamReader(_dataSource); // Nmea sentences are text
             _dataSink = dataSink;
             _lock = new object();
-            _lastSeenSentences = new Dictionary<SentenceId, TalkerSentence>();
         }
 
         public override void StartDecode()
@@ -93,8 +91,6 @@ namespace Iot.Device.Nmea0183
                     FireOnParserError($"Received invalid sentence: Error {error}.", error);
                     continue;
                 }
-
-                _lastSeenSentences[sentence.Id] = sentence;
 
                 NmeaSentence typed = sentence.TryGetTypedValue();
                 DispatchSentenceEvents(typed);

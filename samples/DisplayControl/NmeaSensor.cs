@@ -64,6 +64,8 @@ namespace DisplayControl
         {
             // Note: Order is important. First ones are checked first
             IList<FilterRule> rules = new List<FilterRule>();
+            // Log just everything, but of course continue processing
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, StandardFilterAction.ForwardToLog, false) { Continue = true });
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, StandardFilterAction.ForwardToPrimary, false));
             // GGA messages from the ship are discarded (the ones from the handheld shall be used instead)
@@ -124,7 +126,7 @@ namespace DisplayControl
             _parserHandheldInterface.OnParserError += OnParserError;
             _parserHandheldInterface.StartDecode();
 
-            _router = new MessageRouter();
+            _router = new MessageRouter(new LoggingConfiguration() { Filename = "/home/pi/projects/NmeaLog.txt" });
             _router.AddEndPoint(ShipSourceName, _parserNetworkInterface);
             _router.AddEndPoint(HandheldSourceName, _parserHandheldInterface);
             _router.OnNewSequence += ParserOnNewSequence;

@@ -12,18 +12,31 @@ namespace Iot.Device.Nmea0183
     public sealed class MessageRouter : NmeaSinkAndSource
     {
         public const string LocalMessageSource = "LOCAL";
+        public const string LoggingSink = "LOGGER";
         private readonly Dictionary<string, NmeaSinkAndSource> _sourcesAndSinks;
         private readonly List<string> _sourceSinkOrder;
         private List<FilterRule> _filterRules;
         private bool _localInterfaceActive;
+        private NmeaSinkAndSource _loggingSink;
 
-        public MessageRouter()
+        public MessageRouter(LoggingConfiguration loggingConfiguration = null)
         {
             _sourcesAndSinks = new Dictionary<string, NmeaSinkAndSource>();
             _sourceSinkOrder = new List<string>();
             // Always add ourselves as message source
             _sourcesAndSinks.Add(LocalMessageSource, this);
             _sourceSinkOrder.Add(LocalMessageSource);
+
+            // Also always add a logging sink
+            _loggingSink = new LoggingSink(loggingConfiguration);
+            _sourcesAndSinks.Add(LoggingSink, _loggingSink);
+            _sourceSinkOrder.Add(LoggingSink);
+            if (loggingConfiguration != null)
+            {
+                // Immediately start logger, unless inactive
+                _loggingSink.StartDecode();
+            }
+
             _filterRules = new List<FilterRule>();
             _localInterfaceActive = true;
         }
@@ -61,32 +74,41 @@ namespace Iot.Device.Nmea0183
                     switch (filter.StandardFilterAction)
                     {
                         case StandardFilterAction.DiscardMessage:
-                            return;
+                            break;
                         case StandardFilterAction.ForwardToAllOthers:
                             SendMessageTo(_sourcesAndSinks.Values.Where(x => x != source), sentence);
-                            return;
+                            break;
                         case StandardFilterAction.ForwardToAll:
                             SendMessageTo(_sourcesAndSinks.Values, sentence);
-                            return;
+                            break;
                         case StandardFilterAction.SendBack:
                             SendMessageTo(new[] { source }, sentence);
-                            return;
+                            break;
                         case StandardFilterAction.ForwardToLocal:
                             SendMessageTo(_sourcesAndSinks.Where(x => x.Key == LocalMessageSource)
                                 .Select(y => y.Value), sentence);
-                            return;
+                            break;
                         case StandardFilterAction.ForwardToPrimary:
-                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[1])
-                                .Select(y => y.Value), sentence);
-                            return;
-                        case StandardFilterAction.ForwardToSecondary:
                             SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[2])
                                 .Select(y => y.Value), sentence);
-                            return;
-                        case StandardFilterAction.ForwardToTernary:
+                            break;
+                        case StandardFilterAction.ForwardToSecondary:
                             SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[3])
                                 .Select(y => y.Value), sentence);
-                            return;
+                            break;
+                        case StandardFilterAction.ForwardToTernary:
+                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[4])
+                                .Select(y => y.Value), sentence);
+                            break;
+                        case StandardFilterAction.ForwardToLog:
+                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == LoggingSink)
+                                .Select(y => y.Value), sentence);
+                            break;
+                    }
+
+                    if (!filter.Continue)
+                    {
+                        return;
                     }
                 }
             }

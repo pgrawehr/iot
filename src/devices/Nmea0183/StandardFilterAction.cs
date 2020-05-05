@@ -24,5 +24,6 @@ namespace Iot.Device.Nmea0183
         ForwardToPrimary,
         ForwardToSecondary,
         ForwardToTernary,
+        ForwardToLog
     }
 }

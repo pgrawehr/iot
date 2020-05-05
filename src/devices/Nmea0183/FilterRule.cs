@@ -28,6 +28,7 @@ namespace Iot.Device.Nmea0183
             TalkerId = talkerId;
             SentenceId = sentenceId;
             StandardFilterAction = standardFilterAction;
+            Continue = false;
         }
 
         /// <summary>
@@ -49,6 +50,17 @@ namespace Iot.Device.Nmea0183
         /// Action this filter performs
         /// </summary>
         public StandardFilterAction StandardFilterAction { get; }
+
+        /// <summary>
+        /// If this is true, filter testing is continued even after a match.
+        /// If it is false (the default), no further filters are tested after the first match (which typically means
+        /// that a message is only forwarded to one client)
+        /// </summary>
+        public bool Continue
+        {
+            get;
+            set;
+        }
 
         /// <summary>
         /// True if this filter matches the given sentence and source
