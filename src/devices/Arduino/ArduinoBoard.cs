@@ -9,7 +9,6 @@ using System.Device.Spi;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using Iot.Device.Spi;
 
 #pragma warning disable CS1591
 

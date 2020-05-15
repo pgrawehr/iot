@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
+#pragma warning disable CS1591
 namespace System.Device.Gpio.I2c
 {
     /// <summary>

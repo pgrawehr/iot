@@ -3,11 +3,18 @@ using System.Device.Gpio;
 
 namespace System.Device.Analog
 {
+    /// <summary>
+    /// Base class for Analog Controllers.
+    /// These control analog input pins.
+    /// </summary>
     public sealed class AnalogController : IDisposable
     {
         private readonly AnalogControllerDriver _driver;
         private readonly HashSet<int> _openPins;
 
+        /// <summary>
+        /// Event that is triggered when the value on a pin changes (and callbacks are active)
+        /// </summary>
         public event ValueChangeEventHandler ValueChanged;
 
         /// <summary>

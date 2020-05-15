@@ -4,7 +4,6 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <EnableDefaultItems>false</EnableDefaultItems>
     <RootNamespace>Iot.Device.Arduino</RootNamespace>
-    <Configurations>Windows-Debug;Linux-Debug;Linux-Release;Windows-Release;Debug;Release</Configurations>
   </PropertyGroup>
 
  <ItemGroup>
@@ -12,10 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--Cases used when running in VS, with the solution config either Windows-Debug or Linux-Debug (or -Release) -->
-    <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj">
-  </ProjectReference>
-    <ProjectReference Include="..\SoftwareSpi\SoftwareSpi.csproj" />
+    <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
     <PackageReference Include="System.Memory" Version="4.5.3" />
   </ItemGroup>
 </Project>

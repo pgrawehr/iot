@@ -24,6 +24,9 @@ namespace System.Device.Analog
             TriggerReason = triggerReason;
         }
 
+        /// <summary>
+        /// Raw value, unscaled.
+        /// </summary>
         public uint RawValue
         {
             get;

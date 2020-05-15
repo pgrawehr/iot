@@ -7,6 +7,8 @@ using System.Device.Gpio;
 using System.Device.Gpio.Drivers;
 using System.Device.I2c;
 using System.Device.Spi;
+using System.Globalization;
+using System.IO;
 using System.IO.Ports;
 using System.Text;
 using System.Threading;
@@ -15,6 +17,8 @@ using Iot.Device.Arduino;
 using Iot.Device.Arduino.Sample;
 using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
+using Iot.Device.Common;
+using Iot.Units;
 
 namespace Ft4222.Samples
 {
@@ -458,7 +462,8 @@ namespace Ft4222.Samples
         public static void TestDisplay(ArduinoBoard board)
         {
             const int Gpio2 = 2;
-            const int MaxMode = 2;
+            const int MaxMode = 5;
+            const double StationAltitude = 650;
             int mode = 0;
             var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
             gpioController.OpenPin(Gpio2);
@@ -480,6 +485,21 @@ namespace Ft4222.Samples
             }
 
             gpioController.RegisterCallbackForPinValueChangedEvent(Gpio2, PinEventTypes.Falling, ChangeMode);
+            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, Bmp280.DefaultI2cAddress));
+            Bmp280 bmp;
+            try
+            {
+                bmp = new Bmp280(device);
+                bmp.StandbyTime = StandbyTime.Ms250;
+                bmp.SetPowerMode(Bmx280PowerMode.Normal);
+            }
+            catch (IOException)
+            {
+                bmp = null;
+                Console.WriteLine("BMP280 not available");
+            }
+
+            TimeSpan updateRate = TimeSpan.FromMilliseconds(500);
             while (true)
             {
                 if (Console.KeyAvailable && Console.ReadKey(true).KeyChar == 'x')
@@ -487,10 +507,13 @@ namespace Ft4222.Samples
                     break;
                 }
 
+                // Default
+                updateRate = TimeSpan.FromMilliseconds(500);
+
                 switch (mode)
                 {
                     case 0:
-                        disp.Output.ReplaceLine(0, "Display on");
+                        disp.Output.ReplaceLine(0, "Display ready");
                         disp.Output.ReplaceLine(1, "Button for mode");
                         // Just text
                         break;
@@ -498,6 +521,7 @@ namespace Ft4222.Samples
                     {
                         disp.Output.ReplaceLine(0, "Time");
                         disp.Output.ReplaceLine(1, DateTime.Now.ToLongTimeString());
+                        updateRate = TimeSpan.FromMilliseconds(200);
                         break;
                     }
 
@@ -507,11 +531,53 @@ namespace Ft4222.Samples
                         disp.Output.ReplaceLine(1, DateTime.Now.ToShortDateString());
                         break;
                     }
+
+                    case 3:
+                        disp.Output.ReplaceLine(0, "Temperature");
+                        if (bmp != null && bmp.TryReadTemperature(out Temperature temp))
+                        {
+                            disp.Output.ReplaceLine(1, temp.Celsius.ToString("F1", CultureInfo.CurrentCulture) + " °C");
+                        }
+                        else
+                        {
+                            disp.Output.ReplaceLine(1, "N/A");
+                        }
+
+                        break;
+                    case 4:
+                        disp.Output.ReplaceLine(0, "Raw Pressure");
+                        if (bmp != null && bmp.TryReadPressure(out Pressure p))
+                        {
+                            disp.Output.ReplaceLine(1, p.Hectopascal.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
+                        }
+                        else
+                        {
+                            disp.Output.ReplaceLine(1, "N/A");
+                        }
+
+                        break;
+
+                    case 5:
+                        disp.Output.ReplaceLine(0, "Baro Pressure");
+                        if (bmp != null && bmp.TryReadPressure(out Pressure p2) && bmp.TryReadTemperature(out temp))
+                        {
+                            Pressure p3 = WeatherHelper.CalculateBarometricPressure(p2, temp, StationAltitude);
+                            disp.Output.ReplaceLine(1, p3.Hectopascal.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
+                        }
+                        else
+                        {
+                            disp.Output.ReplaceLine(1, "N/A");
+                        }
+
+                        break;
                 }
 
-                Thread.Sleep(100);
+                Thread.Sleep(updateRate);
             }
 
+            disp.Output.Clear();
+            disp.Dispose();
+            bmp?.Dispose();
             gpioController.Dispose();
         }
     }

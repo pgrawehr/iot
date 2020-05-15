@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Device.Gpio;
 
+#pragma warning disable CS1591
 namespace System.Device.Analog
 {
     public abstract class AnalogControllerDriver : IDisposable
