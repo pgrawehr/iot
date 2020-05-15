@@ -24,6 +24,7 @@
       <AdditionalProperties>$(AdditionalProperties);RuntimeIdentifier=linux</AdditionalProperties>
     </ProjectReference>
     <ProjectReference Include="..\..\Bmxx80\Bmxx80.csproj" />
+    <ProjectReference Include="..\..\CharacterLcd\CharacterLcd.csproj" />
     <ProjectReference Include="..\..\Mcp3xxx\Mcp3xxx.csproj" />
     <ProjectReference Include="..\Arduino.csproj" />
   </ItemGroup>

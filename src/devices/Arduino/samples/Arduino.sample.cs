@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Adc;
 using Iot.Device.Arduino;
+using Iot.Device.Arduino.Sample;
 using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
 
@@ -92,6 +93,7 @@ namespace Ft4222.Samples
             Console.WriteLine(" 8 Read analog channel as fast as possible");
             Console.WriteLine(" 9 Run SPI tests with an MCP3008");
             Console.WriteLine(" 0 Detect all devices on the I2C bus");
+            Console.WriteLine(" D Use a display");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
@@ -131,6 +133,10 @@ namespace Ft4222.Samples
                 case 'x':
                 case 'X':
                     return false;
+                case 'd':
+                case 'D':
+                    TestDisplay(board);
+                    break;
             }
 
             return true;
@@ -447,6 +453,66 @@ namespace Ft4222.Samples
             }
 
             Console.ReadKey();
+        }
+
+        public static void TestDisplay(ArduinoBoard board)
+        {
+            const int Gpio2 = 2;
+            const int MaxMode = 2;
+            int mode = 0;
+            var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
+            gpioController.OpenPin(Gpio2);
+            gpioController.SetPinMode(Gpio2, PinMode.Input);
+            CharacterDisplay disp = new CharacterDisplay(board);
+            Console.WriteLine("Display output test");
+            Console.WriteLine("The button on line 2 changes modes");
+            Console.WriteLine("Press x to exit");
+            disp.Output.ScrollUpDelay = TimeSpan.FromMilliseconds(500);
+
+            void ChangeMode(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
+            {
+                mode++;
+                if (mode > MaxMode)
+                {
+                    // Don't change back to 0
+                    mode = 1;
+                }
+            }
+
+            gpioController.RegisterCallbackForPinValueChangedEvent(Gpio2, PinEventTypes.Falling, ChangeMode);
+            while (true)
+            {
+                if (Console.KeyAvailable && Console.ReadKey(true).KeyChar == 'x')
+                {
+                    break;
+                }
+
+                switch (mode)
+                {
+                    case 0:
+                        disp.Output.ReplaceLine(0, "Display on");
+                        disp.Output.ReplaceLine(1, "Button for mode");
+                        // Just text
+                        break;
+                    case 1:
+                    {
+                        disp.Output.ReplaceLine(0, "Time");
+                        disp.Output.ReplaceLine(1, DateTime.Now.ToLongTimeString());
+                        break;
+                    }
+
+                    case 2:
+                    {
+                        disp.Output.ReplaceLine(0, "Date");
+                        disp.Output.ReplaceLine(1, DateTime.Now.ToShortDateString());
+                        break;
+                    }
+                }
+
+                Thread.Sleep(100);
+            }
+
+            gpioController.Dispose();
         }
     }
 }
