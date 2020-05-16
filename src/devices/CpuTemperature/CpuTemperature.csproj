@@ -7,7 +7,12 @@
 
   <ItemGroup>
     <Compile Include="CpuTemperature.cs" />
+    <Compile Include="OpenHardwareMonitor.cs" />
     <None Include="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="5.0.0-alpha.1.19618.1" />
   </ItemGroup>
 
 </Project>
