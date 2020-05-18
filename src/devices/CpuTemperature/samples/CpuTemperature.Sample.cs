@@ -4,7 +4,6 @@
 
 using System;
 using System.Threading;
-using CpuTemperature;
 using Iot.Device.CpuTemperature;
 using Iot.Units;
 

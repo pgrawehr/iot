@@ -7,6 +7,7 @@ using System.Device.Gpio;
 using System.Device.Gpio.Drivers;
 using System.Device.I2c;
 using System.Device.Spi;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Ports;
@@ -18,6 +19,7 @@ using Iot.Device.Arduino.Sample;
 using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
 using Iot.Device.Common;
+using Iot.Device.CpuTemperature;
 using Iot.Units;
 
 namespace Ft4222.Samples
@@ -462,7 +464,7 @@ namespace Ft4222.Samples
         public static void TestDisplay(ArduinoBoard board)
         {
             const int Gpio2 = 2;
-            const int MaxMode = 5;
+            const int MaxMode = 7;
             const double StationAltitude = 650;
             int mode = 0;
             var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
@@ -499,6 +501,7 @@ namespace Ft4222.Samples
                 Console.WriteLine("BMP280 not available");
             }
 
+            OpenHardwareMonitor hardwareMonitor = new OpenHardwareMonitor();
             TimeSpan updateRate = TimeSpan.FromMilliseconds(500);
             while (true)
             {
@@ -569,6 +572,14 @@ namespace Ft4222.Samples
                             disp.Output.ReplaceLine(1, "N/A");
                         }
 
+                        break;
+                    case 6:
+                        disp.Output.ReplaceLine(0, "CPU Temperature");
+                        disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageCpuTemperature().ToString("C"));
+                        break;
+                    case 7:
+                        disp.Output.ReplaceLine(0, "GPU Temperature");
+                        disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageGpuTemperature().ToString("C"));
                         break;
                 }
 

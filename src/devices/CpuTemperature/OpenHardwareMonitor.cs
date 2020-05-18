@@ -9,7 +9,7 @@ using System.Text;
 using Iot.Units;
 
 #pragma warning disable CS1591
-namespace CpuTemperature
+namespace Iot.Device.CpuTemperature
 {
     public enum SensorType
     {
@@ -35,6 +35,8 @@ namespace CpuTemperature
         private delegate object UnitCreator(float value);
 
         private static Dictionary<SensorType, (Type Type, UnitCreator Creator)> _typeMap;
+        private Hardware _cpu;
+        private Hardware _gpu;
 
         static OpenHardwareMonitor()
         {
@@ -67,6 +69,17 @@ namespace CpuTemperature
                 if (searcher.Get().Count > 0)
                 {
                     _isAvalable = true;
+                    foreach (var hardware in GetHardwareComponents())
+                    {
+                        if (hardware.Type.Equals("CPU", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _cpu = hardware;
+                        }
+                        else if (hardware.Type.StartsWith("GPU", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _gpu = hardware;
+                        }
+                    }
                 }
             }
             catch (Exception x) when (x is IOException || x is UnauthorizedAccessException || x is ManagementException)
@@ -131,6 +144,78 @@ namespace CpuTemperature
         {
             return GetSensorList().Where(x => x.Identifier.StartsWith(forHardware.Identifier));
         }
+
+        // Some well-known properties have their own method
+
+        /// <summary>
+        /// Gets the average CPU temperature (averaged over all CPU sensors / cores)
+        /// </summary>
+        public Temperature GetAverageCpuTemperature()
+        {
+            double value = 0;
+            int count = 0;
+            foreach (var s in GetSensorList(_cpu))
+            {
+                if (s.TryGetValue(out Temperature temp))
+                {
+                    value += temp.Celsius;
+                    count++;
+                }
+            }
+
+            if (count == 0)
+            {
+                return default(Temperature);
+            }
+
+            return Temperature.FromCelsius(value / count);
+        }
+
+        /// <summary>
+        /// Gets the average CPU temperature (averaged over all CPU sensors / cores)
+        /// </summary>
+        public Temperature GetAverageGpuTemperature()
+        {
+            double value = 0;
+            int count = 0;
+            foreach (var s in GetSensorList(_gpu))
+            {
+                if (s.TryGetValue(out Temperature temp))
+                {
+                    value += temp.Celsius;
+                    count++;
+                }
+            }
+
+            if (count == 0)
+            {
+                return default(Temperature);
+            }
+
+            return Temperature.FromCelsius(value / count);
+        }
+
+        /* TODO: This would be cool, but requires some dynamics...
+        private T GetAverage<T>(Hardware hardware)
+        {
+            double value = 0;
+            int count = 0;
+            foreach (var s in GetSensorList(hardware))
+            {
+                if (s.TryGetValue(out T temp))
+                {
+                    value += temp.;
+                    count++;
+                }
+            }
+
+            if (count == 0)
+            {
+                return default(Temperature);
+            }
+
+            return Temperature.FromCelsius(value / count);
+        } */
 
         public sealed class Sensor : IDisposable
         {

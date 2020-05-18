@@ -14,11 +14,13 @@ using UnitsNet;
 namespace Iot.Device.CpuTemperature
 {
     /// <summary>
-    /// CPU temperature
+    /// CPU temperature.
+    /// On Windows, the value returned is driver dependent and may not represent actual CPU temperature, but more one
+    /// of the case sensors. Use <see cref="OpenHardwareMonitor"/> for better environmental representation in Windows.
     /// </summary>
     public class CpuTemperature
     {
-        private bool _isAvalable = false;
+        private bool _isAvailable = false;
         private bool _checkedIfAvailable = false;
         private bool _windows = false;
 
@@ -55,7 +57,7 @@ namespace Iot.Device.CpuTemperature
                 _checkedIfAvailable = true;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && File.Exists("/sys/class/thermal/thermal_zone0/temp"))
                 {
-                    _isAvalable = true;
+                    _isAvailable = true;
                     _windows = false;
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -66,7 +68,7 @@ namespace Iot.Device.CpuTemperature
                         if (searcher.Get().Count > 0)
                         {
                             _managementObjectSearchers.Add(searcher);
-                            _isAvalable = true;
+                            _isAvailable = true;
                             _windows = true;
                         }
                     }
@@ -82,7 +84,7 @@ namespace Iot.Device.CpuTemperature
                         if (searcher.Get().Count > 0)
                         {
                             _managementObjectSearchers.Add(searcher);
-                            _isAvalable = true;
+                            _isAvailable = true;
                             _windows = true;
                         }
                     }
@@ -95,11 +97,11 @@ namespace Iot.Device.CpuTemperature
                 }
             }
 
-            return _isAvalable;
+            return _isAvailable;
         }
 
         /// <summary>
-        /// Returns all temperature sensor values found
+        /// Returns all known temperature sensor values.
         /// </summary>
         /// <returns>A list of name/value pairs for temperature sensors</returns>
         public List<(string, Temperature)> ReadTemperatures()
