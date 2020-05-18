@@ -23,7 +23,8 @@ namespace Iot.Device.Arduino
         private const byte FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
         private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 5; // 2.5 works, but 2.6 is recommended
         private const int FIRMATA_INIT_TIMEOUT_SECONDS = 4;
-        private const int MESSAGE_TIMEOUT_MILLIS = 500;
+        private static readonly TimeSpan DefaultReplyTimeout = TimeSpan.FromMilliseconds(500);
+
         private byte _firmwareVersionMajor;
         private byte _firmwareVersionMinor;
         private byte _actualFirmataProtocolMajorVersion;
@@ -232,7 +233,7 @@ namespace Iot.Device.Arduino
                     // get elapsed seconds, given as a double with resolution in nanoseconds
                     var elapsed = timeout_start.Elapsed;
 
-                    if (elapsed.TotalMilliseconds > MESSAGE_TIMEOUT_MILLIS)
+                    if (elapsed > DefaultReplyTimeout)
                     {
                         return;
                     }
@@ -508,21 +509,27 @@ namespace Iot.Device.Arduino
 
         public Version QueryFirmwareVersion(out string firmwareName)
         {
-            lock (_synchronisationLock)
+            // Try 3 times (because we have to make sure the receiver's input queue is properly synchronized)
+            for (int i = 0; i < 3; i++)
             {
-                _dataReceived.Reset();
-                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
-                _firmataStream.WriteByte((byte)FirmataSysexCommand.REPORT_FIRMWARE);
-                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
-                bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
-                if (result == false)
+                lock (_synchronisationLock)
                 {
-                    throw new TimeoutException("Timeout waiting for firmata version");
-                }
+                    _dataReceived.Reset();
+                    _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                    _firmataStream.WriteByte((byte)FirmataSysexCommand.REPORT_FIRMWARE);
+                    _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                    bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+                    if (result == false)
+                    {
+                        continue;
+                    }
 
-                firmwareName = _firmwareName;
-                return new Version(_firmwareVersionMajor, _firmwareVersionMinor);
+                    firmwareName = _firmwareName;
+                    return new Version(_firmwareVersionMajor, _firmwareVersionMinor);
+                }
             }
+
+            throw new TimeoutException("Timeout waiting for firmata version");
         }
 
         public void QueryCapabilities()
@@ -533,7 +540,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.CAPABILITY_QUERY);
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
-                bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(MESSAGE_TIMEOUT_MILLIS));
+                bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
                 if (result == false)
                 {
                     throw new TimeoutException("Timeout waiting for device capabilities");
@@ -543,7 +550,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.ANALOG_MAPPING_QUERY);
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
-                result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(MESSAGE_TIMEOUT_MILLIS));
+                result = _dataReceived.WaitOne(DefaultReplyTimeout);
                 if (result == false)
                 {
                     throw new TimeoutException("Timeout waiting for PWM port mappings");
@@ -614,7 +621,7 @@ namespace Iot.Device.Arduino
                     _firmataStream.WriteByte((byte)pinNumber);
                     _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                     _firmataStream.Flush();
-                    bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(MESSAGE_TIMEOUT_MILLIS));
+                    bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
                     if (result == false)
                     {
                         throw new TimeoutException("Timeout waiting for pin mode.");
@@ -718,7 +725,7 @@ namespace Iot.Device.Arduino
                     _firmataStream.WriteByte((byte)(length >> 7 & sbyte.MaxValue));
                     _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                     _firmataStream.Flush();
-                    bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(100));
+                    bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
                     if (result == false)
                     {
                         throw new I2cCommunicationException("Timeout waiting for device reply");
@@ -827,7 +834,7 @@ namespace Iot.Device.Arduino
             {
                 _dataReceived.Reset();
                 byte requestId = SpiWrite(csPin, FirmataSpiCommand.SPI_TRANSFER, writeBytes);
-                bool result = _dataReceived.WaitOne(TimeSpan.FromMilliseconds(100));
+                bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
                 if (result == false)
                 {
                     throw new I2cCommunicationException("Timeout waiting for device reply");

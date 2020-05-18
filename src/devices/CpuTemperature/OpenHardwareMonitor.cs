@@ -195,6 +195,19 @@ namespace Iot.Device.CpuTemperature
             return Temperature.FromCelsius(value / count);
         }
 
+        public double GetCpuLoad()
+        {
+            foreach (var s in GetSensorList(_cpu).OrderBy(x => x.Identifier))
+            {
+                if (s.SensorType == SensorType.Load && s.TryGetValue(out float load))
+                {
+                    return load;
+                }
+            }
+
+            return Double.NaN;
+        }
+
         /* TODO: This would be cool, but requires some dynamics...
         private T GetAverage<T>(Hardware hardware)
         {
@@ -227,17 +240,17 @@ namespace Iot.Device.CpuTemperature
                 Name = name;
                 Identifier = identifier;
                 Parent = parent;
-                TypeEnum = typeEnum;
+                SensorType = typeEnum;
             }
 
             public string Name { get; }
             public string Identifier { get; }
             public string Parent { get; }
-            public SensorType TypeEnum { get; }
+            public SensorType SensorType { get; }
 
             public bool TryGetValue<T>(out T value)
             {
-                if (!_typeMap.TryGetValue(TypeEnum, out var elem))
+                if (!_typeMap.TryGetValue(SensorType, out var elem))
                 {
                     value = default(T);
                     return false;

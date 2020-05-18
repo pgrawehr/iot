@@ -464,7 +464,7 @@ namespace Ft4222.Samples
         public static void TestDisplay(ArduinoBoard board)
         {
             const int Gpio2 = 2;
-            const int MaxMode = 7;
+            const int MaxMode = 8;
             const double StationAltitude = 650;
             int mode = 0;
             var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
@@ -472,7 +472,7 @@ namespace Ft4222.Samples
             gpioController.SetPinMode(Gpio2, PinMode.Input);
             CharacterDisplay disp = new CharacterDisplay(board);
             Console.WriteLine("Display output test");
-            Console.WriteLine("The button on line 2 changes modes");
+            Console.WriteLine("The button on GPIO 2 changes modes");
             Console.WriteLine("Press x to exit");
             disp.Output.ScrollUpDelay = TimeSpan.FromMilliseconds(500);
 
@@ -503,6 +503,9 @@ namespace Ft4222.Samples
 
             OpenHardwareMonitor hardwareMonitor = new OpenHardwareMonitor();
             TimeSpan updateRate = TimeSpan.FromMilliseconds(500);
+            string modeName = string.Empty;
+            string previousModeName = string.Empty;
+            int firstCharInText = 0;
             while (true)
             {
                 if (Console.KeyAvailable && Console.ReadKey(true).KeyChar == 'x')
@@ -516,13 +519,13 @@ namespace Ft4222.Samples
                 switch (mode)
                 {
                     case 0:
-                        disp.Output.ReplaceLine(0, "Display ready");
+                        modeName = "Display ready";
                         disp.Output.ReplaceLine(1, "Button for mode");
                         // Just text
                         break;
                     case 1:
                     {
-                        disp.Output.ReplaceLine(0, "Time");
+                        modeName = "Time";
                         disp.Output.ReplaceLine(1, DateTime.Now.ToLongTimeString());
                         updateRate = TimeSpan.FromMilliseconds(200);
                         break;
@@ -530,13 +533,13 @@ namespace Ft4222.Samples
 
                     case 2:
                     {
-                        disp.Output.ReplaceLine(0, "Date");
+                        modeName = "Date";
                         disp.Output.ReplaceLine(1, DateTime.Now.ToShortDateString());
                         break;
                     }
 
                     case 3:
-                        disp.Output.ReplaceLine(0, "Temperature");
+                        modeName = "Temperature";
                         if (bmp != null && bmp.TryReadTemperature(out Temperature temp))
                         {
                             disp.Output.ReplaceLine(1, temp.Celsius.ToString("F1", CultureInfo.CurrentCulture) + " °C");
@@ -548,7 +551,7 @@ namespace Ft4222.Samples
 
                         break;
                     case 4:
-                        disp.Output.ReplaceLine(0, "Raw Pressure");
+                        modeName = "Raw Pressure";
                         if (bmp != null && bmp.TryReadPressure(out Pressure p))
                         {
                             disp.Output.ReplaceLine(1, p.Hectopascal.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
@@ -561,7 +564,7 @@ namespace Ft4222.Samples
                         break;
 
                     case 5:
-                        disp.Output.ReplaceLine(0, "Baro Pressure");
+                        modeName = "Barometric Pressure";
                         if (bmp != null && bmp.TryReadPressure(out Pressure p2) && bmp.TryReadTemperature(out temp))
                         {
                             Pressure p3 = WeatherHelper.CalculateBarometricPressure(p2, temp, StationAltitude);
@@ -574,13 +577,41 @@ namespace Ft4222.Samples
 
                         break;
                     case 6:
-                        disp.Output.ReplaceLine(0, "CPU Temperature");
+                        modeName = "CPU Temperature";
                         disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageCpuTemperature().ToString("C"));
                         break;
                     case 7:
-                        disp.Output.ReplaceLine(0, "GPU Temperature");
+                        modeName = "GPU Temperature";
                         disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageGpuTemperature().ToString("C"));
                         break;
+                    case 8:
+                        modeName = "CPU Load";
+                        disp.Output.ReplaceLine(1, hardwareMonitor.GetCpuLoad().ToString("F1") + " %");
+                        break;
+                }
+
+                int displayWidth = disp.Output.Size.Width;
+                if (modeName.Length > displayWidth)
+                {
+                    // Add one space at the end, makes it a bit easier to read
+                    if (firstCharInText < modeName.Length - displayWidth + 1)
+                    {
+                        firstCharInText++;
+                    }
+                    else
+                    {
+                        firstCharInText = 0;
+                    }
+
+                    disp.Output.ReplaceLine(0, modeName.Substring(firstCharInText));
+                }
+
+                if (modeName != previousModeName)
+                {
+                    disp.Output.ReplaceLine(0, modeName);
+
+                    previousModeName = modeName;
+                    firstCharInText = 0;
                 }
 
                 Thread.Sleep(updateRate);
