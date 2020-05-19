@@ -14,7 +14,8 @@ namespace Iot.Device.Nmea0183
         private FileStream _logFile;
         private TextWriter _textWriter;
 
-        public LoggingSink(LoggingConfiguration configuration)
+        public LoggingSink(string name, LoggingConfiguration configuration)
+        : base(name)
         {
             _logFile = null;
             _lock = new object();

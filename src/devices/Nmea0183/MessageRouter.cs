@@ -12,25 +12,22 @@ namespace Iot.Device.Nmea0183
     public sealed class MessageRouter : NmeaSinkAndSource
     {
         public const string LocalMessageSource = "LOCAL";
-        public const string LoggingSink = "LOGGER";
+        public const string LoggingSinkName = "LOGGER";
         private readonly Dictionary<string, NmeaSinkAndSource> _sourcesAndSinks;
-        private readonly List<string> _sourceSinkOrder;
         private List<FilterRule> _filterRules;
         private bool _localInterfaceActive;
         private NmeaSinkAndSource _loggingSink;
 
         public MessageRouter(LoggingConfiguration loggingConfiguration = null)
+        : base(LocalMessageSource)
         {
             _sourcesAndSinks = new Dictionary<string, NmeaSinkAndSource>();
-            _sourceSinkOrder = new List<string>();
             // Always add ourselves as message source
             _sourcesAndSinks.Add(LocalMessageSource, this);
-            _sourceSinkOrder.Add(LocalMessageSource);
 
             // Also always add a logging sink
-            _loggingSink = new LoggingSink(loggingConfiguration);
-            _sourcesAndSinks.Add(LoggingSink, _loggingSink);
-            _sourceSinkOrder.Add(LoggingSink);
+            _loggingSink = new LoggingSink(LoggingSinkName, loggingConfiguration);
+            _sourcesAndSinks.Add(LoggingSinkName, _loggingSink);
             if (loggingConfiguration != null)
             {
                 // Immediately start logger, unless inactive
@@ -49,12 +46,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        public bool AddEndPoint(string name, NmeaSinkAndSource parser)
+        public bool AddEndPoint(NmeaSinkAndSource parser)
         {
-            if (!_sourcesAndSinks.ContainsKey(name))
+            if (!_sourcesAndSinks.ContainsKey(parser.InterfaceName))
             {
-                _sourcesAndSinks.Add(name, parser);
-                _sourceSinkOrder.Add(name);
+                _sourcesAndSinks.Add(parser.InterfaceName, parser);
                 parser.OnNewSequence += OnSequenceReceived;
                 // Todo: Also monitor errors, should eventually attempt to reconnect
                 return true;
@@ -65,50 +61,48 @@ namespace Iot.Device.Nmea0183
 
         private void OnSequenceReceived(NmeaSinkAndSource source, NmeaSentence sentence)
         {
-            // Get name of source for this message (as defined in the AddStream call)
-            string name = _sourcesAndSinks.First(x => x.Value == source).Key;
+            // Get name of source for this message
+            string name = source.InterfaceName;
             foreach (var filter in _filterRules)
             {
                 if (filter.SentenceMatch(name, sentence))
                 {
-                    switch (filter.StandardFilterAction)
-                    {
-                        case StandardFilterAction.DiscardMessage:
-                            break;
-                        case StandardFilterAction.ForwardToAllOthers:
-                            SendMessageTo(_sourcesAndSinks.Values.Where(x => x != source), sentence);
-                            break;
-                        case StandardFilterAction.ForwardToAll:
-                            SendMessageTo(_sourcesAndSinks.Values, sentence);
-                            break;
-                        case StandardFilterAction.SendBack:
-                            SendMessageTo(new[] { source }, sentence);
-                            break;
-                        case StandardFilterAction.ForwardToLocal:
-                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == LocalMessageSource)
-                                .Select(y => y.Value), sentence);
-                            break;
-                        case StandardFilterAction.ForwardToPrimary:
-                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[2])
-                                .Select(y => y.Value), sentence);
-                            break;
-                        case StandardFilterAction.ForwardToSecondary:
-                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[3])
-                                .Select(y => y.Value), sentence);
-                            break;
-                        case StandardFilterAction.ForwardToTernary:
-                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == _sourceSinkOrder[4])
-                                .Select(y => y.Value), sentence);
-                            break;
-                        case StandardFilterAction.ForwardToLog:
-                            SendMessageTo(_sourcesAndSinks.Where(x => x.Key == LoggingSink)
-                                .Select(y => y.Value), sentence);
-                            break;
-                    }
+                    SendSentenceToFilterItems(source, sentence, filter);
 
-                    if (!filter.Continue)
+                    if (!filter.ContinueAfterMatch)
                     {
                         return;
+                    }
+                }
+            }
+        }
+
+        private void SendSentenceToFilterItems(NmeaSinkAndSource source, NmeaSentence sentence, FilterRule filter)
+        {
+            foreach (var sinkName in filter.Sinks)
+            {
+                if (_sourcesAndSinks.TryGetValue(sinkName, out var sink))
+                {
+                    // If both source and sink are the local interface, we abort here, as we would be causing a
+                    // stack overflow. Note that it is legal to loop messages over Uart interfaces as the TX and RX
+                    // line need not be connected to the same physical device. If the receiver is doing the same there,
+                    // we'll end up in trouble anyway, though.
+                    if (source.InterfaceName == LocalMessageSource && sink.InterfaceName == LocalMessageSource)
+                    {
+                        continue;
+                    }
+
+                    if (filter.ForwardingAction != null)
+                    {
+                        var newMsg = filter.ForwardingAction(source, sink, sentence);
+                        if (newMsg != null)
+                        {
+                            sink.SendSentence(newMsg);
+                        }
+                    }
+                    else
+                    {
+                        sink.SendSentence(sentence);
                     }
                 }
             }
@@ -137,22 +131,15 @@ namespace Iot.Device.Nmea0183
         /// add a rule for an inexistent interface was made)</exception>
         public void AddFilterRule(FilterRule rule)
         {
-            if (rule.StandardFilterAction == StandardFilterAction.ForwardToPrimary && _sourceSinkOrder.Count < 2)
+            foreach (var sinkName in rule.Sinks)
             {
-                throw new ArgumentException("Cannot create a rule that targets the primary interface without such an interface");
+                if (!_sourcesAndSinks.ContainsKey(sinkName))
+                {
+                    throw new ArgumentException($"Rule contains sink {sinkName} which is unknown.");
+                }
             }
 
-            if (rule.StandardFilterAction == StandardFilterAction.ForwardToSecondary && _sourceSinkOrder.Count < 3)
-            {
-                throw new ArgumentException("Cannot create a rule that targets the secondary interface without such an interface");
-            }
-
-            if (rule.StandardFilterAction == StandardFilterAction.ForwardToTernary && _sourceSinkOrder.Count < 4)
-            {
-                throw new ArgumentException("Cannot create a rule that targets the ternary interface without such an interface");
-            }
-
-            if (rule.SourceName != "*" && !_sourceSinkOrder.Contains(rule.SourceName))
+            if (rule.SourceName != "*" && !_sourcesAndSinks.ContainsKey(rule.SourceName))
             {
                 throw new ArgumentException($"Cannot define a rule for the unknown source {rule.SourceName}.");
             }

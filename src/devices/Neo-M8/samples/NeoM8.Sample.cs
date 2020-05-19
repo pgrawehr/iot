@@ -64,7 +64,7 @@ namespace Iot.Device.Gps.NeoM8Samples
                     Console.WriteLine("Connected!");
                     var stream = client.GetStream();
                     bool closed = false;
-                    using (NmeaParser parser = new NmeaParser(stream, stream))
+                    using (NmeaParser parser = new NmeaParser("Test", stream, stream))
                     {
                         parser.OnParserError += (s, error) =>
                         {

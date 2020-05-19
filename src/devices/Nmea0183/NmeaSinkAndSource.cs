@@ -14,6 +14,16 @@ namespace Iot.Device.Nmea0183
         public virtual event Action<NmeaSinkAndSource, NmeaSentence> OnNewSequence;
         public virtual event Action<string, NmeaError> OnParserError;
 
+        protected NmeaSinkAndSource(string interfaceName)
+        {
+            InterfaceName = interfaceName;
+        }
+
+        public string InterfaceName
+        {
+            get;
+        }
+
         public abstract void StartDecode();
         public abstract void SendSentence(NmeaSentence sentence);
         public abstract void StopDecode();

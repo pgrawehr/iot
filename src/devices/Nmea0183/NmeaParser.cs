@@ -26,10 +26,12 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Creates a new instance of the NmeaParser, taking an input and an output stream
         /// </summary>
+        /// <param name="interfaceName">Friendly name of this interface (used for filtering and eventually logging)</param>
         /// <param name="dataSource">Data source (may be connected to a serial port, a network interface, or whatever). It is recommended to use a blocking Stream,
         /// to prevent unnecessary polling</param>
         /// <param name="dataSink">Optional data sink, to send information. Can be null, and can be identical to the source stream</param>
-        public NmeaParser(Stream dataSource, Stream dataSink)
+        public NmeaParser(String interfaceName, Stream dataSource, Stream dataSink)
+        : base(interfaceName)
         {
             _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
             _reader = new StreamReader(_dataSource); // Nmea sentences are text

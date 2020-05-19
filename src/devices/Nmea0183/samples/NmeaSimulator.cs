@@ -53,7 +53,7 @@ namespace Nmea.Simulator
                     if (server.Pending())
                     {
                         TcpClient client = server.AcceptTcpClient();
-                        NmeaParser parser = new NmeaParser(client.GetStream(), client.GetStream());
+                        NmeaParser parser = new NmeaParser("Server", client.GetStream(), client.GetStream());
                         Thread t = new Thread(SenderThread);
                         ParserData pd = new ParserData(client, parser, t);
                         parser.OnNewSequence += (source, sentence) =>

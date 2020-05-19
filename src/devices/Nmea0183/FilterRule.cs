@@ -13,22 +13,49 @@ namespace Iot.Device.Nmea0183
         private readonly bool _rawMessagesOnly;
 
         /// <summary>
-        /// A standard filter rule
+        /// A standard filter rule. When the filter matches
         /// </summary>
         /// <param name="sourceName">Name of the source (Nmea stream name) for which the filter applies or * for all</param>
         /// <param name="talkerId">TalkerId for which the rule applies or <see cref="TalkerId.Any"/></param>
         /// <param name="sentenceId">SentenceId for which the rule applies or <see cref="SentenceId.Any"/></param>
-        /// <param name="standardFilterAction">Action to perform when the filter matches</param>
+        /// <param name="sinks">Where to send the message when the filter matches</param>
         /// <param name="rawMessagesOnly">The filter matches raw messages only. This is the default, because otherwise known message
         /// types would be implicitly duplicated on forwarding</param>
-        public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, StandardFilterAction standardFilterAction, bool rawMessagesOnly = true)
+        /// <param name="continueAfterMatch">True to continue processing after a match, false to stop processing this message</param>
+        public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, IEnumerable<string> sinks, bool rawMessagesOnly = true,
+            bool continueAfterMatch = false)
         {
             _rawMessagesOnly = rawMessagesOnly;
             SourceName = sourceName;
             TalkerId = talkerId;
             SentenceId = sentenceId;
-            StandardFilterAction = standardFilterAction;
-            Continue = false;
+            Sinks = sinks;
+            ContinueAfterMatch = continueAfterMatch;
+        }
+
+        /// <summary>
+        /// A standard filter rule. When the filter matches
+        /// </summary>
+        /// <param name="sourceName">Name of the source (Nmea stream name) for which the filter applies or * for all</param>
+        /// <param name="talkerId">TalkerId for which the rule applies or <see cref="TalkerId.Any"/></param>
+        /// <param name="sentenceId">SentenceId for which the rule applies or <see cref="SentenceId.Any"/></param>
+        /// <param name="sinks">Where to send the message when the filter matches</param>
+        /// <param name="forwardingAction">When the message is about to be sent, this method is called that can modify the
+        /// message. First arg is the source of the message, second the designated sink.</param>
+        /// <param name="rawMessagesOnly">The filter matches raw messages only. This is the default, because otherwise known message
+        /// types would be implicitly duplicated on forwarding</param>
+        /// <param name="continueAfterMatch">True to continue processing after a match, false to stop processing this message</param>
+        public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, IEnumerable<string> sinks,
+            Func<NmeaSinkAndSource, NmeaSinkAndSource, NmeaSentence, NmeaSentence> forwardingAction, bool rawMessagesOnly = true,
+            bool continueAfterMatch = false)
+        {
+            _rawMessagesOnly = rawMessagesOnly;
+            SourceName = sourceName;
+            TalkerId = talkerId;
+            SentenceId = sentenceId;
+            Sinks = sinks;
+            ForwardingAction = forwardingAction;
+            ContinueAfterMatch = continueAfterMatch;
         }
 
         /// <summary>
@@ -49,17 +76,23 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Action this filter performs
         /// </summary>
-        public StandardFilterAction StandardFilterAction { get; }
+        public IEnumerable<String> Sinks { get; }
+
+        /// <summary>
+        /// If non-null, this action can modify the message before it is being sent to the
+        /// indicated sink.
+        /// Note that the input message shall not be modified, clone it if necessary.
+        /// </summary>
+        public Func<NmeaSinkAndSource, NmeaSinkAndSource, NmeaSentence, NmeaSentence> ForwardingAction { get; }
 
         /// <summary>
         /// If this is true, filter testing is continued even after a match.
         /// If it is false (the default), no further filters are tested after the first match (which typically means
-        /// that a message is only forwarded to one client)
+        /// that a message is only matching one filter)
         /// </summary>
-        public bool Continue
+        public bool ContinueAfterMatch
         {
             get;
-            set;
         }
 
         /// <summary>

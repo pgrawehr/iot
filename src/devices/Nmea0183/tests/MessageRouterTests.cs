@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Iot.Device.Nmea0183.Sentences;
 using Moq;
 using Units;
@@ -14,11 +15,11 @@ namespace Iot.Device.Nmea0183.Tests
 
         public MessageRouterTests()
         {
-            _route1 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict);
-            _route2 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict);
+            _route1 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict, "1");
+            _route2 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict, "2");
             _router = new MessageRouter();
-            _router.AddEndPoint("1", _route1.Object);
-            _router.AddEndPoint("2", _route2.Object);
+            _router.AddEndPoint(_route1.Object);
+            _router.AddEndPoint(_route2.Object);
         }
 
         public void Dispose()
@@ -31,13 +32,13 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void RoutingCanBeConstructed()
         {
-            var route1 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict);
-            var route2 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict);
+            var route1 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict, "1");
+            var route2 = new Mock<NmeaSinkAndSource>(MockBehavior.Strict, "2");
             MessageRouter mr = new MessageRouter();
-            Assert.Equal(1, mr.EndPoints.Count); // Already has the default internal end point
-            mr.AddEndPoint("1", route1.Object);
-            mr.AddEndPoint("2", route2.Object);
-            Assert.Equal(3, mr.EndPoints.Count);
+            Assert.Equal(2, mr.EndPoints.Count); // Already has the default internal end point and the logger
+            mr.AddEndPoint(route1.Object);
+            mr.AddEndPoint(route2.Object);
+            Assert.Equal(4, mr.EndPoints.Count);
         }
 
         [Fact]
@@ -51,7 +52,7 @@ namespace Iot.Device.Nmea0183.Tests
         public void AddSimpleOutgoingFilter()
         {
             // This rule sends all messages from the local client to all (other) sinks
-            FilterRule f = new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, StandardFilterAction.ForwardToAllOthers, false);
+            FilterRule f = new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { "1", "2" }, false);
             _router.AddFilterRule(f);
 
             var sentence = TypedTestSentence();
@@ -66,7 +67,7 @@ namespace Iot.Device.Nmea0183.Tests
         {
             // Configuring false for the last parameter here on the local outgoing rule is probably not useful, because
             // the local sender will typically provide typed messages.
-            FilterRule f = new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, StandardFilterAction.ForwardToAllOthers, true);
+            FilterRule f = new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { "1", "2" }, true);
             _router.AddFilterRule(f);
             _router.SendSentence(TypedTestSentence());
         }
@@ -76,8 +77,8 @@ namespace Iot.Device.Nmea0183.Tests
         {
             // These two rules define that messages with a YDGGA header (Navigation data from the NMEA2000 Gateway) shall be
             // discarded and GPGGA messages used instead. These (in my test case) contain elevation as well.
-            FilterRule f1 = new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("GGA"), StandardFilterAction.DiscardMessage, false);
-            FilterRule f2 = new FilterRule("*", new TalkerId('G', 'P'), new SentenceId("GGA"), StandardFilterAction.ForwardToAll, false);
+            FilterRule f1 = new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("GGA"), new List<string>(), false);
+            FilterRule f2 = new FilterRule("*", new TalkerId('G', 'P'), new SentenceId("GGA"), new[] { "1", "2" }, false);
 
             _router.AddFilterRule(f1);
             _router.AddFilterRule(f2);
@@ -101,15 +102,9 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void DecodableMessageIsOnlyForwardedOnce()
         {
-            FilterRule f1 = new FilterRule("*", new TalkerId('G', 'P'), new SentenceId("GGA"), StandardFilterAction.ForwardToAllOthers, true);
+            FilterRule f1 = new FilterRule("*", new TalkerId('G', 'P'), new SentenceId("GGA"), new[] { "1" }, true);
 
             _router.AddFilterRule(f1);
-            bool received = false;
-            _router.OnNewSequence += (source, sentence) =>
-            {
-                Assert.Equal(_router, source);
-                received = true;
-            };
 
             NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
             var sentence1 = GnssSentence();
@@ -120,8 +115,26 @@ namespace Iot.Device.Nmea0183.Tests
             // Forwarded to all, but only once
             _route2.Raise(x => x.OnNewSequence += null, _route2.Object, sentence1);
             _route2.Raise(x => x.OnNewSequence += null, _route2.Object, sentence2);
+        }
 
-            Assert.True(received);
+        [Theory]
+        [InlineData(MessageRouter.LocalMessageSource)]
+        [InlineData("1")]
+        public void MessageLoopingDoesNotCauseStackOverflow(string target)
+        {
+            FilterRule f1 = new FilterRule("*", new TalkerId('G', 'P'), new SentenceId("GGA"), new[] { target }, true);
+
+            _router.AddFilterRule(f1);
+
+            NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
+            var sentence2 = GnssRawSentence();
+            // Only the raw message should be forwarded to the other sink (here sending from 2 to 1)
+            if (target != MessageRouter.LocalMessageSource)
+            {
+                _route1.Setup(x => x.SendSentence(sentence2));
+            }
+
+            _route1.Raise(x => x.OnNewSequence += null, _route1.Object, sentence2);
         }
 
         private RawSentence TestSentence()
