@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Device.Gpio;
+using System.Globalization;
 using System.Text;
 using Iot.Device.CharacterLcd;
 
@@ -19,8 +20,23 @@ namespace Iot.Device.Arduino.Sample
             _display.BlinkingCursorVisible = false;
             _display.UnderlineCursorVisible = false;
             _display.Clear();
-            _textController = new LcdConsole(_display, "A00", false);
+            ////for (int i = 0; i < 16; i++)
+            ////{
+            ////    for (int j = 0; j < 16; j++)
+            ////    {
+            ////        Span<byte> b = new Span<byte>(new byte[] { (byte)(j + i * 16) });
+            ////        _display.Write(b);
+            ////    }
+
+            ////    Console.ReadKey();
+            ////    _display.Clear();
+            ////}
+
+            _textController = new LcdConsole(_display, "SplC780", false);
             _textController.Clear();
+            LcdCharacterEncodingFactory f = new LcdCharacterEncodingFactory();
+            var cultureEncoding = f.Create(CultureInfo.CurrentCulture, "SplC780", '?', _display.NumberOfCustomCharactersSupported);
+            _textController.LoadEncoding(cultureEncoding);
         }
 
         public LcdConsole Output
