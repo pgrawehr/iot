@@ -33,7 +33,7 @@ namespace Iot.Device.CpuTemperature
             {
                 if (!_windows)
                 {
-                    return Temperature.FromCelsius(ReadTemperatureUnix());
+                    return Temperature.FromDegreesCelsius(ReadTemperatureUnix());
                 }
                 else
                 {
@@ -109,7 +109,7 @@ namespace Iot.Device.CpuTemperature
             if (!_windows)
             {
                 var ret = new List<(string, Temperature)>();
-                ret.Add(("CPU", Temperature.FromCelsius(ReadTemperatureUnix())));
+                ret.Add(("CPU", Temperature.FromDegreesCelsius(ReadTemperatureUnix())));
                 return ret;
             }
 
@@ -122,7 +122,7 @@ namespace Iot.Device.CpuTemperature
                 {
                     Double temp = Convert.ToDouble(string.Format(CultureInfo.InvariantCulture, "{0}", obj["CurrentTemperature"]), CultureInfo.InvariantCulture);
                     temp = (temp - 2732) / 10.0;
-                    result.Add((obj["InstanceName"].ToString(), Temperature.FromCelsius(temp)));
+                    result.Add((obj["InstanceName"].ToString(), Temperature.FromDegreesCelsius(temp)));
                 }
             }
 

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
-using Iot.Units;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.CpuTemperature
@@ -42,7 +42,7 @@ namespace Iot.Device.CpuTemperature
         {
             // TODO: Use proper types
             _typeMap = new Dictionary<SensorType, (Type Type, UnitCreator Creator)>();
-            _typeMap.Add(SensorType.Temperature, (typeof(Temperature), (x) => Temperature.FromCelsius(x)));
+            _typeMap.Add(SensorType.Temperature, (typeof(Temperature), (x) => Temperature.FromDegreesCelsius(x)));
             _typeMap.Add(SensorType.Voltage, (typeof(float), x => x));
             _typeMap.Add(SensorType.Load, (typeof(float), x => x));
             _typeMap.Add(SensorType.Fan, (typeof(float), x => x));
@@ -158,7 +158,7 @@ namespace Iot.Device.CpuTemperature
             {
                 if (s.TryGetValue(out Temperature temp))
                 {
-                    value += temp.Celsius;
+                    value += temp.DegreesCelsius;
                     count++;
                 }
             }
@@ -168,7 +168,7 @@ namespace Iot.Device.CpuTemperature
                 return default(Temperature);
             }
 
-            return Temperature.FromCelsius(value / count);
+            return Temperature.FromDegreesCelsius(value / count);
         }
 
         /// <summary>
@@ -182,7 +182,7 @@ namespace Iot.Device.CpuTemperature
             {
                 if (s.TryGetValue(out Temperature temp))
                 {
-                    value += temp.Celsius;
+                    value += temp.DegreesCelsius;
                     count++;
                 }
             }
@@ -192,7 +192,7 @@ namespace Iot.Device.CpuTemperature
                 return default(Temperature);
             }
 
-            return Temperature.FromCelsius(value / count);
+            return Temperature.FromDegreesCelsius(value / count);
         }
 
         public double GetCpuLoad()

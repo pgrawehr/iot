@@ -20,7 +20,7 @@ using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
 using Iot.Device.Common;
 using Iot.Device.CpuTemperature;
-using Iot.Units;
+using UnitsNet;
 
 namespace Ft4222.Samples
 {
@@ -193,7 +193,7 @@ namespace Ft4222.Samples
             {
                 bmp.TryReadTemperature(out var temperature);
                 bmp.TryReadPressure(out var pressure);
-                Console.Write($"\rTemperature: {temperature.Celsius:F2}°C. Pressure {pressure.Hectopascal:F1} hPa                  ");
+                Console.Write($"\rTemperature: {temperature.DegreesCelsius:F2}°C. Pressure {pressure.Hectopascals:F1} hPa                  ");
                 Thread.Sleep(100);
             }
 
@@ -542,7 +542,7 @@ namespace Ft4222.Samples
                         modeName = "Temperature";
                         if (bmp != null && bmp.TryReadTemperature(out Temperature temp))
                         {
-                            disp.Output.ReplaceLine(1, temp.Celsius.ToString("F1", CultureInfo.CurrentCulture) + " °C");
+                            disp.Output.ReplaceLine(1, temp.ToString("F1", CultureInfo.CurrentCulture) + " °C");
                         }
                         else
                         {
@@ -554,7 +554,7 @@ namespace Ft4222.Samples
                         modeName = "Raw Pressure";
                         if (bmp != null && bmp.TryReadPressure(out Pressure p))
                         {
-                            disp.Output.ReplaceLine(1, p.Hectopascal.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
+                            disp.Output.ReplaceLine(1, p.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
                         }
                         else
                         {
@@ -568,7 +568,7 @@ namespace Ft4222.Samples
                         if (bmp != null && bmp.TryReadPressure(out Pressure p2) && bmp.TryReadTemperature(out temp))
                         {
                             Pressure p3 = WeatherHelper.CalculateBarometricPressure(p2, temp, StationAltitude);
-                            disp.Output.ReplaceLine(1, p3.Hectopascal.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
+                            disp.Output.ReplaceLine(1, p3.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
                         }
                         else
                         {
