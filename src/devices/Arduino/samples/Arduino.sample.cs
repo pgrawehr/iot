@@ -542,7 +542,7 @@ namespace Ft4222.Samples
                         modeName = "Temperature";
                         if (bmp != null && bmp.TryReadTemperature(out Temperature temp))
                         {
-                            disp.Output.ReplaceLine(1, temp.ToString("F1", CultureInfo.CurrentCulture) + " °C");
+                            disp.Output.ReplaceLine(1, temp.ToString("s1", CultureInfo.CurrentCulture));
                         }
                         else
                         {
@@ -554,7 +554,7 @@ namespace Ft4222.Samples
                         modeName = "Raw Pressure";
                         if (bmp != null && bmp.TryReadPressure(out Pressure p))
                         {
-                            disp.Output.ReplaceLine(1, p.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
+                            disp.Output.ReplaceLine(1, p.ToString("g", CultureInfo.CurrentCulture));
                         }
                         else
                         {
@@ -568,7 +568,7 @@ namespace Ft4222.Samples
                         if (bmp != null && bmp.TryReadPressure(out Pressure p2) && bmp.TryReadTemperature(out temp))
                         {
                             Pressure p3 = WeatherHelper.CalculateBarometricPressure(p2, temp, StationAltitude);
-                            disp.Output.ReplaceLine(1, p3.ToString("F2", CultureInfo.CurrentCulture) + " hPa");
+                            disp.Output.ReplaceLine(1, p3.ToString("s1", CultureInfo.CurrentCulture));
                         }
                         else
                         {
@@ -578,15 +578,15 @@ namespace Ft4222.Samples
                         break;
                     case 6:
                         modeName = "CPU Temperature";
-                        disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageCpuTemperature().ToString("C"));
+                        disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageCpuTemperature().ToString("s1"));
                         break;
                     case 7:
                         modeName = "GPU Temperature";
-                        disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageGpuTemperature().ToString("C"));
+                        disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageGpuTemperature().ToString("s1"));
                         break;
                     case 8:
                         modeName = "CPU Load";
-                        disp.Output.ReplaceLine(1, hardwareMonitor.GetCpuLoad().ToString("F1") + " %");
+                        disp.Output.ReplaceLine(1, hardwareMonitor.GetCpuLoad().ToString("s1"));
                         break;
                 }
 
