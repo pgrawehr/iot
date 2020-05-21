@@ -487,19 +487,25 @@ namespace Iot.Device.Arduino
 
         public Version QueryFirmataVersion()
         {
-            lock (_synchronisationLock)
+            // Try 3 times (because we have to make sure the receiver's input queue is properly synchronized)
+            for (int i = 0; i < 3; i++)
             {
-                _dataReceived.Reset();
-                _firmataStream.WriteByte((byte)FirmataCommand.PROTOCOL_VERSION);
-                _firmataStream.Flush();
-                bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
-                if (result == false)
+                lock (_synchronisationLock)
                 {
-                    throw new TimeoutException("Timeout waiting for firmata version");
-                }
+                    _dataReceived.Reset();
+                    _firmataStream.WriteByte((byte)FirmataCommand.PROTOCOL_VERSION);
+                    _firmataStream.Flush();
+                    bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
+                    if (result == false)
+                    {
+                        continue;
+                    }
 
-                return new Version(_actualFirmataProtocolMajorVersion, _actualFirmataProtocolMinorVersion);
+                    return new Version(_actualFirmataProtocolMajorVersion, _actualFirmataProtocolMinorVersion);
+                }
             }
+
+            throw new TimeoutException("Timeout waiting for firmata version");
         }
 
         public Version QuerySupportedFirmataVersion()
@@ -529,7 +535,7 @@ namespace Iot.Device.Arduino
                 }
             }
 
-            throw new TimeoutException("Timeout waiting for firmata version");
+            throw new TimeoutException("Timeout waiting for firmata firmware version");
         }
 
         public void QueryCapabilities()
