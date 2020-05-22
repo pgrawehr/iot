@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Globalization;
 using System.Threading;
 using Iot.Device.CpuTemperature;
 using UnitsNet;
@@ -58,14 +59,9 @@ namespace Iot.Device.CpuTemperature.Samples
                     foreach (var sensor in hw.GetSensorList(component))
                     {
                         Console.Write($"{sensor.Name}: Path {sensor.Identifier}, Parent {sensor.Parent} ");
-                        // TODO: Extend this tree once 1072 is merged
-                        if (sensor.TryGetValue(out Temperature temp))
+                        if (sensor.TryGetValue(out IQuantity quantity))
                         {
-                            Console.WriteLine($"Temperature: {temp.DegreesCelsius:F1} °C");
-                        }
-                        else if (sensor.TryGetValue(out float dbl))
-                        {
-                            Console.WriteLine($"Value {dbl:F2}");
+                           Console.WriteLine(string.Format(CultureInfo.CurrentCulture, "{0}: {1:g}", quantity.Type, quantity));
                         }
                         else
                         {

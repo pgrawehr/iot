@@ -29,10 +29,7 @@ namespace Iot.Device.CpuTemperature
     {
         private bool _isAvalable;
 
-        /// <summary>
-        /// Return value needs to be object, because we cannot create a list of untyped methods
-        /// </summary>
-        private delegate object UnitCreator(float value);
+        private delegate IQuantity UnitCreator(float value);
 
         private static Dictionary<SensorType, (Type Type, UnitCreator Creator)> _typeMap;
         private Hardware _cpu;
@@ -40,17 +37,16 @@ namespace Iot.Device.CpuTemperature
 
         static OpenHardwareMonitor()
         {
-            // TODO: Use proper types
             _typeMap = new Dictionary<SensorType, (Type Type, UnitCreator Creator)>();
             _typeMap.Add(SensorType.Temperature, (typeof(Temperature), (x) => Temperature.FromDegreesCelsius(x)));
-            _typeMap.Add(SensorType.Voltage, (typeof(float), x => x));
-            _typeMap.Add(SensorType.Load, (typeof(float), x => x));
-            _typeMap.Add(SensorType.Fan, (typeof(float), x => x));
-            _typeMap.Add(SensorType.Flow, (typeof(float), x => x));
-            _typeMap.Add(SensorType.Control, (typeof(float), x => x));
-            _typeMap.Add(SensorType.Level, (typeof(float), x => x));
-            _typeMap.Add(SensorType.Power, (typeof(float), x => x));
-            _typeMap.Add(SensorType.Clock, (typeof(float), x => x));
+            _typeMap.Add(SensorType.Voltage, (typeof(ElectricPotential), x => ElectricPotential.FromVolts(x)));
+            _typeMap.Add(SensorType.Load, (typeof(Ratio), x => Ratio.FromPercent(x)));
+            _typeMap.Add(SensorType.Fan, (typeof(RotationalSpeed), x => RotationalSpeed.FromRevolutionsPerMinute(x)));
+            _typeMap.Add(SensorType.Flow, (typeof(VolumeFlow), x => VolumeFlow.FromLitersPerHour(x)));
+            _typeMap.Add(SensorType.Control, (typeof(Ratio), x => Ratio.FromPercent(x)));
+            _typeMap.Add(SensorType.Level, (typeof(Ratio), x => Ratio.FromPercent(x)));
+            _typeMap.Add(SensorType.Power, (typeof(Power), x => Power.FromWatts(x)));
+            _typeMap.Add(SensorType.Clock, (typeof(Frequency), x => Frequency.FromMegahertz(x)));
         }
 
         public OpenHardwareMonitor()
@@ -142,7 +138,7 @@ namespace Iot.Device.CpuTemperature
 
         public IEnumerable<Sensor> GetSensorList(Hardware forHardware)
         {
-            return GetSensorList().Where(x => x.Identifier.StartsWith(forHardware.Identifier));
+            return GetSensorList().Where(x => x.Identifier.StartsWith(forHardware.Identifier)).OrderBy(y => y.Identifier);
         }
 
         // Some well-known properties have their own method
@@ -174,17 +170,17 @@ namespace Iot.Device.CpuTemperature
             return false;
         }
 
-        public double GetCpuLoad()
+        public Ratio GetCpuLoad()
         {
             foreach (var s in GetSensorList(_cpu).OrderBy(x => x.Identifier))
             {
-                if (s.SensorType == SensorType.Load && s.TryGetValue(out float load))
+                if (s.SensorType == SensorType.Load && s.TryGetValue(out Ratio load))
                 {
                     return load;
                 }
             }
 
-            return Double.NaN;
+            return default(Ratio);
         }
 
         public bool TryGetAverage<T>(Hardware hardware, out T average)
@@ -241,7 +237,23 @@ namespace Iot.Device.CpuTemperature
             public string Parent { get; }
             public SensorType SensorType { get; }
 
+            public bool TryGetValue(out IQuantity value)
+            {
+                if (!_typeMap.TryGetValue(SensorType, out var elem))
+                {
+                    value = null;
+                    return false;
+                }
+
+                float newValue = Convert.ToSingle(_instance["Value"]);
+                IQuantity newValueAsUnitInstance = elem.Creator(newValue);
+
+                value = newValueAsUnitInstance;
+                return true;
+            }
+
             public bool TryGetValue<T>(out T value)
+                where T : IQuantity
             {
                 if (!_typeMap.TryGetValue(SensorType, out var elem))
                 {
