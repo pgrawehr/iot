@@ -156,6 +156,7 @@ namespace Iot.Device.Nmea0183.Sentences
                 foreach (var data in _dataSets)
                 {
                     b.Append(data.ToReadableContent());
+                    b.Append(" ");
                 }
 
                 return b.ToString();
