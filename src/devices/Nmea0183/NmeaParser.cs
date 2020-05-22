@@ -14,7 +14,7 @@ namespace Iot.Device.Nmea0183
     /// <summary>
     /// Parses Nmea Sequences
     /// </summary>
-    public sealed class NmeaParser : NmeaSinkAndSource, IDisposable
+    public class NmeaParser : NmeaSinkAndSource, IDisposable
     {
         private readonly object _lock;
         private Stream _dataSource;

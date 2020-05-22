@@ -12,7 +12,7 @@ namespace Iot.Device.Nmea0183
         public virtual event PositionUpdate OnNewPosition;
         public virtual event Action<DateTimeOffset> OnNewTime;
         public virtual event Action<NmeaSinkAndSource, NmeaSentence> OnNewSequence;
-        public virtual event Action<string, NmeaError> OnParserError;
+        public virtual event Action<NmeaSinkAndSource, string, NmeaError> OnParserError;
 
         protected NmeaSinkAndSource(string interfaceName)
         {
@@ -30,7 +30,7 @@ namespace Iot.Device.Nmea0183
 
         protected void FireOnParserError(string message, NmeaError error)
         {
-            OnParserError?.Invoke(message, error);
+            OnParserError?.Invoke(this, message, error);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -47,14 +47,14 @@ namespace Iot.Device.Nmea0183
             GC.SuppressFinalize(this);
         }
 
-        protected void DispatchSentenceEvents(NmeaSentence typed)
+        protected void DispatchSentenceEvents(NmeaSentence typedSequence)
         {
-            if (typed != null)
+            if (typedSequence != null)
             {
-                OnNewSequence?.Invoke(this, typed);
+                OnNewSequence?.Invoke(this, typedSequence);
             }
 
-            if (typed is RecommendedMinimumNavigationInformation rmc)
+            if (typedSequence is RecommendedMinimumNavigationInformation rmc)
             {
                 // Todo: This sentence is only interesting if we don't have GGA and VTG
                 if (rmc.LatitudeDegrees.HasValue && rmc.LongitudeDegrees.HasValue)
@@ -71,7 +71,7 @@ namespace Iot.Device.Nmea0183
                     }
                 }
             }
-            else if (typed is TimeDate td)
+            else if (typedSequence is TimeDate td)
             {
                 if (td.Valid && td.DateTime.HasValue)
                 {
