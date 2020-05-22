@@ -125,14 +125,15 @@ namespace Iot.Device.Nmea0183
         /// If it is needed to make distinctions for what needs to be sent to which client, create
         /// multiple server instances. This will allow for proper filtering.
         /// </summary>
+        /// <param name="source">The original source of the message, used i.e. for logging</param>
         /// <param name="sentence">The sentence to send</param>
-        public override void SendSentence(NmeaSentence sentence)
+        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             lock (_activeParsers)
             {
                 foreach (var parser in _activeParsers)
                 {
-                    parser.SendSentence(sentence);
+                    parser.SendSentence(source, sentence);
                 }
             }
         }

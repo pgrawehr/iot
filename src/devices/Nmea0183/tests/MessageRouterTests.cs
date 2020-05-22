@@ -45,7 +45,7 @@ namespace Iot.Device.Nmea0183.Tests
         public void NothingHappensWhenNoFilter()
         {
             _route1.Raise(x => x.OnNewSequence += null, _router, TestSentence());
-            _router.SendSentence(TestSentence());
+            _router.SendSentence(_router, TestSentence());
         }
 
         [Fact]
@@ -56,10 +56,10 @@ namespace Iot.Device.Nmea0183.Tests
             _router.AddFilterRule(f);
 
             var sentence = TypedTestSentence();
-            _route1.Setup(x => x.SendSentence(sentence));
-            _route2.Setup(x => x.SendSentence(sentence));
+            _route1.Setup(x => x.SendSentence(_router, sentence));
+            _route2.Setup(x => x.SendSentence(_router, sentence));
 
-            _router.SendSentence(sentence);
+            _router.SendSentence(_router, sentence);
         }
 
         [Fact]
@@ -69,7 +69,7 @@ namespace Iot.Device.Nmea0183.Tests
             // the local sender will typically provide typed messages.
             FilterRule f = new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { "1", "2" }, true);
             _router.AddFilterRule(f);
-            _router.SendSentence(TypedTestSentence());
+            _router.SendSentence(_router, TypedTestSentence());
         }
 
         [Fact]
@@ -93,8 +93,8 @@ namespace Iot.Device.Nmea0183.Tests
 
             gnssSentence = GnssSentence();
 
-            _route1.Setup(x => x.SendSentence(gnssSentence));
-            _route2.Setup(x => x.SendSentence(gnssSentence));
+            _route1.Setup(x => x.SendSentence(_route2.Object, gnssSentence));
+            _route2.Setup(x => x.SendSentence(_route2.Object, gnssSentence));
 
             _route2.Raise(x => x.OnNewSequence += null, _route2.Object, gnssSentence);
         }
@@ -110,7 +110,7 @@ namespace Iot.Device.Nmea0183.Tests
             var sentence1 = GnssSentence();
             var sentence2 = GnssRawSentence();
             // Only the raw message should be forwarded to the other sink (here sending from 2 to 1)
-            _route1.Setup(x => x.SendSentence(sentence2));
+            _route1.Setup(x => x.SendSentence(_route2.Object, sentence2));
 
             // Forwarded to all, but only once
             _route2.Raise(x => x.OnNewSequence += null, _route2.Object, sentence1);
@@ -131,7 +131,7 @@ namespace Iot.Device.Nmea0183.Tests
             // Only the raw message should be forwarded to the other sink (here sending from 2 to 1)
             if (target != MessageRouter.LocalMessageSource)
             {
-                _route1.Setup(x => x.SendSentence(sentence2));
+                _route1.Setup(x => x.SendSentence(_route1.Object, sentence2));
             }
 
             _route1.Raise(x => x.OnNewSequence += null, _route1.Object, sentence2);

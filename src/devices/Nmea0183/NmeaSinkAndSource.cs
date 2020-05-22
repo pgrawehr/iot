@@ -25,7 +25,13 @@ namespace Iot.Device.Nmea0183
         }
 
         public abstract void StartDecode();
-        public abstract void SendSentence(NmeaSentence sentence);
+        public abstract void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence);
+
+        public void SendSentence(NmeaSentence sentence)
+        {
+            SendSentence(this, sentence);
+        }
+
         public abstract void StopDecode();
 
         protected void FireOnParserError(string message, NmeaError error)

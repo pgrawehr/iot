@@ -97,28 +97,13 @@ namespace Iot.Device.Nmea0183
                         var newMsg = filter.ForwardingAction(source, sink, sentence);
                         if (newMsg != null)
                         {
-                            sink.SendSentence(newMsg);
+                            sink.SendSentence(source, newMsg);
                         }
                     }
                     else
                     {
-                        sink.SendSentence(sentence);
+                        sink.SendSentence(source, sentence);
                     }
-                }
-            }
-        }
-
-        private void SendMessageTo(IEnumerable<NmeaSinkAndSource> sinks, NmeaSentence sentence)
-        {
-            foreach (var sink in sinks)
-            {
-                if (sink == this)
-                {
-                    DispatchSentenceEvents(sentence);
-                }
-                else
-                {
-                    sink.SendSentence(sentence);
                 }
             }
         }
@@ -152,7 +137,7 @@ namespace Iot.Device.Nmea0183
             _localInterfaceActive = true;
         }
 
-        public override void SendSentence(NmeaSentence sentence)
+        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             if (_localInterfaceActive)
             {

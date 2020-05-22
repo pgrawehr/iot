@@ -106,7 +106,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        public override void SendSentence(NmeaSentence sentence)
+        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             TalkerSentence ts = new TalkerSentence(sentence);
             string dataToSend = ts.ToString() + "\r\n";
