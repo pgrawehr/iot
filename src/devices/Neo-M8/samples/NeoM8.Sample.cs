@@ -64,11 +64,11 @@ namespace Iot.Device.Gps.NeoM8Samples
                     Console.WriteLine("Connected!");
                     var stream = client.GetStream();
                     bool closed = false;
-                    using (NmeaParser parser = new NmeaParser(stream, stream))
+                    using (NmeaParser parser = new NmeaParser("Test", stream, stream))
                     {
-                        parser.OnParserError += (s, error) =>
+                        parser.OnParserError += (source, msg, error) =>
                         {
-                            Console.WriteLine($"Error while parsing message '{s}': {error}");
+                            Console.WriteLine($"Error while parsing message '{msg}': {error}");
                             if (error == NmeaError.PortClosed)
                             {
                                 closed = true;

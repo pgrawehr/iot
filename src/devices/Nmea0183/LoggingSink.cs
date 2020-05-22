@@ -14,7 +14,8 @@ namespace Iot.Device.Nmea0183
         private FileStream _logFile;
         private TextWriter _textWriter;
 
-        public LoggingSink(LoggingConfiguration configuration)
+        public LoggingSink(string name, LoggingConfiguration configuration)
+        : base(name)
         {
             _logFile = null;
             _lock = new object();
@@ -38,13 +39,13 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        public override void SendSentence(NmeaSentence sentence)
+        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             lock (_lock)
             {
                 if (_textWriter != null)
                 {
-                    string msg = FormattableString.Invariant($"{sentence.DateTime:s}|${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()}|{sentence.ToReadableContent()}");
+                    string msg = FormattableString.Invariant($"{sentence.DateTime:s}|{source.InterfaceName}|${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()}|{sentence.ToReadableContent()}");
                     _textWriter.WriteLine(msg);
                 }
             }

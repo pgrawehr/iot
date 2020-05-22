@@ -52,11 +52,22 @@ namespace Iot.Device.Nmea0183.Sentences
             string unit = ReadString(field) ?? string.Empty;
             string status = ReadString(field) ?? string.Empty;
 
-            // Other units than "N" (knots) not supported
-            if (status == "A" && angle.HasValue && speed.HasValue && unit == "N")
+            if (status == "A" && angle.HasValue && speed.HasValue)
             {
                 Angle = Angle.FromDegrees(angle.Value);
-                Speed = Speed.FromKnots(speed.Value);
+                if (unit == "N")
+                {
+                    Speed = Speed.FromKnots(speed.Value);
+                }
+                else if (unit == "M")
+                {
+                    Speed = Speed.FromMetersPerSecond(speed.Value);
+                }
+                else
+                {
+                    Speed = Speed.FromMetersPerSecond(0);
+                }
+
                 if (reference == "T")
                 {
                     Relative = false;

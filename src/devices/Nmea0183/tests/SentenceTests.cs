@@ -273,6 +273,22 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Contains("Absolute", mwv.ToReadableContent());
         }
 
+        [Fact]
+        public void MwvDecode()
+        {
+            string text = "$YDMWV,331.6,R,0.7,M,A";
+            var decoded = TalkerSentence.FromSentenceString(text, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(decoded);
+
+            WindSpeedAndAngle wind = (WindSpeedAndAngle)decoded.TryGetTypedValue();
+
+            Assert.True(wind.Valid);
+            Assert.True(wind.Relative);
+            Assert.Equal(331.6 - 360.0, wind.Angle.Degrees, 1);
+            Assert.Equal(0.7, wind.Speed.MetersPerSecond, 1);
+        }
+
         [Theory]
         // These were seen in actual NMEA data streams
         [InlineData("$GPGGA,163806,,*4E")]

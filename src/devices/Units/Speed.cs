@@ -44,5 +44,15 @@ namespace Units
             return new Speed(value / MetersPerSecondToKnots);
         }
 
+        /// <summary>
+        /// Creates a speed instance from meters
+        /// </summary>
+        /// <param name="value">Meters per second</param>
+        /// <returns></returns>
+        public static Speed FromMetersPerSecond(double value)
+        {
+            return new Speed(value);
+        }
+
     }
 }

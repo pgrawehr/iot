@@ -17,16 +17,13 @@ namespace Nmea.Simulator
     internal class Simulator
     {
         private static readonly TimeSpan UpdateRate = TimeSpan.FromMilliseconds(500);
-        private object _lock;
-        private List<ParserData> _activeParsers;
         private Thread _simulatorThread;
         private bool _terminate;
         private SimulatorData _activeData;
+        private NmeaServer _server;
 
         public Simulator()
         {
-            _lock = new object();
-            _activeParsers = new List<ParserData>();
             _activeData = new SimulatorData();
         }
 
@@ -38,40 +35,27 @@ namespace Nmea.Simulator
 
         private void StartServer()
         {
-            TcpListener server = null;
+            _server = null;
             try
             {
+                NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
+
                 _terminate = false;
                 _simulatorThread = new Thread(MainSimulator);
                 _simulatorThread.Start();
-                server = new TcpListener(IPAddress.Any, 10110);
-                server.Start();
-                bool exit = false;
-                Console.WriteLine("Waiting for connections. Press x to quit");
-                while (!exit)
+                _server = new NmeaServer("Server");
+                _server.StartDecode();
+                _server.OnNewSequence += (source, sentence) =>
                 {
-                    if (server.Pending())
+                    if (sentence is RawSentence)
                     {
-                        TcpClient client = server.AcceptTcpClient();
-                        NmeaParser parser = new NmeaParser(client.GetStream(), client.GetStream());
-                        Thread t = new Thread(SenderThread);
-                        ParserData pd = new ParserData(client, parser, t);
-                        parser.OnNewSequence += (source, sentence) =>
-                        {
-                            if (sentence is RawSentence)
-                            {
-                                Console.WriteLine($"Received message: {sentence.ToReadableContent()}");
-                            }
-                        };
-
-                        parser.StartDecode();
-                        lock (_lock)
-                        {
-                            _activeParsers.Add(pd);
-                            t.Start(pd);
-                        }
+                        Console.WriteLine($"Received message: {sentence.ToReadableContent()}");
                     }
+                };
 
+                Console.WriteLine("Waiting for connections. Press x to quit");
+                while (true)
+                {
                     if (Console.KeyAvailable)
                     {
                         var key = Console.ReadKey(true);
@@ -81,8 +65,7 @@ namespace Nmea.Simulator
                         }
                     }
 
-                    // Console.WriteLine($"Number of active clients: {_activeParsers.Count}");
-                    Thread.Sleep(100);
+                    Thread.Sleep(1000);
                 }
             }
             catch (SocketException x)
@@ -91,69 +74,45 @@ namespace Nmea.Simulator
             }
             finally
             {
-                server?.Stop();
+                _server?.StopDecode();
                 if (_simulatorThread != null)
                 {
                     _terminate = true;
                     _simulatorThread?.Join();
                 }
 
-                foreach (var p in _activeParsers)
-                {
-                    p.Dispose();
-                }
-
-                _activeParsers.Clear();
+                _server?.Dispose();
             }
         }
 
-        private void SenderThread(object obj)
+        private void SendNewData()
         {
-            ParserData myThreadData = (ParserData)obj;
-            NmeaParser parser = myThreadData.Parser;
-            while (!myThreadData.TerminateThread)
+            try
             {
-                if (!myThreadData.TcpClient.Connected)
-                {
-                    Console.WriteLine("Thread exiting - connection lost");
-                    break;
-                }
+                var data = _activeData;
+                RecommendedMinimumNavigationInformation rmc = new RecommendedMinimumNavigationInformation(DateTimeOffset.UtcNow,
+                    RecommendedMinimumNavigationInformation.NavigationStatus.Valid, data.Position.Latitude,
+                    data.Position.Longitude, data.Speed.Knots, data.Course, null);
+                SendSentence(rmc);
 
-                // This lock keeps the code simple - we do not have to worry about the data being manipulated while we collect it
-                // and send it out.
-                try
-                {
-                    lock (_lock)
-                    {
-                        var data = _activeData;
-                        RecommendedMinimumNavigationInformation rmc = new RecommendedMinimumNavigationInformation(DateTimeOffset.UtcNow,
-                            RecommendedMinimumNavigationInformation.NavigationStatus.Valid, data.Position.Latitude,
-                            data.Position.Longitude, data.Speed.Knots, data.Course, null);
-                        SendSentence(parser, rmc);
+                GlobalPositioningSystemFixData gga = new GlobalPositioningSystemFixData(
+                    DateTimeOffset.UtcNow, GpsQuality.DifferentialFix, data.Position, data.Position.EllipsoidalHeight - 54,
+                    2.5, 10);
+                SendSentence(gga);
 
-                        GlobalPositioningSystemFixData gga = new GlobalPositioningSystemFixData(
-                            DateTimeOffset.UtcNow, GpsQuality.DifferentialFix, data.Position, data.Position.EllipsoidalHeight - 54,
-                            2.5, 10);
-                        SendSentence(parser, gga);
-
-                        TimeDate zda = new TimeDate(DateTimeOffset.UtcNow);
-                        SendSentence(parser, zda);
-                    }
-                }
-                catch (IOException x)
-                {
-                    Console.WriteLine($"Error writing to the output stream: {x.Message}. Connection lost.");
-                    break;
-                }
-
-                Thread.Sleep(UpdateRate);
+                TimeDate zda = new TimeDate(DateTimeOffset.UtcNow);
+                SendSentence(zda);
+            }
+            catch (IOException x)
+            {
+                Console.WriteLine($"Error writing to the output stream: {x.Message}. Connection lost.");
             }
         }
 
-        private void SendSentence(NmeaParser parser, NmeaSentence sentence)
+        private void SendSentence(NmeaSentence sentence)
         {
             Console.WriteLine($"Sending {sentence.ToReadableContent()}");
-            parser.SendSentence(sentence);
+            _server.SendSentence(sentence);
         }
 
         private void MainSimulator()
@@ -164,11 +123,9 @@ namespace Nmea.Simulator
                 GeographicPosition newPosition = GreatCircle.CalcCoords(newData.Position, _activeData.Course.Degrees,
                     _activeData.Speed.MetersPerSecond * UpdateRate.TotalSeconds);
                 newData.Position = newPosition;
-                lock (_lock)
-                {
-                    _activeData = newData;
-                }
+                _activeData = newData;
 
+                SendNewData();
                 Thread.Sleep(UpdateRate);
             }
         }
