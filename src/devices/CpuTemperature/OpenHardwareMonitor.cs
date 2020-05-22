@@ -150,49 +150,28 @@ namespace Iot.Device.CpuTemperature
         /// <summary>
         /// Gets the average CPU temperature (averaged over all CPU sensors / cores)
         /// </summary>
-        public Temperature GetAverageCpuTemperature()
+        public bool TryGetAverageCpuTemperature(out Temperature temperature)
         {
-            double value = 0;
-            int count = 0;
-            foreach (var s in GetSensorList(_cpu))
+            if (TryGetAverage(_cpu, out temperature))
             {
-                if (s.TryGetValue(out Temperature temp))
-                {
-                    value += temp.DegreesCelsius;
-                    count++;
-                }
+                return true;
             }
 
-            if (count == 0)
-            {
-                return default(Temperature);
-            }
-
-            return Temperature.FromDegreesCelsius(value / count);
+            return false;
         }
 
         /// <summary>
         /// Gets the average CPU temperature (averaged over all CPU sensors / cores)
         /// </summary>
-        public Temperature GetAverageGpuTemperature()
+        /// <param name="temperature">The average GPU temperature</param>
+        public bool TryGetAverageGpuTemperature(out Temperature temperature)
         {
-            double value = 0;
-            int count = 0;
-            foreach (var s in GetSensorList(_gpu))
+            if (TryGetAverage(_gpu, out temperature))
             {
-                if (s.TryGetValue(out Temperature temp))
-                {
-                    value += temp.DegreesCelsius;
-                    count++;
-                }
+                return true;
             }
 
-            if (count == 0)
-            {
-                return default(Temperature);
-            }
-
-            return Temperature.FromDegreesCelsius(value / count);
+            return false;
         }
 
         public double GetCpuLoad()
@@ -208,27 +187,41 @@ namespace Iot.Device.CpuTemperature
             return Double.NaN;
         }
 
-        /* TODO: This would be cool, but requires some dynamics...
-        private T GetAverage<T>(Hardware hardware)
+        public bool TryGetAverage<T>(Hardware hardware, out T average)
+            where T : IQuantity
         {
             double value = 0;
             int count = 0;
+            Enum unitThatWasUsed = null;
             foreach (var s in GetSensorList(hardware))
             {
-                if (s.TryGetValue(out T temp))
+                if (s.TryGetValue(out T singleValue))
                 {
-                    value += temp.;
+                    if (unitThatWasUsed == null)
+                    {
+                        unitThatWasUsed = singleValue.Unit;
+                    }
+                    else if (!unitThatWasUsed.Equals(singleValue.Unit))
+                    {
+                        throw new NotSupportedException($"The different sensors for {hardware.Name} deliver values in different units");
+                    }
+
+                    value += singleValue.Value;
                     count++;
                 }
             }
 
             if (count == 0)
             {
-                return default(Temperature);
+                average = default(T);
+                return false;
             }
 
-            return Temperature.FromCelsius(value / count);
-        } */
+            value = value / count;
+
+            average = (T)Quantity.From(value, unitThatWasUsed);
+            return true;
+        }
 
         public sealed class Sensor : IDisposable
         {

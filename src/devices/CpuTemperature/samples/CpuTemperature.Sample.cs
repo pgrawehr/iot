@@ -5,7 +5,7 @@
 using System;
 using System.Threading;
 using Iot.Device.CpuTemperature;
-using Iot.Units;
+using UnitsNet;
 
 namespace Iot.Device.CpuTemperature.Samples
 {
@@ -23,9 +23,9 @@ namespace Iot.Device.CpuTemperature.Samples
                     var temperature = cpuTemperature.ReadTemperatures();
                     foreach (var entry in temperature)
                     {
-                        if (!double.IsNaN(entry.Item2.Celsius))
+                        if (!double.IsNaN(entry.Item2.DegreesCelsius))
                         {
-                            Console.WriteLine($"Temperature from {entry.Item1.ToString()}: {entry.Item2.Celsius} °C");
+                            Console.WriteLine($"Temperature from {entry.Item1.ToString()}: {entry.Item2.DegreesCelsius} °C");
                         }
                     }
                 }
@@ -61,7 +61,7 @@ namespace Iot.Device.CpuTemperature.Samples
                         // TODO: Extend this tree once 1072 is merged
                         if (sensor.TryGetValue(out Temperature temp))
                         {
-                            Console.WriteLine($"Temperature: {temp.Celsius:F1} °C");
+                            Console.WriteLine($"Temperature: {temp.DegreesCelsius:F1} °C");
                         }
                         else if (sensor.TryGetValue(out float dbl))
                         {
@@ -72,6 +72,12 @@ namespace Iot.Device.CpuTemperature.Samples
                             Console.WriteLine($"No data");
                         }
                     }
+                }
+
+                if (hw.TryGetAverageGpuTemperature(out Temperature gpuTemp) &&
+                    hw.TryGetAverageCpuTemperature(out Temperature cpuTemp))
+                {
+                    Console.WriteLine($"Averages: CPU temp {cpuTemp:s2}, GPU temp {gpuTemp:s2}, CPU Load {hw.GetCpuLoad()}");
                 }
 
                 Thread.Sleep(1000);
