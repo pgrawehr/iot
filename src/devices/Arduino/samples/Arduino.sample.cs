@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Ports;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Iot.Device.Adc;
@@ -464,7 +465,7 @@ namespace Ft4222.Samples
         public static void TestDisplay(ArduinoBoard board)
         {
             const int Gpio2 = 2;
-            const int MaxMode = 8;
+            const int MaxMode = 9;
             const double StationAltitude = 650;
             int mode = 0;
             var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
@@ -578,15 +579,46 @@ namespace Ft4222.Samples
                         break;
                     case 6:
                         modeName = "CPU Temperature";
-                        disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageCpuTemperature().ToString("s1"));
+                        if (hardwareMonitor.TryGetAverageCpuTemperature(out temp))
+                        {
+                            disp.Output.ReplaceLine(1, temp.ToString("s1", CultureInfo.CurrentCulture));
+                        }
+                        else
+                        {
+                            disp.Output.ReplaceLine(1, "N/A");
+                        }
+
                         break;
                     case 7:
                         modeName = "GPU Temperature";
-                        disp.Output.ReplaceLine(1, hardwareMonitor.GetAverageGpuTemperature().ToString("s1"));
+                        if (hardwareMonitor.TryGetAverageGpuTemperature(out temp))
+                        {
+                            disp.Output.ReplaceLine(1, temp.ToString("s1", CultureInfo.CurrentCulture));
+                        }
+                        else
+                        {
+                            disp.Output.ReplaceLine(1, "N/A");
+                        }
+
                         break;
                     case 8:
                         modeName = "CPU Load";
-                        disp.Output.ReplaceLine(1, hardwareMonitor.GetCpuLoad().ToString("s1"));
+                        disp.Output.ReplaceLine(1, hardwareMonitor.GetCpuLoad().ToString("s1", CultureInfo.CurrentCulture));
+                        break;
+
+                    case 9:
+                        modeName = "Total power dissipation";
+                        var powerSources = hardwareMonitor.GetSensorList().Where(x => x.SensorType == SensorType.Power);
+                        Power totalPower = Power.Zero;
+                        foreach (var power in powerSources)
+                        {
+                            if (power.Name != "CPU Cores" && power.TryGetValue(out Power powerConsumption)) // included in CPU Package
+                            {
+                                totalPower = totalPower + powerConsumption;
+                            }
+                        }
+
+                        disp.Output.ReplaceLine(1, totalPower.ToString("s1", CultureInfo.CurrentCulture));
                         break;
                 }
 
