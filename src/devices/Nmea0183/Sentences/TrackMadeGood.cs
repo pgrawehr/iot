@@ -113,7 +113,7 @@ namespace Iot.Device.Nmea0183.Sentences
             if (Valid)
             {
                 double? magnetic = CourseOverGroundMagnetic.HasValue ? CourseOverGroundMagnetic.Value.Degrees : (double?)null;
-                return $"{CourseOverGroundTrue.Degrees:F1},T,{magnetic:F1},M,{Speed.Knots:F1},N,{Speed.KilometersPerHour:F1},K,A";
+                return FormattableString.Invariant($"{CourseOverGroundTrue.Degrees:F1},T,{magnetic:F1},M,{Speed.Knots:F1},N,{Speed.KilometersPerHour:F1},K,A");
             }
 
             return string.Empty;

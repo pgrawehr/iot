@@ -164,7 +164,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (date.Length != 0)
             {
-                d1 = DateTimeOffset.ParseExact(date, "ddMMyy", null);
+                d1 = DateTimeOffset.ParseExact(date, "ddMMyy", CultureInfo.InvariantCulture);
             }
             else
             {

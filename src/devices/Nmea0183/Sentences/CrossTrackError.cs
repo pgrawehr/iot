@@ -98,7 +98,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"A,A,{Distance.NauticalMiles:F3},{(Left ? "L" : "R")},N,D";
+                return FormattableString.Invariant($"A,A,{Distance.NauticalMiles:F3},{(Left ? "L" : "R")},N,D");
             }
 
             return string.Empty;

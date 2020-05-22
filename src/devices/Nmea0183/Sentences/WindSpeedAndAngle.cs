@@ -127,7 +127,7 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 // It seems that angles should always be written 0..360.
                 var normalized = Angle.Normalize(true);
-                return $"{normalized.Degrees:F1},{(Relative ? "R" : "T")},{Speed.Knots:F1},N,A";
+                return FormattableString.Invariant($"{normalized.Degrees:F1},{(Relative ? "R" : "T")},{Speed.Knots:F1},N,A");
             }
 
             return string.Empty;

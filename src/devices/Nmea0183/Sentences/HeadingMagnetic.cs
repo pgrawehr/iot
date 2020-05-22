@@ -76,7 +76,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"{Angle:F1},M";
+                return FormattableString.Invariant($"{Angle:F1},M");
             }
 
             return string.Empty;

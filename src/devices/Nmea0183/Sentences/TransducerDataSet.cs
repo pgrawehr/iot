@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using Iot.Units;
 using Units;
@@ -96,17 +97,17 @@ namespace Iot.Device.Nmea0183.Sentences
             if (Unit == "B" || Unit == "P")
             {
                 // Pressure needs 6 digits
-                formattedValue = Value.ToString("G6");
+                formattedValue = Value.ToString("G6", CultureInfo.InvariantCulture);
             }
             else
             {
-                formattedValue = Value.ToString("G4"); // 4 significant digits
+                formattedValue = Value.ToString("G4", CultureInfo.InvariantCulture); // 4 significant digits
             }
 
             if (formattedValue.Contains("E"))
             {
                 // But if that would result in scientific notation (probably fishy, but not here to decide), use fixed point instead
-                formattedValue = Value.ToString("F1");
+                formattedValue = Value.ToString("F1", CultureInfo.InvariantCulture);
             }
 
             return FormattableString.Invariant($"{DataType},{formattedValue},{Unit},{DataName}");
@@ -117,7 +118,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public string ToReadableContent()
         {
-            return FormattableString.Invariant($"{DataName}: {Value:F2}{Unit}");
+            return FormattableString.Invariant($"{DataName}: {Value:F2} {Unit}");
         }
 
         /// <summary>

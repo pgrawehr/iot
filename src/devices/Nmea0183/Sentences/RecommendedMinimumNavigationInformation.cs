@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Units;
 
@@ -112,22 +113,22 @@ namespace Iot.Device.Nmea0183.Sentences
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
-            string time = DateTime.HasValue ? $"{DateTime.Value.ToString("HHmmss.fff")}" : null;
+            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : null;
             string status = Status.HasValue ? $"{(char)Status}" : null;
-            string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000") : null;
+            string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : null;
             string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : null;
-            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000") : null;
+            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : null;
             string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : null;
-            string speed = SpeedOverGroundInKnots.HasValue ? SpeedOverGroundInKnots.Value.ToString("0.000") : null;
-            string track = TrackMadeGoodInDegreesTrue.HasValue ? TrackMadeGoodInDegreesTrue.Value.ToString("0.000") : null;
-            string date = DateTime.HasValue ? DateTime.Value.ToString("ddMMyy") : null;
-            string mag = _positiveMagneticVariationInDegrees.HasValue ? _positiveMagneticVariationInDegrees.Value.ToString("0.000") : null;
+            string speed = SpeedOverGroundInKnots.HasValue ? SpeedOverGroundInKnots.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
+            string track = TrackMadeGoodInDegreesTrue.HasValue ? TrackMadeGoodInDegreesTrue.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
+            string date = DateTime.HasValue ? DateTime.Value.ToString("ddMMyy", CultureInfo.InvariantCulture) : null;
+            string mag = _positiveMagneticVariationInDegrees.HasValue ? _positiveMagneticVariationInDegrees.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
             string magTurn = _magneticVariationTurn.HasValue ? $"{(char)_magneticVariationTurn.Value}" : null;
 
             // undocumented status field will be optionally displayed
             string status2 = Status2.HasValue ? $",{(char)Status2}" : null;
 
-            return $"{time},{status},{lat},{latTurn},{lon},{lonTurn},{speed},{track},{date},{mag},{magTurn}{status2}";
+            return FormattableString.Invariant($"{time},{status},{lat},{latTurn},{lon},{lonTurn},{speed},{track},{date},{mag},{magTurn}{status2}");
         }
 
         public RecommendedMinimumNavigationInformation(TalkerSentence sentence, DateTimeOffset time)

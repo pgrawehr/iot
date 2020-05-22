@@ -81,7 +81,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
-            string time = DateTime.HasValue ? $"{DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture)}" : null;
+            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : null;
             string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : null;
             string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : null;
             string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : null;
@@ -96,7 +96,7 @@ namespace Iot.Device.Nmea0183.Sentences
                 ? Undulation.Value.ToString("F1", CultureInfo.InvariantCulture)
                 : null;
 
-            return $"{time},{lat},{latTurn},{lon},{lonTurn},{quality},{numSats},{hdop},{geoidElevation},M,{undulation},M,,";
+            return FormattableString.Invariant($"{time},{lat},{latTurn},{lon},{lonTurn},{quality},{numSats},{hdop},{geoidElevation},M,{undulation},M,,");
         }
 
         public GlobalPositioningSystemFixData(TalkerSentence sentence, DateTimeOffset time)

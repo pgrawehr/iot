@@ -337,5 +337,32 @@ namespace Iot.Device.Nmea0183.Tests
             // Just test that this doesn't cause an exception
             Assert.NotNull(decoded.ToReadableContent());
         }
+
+        [Theory]
+        [InlineData("$GPRMC,211730.997,A,3511.28000,S,13823.26000,E,7.000,229.000,190120,,*19")]
+        [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
+        [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
+        [InlineData("$WIMWV,220.0,T,5.0,N,A*20")]
+        [InlineData("$SDDBS,177.9,f,54.21,M,29.3,F*33")]
+        [InlineData("$YDDBS,10.3,f,3.14,M,1.7,F*09")]
+        [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
+        [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
+        [InlineData("$GPXTE,A,A,0.000,L,N,D*36")]
+        [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
+        public void SentenceRoundTripIsUnaffectedByCulture(string input)
+        {
+            // de-DE has "," as decimal separator. Big trouble if using CurrentCulture for any parsing or formatting here
+            using (new SetCultureForTest("de-DE"))
+            {
+                var inSentence = TalkerSentence.FromSentenceString(input, out var error);
+                Assert.Equal(NmeaError.None, error);
+                Assert.NotNull(inSentence);
+                var decoded = inSentence.TryGetTypedValue();
+                Assert.NotNull(decoded);
+                TalkerSentence outSentence = new TalkerSentence(decoded);
+                string output = outSentence.ToString();
+                Assert.Equal(input, output);
+            }
+        }
     }
 }

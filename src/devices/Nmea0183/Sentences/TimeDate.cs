@@ -30,10 +30,10 @@ namespace Iot.Device.Nmea0183.Sentences
             if (!string.IsNullOrWhiteSpace(timeString))
             {
                 // Can't use the base class methods here, because we just shouldn't rely on the input variable "today" here, as this message defines the date
-                int hour = int.Parse(timeString.Substring(0, 2));
-                int minute = int.Parse(timeString.Substring(2, 2));
-                int seconds = int.Parse(timeString.Substring(4, 2));
-                double millis = double.Parse("0" + timeString.Substring(6)) * 1000;
+                int hour = int.Parse(timeString.Substring(0, 2), CultureInfo.InvariantCulture);
+                int minute = int.Parse(timeString.Substring(2, 2), CultureInfo.InvariantCulture);
+                int seconds = int.Parse(timeString.Substring(4, 2), CultureInfo.InvariantCulture);
+                double millis = double.Parse("0" + timeString.Substring(6), CultureInfo.InvariantCulture) * 1000;
                 localTimeOfDay = new TimeSpan(0, hour, minute, seconds, (int)millis);
             }
 
@@ -88,11 +88,11 @@ namespace Iot.Device.Nmea0183.Sentences
             if (DateTime.HasValue && Valid)
             {
                 var t = DateTime.Value;
-                string time = $"{t.ToString("HHmmss.fff")}";
-                string year = $"{t.ToString("yyyy")}";
-                string month = $"{t.ToString("MM")}";
-                string day = $"{t.ToString("dd")}";
-                string offset = $"{t.Offset.Hours.ToString("00")}";
+                string time = t.ToString("HHmmss.fff", CultureInfo.InvariantCulture);
+                string year = t.ToString("yyyy", CultureInfo.InvariantCulture);
+                string month = t.ToString("MM", CultureInfo.InvariantCulture);
+                string day = t.ToString("dd", CultureInfo.InvariantCulture);
+                string offset = t.Offset.Hours.ToString("00", CultureInfo.InvariantCulture);
                 if (t.Offset >= TimeSpan.Zero)
                 {
                     offset = "+" + offset;
@@ -102,16 +102,16 @@ namespace Iot.Device.Nmea0183.Sentences
                     offset = "-" + offset;
                 }
 
-                string minuteOffset = $"{t.Offset.Minutes.ToString("00")}";
+                string minuteOffset = t.Offset.Minutes.ToString("00", CultureInfo.InvariantCulture);
 
                 // Return as UTC for now
                 if (ReverseDateFormat)
                 {
-                    return $"{time},{day},{month},{year},{offset},{minuteOffset}";
+                    return FormattableString.Invariant($"{time},{day},{month},{year},{offset},{minuteOffset}");
                 }
                 else
                 {
-                    return $"{time},{year},{month},{day},{offset},{minuteOffset}";
+                    return FormattableString.Invariant($"{time},{year},{month},{day},{offset},{minuteOffset}");
                 }
 
             }
