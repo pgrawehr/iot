@@ -45,16 +45,16 @@ namespace DisplayControl
             _voltage3_3V = new VoltageWithLimits("3.3V Supply Voltage", 3.2, 3.4);
             _currentSunBrightness = new ObservableValue<double>("Sunlight strength", "V", 0.0);
             _voltage5V = new VoltageWithLimits("5V Supply Voltage", 4.8, 5.2);
-            _button1 = new VoltageWithLimits("Button 1 voltage", -0.1, 2.0);
+            _button1 = new VoltageWithLimits("Button 1 voltage", -0.1, 2.55);
             _button1.LimitTriggered += LimitTriggered;
             _button1.SuppressWarnings = true;
-            _button2 = new VoltageWithLimits("Button 2 voltage", -0.1, 2.0);
+            _button2 = new VoltageWithLimits("Button 2 voltage", -0.1, 2.7);
             _button2.LimitTriggered += LimitTriggered;
             _button2.SuppressWarnings = true;
-            _button3 = new VoltageWithLimits("Button 3 voltage", -0.1, 2.0);
+            _button3 = new VoltageWithLimits("Button 3 voltage", -0.1, 2.7);
             _button3.LimitTriggered += LimitTriggered;
             _button3.SuppressWarnings = true;
-            _button4 = new VoltageWithLimits("Button 4 voltage", -0.1, 2.0);
+            _button4 = new VoltageWithLimits("Button 4 voltage", -0.1, 2.7);
             _button4.LimitTriggered += LimitTriggered;
             _button4.SuppressWarnings = true;
 
