@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using Iot.Device.Nmea0183.Sentences;
@@ -31,12 +32,25 @@ namespace Iot.Device.Nmea0183
         {
             lock (_lock)
             {
-                if (!string.IsNullOrWhiteSpace(Configuration.Filename))
+                if (!string.IsNullOrWhiteSpace(Configuration.Path))
                 {
-                    _logFile = new FileStream(Configuration.Filename, FileMode.Append, FileAccess.Write);
-                    _textWriter = new StreamWriter(_logFile);
+                    StartNewFile();
                 }
             }
+        }
+
+        private void StartNewFile()
+        {
+            string datePart = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
+            string fileName = Path.Combine(Configuration.Path, "Nmea-" + datePart + ".txt");
+            if (_logFile != null)
+            {
+                _textWriter.Flush();
+                _logFile.Close();
+            }
+
+            _logFile = new FileStream(fileName, FileMode.Append, FileAccess.Write);
+            _textWriter = new StreamWriter(_logFile);
         }
 
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
@@ -47,6 +61,11 @@ namespace Iot.Device.Nmea0183
                 {
                     string msg = FormattableString.Invariant($"{sentence.DateTime:s}|{source.InterfaceName}|${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()}|{sentence.ToReadableContent()}");
                     _textWriter.WriteLine(msg);
+
+                    if ((_logFile.Length > Configuration.MaxFileSize) && (Configuration.MaxFileSize != 0))
+                    {
+                        StartNewFile();
+                    }
                 }
             }
         }
@@ -57,9 +76,9 @@ namespace Iot.Device.Nmea0183
             {
                 if (_logFile != null)
                 {
+                    _textWriter.Flush();
                     _logFile.Close();
                     _logFile = null;
-                    _textWriter.Close();
                     _textWriter = null;
                 }
             }

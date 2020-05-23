@@ -265,6 +265,12 @@ namespace Iot.Device.Nmea0183
         /// <returns>TalkerId instance</returns>
         public static TalkerId TimekeeperRadioUpdateWwvOrWwvh => new TalkerId('Z', 'V');
 
+        /// <summary>
+        /// AIS receiver - the only two known messages that are supported with this talker are AIVDM and AIVDO,
+        /// and they use a ! as sentence start character.
+        /// </summary>
+        public static TalkerId Ais => new TalkerId('A', 'I');
+
         public static TalkerId Any => new TalkerId('*', ' ');
     }
 }

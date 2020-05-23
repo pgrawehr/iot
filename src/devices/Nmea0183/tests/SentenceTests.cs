@@ -221,7 +221,7 @@ namespace Iot.Device.Nmea0183.Tests
             HeadingTrue xte = (HeadingTrue)decoded.TryGetTypedValue();
 
             Assert.True(xte.Valid);
-            Assert.Equal(99.9, xte.Angle, 1);
+            Assert.Equal(99.9, xte.Angle.Degrees, 1);
         }
 
         [Fact]
@@ -247,7 +247,7 @@ namespace Iot.Device.Nmea0183.Tests
             HeadingMagnetic hdm = (HeadingMagnetic)decoded.TryGetTypedValue();
 
             Assert.True(hdm.Valid);
-            Assert.Equal(99.9, hdm.Angle, 1);
+            Assert.Equal(99.9, hdm.Angle.Degrees, 1);
         }
 
         [Fact]

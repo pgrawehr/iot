@@ -10,10 +10,16 @@ namespace Iot.Device.Nmea0183
     {
         public LoggingConfiguration()
         {
-            Filename = string.Empty;
+            Path = string.Empty;
         }
 
-        public string Filename
+        public string Path
+        {
+            get;
+            set;
+        }
+
+        public long MaxFileSize
         {
             get;
             set;

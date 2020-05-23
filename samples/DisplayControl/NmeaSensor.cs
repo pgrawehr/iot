@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Ports;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Units;
@@ -63,6 +65,8 @@ namespace DisplayControl
         private RecommendedMinimumNavigationInformation _lastRmcMessage;
         private TrackMadeGood _lastVtgMessage;
         private WindSpeedAndAngle _lastMwvMessage;
+        private Temperature? _lastTemperature;
+        private double? _lastHumidity;
 
         public NmeaSensor()
         {
@@ -96,8 +100,8 @@ namespace DisplayControl
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { SignalK, ShipSourceName, HandheldSourceName }));
             // Anything from the ship is sent locally
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalK, MessageRouter.LocalMessageSource }, false));
-            // Anything from the handheld is sent to all software components
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { OpenCpn, SignalK, MessageRouter.LocalMessageSource }, false, true));
+            // Anything from the handheld is sent to our processor
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
             // ... but excluding the AutoPilot sentences and only as raw to the ship (todo: Analyze)
             string[] gpsSequences = new string[]
@@ -107,7 +111,18 @@ namespace DisplayControl
 
             foreach (var gpsSequence in gpsSequences)
             {
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { ShipSourceName }, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { OpenCpn, ShipSourceName, SignalK }, true, true));
+            }
+
+            string[] navigationSentences = new string[]
+            {
+                "RMB", "BOD", "RTE"
+            };
+
+            foreach (var navigationSentence in navigationSentences)
+            {
+                // Maybe send these from handheld to the nav software, so that this picks up the current destination?
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalK }, true, true));
             }
 
             // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
@@ -174,7 +189,7 @@ namespace DisplayControl
             _signalkServer.OnParserError += OnParserError;
             _signalkServer.StartDecode();
 
-            _router = new MessageRouter(new LoggingConfiguration() { Filename = "/home/pi/projects/NmeaLog.txt" });
+            _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/", MaxFileSize = 1024 * 1024 * 5 });
             _router.AddEndPoint(_parserShipInterface);
             _router.AddEndPoint(_parserHandheldInterface);
             _router.AddEndPoint(_openCpnServer);
@@ -315,6 +330,7 @@ namespace DisplayControl
 
         public void SendTemperature(Temperature value)
         {
+            _lastTemperature = value;
             // Send with two known types
             TransducerDataSet ds = new TransducerDataSet("C", value.Celsius, "C", "ENV_OUTAIR_T");
             var msg = new TransducerMeasurement(new[] { ds });
@@ -329,6 +345,24 @@ namespace DisplayControl
             TransducerDataSet ds = new TransducerDataSet("P", value.Hectopascal / 1000.0, "B", "Barometer");
             var msg = new TransducerMeasurement(new[] { ds });
             _router.SendSentence(msg);
+
+            if (_lastTemperature.HasValue && _lastHumidity.HasValue)
+            {
+                // MDA sentence is actually obsolete, but it may still be recognized by more hardware than the XDR sentences
+                Temperature dewPoint = WeatherHelper.CalculateDewPoint(_lastTemperature.Value, _lastHumidity.Value);
+                RawSentence rs = new RawSentence(new TalkerId('E', 'C'), new SentenceId("MDA"),
+                    new string[]
+                    {
+                        value.InchOfMercury.ToString("F2", CultureInfo.InvariantCulture), "I",
+                        (value.Hectopascal / 1000).ToString("F3", CultureInfo.InvariantCulture), "B", 
+                        _lastTemperature.Value.Celsius.ToString("F1", CultureInfo.InvariantCulture), "C", // air temp
+                        "", "C", // Water temp
+                        _lastHumidity.Value.ToString("F1", CultureInfo.InvariantCulture), "", // Relative and absolute humidity 
+                        dewPoint.Celsius.ToString("F1", CultureInfo.InvariantCulture), "C", // dew point
+                        "", "T", "", "M", "", "N", "", "M" // Wind speed, direction (not given here, since would be a round-trip)
+                    }, DateTimeOffset.UtcNow);
+                _router.SendSentence(rs);
+            }
         }
 
         public void SendHumidity(double value)
@@ -336,6 +370,7 @@ namespace DisplayControl
             TransducerDataSet ds = new TransducerDataSet("H", value, "P", "ENV_INSIDE_H");
             var msg = new TransducerMeasurement(new[] { ds });
             _router.SendSentence(msg);
+            _lastHumidity = value;
         }
     }
 }

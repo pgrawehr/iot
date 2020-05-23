@@ -467,7 +467,7 @@ namespace DisplayControl
             }
 
 
-            if (source.ValueDescription == Bmp680Environment.MAIN_TEMP_SENSOR)
+            if (source.ValueDescription == "Temperature Outside")
             {
                 _nmeaSensor.SendTemperature(Temperature.FromCelsius((double)source.GenericValue));
             }

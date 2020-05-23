@@ -77,8 +77,12 @@ namespace Iot.Device.Nmea0183
         {
             string mainPart = string.Format(CultureInfo.InvariantCulture, "{0}{1},{2}", TalkerId, Id, string.Join(",", Fields));
             byte checksum = CalculateChecksum(mainPart);
-            string fullString = string.Format(CultureInfo.InvariantCulture, "${0}*{1:X2}", mainPart, checksum);
-            return fullString;
+            if (TalkerId == TalkerId.Ais)
+            {
+                return string.Format(CultureInfo.InvariantCulture, "!{0}*{1:X2}", mainPart, checksum);
+            }
+
+            return string.Format(CultureInfo.InvariantCulture, "${0}*{1:X2}", mainPart, checksum);
         }
 
         /// <summary>
