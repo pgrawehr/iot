@@ -87,6 +87,23 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// Age of this message
+        /// </summary>
+        public TimeSpan Age
+        {
+            get
+            {
+                if (!Valid || !DateTime.HasValue)
+                {
+                    return TimeSpan.Zero;
+                }
+
+                return DateTimeOffset.UtcNow - DateTime.Value.UtcDateTime;
+            }
+
+        }
+
+        /// <summary>
         /// Decodes the next field into a string
         /// </summary>
         protected string ReadString(IEnumerator<string> field)

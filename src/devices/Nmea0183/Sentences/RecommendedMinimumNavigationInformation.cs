@@ -31,7 +31,10 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <value>Value of latitude in degrees or null when value is not provided</value>
         public double? LatitudeDegrees
         {
-            get => Nmea0183ToDegrees(_latitude.Value, _latitudeTurn);
+            get
+            {
+                return Nmea0183ToDegrees(_latitude, _latitudeTurn);
+            }
             private set
             {
                 (_latitude, _latitudeTurn) = DegreesToNmea0183(value, isLatitude: true);
@@ -47,7 +50,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <value>Value of longitude in degrees or null when value is not provided</value>
         public double? LongitudeDegrees
         {
-            get => Nmea0183ToDegrees(_longitude.Value, _longitudeTurn.Value);
+            get => Nmea0183ToDegrees(_longitude, _longitudeTurn);
             private set
             {
                 (_longitude, _longitudeTurn) = DegreesToNmea0183(value, isLatitude: false);

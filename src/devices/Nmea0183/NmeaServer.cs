@@ -48,7 +48,7 @@ namespace Iot.Device.Nmea0183
             }
 
             _terminated = false;
-            _server = new TcpListener(IPAddress.Any, 10110);
+            _server = new TcpListener(_bindTo, _port);
             _server.Start();
             _serverThread = new Thread(ConnectionWatcher);
             _serverThread.Start();

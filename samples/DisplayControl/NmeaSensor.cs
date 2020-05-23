@@ -59,6 +59,10 @@ namespace DisplayControl
         private SerialPort _serialPortHandheld;
 
         private Angle? _magneticVariation;
+        private GlobalPositioningSystemFixData _lastGgaMessage;
+        private RecommendedMinimumNavigationInformation _lastRmcMessage;
+        private TrackMadeGood _lastVtgMessage;
+        private WindSpeedAndAngle _lastMwvMessage;
 
         public NmeaSensor()
         {
@@ -80,10 +84,11 @@ namespace DisplayControl
             IList<FilterRule> rules = new List<FilterRule>();
             // Log just everything, but of course continue processing
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
-            // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new [] { ShipSourceName, OpenCpn, SignalK }, false));
             // GGA messages from the ship are discarded (the ones from the handheld shall be used instead)
             rules.Add(new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("GGA"), new List<string>()));
+            // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalK }, false));
+
             // Anything from SignalK is currently discarded (maybe there are some computed sentences that are useful)
             rules.Add(new FilterRule(SignalK, TalkerId.Any, SentenceId.Any, new List<string>()));
             // Anything from OpenCpn is distributed everywhere
@@ -162,7 +167,7 @@ namespace DisplayControl
             _openCpnServer.OnParserError += OnParserError;
             _openCpnServer.StartDecode();
 
-            _signalkServer = new NmeaServer(SignalK, IPAddress.Any, 10110);
+            _signalkServer = new NmeaServer(SignalK, IPAddress.Any, 10101);
             _signalkServer.OnParserError += OnParserError;
             _signalkServer.StartDecode();
 
@@ -186,12 +191,22 @@ namespace DisplayControl
         {
             if (sentence is GlobalPositioningSystemFixData gga && gga.Valid)
             {
+                if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(1))
+                {
+                    return;
+                }
+                _lastGgaMessage = gga;
                 _position.Value = gga.Position;
                 _elevation.Value = gga.GeoidAltitude.GetValueOrDefault(0);
             }
 
             if (sentence is RecommendedMinimumNavigationInformation rmc)
             {
+                if (_lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(1))
+                {
+                    return;
+                }
+                _lastRmcMessage = rmc;
                 _speed.Value = rmc.Speed.Knots;
                 _track.Value = rmc.TrackMadeGoodInDegreesTrue.GetValueOrDefault(Angle.Zero).Degrees;
                 _magneticVariation = rmc.MagneticVariationInDegrees;
@@ -203,12 +218,14 @@ namespace DisplayControl
 
             if (sentence is TrackMadeGood vtg)
             {
+                _lastVtgMessage = vtg;
                 _speed.Value = vtg.Speed.Knots;
                 _track.Value = vtg.CourseOverGroundTrue.Degrees;
             }
 
             if (sentence is WindSpeedAndAngle mwv)
             {
+                _lastMwvMessage = mwv;
                 if (mwv.Relative)
                 {
                     _windSpeedRelative.Value = mwv.Speed.Knots;
@@ -236,6 +253,8 @@ namespace DisplayControl
             {
                 _parserMsg.WarningLevel = WarningLevel.Warning;
             }
+
+            Console.WriteLine($"Nmea error from {source.InterfaceName}: {error}");
         }
 
         public void SendImuData(Vector3 value)

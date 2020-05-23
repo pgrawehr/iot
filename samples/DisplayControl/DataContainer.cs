@@ -253,8 +253,8 @@ namespace DisplayControl
         {
             if (_nmeaSensor != null)
             {
-                // Send only every second message (we currently get the data at 25Hz, this is a bit much)
-                if (_numberOfImuSentencesSent % 2 == 0)
+                // Send only every fourth message (we currently get the data at 25Hz, this is a bit much)
+                if (_numberOfImuSentencesSent % 4 == 0)
                 {
                     _nmeaSensor.SendImuData(orientation);
                 }

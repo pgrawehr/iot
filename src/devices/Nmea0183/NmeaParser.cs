@@ -90,7 +90,7 @@ namespace Iot.Device.Nmea0183
                 TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, out var error);
                 if (sentence == null)
                 {
-                    FireOnParserError($"Received invalid sentence: Error {error}.", error);
+                    FireOnParserError($"Received invalid sentence {currentLine}: Error {error}.", error);
                     continue;
                 }
 

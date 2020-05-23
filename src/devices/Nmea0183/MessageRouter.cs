@@ -141,6 +141,13 @@ namespace Iot.Device.Nmea0183
         {
             if (_localInterfaceActive)
             {
+                if (source != this)
+                {
+                    // We're not the source, so this should use the sink here.
+                    DispatchSentenceEvents(sentence);
+                    return;
+                }
+
                 // Forward to routing method with ourselves as source
                 OnSequenceReceived(this, sentence);
             }
