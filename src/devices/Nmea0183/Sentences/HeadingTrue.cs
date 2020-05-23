@@ -26,7 +26,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public HeadingTrue(double angle)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
-            Angle = angle;
+            Angle = Angle.FromDegrees(angle);
             Valid = true;
         }
 
@@ -52,12 +52,12 @@ namespace Iot.Device.Nmea0183.Sentences
             // The HDT sentence must have a "T" (True) reference, otherwise something is fishy
             if (reference == "T" && angle.HasValue)
             {
-                Angle = angle.Value;
+                Angle = Angle.FromDegrees(angle.Value);
                 Valid = true;
             }
             else
             {
-                Angle = 0;
+                Angle = Angle.Zero;
                 Valid = false;
             }
         }
@@ -65,7 +65,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Angle of the wind
         /// </summary>
-        public double Angle
+        public Angle Angle
         {
             get;
             private set;
@@ -78,7 +78,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return FormattableString.Invariant($"{Angle:F1},T");
+                return FormattableString.Invariant($"{Angle.Normalize(true).Degrees:F1},T");
             }
 
             return string.Empty;
@@ -89,7 +89,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"True Heading: {Angle:F1}°";
+                return $"True Heading: {Angle.Normalize(true).Degrees:F1}°";
             }
 
             return "True heading unknown";

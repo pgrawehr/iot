@@ -348,6 +348,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
         [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
         [InlineData("$GPXTE,A,A,0.000,L,N,D*36")]
+        [InlineData("$HCHDG,103.2,,,1.9,E")]
         [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
         public void SentenceRoundTripIsUnaffectedByCulture(string input)
         {

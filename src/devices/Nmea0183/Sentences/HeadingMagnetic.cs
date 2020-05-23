@@ -24,7 +24,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public HeadingMagnetic(double angle)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
-            Angle = angle;
+            Angle = Angle.FromDegrees(angle);
             Valid = true;
         }
 
@@ -50,12 +50,12 @@ namespace Iot.Device.Nmea0183.Sentences
             // The HDM sentence must have a "M" (Magnetic) reference, otherwise something is fishy
             if (reference == "M" && angle.HasValue)
             {
-                Angle = angle.Value;
+                Angle = Angle.FromDegrees(angle.Value);
                 Valid = true;
             }
             else
             {
-                Angle = 0;
+                Angle = Angle.Zero;
                 Valid = false;
             }
         }
@@ -63,7 +63,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Angle of the wind
         /// </summary>
-        public double Angle
+        public Angle Angle
         {
             get;
             private set;
@@ -76,7 +76,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return FormattableString.Invariant($"{Angle:F1},M");
+                return FormattableString.Invariant($"{Angle.Normalize(true).Degrees:F1},M");
             }
 
             return string.Empty;
@@ -87,7 +87,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"Magnetic Heading: {Angle:F1}°";
+                return $"Magnetic Heading: {Angle.Normalize(true).Degrees:F1}°";
             }
 
             return "Magnetic Heading unknown";

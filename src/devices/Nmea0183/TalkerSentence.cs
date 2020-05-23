@@ -36,6 +36,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[GlobalPositioningSystemFixData.Id] = (sentence, time) => new GlobalPositioningSystemFixData(sentence, time);
             knownSentences[TrackMadeGood.Id] = (sentence, time) => new TrackMadeGood(sentence, time);
             knownSentences[WaterSpeedAndAngle.Id] = (sentence, time) => new WaterSpeedAndAngle(sentence, time);
+            knownSentences[HeadingAndDeviation.Id] = (sentence, time) => new HeadingAndDeviation(sentence, time);
 
             return knownSentences;
         }

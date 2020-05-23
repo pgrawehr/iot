@@ -85,7 +85,8 @@ namespace DisplayControl
             // Log just everything, but of course continue processing
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
             // GGA messages from the ship are discarded (the ones from the handheld shall be used instead)
-            rules.Add(new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("GGA"), new List<string>()));
+            rules.Add(new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("GGA"), new List<string>(), false, false));
+            rules.Add(new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("RMC"), new List<string>(), false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalK }, false));
 
@@ -96,12 +97,12 @@ namespace DisplayControl
             // Anything from the ship is sent locally
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalK, MessageRouter.LocalMessageSource }, false));
             // Anything from the handheld is sent to all software components
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { OpenCpn, SignalK, MessageRouter.LocalMessageSource }, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { OpenCpn, SignalK, MessageRouter.LocalMessageSource }, false, true));
 
             // ... but excluding the AutoPilot sentences and only as raw to the ship (todo: Analyze)
             string[] gpsSequences = new string[]
             {
-                "GGA", "RMC", "ZDA", "GSV"
+                "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG"
             };
 
             foreach (var gpsSequence in gpsSequences)
@@ -136,7 +137,9 @@ namespace DisplayControl
             _parserMsg = new ObservableValue<string>("Nmea parser msg", string.Empty, "Ok");
             _parserMsg.SuppressWarnings = true; // Do many intermittent errors
             _windSpeedRelative = new ObservableValue<double>("Scheinbarer Wind", "kts");
+            _windSpeedRelative.ValueFormatter = "F1";
             _windSpeedAbsolute = new ObservableValue<double>("Wahrer Wind", "kts");
+            _windSpeedAbsolute.ValueFormatter = "F1";
             _windDirectionAbsolute = new ObservableValue<double>("Scheinbare Windrichtung", "°T");
             _windDirectionRelative = new ObservableValue<double>("Wahre Windrichtung", "°T");
             _magneticVariationField = new ObservableValue<double>("Deklination", "°E");
@@ -271,6 +274,9 @@ namespace DisplayControl
             {
                 HeadingTrue hdt = new HeadingTrue(value.X + _magneticVariation.Value.Degrees);
                 _router.SendSentence(hdt);
+
+                HeadingAndDeviation hdg = new HeadingAndDeviation(Angle.FromDegrees(value.X), null, _magneticVariation.Value);
+                _router.SendSentence(hdg);
             }
 
             var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees(value.Y),
@@ -309,8 +315,12 @@ namespace DisplayControl
 
         public void SendTemperature(Temperature value)
         {
+            // Send with two known types
             TransducerDataSet ds = new TransducerDataSet("C", value.Celsius, "C", "ENV_OUTAIR_T");
             var msg = new TransducerMeasurement(new[] { ds });
+            _router.SendSentence(msg);
+            ds = new TransducerDataSet("C", value.Celsius, "C", "Air");
+            msg = new TransducerMeasurement(new[] { ds });
             _router.SendSentence(msg);
         }
 
