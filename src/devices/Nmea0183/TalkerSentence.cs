@@ -124,6 +124,20 @@ namespace Iot.Device.Nmea0183
         /// <remarks><paramref name="sentence"/> does not include new line characters</remarks>
         public static TalkerSentence FromSentenceString(string sentence, out NmeaError errorCode)
         {
+            return FromSentenceString(sentence, TalkerId.Any, out errorCode);
+        }
+
+        /// <summary>
+        /// Reads NMEA0183 talker sentence from provided string
+        /// </summary>
+        /// <param name="sentence">NMEA0183 talker sentence</param>
+        /// <param name="expectedTalkerId">If this is not TalkerId.Any, only messages with this talker id are parsed,
+        /// all others are ignored. This reduces workload if a source acts as repeater, but the repeated messages are not needed.</param>
+        /// <param name="errorCode">Returns an error code, if the parsing failed</param>
+        /// <returns>TalkerSentence instance, or null in case of an error</returns>
+        /// <remarks><paramref name="sentence"/> does not include new line characters</remarks>
+        public static TalkerSentence FromSentenceString(string sentence, TalkerId expectedTalkerId, out NmeaError errorCode)
+        {
             // $XXYYY, ...
             const int SentenceHeaderLength = 7;
 
@@ -155,6 +169,12 @@ namespace Iot.Device.Nmea0183
             }
 
             TalkerId talkerId = new TalkerId(sentence[1], sentence[2]);
+            if (expectedTalkerId != TalkerId.Any && expectedTalkerId != talkerId)
+            {
+                errorCode = NmeaError.None;
+                return null;
+            }
+
             SentenceId sentenceId = new SentenceId(sentence[3], sentence[4], sentence[5]);
 
             string[] fields = sentence.Substring(SentenceHeaderLength).Split(',');

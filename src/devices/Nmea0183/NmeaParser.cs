@@ -37,6 +37,16 @@ namespace Iot.Device.Nmea0183
             _reader = new StreamReader(_dataSource); // Nmea sentences are text
             _dataSink = dataSink;
             _lock = new object();
+            ExclusiveTalkerId = TalkerId.Any;
+        }
+
+        /// <summary>
+        /// Set this to anything other than <see cref="TalkerId.Any"/> to receive only that specific ID from this parser
+        /// </summary>
+        public TalkerId ExclusiveTalkerId
+        {
+            get;
+            set;
         }
 
         public override void StartDecode()
@@ -87,10 +97,15 @@ namespace Iot.Device.Nmea0183
                 }
 
                 // Console.WriteLine(currentLine);
-                TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, out var error);
+                TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out var error);
                 if (sentence == null)
                 {
-                    FireOnParserError($"Received invalid sentence {currentLine}: Error {error}.", error);
+                    // If error is none, but the return value is null, we just ignored that message.
+                    if (error != NmeaError.None)
+                    {
+                        FireOnParserError($"Received invalid sentence {currentLine}: Error {error}.", error);
+                    }
+
                     continue;
                 }
 

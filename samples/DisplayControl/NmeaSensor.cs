@@ -20,7 +20,8 @@ namespace DisplayControl
         private const string ShipSourceName = "Ship";
         private const string HandheldSourceName = "Handheld";
         private const string OpenCpn = "OpenCpn";
-        private const string SignalK = "SignalK";
+        private const string SignalKOut = "SignalKOut";
+        private const string SignalKIn = "SignalK";
         
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -41,6 +42,12 @@ namespace DisplayControl
         /// Server instance for signal-k
         /// </summary>
         private NmeaServer _signalkServer;
+
+        /// <summary>
+        /// Client instance for signal-k (we need to read from here, maybe later we drop the separate server above)
+        /// </summary>
+        private TcpClient _signalKClient;
+        private NmeaParser _signalKClientParser;
 
         private MessageRouter _router;
 
@@ -84,22 +91,25 @@ namespace DisplayControl
 
         public IList<FilterRule> ConstructRules()
         {
+            TalkerId yd = new TalkerId('Y', 'D');
             // Note: Order is important. First ones are checked first
             IList<FilterRule> rules = new List<FilterRule>();
+            // Drop any incoming YD sentences from this source, they were processed already
+            rules.Add(new FilterRule(SignalKIn, yd, SentenceId.Any, new List<string>(), false ));
             // Log just everything, but of course continue processing
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
             // GGA messages from the ship are discarded (the ones from the handheld shall be used instead)
-            rules.Add(new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("GGA"), new List<string>(), false, false));
-            rules.Add(new FilterRule("*", new TalkerId('Y', 'D'), new SentenceId("RMC"), new List<string>(), false, false));
+            rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>(), false, false));
+            rules.Add(new FilterRule("*", yd, new SentenceId("RMC"), new List<string>(), false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalK }, false));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut }, false));
 
             // Anything from SignalK is currently discarded (maybe there are some computed sentences that are useful)
-            rules.Add(new FilterRule(SignalK, TalkerId.Any, SentenceId.Any, new List<string>()));
+            rules.Add(new FilterRule(SignalKOut, TalkerId.Any, SentenceId.Any, new List<string>()));
             // Anything from OpenCpn is distributed everywhere
-            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { SignalK, ShipSourceName, HandheldSourceName }));
+            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { SignalKOut, ShipSourceName, HandheldSourceName }));
             // Anything from the ship is sent locally
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalK, MessageRouter.LocalMessageSource }, false));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalKOut, MessageRouter.LocalMessageSource }, false));
             // Anything from the handheld is sent to our processor
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
@@ -111,18 +121,22 @@ namespace DisplayControl
 
             foreach (var gpsSequence in gpsSequences)
             {
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { OpenCpn, ShipSourceName, SignalK }, true, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { OpenCpn, ShipSourceName, SignalKOut }, true, true));
             }
 
             string[] navigationSentences = new string[]
             {
-                "RMB", "BOD", "RTE"
+                "RMB", "BOD", "XTE", "BWC", "RTE", "APA", "APB", "BWR"
             };
 
             foreach (var navigationSentence in navigationSentences)
             {
-                // Maybe send these from handheld to the nav software, so that this picks up the current destination?
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalK }, true, true));
+                // Send these from handheld to the nav software, so that this picks up the current destination.
+                // signalK is able to do this, OpenCPN is not
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut }, true, true));
+                // And send the result of that nav operation to the ship 
+                // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
+                rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
             }
 
             // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
@@ -185,15 +199,22 @@ namespace DisplayControl
             _openCpnServer.OnParserError += OnParserError;
             _openCpnServer.StartDecode();
 
-            _signalkServer = new NmeaServer(SignalK, IPAddress.Any, 10101);
+            _signalkServer = new NmeaServer(SignalKOut, IPAddress.Any, 10101);
             _signalkServer.OnParserError += OnParserError;
             _signalkServer.StartDecode();
+
+            _signalKClient = new TcpClient("127.0.0.1", 10110);
+            _signalKClientParser = new NmeaParser(SignalKIn, _signalKClient.GetStream(), _signalKClient.GetStream());
+            _signalKClientParser.OnParserError += OnParserError;
+            // _signalKClientParser.ExclusiveTalkerId = new TalkerId('I', 'I');
+            _signalKClientParser.StartDecode();
 
             _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/", MaxFileSize = 1024 * 1024 * 5 });
             _router.AddEndPoint(_parserShipInterface);
             _router.AddEndPoint(_parserHandheldInterface);
             _router.AddEndPoint(_openCpnServer);
             _router.AddEndPoint(_signalkServer);
+            _router.AddEndPoint(_signalKClientParser);
 
             _router.OnNewSequence += ParserOnNewSequence;
             foreach (var rule in ConstructRules())
@@ -323,6 +344,11 @@ namespace DisplayControl
 
             _signalkServer?.Dispose();
             _signalkServer = null;
+
+            _signalKClient?.Dispose();
+            _signalKClientParser?.Dispose();
+            _signalKClient = null;
+            _signalKClientParser = null;
 
             _parserHandheldInterface?.Dispose();
             _parserHandheldInterface = null;

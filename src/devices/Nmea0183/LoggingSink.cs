@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using Iot.Device.Nmea0183.Sentences;
+using Units;
 
 #pragma warning disable CS1591
 
@@ -14,12 +15,15 @@ namespace Iot.Device.Nmea0183
         private object _lock;
         private FileStream _logFile;
         private TextWriter _textWriter;
+        private NmeaSentence _lastSentence;
 
         public LoggingSink(string name, LoggingConfiguration configuration)
         : base(name)
         {
             _logFile = null;
             _lock = new object();
+            // So we do not need to do a null test later
+            _lastSentence = new CrossTrackError(Distance.Zero, true);
             Configuration = configuration ?? new LoggingConfiguration();
         }
 
@@ -59,13 +63,20 @@ namespace Iot.Device.Nmea0183
             {
                 if (_textWriter != null)
                 {
-                    string msg = FormattableString.Invariant($"{sentence.DateTime:s}|{source.InterfaceName}|${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()}|{sentence.ToReadableContent()}");
-                    _textWriter.WriteLine(msg);
+                    // If talker and ID are the same, assume it's the same message
+                    if (_lastSentence.SentenceId != sentence.SentenceId && _lastSentence.TalkerId != sentence.TalkerId)
+                    {
+                        string msg = FormattableString.Invariant(
+                            $"{sentence.DateTime:s}|{source.InterfaceName}|${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()}|{sentence.ToReadableContent()}");
+                        _textWriter.WriteLine(msg);
+                    }
 
                     if ((_logFile.Length > Configuration.MaxFileSize) && (Configuration.MaxFileSize != 0))
                     {
                         StartNewFile();
                     }
+
+                    _lastSentence = sentence;
                 }
             }
         }
