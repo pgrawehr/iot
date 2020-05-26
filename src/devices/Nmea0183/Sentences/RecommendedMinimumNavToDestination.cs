@@ -25,21 +25,24 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
-            ////string overallStatus = ReadString(field);
-            ////double? crossTrackError = ReadValue(field);
-            ////string directionToSteer = ReadString(field);
-            ////string previousWayPoint = ReadString(field);
-            ////string nextWayPoint = ReadString(field);
-            ////double? nextWayPointLatitude = ReadValue(field);
-            ////string nextWayPointHemisphere = ReadString(field);
-            ////double? nextWayPointLongitude = ReadValue(field);
-            ////string nextWayPointDirection = ReadString(field);
-            ////double? rangeToWayPoint = ReadValue(field);
-            ////double? bearing = ReadValue(field);
-            ////double? approachSpeed = ReadValue(field);
-            ////string arrivalStatus = ReadString(field);
+            string overallStatus = ReadString(field);
+            double? crossTrackError = ReadValue(field);
+            string directionToSteer = ReadString(field);
+            string previousWayPoint = ReadString(field);
+            string nextWayPoint = ReadString(field);
+            double? nextWayPointLatitude = ReadValue(field);
+            string nextWayPointHemisphere = ReadString(field);
+            double? nextWayPointLongitude = ReadValue(field);
+            string nextWayPointDirection = ReadString(field);
+            double? rangeToWayPoint = ReadValue(field);
+            double? bearing = ReadValue(field);
+            double? approachSpeed = ReadValue(field);
+            string arrivalStatus = ReadString(field);
 
-            Valid = true; // for this message, we need to check on the individual fields
+            if (overallStatus == "A")
+            {
+                CrossTrackError = Distance.FromNauticalMiles(crossTrackError.GetValueOrDefault(0));
+            }
         }
 
         public RecommendedMinimumNavToDestination(
@@ -52,6 +55,11 @@ namespace Iot.Device.Nmea0183.Sentences
         : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
         {
             Valid = true;
+        }
+
+        public Distance CrossTrackError
+        {
+            get;
         }
 
         public override string ToNmeaMessage()
