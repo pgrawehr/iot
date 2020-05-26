@@ -153,9 +153,9 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <inheritdoc />
         public override string ToReadableContent()
         {
-            if (Valid)
+            if (Valid && Variation.HasValue)
             {
-                return $"Magnetic Heading: {HeadingTrue:F1}°, Variation: {Variation}";
+                return $"Magnetic Heading: {HeadingTrue.Degrees:F1}°, Variation: {Variation.Value.Degrees:F1}°";
             }
 
             return "Magnetic Heading unknown";
