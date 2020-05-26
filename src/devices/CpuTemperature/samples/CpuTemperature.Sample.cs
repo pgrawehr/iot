@@ -46,6 +46,8 @@ namespace Iot.Device.CpuTemperature.Samples
                 return;
             }
 
+            hw.EnableDerivedSensors();
+
             while (!Console.KeyAvailable)
             {
                 Console.Clear();

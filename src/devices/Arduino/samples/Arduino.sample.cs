@@ -465,7 +465,7 @@ namespace Ft4222.Samples
         public static void TestDisplay(ArduinoBoard board)
         {
             const int Gpio2 = 2;
-            const int MaxMode = 9;
+            const int MaxMode = 10;
             const double StationAltitude = 650;
             int mode = 0;
             var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
@@ -503,6 +503,7 @@ namespace Ft4222.Samples
             }
 
             OpenHardwareMonitor hardwareMonitor = new OpenHardwareMonitor();
+            hardwareMonitor.EnableDerivedSensors();
             TimeSpan updateRate = TimeSpan.FromMilliseconds(500);
             string modeName = string.Empty;
             string previousModeName = string.Empty;
@@ -620,6 +621,21 @@ namespace Ft4222.Samples
 
                         disp.Output.ReplaceLine(1, totalPower.ToString("s1", CultureInfo.CurrentCulture));
                         break;
+
+                    case 10:
+                        modeName = "Energy consumed";
+                        var energySources = hardwareMonitor.GetSensorList().Where(x => x.SensorType == SensorType.Energy);
+                        Energy totalEnergy = Energy.FromWattHours(0); // Set up the desired output unit
+                        foreach (var e in energySources)
+                        {
+                            if (!e.Name.StartsWith("CPU Cores") && e.TryGetValue(out Energy powerConsumption)) // included in CPU Package
+                            {
+                                totalEnergy = totalEnergy + powerConsumption;
+                            }
+                        }
+
+                        disp.Output.ReplaceLine(1, totalEnergy.ToString("s1", CultureInfo.CurrentCulture));
+                        break;
                 }
 
                 int displayWidth = disp.Output.Size.Width;
@@ -649,6 +665,7 @@ namespace Ft4222.Samples
                 Thread.Sleep(updateRate);
             }
 
+            hardwareMonitor.Dispose();
             disp.Output.Clear();
             disp.Dispose();
             bmp?.Dispose();
