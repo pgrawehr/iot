@@ -6,7 +6,6 @@ using System.IO.Ports;
 using System.Numerics;
 using System.Text;
 using Iot.Device.Imu;
-using Iot.Units;
 
 namespace DisplayControl
 {
@@ -116,7 +115,7 @@ namespace DisplayControl
             _pitch.Value = _lastEulerAngles.Z;
             _roll.Value = _lastEulerAngles.Y;
             _heading.Value = _lastEulerAngles.X;
-            _imuTemperature.Value = _imu.Temperature.Celsius;
+            _imuTemperature.Value = _imu.Temperature.DegreesCelsius;
         }
 
         protected override void Dispose(bool disposing)

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Iot.Device.Nmea0183.Sentences;
-using Units;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183

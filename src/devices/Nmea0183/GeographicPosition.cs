@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Text;
 
 #pragma warning disable CS1591
-namespace Units
+namespace Iot.Device.Nmea0183
 {
     /// <summary>
     /// Represents a position in WGS84 coordinates.

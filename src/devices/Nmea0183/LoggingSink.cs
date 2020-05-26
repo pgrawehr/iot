@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using Iot.Device.Nmea0183.Sentences;
-using Units;
+using UnitsNet;
 
 #pragma warning disable CS1591
 
@@ -23,7 +23,7 @@ namespace Iot.Device.Nmea0183
             _logFile = null;
             _lock = new object();
             // So we do not need to do a null test later
-            _lastSentence = new CrossTrackError(Distance.Zero, true);
+            _lastSentence = new CrossTrackError(Length.Zero, true);
             Configuration = configuration ?? new LoggingConfiguration();
         }
 

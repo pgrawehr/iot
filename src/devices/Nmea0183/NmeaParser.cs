@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Iot.Device.Nmea0183.Sentences;
-using Units;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183

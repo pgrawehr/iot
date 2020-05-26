@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 
 #pragma warning disable CS1591
-namespace Units
+namespace Iot.Device.Nmea0183
 {
     public static class GreatCircle
     {

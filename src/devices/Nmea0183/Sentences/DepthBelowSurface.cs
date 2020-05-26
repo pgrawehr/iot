@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Iot.Device.Nmea0183;
-using Units;
+using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Sentences
 {
@@ -21,7 +21,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs a new MWV sentence
         /// </summary>
-        public DepthBelowSurface(Distance depth)
+        public DepthBelowSurface(Length depth)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Depth = depth;
@@ -50,12 +50,12 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (metersUnit == "M" && meters.HasValue)
             {
-                Depth = Distance.FromMeters(meters.Value);
+                Depth = Length.FromMeters(meters.Value);
                 Valid = true;
             }
             else
             {
-                Depth = Distance.Zero;
+                Depth = Length.Zero;
                 Valid = false;
             }
         }
@@ -63,7 +63,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Cross track distance, meters
         /// </summary>
-        public Distance Depth
+        public Length Depth
         {
             get;
             private set;

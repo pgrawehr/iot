@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Iot.Device.Nmea0183.Sentences;
 using Moq;
-using Units;
+using UnitsNet;
 using Xunit;
 
 namespace Iot.Device.Nmea0183.Tests

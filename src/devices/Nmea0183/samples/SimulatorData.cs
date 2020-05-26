@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Units;
+using Iot.Device.Nmea0183;
+using UnitsNet;
 
 namespace Nmea.Simulator
 {

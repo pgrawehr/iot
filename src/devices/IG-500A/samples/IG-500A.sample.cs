@@ -59,7 +59,7 @@ namespace Ig500.Sample
                         Console.WriteLine($"Magnetometer X: {magneto.X} Y: {magneto.Y} Z: {magneto.Z}");
                         Console.WriteLine($"Gyroscope X: {gyro.X} Y: {gyro.Y} Z: {gyro.Z}");
                         Console.WriteLine($"Acceleration X: {accele.X} Y: {accele.Y} Z: {accele.Z}");
-                        Console.WriteLine($"Temperature {sensor.Temperature.Celsius}°C");
+                        Console.WriteLine($"Temperature {sensor.Temperature.DegreesCelsius}°C");
                         var errors = sensor.RecentParserErrors;
                         foreach (string error in errors)
                         {

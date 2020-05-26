@@ -10,8 +10,7 @@ using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
-using Iot.Units;
-using Units;
+using UnitsNet;
 
 namespace DisplayControl
 {
@@ -358,17 +357,17 @@ namespace DisplayControl
         {
             _lastTemperature = value;
             // Send with two known types
-            TransducerDataSet ds = new TransducerDataSet("C", value.Celsius, "C", "ENV_OUTAIR_T");
+            TransducerDataSet ds = new TransducerDataSet("C", value.DegreesCelsius, "C", "ENV_OUTAIR_T");
             var msg = new TransducerMeasurement(new[] { ds });
             _router.SendSentence(msg);
-            ds = new TransducerDataSet("C", value.Celsius, "C", "Air");
+            ds = new TransducerDataSet("C", value.DegreesCelsius, "C", "Air");
             msg = new TransducerMeasurement(new[] { ds });
             _router.SendSentence(msg);
         }
 
         public void SendPressure(Pressure value)
         {
-            TransducerDataSet ds = new TransducerDataSet("P", value.Hectopascal / 1000.0, "B", "Barometer");
+            TransducerDataSet ds = new TransducerDataSet("P", value.Hectopascals / 1000.0, "B", "Barometer");
             var msg = new TransducerMeasurement(new[] { ds });
             _router.SendSentence(msg);
 
@@ -379,12 +378,12 @@ namespace DisplayControl
                 RawSentence rs = new RawSentence(new TalkerId('E', 'C'), new SentenceId("MDA"),
                     new string[]
                     {
-                        value.InchOfMercury.ToString("F2", CultureInfo.InvariantCulture), "I",
-                        (value.Hectopascal / 1000).ToString("F3", CultureInfo.InvariantCulture), "B", 
-                        _lastTemperature.Value.Celsius.ToString("F1", CultureInfo.InvariantCulture), "C", // air temp
+                        value.InchesOfMercury.ToString("F2", CultureInfo.InvariantCulture), "I",
+                        (value.Hectopascals / 1000).ToString("F3", CultureInfo.InvariantCulture), "B", 
+                        _lastTemperature.Value.DegreesCelsius.ToString("F1", CultureInfo.InvariantCulture), "C", // air temp
                         "", "C", // Water temp
                         _lastHumidity.Value.ToString("F1", CultureInfo.InvariantCulture), "", // Relative and absolute humidity 
-                        dewPoint.Celsius.ToString("F1", CultureInfo.InvariantCulture), "C", // dew point
+                        dewPoint.DegreesCelsius.ToString("F1", CultureInfo.InvariantCulture), "C", // dew point
                         "", "T", "", "M", "", "N", "", "M" // Wind speed, direction (not given here, since would be a round-trip)
                     }, DateTimeOffset.UtcNow);
                 _router.SendSentence(rs);

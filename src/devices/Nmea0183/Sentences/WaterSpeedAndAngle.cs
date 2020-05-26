@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using Units;
+using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Sentences
 {

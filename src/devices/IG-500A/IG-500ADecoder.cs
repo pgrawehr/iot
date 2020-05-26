@@ -11,7 +11,8 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
-using Iot.Units;
+using UnitsNet;
+
 #pragma warning disable 1591
 namespace Iot.Device.Imu
 {
@@ -90,10 +91,10 @@ namespace Iot.Device.Imu
             Magnetometer = Vector3.Zero;
             Gyroscope = Vector3.Zero;
             Accelerometer = Vector3.Zero;
-            Temperature = Temperature.FromCelsius(0);
+            Temperature = Temperature.FromDegreesCelsius(0);
 
             EulerAnglesDegrees = true;
-            Temperature = Temperature.FromCelsius(0);
+            Temperature = Temperature.FromDegreesCelsius(0);
             _recentParserErrors = new LinkedList<string>();
             _robinBuffer = new RoundRobinBuffer(InputBufferSize);
             _decoderThread = new Thread(MessageParser);
@@ -428,7 +429,7 @@ namespace Iot.Device.Imu
             int temperatureOffset = CalculateOutputOffset(OutputDataSets.Temperatures);
             if (temperatureOffset >= 0)
             {
-                var temp = Temperature.FromCelsius(ExtractFloatFromPacket(currentPacketBuffer, temperatureOffset));
+                var temp = Temperature.FromDegreesCelsius(ExtractFloatFromPacket(currentPacketBuffer, temperatureOffset));
                 Temperature = temp;
             }
 

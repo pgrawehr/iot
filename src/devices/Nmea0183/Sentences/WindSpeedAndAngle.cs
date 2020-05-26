@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Units;
+using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Sentences
 {
@@ -86,7 +86,7 @@ namespace Iot.Device.Nmea0183.Sentences
             else
             {
                 Angle = Angle.Zero;
-                Speed = new Speed();
+                Speed = Speed.Zero;
                 Valid = false;
             }
         }

@@ -14,8 +14,4 @@
     <None Include="README.md" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Units\Units.csproj" />
-  </ItemGroup>
-
 </Project>

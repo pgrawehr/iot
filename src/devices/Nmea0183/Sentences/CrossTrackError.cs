@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Iot.Device.Nmea0183;
-using Units;
+using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Sentences
 {
@@ -21,7 +21,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs a new MWV sentence
         /// </summary>
-        public CrossTrackError(Distance distance, bool left)
+        public CrossTrackError(Length distance, bool left)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Distance = distance;
@@ -53,7 +53,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (status1 == "A" && status2 == "A" && distance.HasValue && (direction == "L" || direction == "R") && unit == "N")
             {
-                Distance = Distance.FromNauticalMiles(distance.Value);
+                Distance = Length.FromNauticalMiles(distance.Value);
                 if (direction == "L")
                 {
                     Left = true;
@@ -67,7 +67,7 @@ namespace Iot.Device.Nmea0183.Sentences
             }
             else
             {
-                Distance = Distance.Zero;
+                Distance = Length.Zero;
                 Valid = false;
             }
         }
@@ -75,7 +75,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Cross track distance, meters
         /// </summary>
-        public Distance Distance
+        public Length Distance
         {
             get;
             private set;

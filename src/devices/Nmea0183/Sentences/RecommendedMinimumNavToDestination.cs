@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Iot.Device.Nmea0183;
-using Units;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
@@ -41,7 +41,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (overallStatus == "A")
             {
-                CrossTrackError = Distance.FromNauticalMiles(crossTrackError.GetValueOrDefault(0));
+                CrossTrackError = Length.FromNauticalMiles(crossTrackError.GetValueOrDefault(0));
             }
         }
 
@@ -57,7 +57,7 @@ namespace Iot.Device.Nmea0183.Sentences
             Valid = true;
         }
 
-        public Distance CrossTrackError
+        public Length CrossTrackError
         {
             get;
         }

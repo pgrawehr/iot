@@ -10,7 +10,7 @@ using System.Net.Sockets;
 using System.Threading;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
-using Units;
+using UnitsNet;
 
 namespace Nmea.Simulator
 {

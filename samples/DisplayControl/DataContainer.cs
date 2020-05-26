@@ -14,7 +14,7 @@ using System.Threading;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Iot.Device.CharacterLcd;
-using Iot.Units;
+using UnitsNet;
 
 namespace DisplayControl
 {
@@ -469,12 +469,12 @@ namespace DisplayControl
 
             if (source.ValueDescription == "Temperature Outside")
             {
-                _nmeaSensor.SendTemperature(Temperature.FromCelsius((double)source.GenericValue));
+                _nmeaSensor.SendTemperature(Temperature.FromDegreesCelsius((double)source.GenericValue));
             }
 
             if (source.ValueDescription == Bmp680Environment.MAIN_PRESSURE_SENSOR)
             {
-                _nmeaSensor.SendPressure(Pressure.FromHectopascal((double)source.GenericValue));
+                _nmeaSensor.SendPressure(Pressure.FromHectopascals((double)source.GenericValue));
             }
 
             if (source.ValueDescription == Bmp680Environment.MAIN_HUMIDITY_SENSOR)

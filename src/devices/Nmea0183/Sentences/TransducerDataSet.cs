@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using Iot.Units;
-using Units;
+using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Sentences
 {
@@ -143,7 +142,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Unit == "C")
             {
-                return Temperature.FromCelsius(Value);
+                return Temperature.FromDegreesCelsius(Value);
             }
 
             return null;

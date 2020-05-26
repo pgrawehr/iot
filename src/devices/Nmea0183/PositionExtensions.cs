@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Units
+namespace Iot.Device.Nmea0183
 {
     /// <summary>
     /// Extensions for positions

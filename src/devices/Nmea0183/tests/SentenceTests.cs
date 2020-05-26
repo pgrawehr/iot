@@ -5,7 +5,7 @@
 using System;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
-using Units;
+using UnitsNet;
 using Xunit;
 
 namespace Iot.Device.Nmea0183.Tests
@@ -193,7 +193,7 @@ namespace Iot.Device.Nmea0183.Tests
             CrossTrackError xte = (CrossTrackError)decoded.TryGetTypedValue();
 
             Assert.True(xte.Valid);
-            Assert.Equal(Distance.Zero, xte.Distance);
+            Assert.Equal(Length.Zero, xte.Distance);
             Assert.True(xte.Left);
         }
 
@@ -203,7 +203,7 @@ namespace Iot.Device.Nmea0183.Tests
             string msg = "A,A,10.912,R,N,D";
 
             NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
-            CrossTrackError mwv = new CrossTrackError(Distance.FromNauticalMiles(10.91234), false);
+            CrossTrackError mwv = new CrossTrackError(Length.FromNauticalMiles(10.91234), false);
             Assert.True(mwv.Valid);
             Assert.False(mwv.Left);
             Assert.Equal(msg, mwv.ToNmeaMessage());

@@ -44,12 +44,12 @@ namespace DisplayControl
             Thread.Sleep(measurementTime);
             if (_bmp280.TryReadTemperature(out var tempValue))
             {
-                _outsideTemperature.Value = tempValue.Celsius;
+                _outsideTemperature.Value = tempValue.DegreesCelsius;
             }
 
             if (_bmp280.TryReadPressure(out var preValue))
             {
-                _pressure.Value = preValue.Hectopascal;
+                _pressure.Value = preValue.Hectopascals;
             }
         }
 

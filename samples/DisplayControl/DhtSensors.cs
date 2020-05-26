@@ -57,7 +57,7 @@ namespace DisplayControl
                 var temp = _dht11.Temperature;
                 if (_dht11.IsLastReadSuccessful)
                 {
-                    _insideTemperature.Value = temp.Celsius;
+                    _insideTemperature.Value = temp.DegreesCelsius;
                     _insideHumidity.Value = _dht11.Humidity;
                 }
                 _cancellationTokenSource.Token.WaitHandle.WaitOne(3000);

@@ -21,6 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="C:\projects\iot\src\Iot.Device.Bindings\..\devices\Nmea0183\Distance.cs" />
+    <Compile Remove="C:\projects\iot\src\Iot.Device.Bindings\..\devices\Units\Distance.cs" />
+    <Compile Remove="C:\projects\iot\src\Iot.Device.Bindings\..\devices\Units\Speed.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="$(DeviceRoot)/CharacterLcd/BigFontMap.txt" />
   </ItemGroup>
   

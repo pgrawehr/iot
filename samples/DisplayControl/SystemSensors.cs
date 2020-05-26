@@ -41,7 +41,7 @@ namespace DisplayControl
         {
             if (_cpuTemperature.IsAvailable)
             {
-                _cpuTemperatureValue.Value = _cpuTemperature.Temperature.Celsius;
+                _cpuTemperatureValue.Value = _cpuTemperature.Temperature.DegreesCelsius;
             }
         }
 

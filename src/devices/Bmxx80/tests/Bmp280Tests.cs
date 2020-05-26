@@ -7,7 +7,7 @@ using System.Device.I2c;
 using System.IO;
 using Iot.Device.Bmxx80;
 using Iot.Device.Imu.Tests;
-using Iot.Units;
+using UnitsNet;
 using Xunit;
 
 namespace Iot.Device.Bmxx80.Tests
@@ -80,9 +80,9 @@ namespace Iot.Device.Bmxx80.Tests
             Bmp280 sensor = new Bmp280(_i2cDevice);
             sensor.TemperatureSampling = Sampling.HighResolution;
             sensor.TryReadTemperature(out Temperature temperature);
-            Assert.Equal(25.08, temperature.Celsius, 2);
+            Assert.Equal(25.08, temperature.DegreesCelsius, 2);
             sensor.TryReadPressure(out Pressure pressure);
-            Assert.Equal(100653.27, pressure.Pascal, 2);
+            Assert.Equal(100653.27, pressure.Pascals, 2);
         }
 
         public void Dispose()

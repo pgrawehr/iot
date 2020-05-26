@@ -75,13 +75,13 @@ namespace DisplayControl
             bool temp = _bme680.TryReadTemperature(out var tempValue);
             if (temp)
             {
-                _temperature.Value = tempValue.Celsius;
+                _temperature.Value = tempValue.DegreesCelsius;
             }
 
             bool press = _bme680.TryReadPressure(out var preValue);
             if (press)
             {
-                _pressure.Value = preValue.Hectopascal;
+                _pressure.Value = preValue.Hectopascals;
             }
 
             bool hum = _bme680.TryReadHumidity(out var humidity);
@@ -97,8 +97,8 @@ namespace DisplayControl
 
             if (temp && press && hum)
             {
-                _barometric.Value = WeatherHelper.CalculateBarometricPressure(preValue, tempValue, Altitude, humidity).Hectopascal;
-                _dewPoint.Value = WeatherHelper.CalculateDewPoint(tempValue, humidity).Celsius;
+                _barometric.Value = WeatherHelper.CalculateBarometricPressure(preValue, tempValue, Altitude, humidity).Hectopascals;
+                _dewPoint.Value = WeatherHelper.CalculateDewPoint(tempValue, humidity).DegreesCelsius;
             }
         }
 

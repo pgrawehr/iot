@@ -21,7 +21,7 @@ using System.Text;
 
 #pragma warning disable CS1591
 // Ported from the proj.4 project
-namespace Units
+namespace Iot.Device.Nmea0183
 {
     internal static class GeoidCalculations
     {
