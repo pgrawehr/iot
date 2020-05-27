@@ -57,7 +57,8 @@ namespace Iot.Device.Nmea0183
                 }
             }
 
-            return Angle.FromRadians(r);
+            // Return in same unit as original input
+            return Angle.FromRadians(r).ToUnit(self.Unit);
         }
     }
 }

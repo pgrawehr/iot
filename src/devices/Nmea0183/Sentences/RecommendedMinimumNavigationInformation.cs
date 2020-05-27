@@ -123,7 +123,7 @@ namespace Iot.Device.Nmea0183.Sentences
             string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : null;
             string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : null;
             string speed = SpeedOverGroundInKnots.HasValue ? SpeedOverGroundInKnots.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
-            string track = TrackMadeGoodInDegreesTrue.HasValue ? TrackMadeGoodInDegreesTrue.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
+            string track = TrackMadeGoodInDegreesTrue.HasValue ? TrackMadeGoodInDegreesTrue.Value.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
             string date = DateTime.HasValue ? DateTime.Value.ToString("ddMMyy", CultureInfo.InvariantCulture) : null;
             string mag = _positiveMagneticVariationInDegrees.HasValue ? _positiveMagneticVariationInDegrees.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
             string magTurn = _magneticVariationTurn.HasValue ? $"{(char)_magneticVariationTurn.Value}" : null;

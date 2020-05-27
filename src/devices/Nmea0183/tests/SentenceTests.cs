@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
+using UnitsNet.Units;
 using Xunit;
 
 namespace Iot.Device.Nmea0183.Tests
@@ -149,8 +150,10 @@ namespace Iot.Device.Nmea0183.Tests
 
             WindSpeedAndAngle mwv = (WindSpeedAndAngle)decoded.TryGetTypedValue();
 
-            Assert.Equal(Angle.FromDegrees(-10), mwv.Angle);
+            Assert.Equal(AngleUnit.Degree, mwv.Angle.Unit);
+            Assert.Equal(Angle.FromDegrees(-10).Degrees, mwv.Angle.Degrees, 3);
             Assert.True(mwv.Relative);
+            Assert.Equal(SpeedUnit.Knot, mwv.Speed.Unit);
             Assert.Equal(Speed.FromKnots(16.8), mwv.Speed);
         }
 
@@ -289,6 +292,39 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Equal(0.7, wind.Speed.MetersPerSecond, 1);
         }
 
+        [Fact]
+        public void RmbDecode()
+        {
+            string text = "$GPRMB,A,0.02,R,R3,R4,4728.9218,N,00930.3359,E,0.026,222.0,2.4,V,D";
+            var decoded = TalkerSentence.FromSentenceString(text, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(decoded);
+
+            RecommendedMinimumNavToDestination nav = (RecommendedMinimumNavToDestination)decoded.TryGetTypedValue();
+
+            Assert.True(nav.Valid);
+            Assert.Equal(-0.02, nav.CrossTrackError.NauticalMiles, 2);
+            Assert.Equal("R3", nav.PreviousWayPointName);
+            Assert.Equal("R4", nav.NextWayPointName);
+            Assert.Equal(47.48203, nav.NextWayPoint.Latitude, 6);
+            Assert.Equal(9.505598, nav.NextWayPoint.Longitude, 6);
+            Assert.Equal(0.026, nav.DistanceToWayPoint.GetValueOrDefault(Length.Zero).NauticalMiles, 3);
+            Assert.Equal(222.0, nav.BearingToWayPoint.GetValueOrDefault(Angle.Zero).Degrees, 1);
+            Assert.Equal(2.4, nav.ApproachSpeed.GetValueOrDefault(Speed.Zero).Knots, 1);
+        }
+
+        [Fact]
+        public void RmbEncode()
+        {
+            string msg = "A,22.200,L,Ostsee,Nordsee,6030.00000,N,02000.00000,E,53.996,270.0,19.4,V,D";
+
+            NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
+            var rmb = new RecommendedMinimumNavToDestination(null, Length.FromNauticalMiles(22.2), "Ostsee", "Nordsee", new GeographicPosition(60.5, 20.0, 0),
+                Length.FromKilometers(100), Angle.FromDegrees(-90), Speed.FromMetersPerSecond(10));
+            Assert.True(rmb.Valid);
+            Assert.Equal(msg, rmb.ToNmeaMessage());
+        }
+
         [Theory]
         // These were seen in actual NMEA data streams
         [InlineData("$GPGGA,163806,,*4E")]
@@ -313,7 +349,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
         [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
         [InlineData("$WIMWV,220.0,T,5.0,N,A*20")]
-        [InlineData("$SDDBS,177.9,f,54.21,M,29.3,F*33")]
+        [InlineData("$SDDBS,177.9,f,54.21,M,29.6,F*36")]
         [InlineData("$YDDBS,10.3,f,3.14,M,1.7,F*09")]
         [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
         [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
@@ -322,6 +358,7 @@ namespace Iot.Device.Nmea0183.Tests
         // GGA with elevation
         [InlineData("$GPGGA,163810.000,4728.70270,N,00929.96660,E,2,12,0.6,397.4,M,46.8,M,,*52")]
         [InlineData("$YDVTG,124.0,T,121.2,M,0.0,N,0.0,K,A*2E")]
+        [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D*6D")]
         [InlineData("$IIDBK,29.2,f,8.90,M,4.9,F*0B")] // Unknown sentence (for now)
         public void SentenceRoundTrip(string input)
         {
@@ -343,13 +380,14 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
         [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
         [InlineData("$WIMWV,220.0,T,5.0,N,A*20")]
-        [InlineData("$SDDBS,177.9,f,54.21,M,29.3,F*33")]
+        [InlineData("$SDDBS,177.9,f,54.21,M,29.6,F*36")]
         [InlineData("$YDDBS,10.3,f,3.14,M,1.7,F*09")]
         [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
         [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
         [InlineData("$GPXTE,A,A,0.000,L,N,D*36")]
         [InlineData("$HCHDG,103.2,,,1.9,E*21")]
         [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
+        [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D*6D")]
         public void SentenceRoundTripIsUnaffectedByCulture(string input)
         {
             // de-DE has "," as decimal separator. Big trouble if using CurrentCulture for any parsing or formatting here

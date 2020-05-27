@@ -37,6 +37,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[TrackMadeGood.Id] = (sentence, time) => new TrackMadeGood(sentence, time);
             knownSentences[WaterSpeedAndAngle.Id] = (sentence, time) => new WaterSpeedAndAngle(sentence, time);
             knownSentences[HeadingAndDeviation.Id] = (sentence, time) => new HeadingAndDeviation(sentence, time);
+            knownSentences[RecommendedMinimumNavToDestination.Id] = (sentence, time) => new RecommendedMinimumNavToDestination(sentence, time);
 
             return knownSentences;
         }
