@@ -8,7 +8,7 @@ namespace Iot.Device.Nmea0183
 {
     public sealed class RoutePoint
     {
-        public RoutePoint(string routeName, int indexInRoute, int totalPointsInRoute, string waypointName, GeographicPosition position, 
+        public RoutePoint(string routeName, int indexInRoute, int totalPointsInRoute, string waypointName, GeographicPosition position,
             Angle? bearingToNextWaypoint, Length? distanceToNextWaypoint)
         {
             RouteName = routeName;

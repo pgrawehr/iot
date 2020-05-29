@@ -103,6 +103,12 @@ namespace Iot.Device.Nmea0183
                 wpNames.AddRange(segment.WaypointNames);
             }
 
+            // RTE messages were present, but they contain no information
+            if (wpNames.Count == 0)
+            {
+                return null;
+            }
+
             for (var index = 0; index < wpNames.Count; index++)
             {
                 var name = wpNames[index];
@@ -126,6 +132,7 @@ namespace Iot.Device.Nmea0183
             {
                 // Newest shall be first in list
                 temp = _lastRouteSentences.ToList();
+                temp.Reverse();
             }
 
             if (temp.Count == 0)
@@ -170,13 +177,14 @@ namespace Iot.Device.Nmea0183
                 return null;
             }
 
-            for (var index = 1; index <= elements.Length; index++)
+            List<Route> ret = new List<Route>();
+            for (var index = 1; index < elements.Length; index++)
             {
                 var elem = elements[index];
-                temp.Add(elem);
+                ret.Add(elem);
             }
 
-            return temp.OrderBy(x => x.Sequence).ToList();
+            return ret.OrderBy(x => x.Sequence).ToList();
         }
 
         private void OnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
