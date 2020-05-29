@@ -346,6 +346,7 @@ namespace Iot.Device.Nmea0183.Tests
 
         [Theory]
         [InlineData("$GPRMC,211730.997,A,3511.28000,S,13823.26000,E,7.000,229.000,190120,,*19")]
+        [InlineData("$GPRMC,115613.000,A,4729.49750,N,00930.39830,E,1.600,36.200,240520,1.900,E,D*34")]
         [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
         [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
         [InlineData("$WIMWV,220.0,T,5.0,N,A*20")]

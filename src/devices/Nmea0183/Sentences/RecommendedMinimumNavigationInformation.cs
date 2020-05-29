@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using UnitsNet;
 
 #pragma warning disable CS1591
@@ -15,7 +16,7 @@ namespace Iot.Device.Nmea0183.Sentences
     // page 14
 
     /// <summary>
-    /// Represents RecommendedMinimumNavigationInformation NMEA0183 sentence
+    /// Represents RMC NMEA0183 sentence (Recommended Minimum Navigation Information)
     /// </summary>
     public class RecommendedMinimumNavigationInformation : NmeaSentence
     {
@@ -23,88 +24,30 @@ namespace Iot.Device.Nmea0183.Sentences
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
-        public NavigationStatus? Status { get; private set; }
-
-        /// <summary>
-        /// Latitude in degrees. Positive value means north, negative means south.
-        /// </summary>
-        /// <value>Value of latitude in degrees or null when value is not provided</value>
-        public double? LatitudeDegrees
+        public NavigationStatus? Status
         {
-            get
-            {
-                return Nmea0183ToDegrees(_latitude, _latitudeTurn);
-            }
-            private set
-            {
-                (_latitude, _latitudeTurn) = DegreesToNmea0183(value, isLatitude: true);
-            }
+            get;
         }
 
-        private double? _latitude;
-        private CardinalDirection? _latitudeTurn;
-
-        /// <summary>
-        /// Longitude in degrees. Positive value means east, negative means west.
-        /// </summary>
-        /// <value>Value of longitude in degrees or null when value is not provided</value>
-        public double? LongitudeDegrees
+        public GeographicPosition Position
         {
-            get => Nmea0183ToDegrees(_longitude, _longitudeTurn);
-            private set
-            {
-                (_longitude, _longitudeTurn) = DegreesToNmea0183(value, isLatitude: false);
-            }
+            get;
         }
 
-        private double? _longitude;
-        private CardinalDirection? _longitudeTurn;
-        public double? SpeedOverGroundInKnots { get; private set; }
-
-        public Speed Speed
+        public Speed SpeedOverGround
         {
-            get
-            {
-                return Speed.FromKnots(SpeedOverGroundInKnots.GetValueOrDefault(0));
-            }
+            get;
         }
 
-        public Angle? TrackMadeGoodInDegreesTrue { get; private set; }
+        public Angle TrackMadeGoodInDegreesTrue
+        {
+            get;
+        }
+
         public Angle? MagneticVariationInDegrees
         {
-            get
-            {
-                if (!_positiveMagneticVariationInDegrees.HasValue || !_magneticVariationTurn.HasValue)
-                {
-                    return null;
-                }
-
-                return _positiveMagneticVariationInDegrees.Value * DirectionToSign(_magneticVariationTurn.Value);
-            }
-            private set
-            {
-                if (!value.HasValue)
-                {
-                    _positiveMagneticVariationInDegrees = null;
-                    _magneticVariationTurn = null;
-                    return;
-                }
-
-                if (value >= Angle.Zero)
-                {
-                    _positiveMagneticVariationInDegrees = value;
-                    _magneticVariationTurn = CardinalDirection.East;
-                }
-                else
-                {
-                    _positiveMagneticVariationInDegrees = -value;
-                    _magneticVariationTurn = CardinalDirection.West;
-                }
-            }
+            get;
         }
-
-        private Angle? _positiveMagneticVariationInDegrees;
-        private CardinalDirection? _magneticVariationTurn;
 
         // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf
         // doesn't mention this field but all other sentences have this
@@ -116,22 +59,63 @@ namespace Iot.Device.Nmea0183.Sentences
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
-            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : null;
-            string status = Status.HasValue ? $"{(char)Status}" : null;
-            string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : null;
-            string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : null;
-            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : null;
-            string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : null;
-            string speed = SpeedOverGroundInKnots.HasValue ? SpeedOverGroundInKnots.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
-            string track = TrackMadeGoodInDegreesTrue.HasValue ? TrackMadeGoodInDegreesTrue.Value.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
+            StringBuilder b = new StringBuilder();
+            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
+            b.AppendFormat($"{time},");
+            string status = Status.HasValue ? $"{(char)Status}" : "V";
+            b.AppendFormat($"{status},");
+            double? degrees;
+            CardinalDirection? direction;
+            (degrees, direction) = DegreesToNmea0183(Position.Latitude, true);
+            if (degrees.HasValue && direction.HasValue)
+            {
+                b.AppendFormat(CultureInfo.InvariantCulture, "{0:0000.00000},{1},", degrees.Value, (char)direction);
+            }
+            else
+            {
+                b.Append(",,");
+            }
+
+            (degrees, direction) = DegreesToNmea0183(Position.Longitude, false);
+            if (degrees.HasValue && direction.HasValue)
+            {
+                b.AppendFormat(CultureInfo.InvariantCulture, "{0:00000.00000},{1},", degrees.Value, (char)direction);
+            }
+            else
+            {
+                b.Append(",,");
+            }
+
+            string speed = SpeedOverGround.Value.ToString("0.000", CultureInfo.InvariantCulture);
+            b.Append($"{speed},");
+            string track = TrackMadeGoodInDegreesTrue.Value.ToString("0.000", CultureInfo.InvariantCulture);
+            b.Append($"{track},");
             string date = DateTime.HasValue ? DateTime.Value.ToString("ddMMyy", CultureInfo.InvariantCulture) : null;
-            string mag = _positiveMagneticVariationInDegrees.HasValue ? _positiveMagneticVariationInDegrees.Value.ToString("0.000", CultureInfo.InvariantCulture) : null;
-            string magTurn = _magneticVariationTurn.HasValue ? $"{(char)_magneticVariationTurn.Value}" : null;
+            b.Append($"{date},");
+            if (MagneticVariationInDegrees.HasValue)
+            {
+                string mag = Math.Abs(MagneticVariationInDegrees.Value.Value).ToString("0.000", CultureInfo.InvariantCulture);
+                if (MagneticVariationInDegrees >= Angle.Zero)
+                {
+                    b.Append($"{mag},E");
+                }
+                else
+                {
+                    b.Append($"{mag},W");
+                }
+            }
+            else
+            {
+                b.Append(",");
+            }
 
             // undocumented status field will be optionally displayed
-            string status2 = Status2.HasValue ? $",{(char)Status2}" : null;
+            if (Status2.HasValue)
+            {
+                b.Append($",{(char)Status2.Value}"); // Also only add the comma if the parameter exists
+            }
 
-            return FormattableString.Invariant($"{time},{status},{lat},{latTurn},{lon},{lonTurn},{speed},{track},{date},{mag},{magTurn}{status2}");
+            return b.ToString();
         }
 
         public RecommendedMinimumNavigationInformation(TalkerSentence sentence, DateTimeOffset time)
@@ -172,53 +156,52 @@ namespace Iot.Device.Nmea0183.Sentences
             if (field.MoveNext())
             {
                 string val = field.Current;
-                Status2 = string.IsNullOrEmpty(val) ? (NavigationStatus?)null : (NavigationStatus?)val.Single();
+                Status2 = string.IsNullOrEmpty(val) ? (NavigationStatus?)null : (NavigationStatus?)val.FirstOrDefault();
             }
 
             DateTime = dateTime;
             Status = status;
-            _latitude = lat;
-            _latitudeTurn = latTurn;
-            _longitude = lon;
-            _longitudeTurn = lonTurn;
-            SpeedOverGroundInKnots = speed;
+            double? latitude = Nmea0183ToDegrees(lat, latTurn);
+            double? longitude = Nmea0183ToDegrees(lon, lonTurn);
+
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                Position = new GeographicPosition(latitude.Value, longitude.Value, 0);
+                // If the message contains no position, it is unusable.
+                // On the other hand, if the position is known (meaning the GPS receiver works), speed and track are known, too.
+                Valid = true;
+            }
+
+            SpeedOverGround = Speed.FromKnots(speed.GetValueOrDefault(0));
+
             if (track.HasValue)
             {
                 TrackMadeGoodInDegreesTrue = Angle.FromDegrees(track.Value);
             }
             else
             {
-                TrackMadeGoodInDegreesTrue = null;
+                TrackMadeGoodInDegreesTrue = Angle.Zero;
             }
 
-            if (mag.HasValue)
+            if (mag.HasValue && magTurn.HasValue)
             {
-                _positiveMagneticVariationInDegrees = Angle.FromDegrees(mag.Value);
+                MagneticVariationInDegrees = Angle.FromDegrees(mag.Value * DirectionToSign(magTurn.Value));
             }
-            else
-            {
-                _positiveMagneticVariationInDegrees = null;
-            }
-
-            _magneticVariationTurn = magTurn;
-            Valid = true; // for this message, we need to check on the individual fields
         }
 
         public RecommendedMinimumNavigationInformation(
             DateTimeOffset? dateTime,
             NavigationStatus? status,
-            double? latitude,
-            double? longitude,
-            double? speedOverGroundInKnots,
-            Angle? trackMadeGoodInDegreesTrue,
+            GeographicPosition position,
+            Speed speedOverGround,
+            Angle trackMadeGoodInDegreesTrue,
             Angle? magneticVariationInDegrees)
         : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
         {
             DateTime = dateTime;
             Status = status;
-            LatitudeDegrees = latitude;
-            LongitudeDegrees = longitude;
-            SpeedOverGroundInKnots = speedOverGroundInKnots;
+            Position = position;
+            SpeedOverGround = speedOverGround;
             TrackMadeGoodInDegreesTrue = trackMadeGoodInDegreesTrue;
             MagneticVariationInDegrees = magneticVariationInDegrees;
             Valid = true;
@@ -254,10 +237,9 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public override string ToReadableContent()
         {
-            if (LatitudeDegrees.HasValue && LongitudeDegrees.HasValue)
+            if (Valid)
             {
-                GeographicPosition position = new GeographicPosition(LatitudeDegrees.Value, LongitudeDegrees.Value, 0);
-                return $"Position: {position} / Speed {SpeedOverGroundInKnots} / Track {TrackMadeGoodInDegreesTrue}";
+                return $"Position: {Position} / Speed {SpeedOverGround} / Track {TrackMadeGoodInDegreesTrue}";
             }
 
             return "Position unknown";

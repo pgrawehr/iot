@@ -36,10 +36,9 @@ namespace Iot.Device.Gps.NeoM8Samples
                     {
                         gotRmc = true;
 
-                        if (rmc.LatitudeDegrees.HasValue && rmc.LongitudeDegrees.HasValue)
+                        if (rmc.Valid)
                         {
-                            Console.WriteLine(
-                                $"Your location: {rmc.LatitudeDegrees.Value:0.00000}, {rmc.LongitudeDegrees.Value:0.00000}");
+                            Console.WriteLine($"Your location: {rmc.Position}");
                         }
                         else
                         {

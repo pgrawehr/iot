@@ -91,8 +91,8 @@ namespace Nmea.Simulator
             {
                 var data = _activeData;
                 RecommendedMinimumNavigationInformation rmc = new RecommendedMinimumNavigationInformation(DateTimeOffset.UtcNow,
-                    RecommendedMinimumNavigationInformation.NavigationStatus.Valid, data.Position.Latitude,
-                    data.Position.Longitude, data.Speed.Knots, data.Course, null);
+                    RecommendedMinimumNavigationInformation.NavigationStatus.Valid, data.Position,
+                    data.Speed, data.Course, null);
                 SendSentence(rmc);
 
                 GlobalPositioningSystemFixData gga = new GlobalPositioningSystemFixData(

@@ -60,22 +60,9 @@ namespace Iot.Device.Nmea0183
                 OnNewSequence?.Invoke(this, typedSequence);
             }
 
-            if (typedSequence is RecommendedMinimumNavigationInformation rmc)
+            if (typedSequence is RecommendedMinimumNavigationInformation rmc && rmc.Valid)
             {
-                // Todo: This sentence is only interesting if we don't have GGA and VTG
-                if (rmc.LatitudeDegrees.HasValue && rmc.LongitudeDegrees.HasValue)
-                {
-                    GeographicPosition position = new GeographicPosition(rmc.LatitudeDegrees.Value, rmc.LongitudeDegrees.Value, 0);
-
-                    if (rmc.TrackMadeGoodInDegreesTrue.HasValue && rmc.SpeedOverGroundInKnots.HasValue)
-                    {
-                        OnNewPosition?.Invoke(position, rmc.TrackMadeGoodInDegreesTrue.Value, Speed.FromKnots(rmc.SpeedOverGroundInKnots.Value));
-                    }
-                    else
-                    {
-                        OnNewPosition?.Invoke(position, Angle.Zero, Speed.FromKnots(0));
-                    }
-                }
+                OnNewPosition?.Invoke(rmc.Position, rmc.TrackMadeGoodInDegreesTrue, rmc.SpeedOverGround);
             }
             else if (typedSequence is TimeDate td)
             {

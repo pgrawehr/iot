@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Iot.Device.Nmea0183.Sentences;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
@@ -44,6 +45,87 @@ namespace Iot.Device.Nmea0183
                 _lastRouteSentences.Clear();
                 _wayPoints.Clear();
             }
+        }
+
+        /// <summary>
+        /// Get the current position from the latest message containing any of the relevant data bits
+        /// </summary>
+        /// <param name="position">Current position</param>
+        /// <param name="track">Track (course over ground)</param>
+        /// <param name="sog">Speed over ground</param>
+        /// <param name="heading">Heading of bow (optional)</param>
+        /// <returns></returns>
+        public bool TryGetCurrentPosition(out GeographicPosition position, out Angle track, out Speed sog, out Angle? heading)
+        {
+            // Try to get any of the position messages
+            var gll = (PositionFastUpdate)GetLastSentence(PositionFastUpdate.Id);
+            var gga = (GlobalPositioningSystemFixData)GetLastSentence(GlobalPositioningSystemFixData.Id);
+            var rmc = (RecommendedMinimumNavigationInformation)GetLastSentence(RecommendedMinimumNavigationInformation.Id);
+            var vtg = (TrackMadeGood)GetLastSentence(TrackMadeGood.Id);
+            var hdt = (HeadingTrue)GetLastSentence(HeadingTrue.Id);
+
+            List<(GeographicPosition, TimeSpan)> orderablePositions = new List<(GeographicPosition, TimeSpan)>();
+            if (gll != null && gll.Position != null)
+            {
+                orderablePositions.Add((gll.Position, gll.Age));
+            }
+
+            if (gga != null && gga.Valid)
+            {
+                orderablePositions.Add((gga.Position, gga.Age));
+            }
+
+            if (rmc != null && rmc.Valid)
+            {
+                orderablePositions.Add((rmc.Position, rmc.Age));
+            }
+
+            if (orderablePositions.Count == 0)
+            {
+                // No valid positions received
+                position = null;
+                track = Angle.Zero;
+                sog = Speed.Zero;
+                heading = null;
+                return false;
+            }
+
+            position = orderablePositions.OrderBy(x => x.Item2).Select(x => x.Item1).First();
+
+            if (gga != null && gga.EllipsoidAltitude.HasValue)
+            {
+                // If we had seen a gga message, use its height, regardless of which other message provided the position
+                position = new GeographicPosition(position.Latitude, position.Longitude, gga.EllipsoidAltitude.Value);
+            }
+
+            if (rmc != null)
+            {
+                sog = rmc.SpeedOverGround;
+                track = rmc.TrackMadeGoodInDegreesTrue;
+            }
+            else if (vtg != null)
+            {
+                sog = vtg.Speed;
+                track = vtg.CourseOverGroundTrue;
+            }
+            else
+            {
+                sog = Speed.Zero;
+                track = Angle.Zero;
+                heading = null;
+                return false;
+            }
+
+            if (hdt != null)
+            {
+                heading = hdt.Angle;
+            }
+            else
+            {
+                heading = null;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -189,6 +271,12 @@ namespace Iot.Device.Nmea0183
 
         private void OnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
+            // Cache only valid sentences
+            if (!sentence.Valid)
+            {
+                return;
+            }
+
             lock (_lock)
             {
                 if (!_groupSentences.Contains(sentence.SentenceId))
