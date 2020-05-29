@@ -1,0 +1,134 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using UnitsNet;
+
+namespace Iot.Device.Nmea0183.Sentences
+{
+    /// <summary>
+    /// WPT sentence: Identifies a single waypoint (may be sent multiple times with different names)
+    /// </summary>
+    public class WayPoint : NmeaSentence
+    {
+        /// <summary>
+        /// This sentence's id
+        /// </summary>
+        public static SentenceId Id => new SentenceId("WPL");
+        private static bool Matches(SentenceId sentence) => Id == sentence;
+        private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
+
+        /// <summary>
+        /// Constructs a new WPT sentence
+        /// </summary>
+        public WayPoint(GeographicPosition position, string name)
+            : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
+        {
+            Position = position;
+            Name = name;
+            Valid = true;
+        }
+
+        /// <summary>
+        /// Internal constructor
+        /// </summary>
+        public WayPoint(TalkerSentence sentence, DateTimeOffset time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+        {
+        }
+
+        /// <summary>
+        /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
+        /// </summary>
+        public WayPoint(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
+        {
+            IEnumerator<string> field = fields.GetEnumerator();
+
+            double? wayPointLatitude = ReadValue(field);
+            CardinalDirection? wayPointHemisphere = (CardinalDirection?)ReadChar(field);
+            double? wayPointLongitude = ReadValue(field);
+            CardinalDirection? wayPointDirection = (CardinalDirection?)ReadChar(field);
+
+            string waypointName = ReadString(field);
+
+            if (wayPointLatitude.HasValue && wayPointLongitude.HasValue)
+            {
+                double? latitude = RecommendedMinimumNavigationInformation.Nmea0183ToDegrees(wayPointLatitude, wayPointHemisphere);
+                double? longitude = RecommendedMinimumNavigationInformation.Nmea0183ToDegrees(wayPointLongitude, wayPointDirection);
+                if (latitude.HasValue && longitude.HasValue)
+                {
+                    Position = new GeographicPosition(latitude.Value, longitude.Value, 0);
+                    Valid = true;
+                }
+
+                Name = waypointName;
+            }
+
+        }
+
+        /// <summary>
+        /// Position of waypoint
+        /// </summary>
+        public GeographicPosition Position
+        {
+            get;
+        }
+
+        /// <summary>
+        /// Name of waypoint
+        /// </summary>
+        public string Name
+        {
+            get;
+        }
+
+        /// <summary>
+        /// Presents this message as output
+        /// </summary>
+        public override string ToNmeaMessage()
+        {
+            if (Valid)
+            {
+                StringBuilder b = new StringBuilder();
+                double? degrees;
+                CardinalDirection? direction;
+                (degrees, direction) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(Position.Latitude, true);
+                if (degrees.HasValue && direction.HasValue)
+                {
+                    b.AppendFormat(CultureInfo.InvariantCulture, "{0:0000.00000},{1},", degrees.Value, (char)direction);
+                }
+                else
+                {
+                    b.Append(",,");
+                }
+
+                (degrees, direction) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(Position.Longitude, false);
+                if (degrees.HasValue && direction.HasValue)
+                {
+                    b.AppendFormat(CultureInfo.InvariantCulture, "{0:00000.00000},{1},", degrees.Value, (char)direction);
+                }
+                else
+                {
+                    b.Append(",,");
+                }
+
+                b.Append(Name);
+                return b.ToString();
+            }
+
+            return string.Empty;
+        }
+
+        /// <inheritdoc />
+        public override string ToReadableContent()
+        {
+            if (Valid)
+            {
+                return $"Waypoint {Name} Position: {Position}";
+            }
+
+            return "Not a valid waypoint";
+        }
+    }
+}

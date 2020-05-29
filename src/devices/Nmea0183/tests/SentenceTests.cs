@@ -359,7 +359,12 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$GPGGA,163810.000,4728.70270,N,00929.96660,E,2,12,0.6,397.4,M,46.8,M,,*52")]
         [InlineData("$YDVTG,124.0,T,121.2,M,0.0,N,0.0,K,A*2E")]
         [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D*6D")]
+        [InlineData("$GPWPL,4729.02350,N,00929.05360,E,R1*26")]
+        [InlineData("$GPBOD,244.8,T,242.9,M,R5,R4*41")]
+        [InlineData("$GPBOD,99.3,T,105.6,M,POINTB,*78")] // without named origin
+        [InlineData("$GPBWC,115613.000,4728.81500,N,00929.99990,E,201.5,T,199.6,M,0.735,N,R5,D*14")]
         [InlineData("$IIDBK,29.2,f,8.90,M,4.9,F*0B")] // Unknown sentence (for now)
+        [InlineData("$GPGLL,4729.4968,N,00930.3977,E,115611,A,D")]
         public void SentenceRoundTrip(string input)
         {
             var inSentence = TalkerSentence.FromSentenceString(input, out var error);
@@ -376,6 +381,50 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Theory]
+        [InlineData("$GPRMC,115611.000,A,4729.49680,N,00930.39770,E,1.500,37.000,240520,1.900,E,D")]
+        [InlineData("$GPRMB,A,0.50,L,R4,R5,4728.8150,N,00929.9999,E,0.734,201.5,-1.5,V,D")]
+        [InlineData("$GPGGA,115611.000,4729.49680,N,00930.39770,E,2,12,0.7,392.7,M,46.8,M,,")]
+        [InlineData("$GPGLL,4729.4968,N,00930.3977,E,115611,A,D")]
+        [InlineData("$GPBWC,115611,4728.8150,N,00929.9999,E,201.5,T,199.6,M,0.734,N,R5,D")]
+        [InlineData("$GPVTG,37.0,T,35.1,M,1.5,N,2.8,K,A")]
+        [InlineData("$GPXTE,A,A,0.500,L,N,D")]
+        [InlineData("$HCHDG,20.4,,,1.9,E")]
+        [InlineData("$GPWPL,4728.9218,N,00930.3359,E,R4")]
+        [InlineData("$GPRMC,115613.000,A,4729.49750,N,00930.39830,E,1.600,36.200,240520,1.900,E,D")]
+        [InlineData("$GPRMB,A,0.50,L,R4,R5,4728.8150,N,00929.9999,E,0.735,201.5,-1.3,V,D")]
+        [InlineData("$GPGGA,115613.000,4729.49750,N,00930.39830,E,2,12,0.7,392.7,M,46.8,M,,")]
+        [InlineData("$GPGLL,4729.4975,N,00930.3983,E,115613,A,D")]
+        [InlineData("$GPBWC,115613,4728.8150,N,00929.9999,E,201.5,T,199.6,M,0.735,N,R5,D")]
+        [InlineData("$GPVTG,36.2,T,34.3,M,1.6,N,3.0,K,A")]
+        [InlineData("$HCHDG,23.4,,,1.9,E")]
+        [InlineData("$GPWPL,4728.8150,N,00929.9999,E,R5")]
+        [InlineData("$GPRMC,115615.000,A,4729.49810,N,00930.39910,E,1.600,38.500,240520,1.900,E,D")]
+        [InlineData("$GPRMB,A,0.50,L,R4,R5,4728.8150,N,00929.9999,E,0.736,201.6,-1.4,V,D")]
+        [InlineData("$GPGGA,115615.000,4729.49810,N,00930.39910,E,2,12,0.7,392.9,M,46.8,M,,")]
+        [InlineData("$GPGLL,4729.4981,N,00930.3991,E,115615,A,D")]
+        [InlineData("$GPBWC,115615,4728.8150,N,00929.9999,E,201.6,T,199.6,M,0.736,N,R5,D")]
+        [InlineData("$GPVTG,38.5,T,36.6,M,1.6,N,3.0,K,A")]
+        [InlineData("$HCHDG,27.9,,,1.9,E")]
+        [InlineData("$GPRTE,1,1,c,Route008,R1,R2,R3,R4,R5")]
+        [InlineData("$GPRMC,115617.000,A,4729.49880,N,00930.40010,E,1.800,41.300,240520,1.900,E,D")]
+        [InlineData("$GPRMB,A,0.50,L,R4,R5,4728.8150,N,00929.9999,E,0.737,201.6,-1.7,V,D")]
+        [InlineData("$GPGGA,115617.000,4729.49880,N,00930.40010,E,2,12,0.7,392.9,M,46.8,M,,")]
+        [InlineData("$GPGLL,4729.4988,N,00930.4001,E,115617,A,D")]
+        [InlineData("$GPBOD,244.8,T,242.9,M,R5,R4")]
+        [InlineData("$GPBWC,115617,4728.8150,N,00929.9999,E,201.6,T,199.7,M,0.737,N,R5,D")]
+        [InlineData("$GPVTG,41.3,T,39.3,M,1.8,N,3.3,K,A")]
+        [InlineData("$HCHDG,30.9,,,1.9,E")]
+        public void CanParseAllTheseMessages(string input)
+        {
+            var inSentence = TalkerSentence.FromSentenceString(input, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(inSentence);
+            var decoded = inSentence.TryGetTypedValue();
+            Assert.NotNull(decoded);
+            Assert.False(decoded is RawSentence);
+        }
+
+        [Theory]
         [InlineData("$GPRMC,211730.997,A,3511.28000,S,13823.26000,E,7.000,229.000,190120,,*19")]
         [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
         [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
@@ -386,6 +435,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
         [InlineData("$GPXTE,A,A,0.000,L,N,D*36")]
         [InlineData("$HCHDG,103.2,,,1.9,E*21")]
+        [InlineData("$GPGLL,4729.4968,N,00930.3977,E,115611,A,D")]
         [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
         [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D*6D")]
         public void SentenceRoundTripIsUnaffectedByCulture(string input)

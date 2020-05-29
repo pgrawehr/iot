@@ -38,6 +38,10 @@ namespace Iot.Device.Nmea0183
             knownSentences[WaterSpeedAndAngle.Id] = (sentence, time) => new WaterSpeedAndAngle(sentence, time);
             knownSentences[HeadingAndDeviation.Id] = (sentence, time) => new HeadingAndDeviation(sentence, time);
             knownSentences[RecommendedMinimumNavToDestination.Id] = (sentence, time) => new RecommendedMinimumNavToDestination(sentence, time);
+            knownSentences[WayPoint.Id] = (sentence, time) => new WayPoint(sentence, time);
+            knownSentences[BearingOriginToDestination.Id] = (sentence, time) => new BearingOriginToDestination(sentence, time);
+            knownSentences[BearingAndDistanceToWayPoint.Id] = (sentence, time) => new BearingAndDistanceToWayPoint(sentence, time);
+            knownSentences[PositionFastUpdate.Id] = (sentence, time) => new PositionFastUpdate(sentence, time);
 
             return knownSentences;
         }
