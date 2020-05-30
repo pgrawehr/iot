@@ -147,6 +147,20 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        public bool TryGetLastSentence<T>(SentenceId id, out T sentence)
+        where T : NmeaSentence
+        {
+            var s = GetLastSentence(id);
+            if (s is T)
+            {
+                sentence = (T)s;
+                return true;
+            }
+
+            sentence = null;
+            return false;
+        }
+
         /// <summary>
         /// Gets the last sentence of the given type.
         /// Does not return sentences that are part of a group (i.e. GSV, RTE)
