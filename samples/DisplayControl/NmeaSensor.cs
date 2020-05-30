@@ -245,8 +245,8 @@ namespace DisplayControl
                     return;
                 }
                 _lastRmcMessage = rmc;
-                _speed.Value = rmc.Speed.Knots;
-                _track.Value = rmc.TrackMadeGoodInDegreesTrue.GetValueOrDefault(Angle.Zero).Degrees;
+                _speed.Value = rmc.SpeedOverGround.Knots;
+                _track.Value = rmc.TrackMadeGoodInDegreesTrue.Degrees;
                 _magneticVariation = rmc.MagneticVariationInDegrees;
                 if (_magneticVariation.HasValue)
                 {
