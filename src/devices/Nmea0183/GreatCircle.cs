@@ -36,14 +36,20 @@ namespace Iot.Device.Nmea0183
             GeoidCalculations.geod_init(out _geod, WGS84_A, WGS84_F);
         }
 
-        public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out double distance, out double direction)
+        public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out Length distance, out Angle direction)
         {
-            DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out distance, out direction);
+            DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out double dist, out double dir);
+            distance = Length.FromMeters(dist);
+            direction = Angle.FromDegrees(dir);
         }
 
-        public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out double distance, out double directionAtStart, out double directionAtEnd)
+        public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out Length distance, out Angle directionAtStart, out Angle directionAtEnd)
         {
-            DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out distance, out directionAtStart, out directionAtEnd);
+            DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out double dist, out double dirAtStart, out double dirAtEnd);
+
+            distance = Length.FromMeters(dist);
+            directionAtStart = Angle.FromDegrees(dirAtStart);
+            directionAtEnd = Angle.FromDegrees(dirAtEnd);
         }
 
         public static void DistAndDir(double latitude1,  double longitude1, double latitude2, double longitude2, out double distance, out double direction)
@@ -68,12 +74,12 @@ namespace Iot.Device.Nmea0183
         public static void CrossTrackError(GeographicPosition origin, GeographicPosition destination, GeographicPosition currentPosition,
             out Length crossTrackError, out Length distanceTogoAlongRoute)
         {
-            DistAndDir(origin, destination, out double distanceOriginToDestination, out double directionOriginToDestination, out double trackEndDirection);
-            DistAndDir(currentPosition, destination, out double distanceToDestination, out double currentToDestination);
+            DistAndDir(origin, destination, out _, out _, out Angle trackEndDirection);
+            DistAndDir(currentPosition, destination, out Length distanceToDestination, out Angle currentToDestination);
 
-            Angle angleDiff = AngleExtensions.Difference(Angle.FromDegrees(trackEndDirection), Angle.FromDegrees(currentToDestination));
-            distanceTogoAlongRoute = Length.FromMeters(Math.Cos(angleDiff.Radians) * distanceToDestination);
-            crossTrackError = Length.FromMeters(Math.Sin(angleDiff.Radians) * distanceToDestination);
+            Angle angleDiff = AngleExtensions.Difference(trackEndDirection, currentToDestination);
+            distanceTogoAlongRoute = Length.FromMeters(Math.Cos(angleDiff.Radians) * distanceToDestination.Meters);
+            crossTrackError = Length.FromMeters(Math.Sin(angleDiff.Radians) * distanceToDestination.Meters);
         }
 
         /// <summary>
@@ -86,7 +92,7 @@ namespace Iot.Device.Nmea0183
         /// <returns>Speed towards target. Negative if moving away from target</returns>
         public static Speed CalculateVelocityTowardsTarget(GeographicPosition destination, GeographicPosition currentPosition, Speed currentSpeed, Angle currentTrack)
         {
-            DistAndDir(currentPosition, destination, out double distanceToDestination, out double currentToDestination);
+            DistAndDir(currentPosition, destination, out Length distanceToDestination, out Angle currentToDestination);
             return Speed.Zero;
         }
 

@@ -105,9 +105,9 @@ namespace Iot.Device.Nmea0183
                     else
                     {
                         // Assume the current position is the origin
-                        GreatCircle.DistAndDir(position, next.Position, out double distance, out double direction);
-                        _currentOrigin = new RoutePoint("Manual", 1, 1, "Origin", position, Angle.FromDegrees(direction),
-                            Length.FromMeters(distance));
+                        GreatCircle.DistAndDir(position, next.Position, out Length distance, out Angle direction);
+                        _currentOrigin = new RoutePoint("Manual", 1, 1, "Origin", position, direction,
+                            distance);
                     }
                 }
                 else
@@ -128,16 +128,12 @@ namespace Iot.Device.Nmea0183
                 if (next != null && next.Position != null)
                 {
                     nextPosition = next.Position;
-                    GreatCircle.DistAndDir(position, next.Position, out double distance, out double direction);
-                    distanceToNext = Length.FromMeters(distance);
-                    bearingCurrentToDestination = Angle.FromDegrees(direction);
+                    GreatCircle.DistAndDir(position, next.Position, out distanceToNext, out bearingCurrentToDestination);
 
                     // Either the last waypoint or "origin"
                     if (previous != null && previous.Position != null)
                     {
-                        GreatCircle.DistAndDir(position, next.Position, out distance, out direction);
-                        distancePreviousToNext = Length.FromMeters(distance);
-                        bearingOriginToDestination = Angle.FromDegrees(direction);
+                        GreatCircle.DistAndDir(position, next.Position, out distancePreviousToNext, out bearingOriginToDestination);
                         GreatCircle.CrossTrackError(previous.Position, next.Position, position, out crossTrackError, out distanceOnTrackToNext);
                     }
                 }
