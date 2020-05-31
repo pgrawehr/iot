@@ -98,7 +98,8 @@ namespace Iot.Device.Nmea0183.Sentences
             GeographicPosition nextWayPoint,
             Length distanceToWayPoint,
             Angle bearingToWayPoint,
-            Speed approachSpeedToWayPoint)
+            Speed approachSpeedToWayPoint,
+            bool arrived)
         : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
         {
             CrossTrackError = crossTrackError;
@@ -108,6 +109,7 @@ namespace Iot.Device.Nmea0183.Sentences
             DistanceToWayPoint = distanceToWayPoint;
             BearingToWayPoint = bearingToWayPoint;
             ApproachSpeed = approachSpeedToWayPoint;
+            Arrived = arrived;
             Valid = true;
         }
 

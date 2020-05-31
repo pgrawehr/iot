@@ -73,5 +73,17 @@ namespace Iot.Device.Nmea0183
             double val = currentTrack.Radians - destinationTrack.Radians;
             return Angle.FromRadians(val).ToUnit(currentTrack.Unit).Normalize(false);
         }
+
+        /// <summary>
+        /// Helper method to convert a true angle to a magnetic one, given the variation.
+        /// </summary>
+        /// <param name="angleTrue">Course relative to true north</param>
+        /// <param name="variation">Variation. Positive for east</param>
+        /// <returns>The magnetic course</returns>
+        /// <remarks>From true to false with the wrong sign</remarks>
+        public static Angle TrueToMagnetic(Angle angleTrue, Angle variation)
+        {
+            return (angleTrue - variation).Normalize(true);
+        }
     }
 }
