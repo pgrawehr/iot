@@ -53,7 +53,7 @@ namespace Iot.Device.Nmea0183
             GC.SuppressFinalize(this);
         }
 
-        protected void DispatchSentenceEvents(NmeaSentence typedSequence)
+        protected virtual void DispatchSentenceEvents(NmeaSentence typedSequence)
         {
             if (typedSequence != null)
             {
@@ -70,6 +70,14 @@ namespace Iot.Device.Nmea0183
                 {
                     OnNewTime?.Invoke(td.DateTime.Value);
                 }
+            }
+        }
+
+        public virtual void SendSentences(IEnumerable<NmeaSentence> sentencesToSend)
+        {
+            foreach (var sentence in sentencesToSend)
+            {
+                SendSentence(sentence);
             }
         }
     }

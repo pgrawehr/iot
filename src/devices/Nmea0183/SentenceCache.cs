@@ -322,5 +322,14 @@ namespace Iot.Device.Nmea0183
             _source.OnNewSequence -= OnNewSequence;
             _sentences.Clear();
         }
+
+        /// <summary>
+        /// Adds the given sentence to the cache - if manual filling is preferred
+        /// </summary>
+        /// <param name="sentence">Sentence to add</param>
+        public void Add(NmeaSentence sentence)
+        {
+            OnNewSequence(null, sentence);
+        }
     }
 }

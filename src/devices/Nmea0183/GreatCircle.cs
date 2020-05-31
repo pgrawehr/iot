@@ -40,7 +40,7 @@ namespace Iot.Device.Nmea0183
         {
             DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out double dist, out double dir);
             distance = Length.FromMeters(dist);
-            direction = Angle.FromDegrees(dir);
+            direction = Angle.FromDegrees(dir).Normalize(true);
         }
 
         public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out Length distance, out Angle directionAtStart, out Angle directionAtEnd)
@@ -48,8 +48,8 @@ namespace Iot.Device.Nmea0183
             DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out double dist, out double dirAtStart, out double dirAtEnd);
 
             distance = Length.FromMeters(dist);
-            directionAtStart = Angle.FromDegrees(dirAtStart);
-            directionAtEnd = Angle.FromDegrees(dirAtEnd);
+            directionAtStart = Angle.FromDegrees(dirAtStart).Normalize(true);
+            directionAtEnd = Angle.FromDegrees(dirAtEnd).Normalize(true);
         }
 
         public static void DistAndDir(double latitude1,  double longitude1, double latitude2, double longitude2, out double distance, out double direction)

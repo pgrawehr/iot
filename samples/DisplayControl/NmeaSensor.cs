@@ -99,6 +99,7 @@ namespace DisplayControl
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
             // GGA messages from the ship are discarded (the ones from the handheld shall be used instead)
             rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>(), false, false));
+            // Same applies for this. For some reason, this also gets a different value for the magnetic variation
             rules.Add(new FilterRule("*", yd, new SentenceId("RMC"), new List<string>(), false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut }, false));
