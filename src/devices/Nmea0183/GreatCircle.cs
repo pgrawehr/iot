@@ -93,7 +93,8 @@ namespace Iot.Device.Nmea0183
         public static Speed CalculateVelocityTowardsTarget(GeographicPosition destination, GeographicPosition currentPosition, Speed currentSpeed, Angle currentTrack)
         {
             DistAndDir(currentPosition, destination, out Length distanceToDestination, out Angle currentToDestination);
-            return Speed.Zero;
+            Angle delta = AngleExtensions.Difference(currentToDestination, currentTrack);
+            return currentSpeed * Math.Cos(delta.Radians);
         }
 
         public static GeographicPosition CalcCoords(GeographicPosition start, double direction, double distance)

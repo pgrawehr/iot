@@ -348,5 +348,38 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Equal(14.9264938243846, distance.NauticalMiles, 4); // 1 degree latitude = 60 nautical miles. A third of it is remaining
             Assert.Equal(-1.00, crossTrackError.NauticalMiles, 2); // One nautical mile off, to the left
         }
+
+        [Fact]
+        public void CalculateVelocityTowardsTarget1()
+        {
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1, 0, 0);
+
+            Speed result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.Zero);
+            Assert.Equal(Speed.FromMetersPerSecond(10), result); // directly towards target
+
+            result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.FromDegrees(180));
+            Assert.Equal(-Speed.FromMetersPerSecond(10), result); // directly away from target
+
+            result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.FromDegrees(270));
+            Assert.Equal(Speed.Zero.MetersPerSecond, result.MetersPerSecond, 5); // perpendicular to target
+        }
+
+        [Fact]
+        public void CalculateVelocityTowardsTarget2()
+        {
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1.75, 0.25, 0);
+
+            Speed result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.Zero);
+            // Will miss the target like this
+            Assert.True(Math.Abs((Speed.FromMetersPerSecond(10) * Math.Cos(45.0 / 180 * Math.PI)).MetersPerSecond - result.MetersPerSecond) < 0.05, result.ToString());
+
+            result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.FromDegrees(45));
+            Assert.True(Math.Abs(result.MetersPerSecond) <= 0.04, result.ToString()); // about perpendicular to target
+
+            result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.FromDegrees(280));
+            Assert.True(Math.Abs(8.21 - result.MetersPerSecond) < 0.01, result.ToString()); // perpendicular to target
+        }
     }
 }
