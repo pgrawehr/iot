@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
@@ -40,9 +41,53 @@ namespace Iot.Device.Nmea0183
             DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out distance, out direction);
         }
 
+        public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out double distance, out double directionAtStart, out double directionAtEnd)
+        {
+            DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out distance, out directionAtStart, out directionAtEnd);
+        }
+
         public static void DistAndDir(double latitude1,  double longitude1, double latitude2, double longitude2, out double distance, out double direction)
         {
             GeoidCalculations.geod_inverse(_geod, latitude1, longitude1, latitude2, longitude2, out distance, out direction, out _);
+        }
+
+        public static void DistAndDir(double latitude1, double longitude1, double latitude2, double longitude2, out double distance, out double directionAtStart, out double directionAtEnd)
+        {
+            GeoidCalculations.geod_inverse(_geod, latitude1, longitude1, latitude2, longitude2, out distance, out directionAtStart, out directionAtEnd);
+        }
+
+        /// <summary>
+        /// Computes cross-track error, that is the distance the current position is away from the route from origin to destination
+        /// </summary>
+        /// <param name="origin">Start of current leg</param>
+        /// <param name="destination">End of current leg</param>
+        /// <param name="currentPosition">Current position</param>
+        /// <param name="crossTrackError">The distance perpendicular to the leg. Positive if the current position is to the right of the leg.</param>
+        /// <param name="distanceTogoAlongRoute">Distance to go on track (with current position projected back to the leg)</param>
+        /// <remarks>Accuracy may be limited for distances &gt; 100km</remarks>
+        public static void CrossTrackError(GeographicPosition origin, GeographicPosition destination, GeographicPosition currentPosition,
+            out Length crossTrackError, out Length distanceTogoAlongRoute)
+        {
+            DistAndDir(origin, destination, out double distanceOriginToDestination, out double directionOriginToDestination, out double trackEndDirection);
+            DistAndDir(currentPosition, destination, out double distanceToDestination, out double currentToDestination);
+
+            Angle angleDiff = AngleExtensions.Difference(Angle.FromDegrees(trackEndDirection), Angle.FromDegrees(currentToDestination));
+            distanceTogoAlongRoute = Length.FromMeters(Math.Cos(angleDiff.Radians) * distanceToDestination);
+            crossTrackError = Length.FromMeters(Math.Sin(angleDiff.Radians) * distanceToDestination);
+        }
+
+        /// <summary>
+        /// Calculate the velocity towards (or away from) the target. This is often also called VMG (=Velocity made good)
+        /// </summary>
+        /// <param name="destination">Target waypoint</param>
+        /// <param name="currentPosition">Current position</param>
+        /// <param name="currentSpeed">Current speed over ground</param>
+        /// <param name="currentTrack">Current track (course over ground)</param>
+        /// <returns>Speed towards target. Negative if moving away from target</returns>
+        public static Speed CalculateVelocityTowardsTarget(GeographicPosition destination, GeographicPosition currentPosition, Speed currentSpeed, Angle currentTrack)
+        {
+            DistAndDir(currentPosition, destination, out double distanceToDestination, out double currentToDestination);
+            return Speed.Zero;
         }
 
         public static GeographicPosition CalcCoords(GeographicPosition start, double direction, double distance)

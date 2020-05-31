@@ -297,5 +297,56 @@ namespace Iot.Device.Nmea0183.Tests
                 Assert.Equal(1, pt.Longitude);
             }
         }
+
+        [Fact]
+        public void CrossTrackError1()
+        {
+            GeographicPosition start = new GeographicPosition(0, 0, 0);
+            GeographicPosition end = new GeographicPosition(1, 0, 0);
+
+            GreatCircle.CrossTrackError(start, end, start, out var crossTrackError, out Length distance);
+
+            Assert.Equal(59.7053933897411, distance.NauticalMiles, 2); // 1 degree latitude = ~60 nautical miles
+            Assert.Equal(0, crossTrackError.Meters); // start on track -> deviation is 0
+        }
+
+        [Fact]
+        public void CrossTrackError2()
+        {
+            GeographicPosition start = new GeographicPosition(1, 0, 0);
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1.75, 0, 0);
+
+            GreatCircle.CrossTrackError(start, end, current, out var crossTrackError, out Length distance);
+
+            Assert.Equal(14.9264938243846, distance.NauticalMiles, 4); // 1 degree latitude = 60 nautical miles. A quarter of it is remaining
+            Assert.Equal(0, crossTrackError.Meters); // On track -> deviation is 0
+        }
+
+        [Fact]
+        public void CrossTrackError3()
+        {
+            GeographicPosition start = new GeographicPosition(1, 0, 0);
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1.75, 1.0 / 60.0, 0);
+
+            GreatCircle.CrossTrackError(start, end, current, out var crossTrackError, out Length distance);
+
+            Assert.Equal(14.9264938243846, distance.NauticalMiles, 4); // 1 degree latitude = 60 nautical miles. A third of it is remaining (same as above)
+            Assert.Equal(1.00, crossTrackError.NauticalMiles, 2); // One nautical mile off
+        }
+
+        [Fact]
+        public void CrossTrackError4()
+        {
+            GeographicPosition start = new GeographicPosition(1, 0, 0);
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1.75, -1.0 / 60.0, 0);
+
+            GreatCircle.CrossTrackError(start, end, current, out var crossTrackError, out Length distance);
+
+            Assert.Equal(14.9264938243846, distance.NauticalMiles, 4); // 1 degree latitude = 60 nautical miles. A third of it is remaining
+            Assert.Equal(-1.00, crossTrackError.NauticalMiles, 2); // One nautical mile off, to the left
+        }
     }
 }

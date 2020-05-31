@@ -17,11 +17,21 @@ namespace Iot.Device.Nmea0183
         private Thread _updateThread;
         private SentenceCache _cache;
 
+        /// <summary>
+        /// Last "origin" position. Used if the current route does not specify one.
+        /// Assumed to be the position the user last hit "Goto" on the GPS, without explicitly defining a route.
+        /// </summary>
+        private RoutePoint _currentOrigin;
+
+        private RoutePoint _knownNextWaypoint;
+
         public AutopilotController(SentenceCache sentenceCache, NmeaSinkAndSource output)
         {
             _output = output;
             _cache = sentenceCache;
             _threadRunning = false;
+            _currentOrigin = null;
+            _knownNextWaypoint = null;
         }
 
         public void Start()
@@ -77,16 +87,64 @@ namespace Iot.Device.Nmea0183
                 string nextWayPoint = currentLeg.NextWayPointName;
 
                 RoutePoint next = currentRoute.Find(x => x.WaypointName == nextWayPoint);
+                if (next.Position != null && next.Position.EqualPosition(_knownNextWaypoint.Position) == false)
+                {
+                    // the next waypoint changed. Set the new origin (if previous is undefined)
+                    // This means that either the user has selected a new route or we moved to the next leg.
+                    _knownNextWaypoint = next;
+                    _currentOrigin = null;
+                }
+
                 RoutePoint previous = currentRoute.Find(x => x.WaypointName == previousWayPoint);
+                if (previous == null && next != null)
+                {
+                    if (_currentOrigin != null)
+                    {
+                        previous = _currentOrigin;
+                    }
+                    else
+                    {
+                        // Assume the current position is the origin
+                        GreatCircle.DistAndDir(position, next.Position, out double distance, out double direction);
+                        _currentOrigin = new RoutePoint("Manual", 1, 1, "Origin", position, Angle.FromDegrees(direction),
+                            Length.FromMeters(distance));
+                    }
+                }
+                else
+                {
+                    // We don't need that any more. Reinit when previous is null again
+                    _currentOrigin = null;
+                }
 
                 Length distanceToNext = Length.Zero;
+                Length distanceOnTrackToNext = Length.Zero;
+                Length crossTrackError = Length.Zero;
+                Length distancePreviousToNext = Length.Zero;
                 Angle bearingCurrentToDestination = Angle.Zero;
+                Angle bearingOriginToDestination = Angle.Zero;
+                GeographicPosition nextPosition = null;
+                Speed approachSpeedToWayPoint = Speed.Zero;
+
                 if (next != null && next.Position != null)
                 {
+                    nextPosition = next.Position;
                     GreatCircle.DistAndDir(position, next.Position, out double distance, out double direction);
                     distanceToNext = Length.FromMeters(distance);
                     bearingCurrentToDestination = Angle.FromDegrees(direction);
+
+                    // Either the last waypoint or "origin"
+                    if (previous != null && previous.Position != null)
+                    {
+                        GreatCircle.DistAndDir(position, next.Position, out distance, out direction);
+                        distancePreviousToNext = Length.FromMeters(distance);
+                        bearingOriginToDestination = Angle.FromDegrees(direction);
+                        GreatCircle.CrossTrackError(previous.Position, next.Position, position, out crossTrackError, out distanceOnTrackToNext);
+                    }
                 }
+
+                RecommendedMinimumNavToDestination rmb = new RecommendedMinimumNavToDestination(DateTimeOffset.UtcNow,
+                    crossTrackError, previousWayPoint, nextWayPoint, nextPosition, distanceToNext, bearingCurrentToDestination,
+                    approachSpeedToWayPoint);
             }
         }
 

@@ -9,6 +9,9 @@ using UnitsNet;
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
+    /// <summary>
+    /// RMB sentence: Recommended minimum navigation information (current leg)
+    /// </summary>
     public class RecommendedMinimumNavToDestination : NmeaSentence
     {
         public static SentenceId Id => new SentenceId('R', 'M', 'B');
