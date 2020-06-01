@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Device.Gpio;
+using System.IO;
 using System.Text;
 using System.Threading;
 using Iot.Device.CpuTemperature;
@@ -60,7 +61,16 @@ namespace DisplayControl
         {
             while (!_cancellationTokenSource.IsCancellationRequested)
             {
-                UpdateSensors();
+                try
+                {
+                    UpdateSensors();
+                }
+                catch (IOException x)
+                {
+                    // Likely an I2C communication error, try again
+                    Console.WriteLine($"{GetType().Name}: {x}");
+                }
+
                 _cancellationTokenSource.Token.WaitHandle.WaitOne(PollTime);
             }
         }
