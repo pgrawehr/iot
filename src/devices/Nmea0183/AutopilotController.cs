@@ -67,7 +67,10 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        internal void CalculateNewStatus(int loops, DateTimeOffset now)
+        /// <summary>
+        /// Navigation loop. Generally called internally only.
+        /// </summary>
+        public void CalculateNewStatus(int loops, DateTimeOffset now)
         {
             if (!_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination currentLeg))
             {

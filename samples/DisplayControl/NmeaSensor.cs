@@ -73,6 +73,8 @@ namespace DisplayControl
         private WindSpeedAndAngle _lastMwvMessage;
         private Temperature? _lastTemperature;
         private double? _lastHumidity;
+        private SentenceCache _sentenceCache;
+        private AutopilotController _autopilot;
 
         public NmeaSensor()
         {
@@ -93,8 +95,8 @@ namespace DisplayControl
             TalkerId yd = new TalkerId('Y', 'D');
             // Note: Order is important. First ones are checked first
             IList<FilterRule> rules = new List<FilterRule>();
-            // Drop any incoming YD sentences from this source, they were processed already
-            rules.Add(new FilterRule(SignalKIn, yd, SentenceId.Any, new List<string>(), false ));
+            // Drop any incoming sentences from this source, they were processed already (no known use case here)
+            rules.Add(new FilterRule(SignalKIn, TalkerId.Any, SentenceId.Any, new List<string>(), false ));
             // Log just everything, but of course continue processing
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
             // GGA messages from the ship are discarded (the ones from the handheld shall be used instead)
@@ -105,6 +107,7 @@ namespace DisplayControl
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut }, false));
 
             // Anything from SignalK is currently discarded (maybe there are some computed sentences that are useful)
+            // Note: This source does not normally generate any data. Input from SignalK is on SignalKIn
             rules.Add(new FilterRule(SignalKOut, TalkerId.Any, SentenceId.Any, new List<string>()));
             // Anything from OpenCpn is distributed everywhere
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { SignalKOut, ShipSourceName, HandheldSourceName }));
@@ -113,7 +116,7 @@ namespace DisplayControl
             // Anything from the handheld is sent to our processor
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
-            // ... but excluding the AutoPilot sentences and only as raw to the ship (todo: Analyze)
+            // The GPS messages are sent everywhere (as raw)
             string[] gpsSequences = new string[]
             {
                 "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG"
@@ -150,10 +153,15 @@ namespace DisplayControl
             {
                 // TODO: needs testing (we must make sure the autopilot gets sentences only from one nav device, or 
                 // it will get confused)
-                // Maybe we need to be able to switch between using OpenCpn and the Handheld for autopilot / navigation control
-                rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId(autopilot), new []{ HandheldSourceName }, true));
+                // - Maybe we need to be able to switch between using OpenCpn and the Handheld for autopilot / navigation control
+                // - For now, we forward anything from our own processor to the real autopilot and the ship (so it gets displayed on the displays)
+                rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilot), new []{ HandheldSourceName, ShipSourceName }, true, true));
             }
-            
+
+            // The messages VWR and VHW (Wind measurement / speed trough water) come from the ship and need to go to the autopilot
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId("VWR"), new[] { HandheldSourceName }, true, true));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId("VHW"), new[] { HandheldSourceName }, true, true));
+
             return rules;
         }
 
@@ -203,6 +211,7 @@ namespace DisplayControl
             _signalkServer.OnParserError += OnParserError;
             _signalkServer.StartDecode();
 
+            // TODO: This source is probably not required
             _signalKClient = new TcpClient("127.0.0.1", 10110);
             _signalKClientParser = new NmeaParser(SignalKIn, _signalKClient.GetStream(), _signalKClient.GetStream());
             _signalKClientParser.OnParserError += OnParserError;
@@ -210,6 +219,10 @@ namespace DisplayControl
             _signalKClientParser.StartDecode();
 
             _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/", MaxFileSize = 1024 * 1024 * 5 });
+
+            _sentenceCache = new SentenceCache(_router);
+            _autopilot = new AutopilotController(_sentenceCache, _router);
+
             _router.AddEndPoint(_parserShipInterface);
             _router.AddEndPoint(_parserHandheldInterface);
             _router.AddEndPoint(_openCpnServer);
@@ -223,7 +236,7 @@ namespace DisplayControl
             }
 
             _router.StartDecode();
-
+            _autopilot.Start();
         }
 
         private void ParserOnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
@@ -322,6 +335,7 @@ namespace DisplayControl
 
         public void Dispose()
         {
+            _autopilot?.Stop();
             _router?.Dispose();
             _router = null;
 
@@ -350,8 +364,13 @@ namespace DisplayControl
             _signalKClient = null;
             _signalKClientParser = null;
 
+            _autopilot?.Dispose();
+            _autopilot = null;
+
             _parserHandheldInterface?.Dispose();
             _parserHandheldInterface = null;
+
+            _sentenceCache.Clear();
         }
 
         public void SendTemperature(Temperature value)

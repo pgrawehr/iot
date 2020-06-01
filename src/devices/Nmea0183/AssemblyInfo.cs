@@ -2,4 +2,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Nmea0183.Tests")]
+// [assembly: InternalsVisibleTo("Nmea0183.Tests")]
