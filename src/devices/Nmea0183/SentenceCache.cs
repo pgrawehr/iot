@@ -34,7 +34,18 @@ namespace Iot.Device.Nmea0183
             _sentences = new Dictionary<SentenceId, NmeaSentence>();
             _lastRouteSentences = new Queue<Route>();
             _wayPoints = new Dictionary<string, WayPoint>();
+            StoreRawSentences = false;
             _source.OnNewSequence += OnNewSequence;
+        }
+
+        /// <summary>
+        /// True to (also) store raw sentences. Otherwise only recognized decoded sentences are stored.
+        /// Defaults to false.
+        /// </summary>
+        public bool StoreRawSentences
+        {
+            get;
+            set;
         }
 
         public void Clear()
@@ -287,6 +298,11 @@ namespace Iot.Device.Nmea0183
         {
             // Cache only valid sentences
             if (!sentence.Valid)
+            {
+                return;
+            }
+
+            if (!StoreRawSentences && sentence is RawSentence)
             {
                 return;
             }

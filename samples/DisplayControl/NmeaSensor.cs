@@ -104,7 +104,7 @@ namespace DisplayControl
             // Same applies for this. For some reason, this also gets a different value for the magnetic variation
             rules.Add(new FilterRule("*", yd, new SentenceId("RMC"), new List<string>(), false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut }, false));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut }, false, true));
 
             // Anything from SignalK is currently discarded (maybe there are some computed sentences that are useful)
             // Note: This source does not normally generate any data. Input from SignalK is on SignalKIn
@@ -112,7 +112,7 @@ namespace DisplayControl
             // Anything from OpenCpn is distributed everywhere
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { SignalKOut, ShipSourceName, HandheldSourceName }));
             // Anything from the ship is sent locally
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalKOut, MessageRouter.LocalMessageSource }, false));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalKOut, MessageRouter.LocalMessageSource }, false, true));
             // Anything from the handheld is sent to our processor
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
@@ -139,7 +139,7 @@ namespace DisplayControl
                 rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut }, true, true));
                 // And send the result of that nav operation to the ship 
                 // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
-                rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
+                // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
             }
 
             // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
@@ -155,12 +155,12 @@ namespace DisplayControl
                 // it will get confused)
                 // - Maybe we need to be able to switch between using OpenCpn and the Handheld for autopilot / navigation control
                 // - For now, we forward anything from our own processor to the real autopilot and the ship (so it gets displayed on the displays)
-                rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilot), new []{ HandheldSourceName, ShipSourceName }, true, true));
+                rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilot), new []{ HandheldSourceName }, false, true));
             }
 
             // The messages VWR and VHW (Wind measurement / speed trough water) come from the ship and need to go to the autopilot
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId("VWR"), new[] { HandheldSourceName }, true, true));
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId("VHW"), new[] { HandheldSourceName }, true, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VWR"), new[] { HandheldSourceName }, true, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { HandheldSourceName }, true, true));
 
             return rules;
         }

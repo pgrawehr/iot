@@ -94,17 +94,27 @@ namespace Iot.Device.Nmea0183
 
             if (_cache.TryGetCurrentPosition(out var position, out Angle track, out Speed sog, out Angle? heading))
             {
-                List<RoutePoint> currentRoute = _cache.GetCurrentRoute();
-                if (currentRoute == null || currentRoute.Count == 0)
-                {
-                    Console.WriteLine("No route - skipping");
-                    return; // Nothing to do - no route
-                }
-
                 string previousWayPoint = currentLeg.PreviousWayPointName;
                 string nextWayPoint = currentLeg.NextWayPointName;
 
-                RoutePoint next = currentRoute.FirstOrDefault(x => x.WaypointName == nextWayPoint);
+                List<RoutePoint> currentRoute = _cache.GetCurrentRoute();
+                RoutePoint next;
+                if (currentRoute == null || currentRoute.Count == 0)
+                {
+                    // No route. But if we have an RMB message, there could still be a current target (typically one that was
+                    // directly selected with "Goto")
+                    if (string.IsNullOrWhiteSpace(currentLeg.NextWayPointName) || currentLeg.NextWayPoint == null)
+                    {
+                        Console.WriteLine("No route and RMB message empty");
+                    }
+
+                    next = new RoutePoint("Goto", 0, 1, currentLeg.NextWayPointName, currentLeg.NextWayPoint, null, null);
+                }
+                else
+                {
+                    next = currentRoute.FirstOrDefault(x => x.WaypointName == nextWayPoint);
+                }
+
                 if (next != null && next.Position != null && (_knownNextWaypoint == null || next.Position.EqualPosition(_knownNextWaypoint.Position) == false))
                 {
                     // the next waypoint changed. Set the new origin (if previous is undefined)
@@ -113,7 +123,12 @@ namespace Iot.Device.Nmea0183
                     _currentOrigin = null;
                 }
 
-                RoutePoint previous = currentRoute.Find(x => x.WaypointName == previousWayPoint);
+                RoutePoint previous = null;
+                if (currentRoute != null)
+                {
+                    previous = currentRoute.Find(x => x.WaypointName == previousWayPoint);
+                }
+
                 if (previous == null && next != null)
                 {
                     if (_currentOrigin != null)
@@ -124,7 +139,7 @@ namespace Iot.Device.Nmea0183
                     {
                         // Assume the current position is the origin
                         GreatCircle.DistAndDir(position, next.Position, out Length distance, out Angle direction);
-                        _currentOrigin = new RoutePoint("Manual", 1, 1, "Origin", position, direction,
+                        _currentOrigin = new RoutePoint("Goto", 1, 1, "Origin", position, direction,
                             distance);
                     }
                 }
@@ -149,7 +164,7 @@ namespace Iot.Device.Nmea0183
                 GeographicPosition nextPosition = null;
                 Speed approachSpeedToWayPoint = Speed.Zero;
 
-                if (next != null && next.Position != null)
+                if (next.Position != null)
                 {
                     nextPosition = next.Position;
                     GreatCircle.DistAndDir(position, next.Position, out distanceToNext, out bearingCurrentToDestination);
@@ -185,9 +200,27 @@ namespace Iot.Device.Nmea0183
                     // Only send these once a second
                     IEnumerable<Route> rte;
                     IEnumerable<WayPoint> wpt;
-                    CreateRouteMessages(currentRoute, out rte, out wpt);
-                    sentencesToSend.AddRange(wpt);
-                    sentencesToSend.AddRange(rte);
+                    if (currentRoute == null || currentRoute.Count == 0)
+                    {
+                        currentRoute = new List<RoutePoint>();
+                        if (_currentOrigin != null)
+                        {
+                            currentRoute.Add(_currentOrigin);
+                        }
+
+                        if (next.Position != null)
+                        {
+                            currentRoute.Add(next);
+                        }
+                    }
+
+                    // This should actually always contain at least two points now (origin and current target)
+                    if (currentRoute.Count > 0)
+                    {
+                        CreateRouteMessages(currentRoute, out rte, out wpt);
+                        sentencesToSend.AddRange(wpt);
+                        sentencesToSend.AddRange(rte);
+                    }
                 }
 
                 _output.SendSentences(sentencesToSend);
