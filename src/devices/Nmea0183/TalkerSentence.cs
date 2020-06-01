@@ -301,11 +301,12 @@ namespace Iot.Device.Nmea0183
             {
                 char c = checksumChars[i];
 
-                ////if (c >= 128)
-                ////{
-                ////    // this should generally not be possible but checking for sanity
-                ////    throw new InvalidOperationException($"Talker sentence must contain only ASCII characters, found {c}.");
-                ////}
+                // Non ascii-characters (>=128) are rare, but seem to be allowed.
+                if (c >= 256)
+                {
+                    // this should generally not be possible but checking for sanity
+                    c = '\0'; // will likely result in a checksum mismatch
+                }
 
                 ret ^= (byte)c;
             }

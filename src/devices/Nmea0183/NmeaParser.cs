@@ -22,6 +22,7 @@ namespace Iot.Device.Nmea0183
         private Thread _parserThread;
         private CancellationTokenSource _cancellationTokenSource;
         private StreamReader _reader;
+        private Raw8BitEncoding _encoding;
 
         /// <summary>
         /// Creates a new instance of the NmeaParser, taking an input and an output stream
@@ -33,8 +34,9 @@ namespace Iot.Device.Nmea0183
         public NmeaParser(String interfaceName, Stream dataSource, Stream dataSink)
         : base(interfaceName)
         {
+            _encoding = new Raw8BitEncoding();
             _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
-            _reader = new StreamReader(_dataSource); // Nmea sentences are text
+            _reader = new StreamReader(_dataSource, _encoding); // Nmea sentences are text
             _dataSink = dataSink;
             _lock = new object();
             ExclusiveTalkerId = TalkerId.Any;
@@ -125,7 +127,7 @@ namespace Iot.Device.Nmea0183
         {
             TalkerSentence ts = new TalkerSentence(sentence);
             string dataToSend = ts.ToString() + "\r\n";
-            byte[] buffer = Encoding.ASCII.GetBytes(dataToSend);
+            byte[] buffer = _encoding.GetBytes(dataToSend);
             _dataSink.Write(buffer);
         }
 
