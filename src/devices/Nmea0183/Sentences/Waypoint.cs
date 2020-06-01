@@ -24,7 +24,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public WayPoint(GeographicPosition position, string name)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
-            Position = position;
+            Position = position ?? throw new ArgumentNullException(nameof(position));
             Name = name;
             Valid = true;
         }

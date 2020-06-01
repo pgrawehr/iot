@@ -128,7 +128,14 @@ namespace Iot.Device.Nmea0183
             TalkerSentence ts = new TalkerSentence(sentence);
             string dataToSend = ts.ToString() + "\r\n";
             byte[] buffer = _encoding.GetBytes(dataToSend);
-            _dataSink.Write(buffer);
+            try
+            {
+                _dataSink.Write(buffer);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Todo: return false
+            }
         }
 
         public override void StopDecode()
