@@ -189,9 +189,14 @@ namespace Iot.Device.Nmea0183.Sentences
 
                 b.AppendFormat(CultureInfo.InvariantCulture, "{0},{1},", PreviousWayPointName, NextWayPointName);
 
-                double? degrees;
-                CardinalDirection? direction;
-                (degrees, direction) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(NextWayPoint.Latitude, true);
+                double? degrees = null;
+                CardinalDirection? direction = null;
+                if (NextWayPoint != null)
+                {
+                    (degrees, direction) =
+                        RecommendedMinimumNavigationInformation.DegreesToNmea0183(NextWayPoint.Latitude, true);
+                }
+
                 if (degrees.HasValue && direction.HasValue)
                 {
                     b.AppendFormat(CultureInfo.InvariantCulture, "{0:0000.00000},{1},", degrees.Value, (char)direction);
@@ -201,7 +206,14 @@ namespace Iot.Device.Nmea0183.Sentences
                     b.Append(",,");
                 }
 
-                (degrees, direction) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(NextWayPoint.Longitude, false);
+                degrees = null;
+                direction = null;
+                if (NextWayPoint != null)
+                {
+                    (degrees, direction) =
+                        RecommendedMinimumNavigationInformation.DegreesToNmea0183(NextWayPoint.Longitude, false);
+                }
+
                 if (degrees.HasValue && direction.HasValue)
                 {
                     b.AppendFormat(CultureInfo.InvariantCulture, "{0:00000.00000},{1},", degrees.Value, (char)direction);
