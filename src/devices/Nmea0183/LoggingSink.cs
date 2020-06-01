@@ -23,7 +23,7 @@ namespace Iot.Device.Nmea0183
             _logFile = null;
             _lock = new object();
             // So we do not need to do a null test later
-            _lastSentence = new CrossTrackError(Length.Zero, true);
+            _lastSentence = new CrossTrackError(Length.Zero);
             Configuration = configuration ?? new LoggingConfiguration();
         }
 

@@ -19,14 +19,14 @@ namespace Iot.Device.Nmea0183.Sentences
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
         /// <summary>
-        /// Constructs a new MWV sentence
+        /// Constructs a new BOD sentence
         /// </summary>
         public BearingOriginToDestination(Angle bearingTrue, Angle bearingMagnetic, string originName, string destinationName)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
-            BearingTrue = bearingTrue;
+            BearingTrue = bearingTrue.Normalize(true);
             OriginName = originName;
-            BearingMagnetic = bearingMagnetic;
+            BearingMagnetic = bearingMagnetic.Normalize(true);
             DestinationName = destinationName;
             Valid = true;
         }

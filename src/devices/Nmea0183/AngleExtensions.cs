@@ -60,5 +60,30 @@ namespace Iot.Device.Nmea0183
             // Return in same unit as original input
             return Angle.FromRadians(r).ToUnit(self.Unit);
         }
+
+        /// <summary>
+        /// Calculate the difference between two angles. Useful to compute the angle error between a desired and an actual track.
+        /// </summary>
+        /// <param name="currentTrack">First angle, actual direction</param>
+        /// <param name="destinationTrack">Second angle, desired direction</param>
+        /// <returns>The difference</returns>
+        public static Angle Difference(Angle currentTrack, Angle destinationTrack)
+        {
+            currentTrack = currentTrack.Normalize(true);
+            double val = currentTrack.Radians - destinationTrack.Radians;
+            return Angle.FromRadians(val).ToUnit(currentTrack.Unit).Normalize(false);
+        }
+
+        /// <summary>
+        /// Helper method to convert a true angle to a magnetic one, given the variation.
+        /// </summary>
+        /// <param name="angleTrue">Course relative to true north</param>
+        /// <param name="variation">Variation. Positive for east</param>
+        /// <returns>The magnetic course</returns>
+        /// <remarks>From true to false with the wrong sign</remarks>
+        public static Angle TrueToMagnetic(Angle angleTrue, Angle variation)
+        {
+            return (angleTrue - variation).Normalize(true);
+        }
     }
 }

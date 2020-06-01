@@ -21,11 +21,10 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs a new MWV sentence
         /// </summary>
-        public CrossTrackError(Length distance, bool left)
+        public CrossTrackError(Length distance)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Distance = distance;
-            Left = left;
             Valid = true;
         }
 
@@ -54,13 +53,9 @@ namespace Iot.Device.Nmea0183.Sentences
             if (status1 == "A" && status2 == "A" && distance.HasValue && (direction == "L" || direction == "R") && unit == "N")
             {
                 Distance = Length.FromNauticalMiles(distance.Value);
-                if (direction == "L")
+                if (direction == "R")
                 {
-                    Left = true;
-                }
-                else
-                {
-                    Left = false;
+                    Distance = Distance * -1;
                 }
 
                 Valid = true;
@@ -73,22 +68,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Cross track distance, meters
+        /// Cross track distance. Positive if to the right of the track (meaning one shall steer left or to port)
         /// </summary>
         public Length Distance
         {
             get;
-            private set;
-        }
-
-        /// <summary>
-        /// Direction to steer.
-        /// True: Left, False: Right
-        /// </summary>
-        public bool Left
-        {
-            get;
-            private set;
         }
 
         /// <summary>
@@ -98,7 +82,14 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return FormattableString.Invariant($"A,A,{Distance.NauticalMiles:F3},{(Left ? "L" : "R")},N,D");
+                if (Distance.Value >= 0)
+                {
+                    return FormattableString.Invariant($"A,A,{Distance.NauticalMiles:F3},L,N,D");
+                }
+                else
+                {
+                    return FormattableString.Invariant($"A,A,{-Distance.NauticalMiles:F3},R,N,D");
+                }
             }
 
             return string.Empty;
@@ -109,13 +100,13 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                if (Left)
+                if (Distance.Value >= 0)
                 {
-                    return $"The route is {Distance.NauticalMiles:F3} to the left";
+                    return $"The route is {Distance.NauticalMiles:F3} nm to the left";
                 }
                 else
                 {
-                    return $"The route is {Distance.NauticalMiles:F3} to the right";
+                    return $"The route is {Math.Abs(Distance.NauticalMiles):F3} nm to the right";
                 }
             }
 

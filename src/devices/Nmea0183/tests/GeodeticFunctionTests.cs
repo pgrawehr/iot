@@ -210,10 +210,10 @@ namespace Iot.Device.Nmea0183.Tests
             double deltaInc = 0.01 / 3600.0;
 
             GeographicPosition pStart = new GeographicPosition(latStart, lonStart, 0);
-            double dblDist = 0;
-            double dblDir = 0;
-            double dblGCDist = 0;
-            double dblGCDir = 0;
+            double distance = 0;
+            double direction = 0;
+            Length gcDist = Length.Zero;
+            Angle gcDir;
 
             // iterate over the 8 axis (45° increments)
             for (int signIdx = 0; signIdx < 8; signIdx++)
@@ -243,22 +243,22 @@ namespace Iot.Device.Nmea0183.Tests
                 {
                     double delta = idx * deltaInc;
                     GeographicPosition pEnd = new GeographicPosition(latStart + dblYSign * delta, lonStart + dblXSign * delta, 0);
-                    InternalDistDir(pStart, pEnd, ref dblDist, ref dblDir);
-                    GreatCircle.DistAndDir(pStart, pEnd, out dblGCDist, out dblGCDir);
+                    InternalDistDir(pStart, pEnd, ref distance, ref direction);
+                    GreatCircle.DistAndDir(pStart, pEnd, out gcDist, out gcDir);
 
                     // compare the two calculation methods
-                    Assert.True(Math.Abs(dblDist - dblGCDist) < 1.0, "position accuracy less than 1m");
-                    Assert.True(GreatCircle.AngleDifferenceSignedDegrees(dblDir, dblGCDir) < 1.0, "direction accuracy less than 1 deg");
+                    Assert.True(Math.Abs(distance - gcDist.Meters) < 1.0, "position accuracy less than 1m");
+                    Assert.True(GreatCircle.AngleDifferenceSignedDegrees(direction, gcDir.Degrees) < 1.0, "direction accuracy less than 1 deg");
 
                     // calculate the endpoint with the previously calculated offsets using great circle
                     double dblEndLat = 0;
                     double dblEndLon = 0;
-                    GreatCircle.CalcCoords(pStart.Latitude, pStart.Longitude, dblGCDir, dblGCDist, out dblEndLat, out dblEndLon);
+                    GreatCircle.CalcCoords(pStart.Latitude, pStart.Longitude, gcDir.Degrees, gcDist.Meters, out dblEndLat, out dblEndLon);
                     Assert.True(Math.Abs(dblEndLat - pEnd.Latitude) < 1.0, "GC latitude accuracy less than 1m");
                     Assert.True(GreatCircle.AngleDifferenceSignedDegrees(dblEndLon, pEnd.Longitude) < 1.0, "GC longitude accuracy less than 1m");
 
                     // calculate the endpoint with the previously calculated offsets using the cartesic routine
-                    GeographicPosition pCalcEnd = InternalExtrapolatePosition(pStart, dblDist, dblDir);
+                    GeographicPosition pCalcEnd = InternalExtrapolatePosition(pStart, distance, direction);
                     double dblDeltaX = Math.Abs(pCalcEnd.Longitude - pEnd.Longitude) * GreatCircle.METERS_PER_DEGREE_LONGITUDE;
                     double dblDeltaY = Math.Abs(pCalcEnd.Latitude - pEnd.Latitude) * GreatCircle.METERS_PER_DEGREEE_LATITUDE;
                     Assert.True(dblDeltaY < 1.0, "XY latitude accuracy less than 1m");
@@ -296,6 +296,90 @@ namespace Iot.Device.Nmea0183.Tests
                 previousLat = pt.Latitude;
                 Assert.Equal(1, pt.Longitude);
             }
+        }
+
+        [Fact]
+        public void CrossTrackError1()
+        {
+            GeographicPosition start = new GeographicPosition(0, 0, 0);
+            GeographicPosition end = new GeographicPosition(1, 0, 0);
+
+            GreatCircle.CrossTrackError(start, end, start, out var crossTrackError, out Length distance);
+
+            Assert.Equal(59.7053933897411, distance.NauticalMiles, 2); // 1 degree latitude = ~60 nautical miles
+            Assert.Equal(0, crossTrackError.Meters); // start on track -> deviation is 0
+        }
+
+        [Fact]
+        public void CrossTrackError2()
+        {
+            GeographicPosition start = new GeographicPosition(1, 0, 0);
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1.75, 0, 0);
+
+            GreatCircle.CrossTrackError(start, end, current, out var crossTrackError, out Length distance);
+
+            Assert.Equal(14.9264938243846, distance.NauticalMiles, 4); // 1 degree latitude = 60 nautical miles. A quarter of it is remaining
+            Assert.Equal(0, crossTrackError.Meters); // On track -> deviation is 0
+        }
+
+        [Fact]
+        public void CrossTrackError3()
+        {
+            GeographicPosition start = new GeographicPosition(1, 0, 0);
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1.75, 1.0 / 60.0, 0);
+
+            GreatCircle.CrossTrackError(start, end, current, out var crossTrackError, out Length distance);
+
+            Assert.Equal(14.9264938243846, distance.NauticalMiles, 4); // 1 degree latitude = 60 nautical miles. A third of it is remaining (same as above)
+            Assert.Equal(1.00, crossTrackError.NauticalMiles, 2); // One nautical mile off
+        }
+
+        [Fact]
+        public void CrossTrackError4()
+        {
+            GeographicPosition start = new GeographicPosition(1, 0, 0);
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1.75, -1.0 / 60.0, 0);
+
+            GreatCircle.CrossTrackError(start, end, current, out var crossTrackError, out Length distance);
+
+            Assert.Equal(14.9264938243846, distance.NauticalMiles, 4); // 1 degree latitude = 60 nautical miles. A third of it is remaining
+            Assert.Equal(-1.00, crossTrackError.NauticalMiles, 2); // One nautical mile off, to the left
+        }
+
+        [Fact]
+        public void CalculateVelocityTowardsTarget1()
+        {
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1, 0, 0);
+
+            Speed result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.Zero);
+            Assert.Equal(Speed.FromMetersPerSecond(10), result); // directly towards target
+
+            result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.FromDegrees(180));
+            Assert.Equal(-Speed.FromMetersPerSecond(10), result); // directly away from target
+
+            result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.FromDegrees(270));
+            Assert.Equal(Speed.Zero.MetersPerSecond, result.MetersPerSecond, 5); // perpendicular to target
+        }
+
+        [Fact]
+        public void CalculateVelocityTowardsTarget2()
+        {
+            GeographicPosition end = new GeographicPosition(2, 0, 0);
+            GeographicPosition current = new GeographicPosition(1.75, 0.25, 0);
+
+            Speed result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.Zero);
+            // Will miss the target like this
+            Assert.True(Math.Abs((Speed.FromMetersPerSecond(10) * Math.Cos(45.0 / 180 * Math.PI)).MetersPerSecond - result.MetersPerSecond) < 0.05, result.ToString());
+
+            result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.FromDegrees(45));
+            Assert.True(Math.Abs(result.MetersPerSecond) <= 0.04, result.ToString()); // about perpendicular to target
+
+            result = GreatCircle.CalculateVelocityTowardsTarget(end, current, Speed.FromMetersPerSecond(10), Angle.FromDegrees(280));
+            Assert.True(Math.Abs(8.21 - result.MetersPerSecond) < 0.01, result.ToString()); // perpendicular to target
         }
     }
 }

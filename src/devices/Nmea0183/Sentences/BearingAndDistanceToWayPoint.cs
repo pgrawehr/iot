@@ -105,8 +105,8 @@ namespace Iot.Device.Nmea0183.Sentences
             NextWayPointName = nextWayPointName;
             NextWayPoint = nextWayPoint;
             DistanceToWayPoint = distanceToWayPoint;
-            BearingTrueToWayPoint = bearingTrueToWayPoint;
-            BearingMagneticToWayPoint = bearingMagneticToWayPoint;
+            BearingTrueToWayPoint = bearingTrueToWayPoint.Normalize(true);
+            BearingMagneticToWayPoint = bearingMagneticToWayPoint.Normalize(true);
             Valid = true;
         }
 

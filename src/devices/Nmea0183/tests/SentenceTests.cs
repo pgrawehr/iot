@@ -197,7 +197,6 @@ namespace Iot.Device.Nmea0183.Tests
 
             Assert.True(xte.Valid);
             Assert.Equal(Length.Zero, xte.Distance);
-            Assert.True(xte.Left);
         }
 
         [Fact]
@@ -206,9 +205,8 @@ namespace Iot.Device.Nmea0183.Tests
             string msg = "A,A,10.912,R,N,D";
 
             NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
-            CrossTrackError mwv = new CrossTrackError(Length.FromNauticalMiles(10.91234), false);
+            CrossTrackError mwv = new CrossTrackError(Length.FromNauticalMiles(-10.91234));
             Assert.True(mwv.Valid);
-            Assert.False(mwv.Left);
             Assert.Equal(msg, mwv.ToNmeaMessage());
         }
 
@@ -320,7 +318,7 @@ namespace Iot.Device.Nmea0183.Tests
 
             NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
             var rmb = new RecommendedMinimumNavToDestination(null, Length.FromNauticalMiles(22.2), "Ostsee", "Nordsee", new GeographicPosition(60.5, 20.0, 0),
-                Length.FromKilometers(100), Angle.FromDegrees(-90), Speed.FromMetersPerSecond(10));
+                Length.FromKilometers(100), Angle.FromDegrees(-90), Speed.FromMetersPerSecond(10), false);
             Assert.True(rmb.Valid);
             Assert.Equal(msg, rmb.ToNmeaMessage());
         }

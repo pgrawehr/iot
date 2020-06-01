@@ -27,6 +27,7 @@ namespace Iot.Device.Nmea0183.Sentences
             CourseOverGroundTrue = courseOverGroundTrue;
             CourseOverGroundMagnetic = courseOverGroundMagnetic;
             Speed = speed;
+            Valid = true;
         }
 
         /// <summary>

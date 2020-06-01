@@ -9,6 +9,9 @@ using UnitsNet;
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
+    /// <summary>
+    /// RMB sentence: Recommended minimum navigation information (current leg)
+    /// </summary>
     public class RecommendedMinimumNavToDestination : NmeaSentence
     {
         public static SentenceId Id => new SentenceId('R', 'M', 'B');
@@ -95,7 +98,8 @@ namespace Iot.Device.Nmea0183.Sentences
             GeographicPosition nextWayPoint,
             Length distanceToWayPoint,
             Angle bearingToWayPoint,
-            Speed approachSpeedToWayPoint)
+            Speed approachSpeedToWayPoint,
+            bool arrived)
         : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
         {
             CrossTrackError = crossTrackError;
@@ -105,6 +109,7 @@ namespace Iot.Device.Nmea0183.Sentences
             DistanceToWayPoint = distanceToWayPoint;
             BearingToWayPoint = bearingToWayPoint;
             ApproachSpeed = approachSpeedToWayPoint;
+            Arrived = arrived;
             Valid = true;
         }
 
