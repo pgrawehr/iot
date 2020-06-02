@@ -340,6 +340,7 @@ namespace Iot.Device.CpuTemperature
                             elem.LastUpdated = now;
                         }
 
+                        _lastMonitorLoop = now;
                         continue;
                     }
 
@@ -357,6 +358,7 @@ namespace Iot.Device.CpuTemperature
                         }
                     }
 
+                    _lastMonitorLoop = now;
                     running = _monitoredElements.Count > 0;
                 }
 
