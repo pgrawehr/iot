@@ -20,21 +20,11 @@ namespace System.Device.Gpio.Drivers
             }
         }
 
-        protected UnixDriver(Board board)
-        : base(board)
-        {
-            if (Environment.OSVersion.Platform != PlatformID.Unix)
-            {
-                throw new PlatformNotSupportedException(GetType().Name + " is only supported on Linux/Unix");
-            }
-        }
-
         /// <summary>
         /// Static factory method
         /// </summary>
         /// <returns>An instance of GpioDriver, depending on which one fits</returns>
         // TODO: remove try catch after https://github.com/dotnet/corefx/issues/32015 deployed
-        [Obsolete("Use Board.CreateI2cDevice instead")]
         public static UnixDriver Create()
         {
             if (Environment.OSVersion.Platform != PlatformID.Unix)
@@ -50,21 +40,6 @@ namespace System.Device.Gpio.Drivers
             catch (PlatformNotSupportedException)
             {
                 driver = new SysFsDriver();
-            }
-
-            return driver;
-        }
-
-        internal static UnixDriver Create(Board board)
-        {
-            UnixDriver driver = null;
-            try
-            {
-                driver = new LibGpiodDriver(board);
-            }
-            catch (PlatformNotSupportedException)
-            {
-                driver = new SysFsDriver(board);
             }
 
             return driver;

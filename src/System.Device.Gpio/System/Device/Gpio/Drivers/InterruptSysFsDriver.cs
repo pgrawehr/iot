@@ -15,8 +15,8 @@ namespace System.Device.Gpio.Drivers
     internal class InterruptSysFsDriver : SysFsDriver
     {
         private GpioDriver _gpioDriver;
-        public InterruptSysFsDriver(Board board, GpioDriver gpioDriver)
-            : base(board)
+        public InterruptSysFsDriver(GpioDriver gpioDriver)
+            : base()
         {
             if (Environment.OSVersion.Platform != PlatformID.Unix)
             {

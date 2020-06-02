@@ -21,7 +21,6 @@ namespace System.Device.Gpio.Drivers
         /// <summary>
         /// Initializes a new instance of the <see cref="Windows10Driver"/> class.
         /// </summary>
-        [Obsolete]
         public Windows10Driver()
         {
             if (Environment.OSVersion.Platform != PlatformID.Win32NT)
@@ -32,15 +31,6 @@ namespace System.Device.Gpio.Drivers
             if (s_winGpioController == null)
             {
                 throw new NotSupportedException("No GPIO controllers exist on this system.");
-            }
-        }
-
-        public Windows10Driver(Board board)
-        : base(board)
-        {
-            if (s_winGpioController == null)
-            {
-                throw new PlatformNotSupportedException("No GPIO controllers exist on this system.");
             }
         }
 
@@ -90,15 +80,7 @@ namespace System.Device.Gpio.Drivers
         /// <param name="pinNumber">The board pin number to convert.</param>
         /// <returns>The pin number in the driver's logical numbering scheme.</returns>
         protected internal override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
-        {
-            if (Board != null)
-            {
-                return Board.ConvertPinNumberToLogicalNumberingScheme(pinNumber);
-            }
-
-            throw new PlatformNotSupportedException(
-                $"The {GetType().Name} driver does not support physical (board) numbering, since it's generic.");
-        }
+            => throw new PlatformNotSupportedException($"The {GetType().Name} driver does not support physical (board) numbering, since it's generic.");
 
         /// <summary>
         /// Gets the mode of a pin.

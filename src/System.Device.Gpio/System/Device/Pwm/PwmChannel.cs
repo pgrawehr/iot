@@ -9,15 +9,8 @@ namespace System.Device.Pwm
     /// <summary>
     /// Represents a single PWM channel.
     /// </summary>
-    public abstract class PwmChannel : IDisposable
+    public abstract partial class PwmChannel : IDisposable
     {
-        public Board Board { get; }
-
-        protected PwmChannel(Board board)
-        {
-            Board = board;
-        }
-
         /// <summary>
         /// The frequency in hertz.
         /// </summary>
@@ -62,7 +55,6 @@ namespace System.Device.Pwm
         /// <param name="frequency">The frequency in hertz.</param>
         /// <param name="dutyCyclePercentage">The duty cycle percentage represented as a value between 0.0 and 1.0.</param>
         /// <returns>A PWM channel running on Windows 10 IoT.</returns>
-        [Obsolete("Use Board.CreatePwmChannel instead")]
         public static PwmChannel Create(
             int chip,
             int channel,

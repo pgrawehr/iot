@@ -48,8 +48,6 @@ namespace System.Device.Gpio.Drivers
             GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_UP = (1UL << 5)
         }
 
-        public LibGpiodDriver(Board board, int gpioChip = 0)
-        : base(board)
         /// <summary>
         /// Construct an instance
         /// </summary>
@@ -78,12 +76,6 @@ namespace System.Device.Gpio.Drivers
             {
                 throw ExceptionHelper.GetPlatformNotSupportedException(ExceptionResource.LibGpiodNotInstalled);
             }
-        }
-
-        [Obsolete("Use Board.CreateGpioController instead")]
-        public LibGpiodDriver(int gpioChip = 0)
-            : this(null, gpioChip)
-        {
         }
 
         /// <inheritdoc/>

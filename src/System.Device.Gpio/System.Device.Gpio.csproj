@@ -5,7 +5,6 @@
     <LangVersion>preview</LangVersion>
     <IsPackable>true</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <RootNamespace></RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="winmd\**" />

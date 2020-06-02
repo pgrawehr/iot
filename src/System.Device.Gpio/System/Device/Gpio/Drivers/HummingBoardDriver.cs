@@ -25,19 +25,13 @@ namespace System.Device.Gpio.Drivers
         /// </summary>
         /// <exception cref="PlatformNotSupportedException">The current operating system is not Windows</exception>
         public HummingBoardDriver()
-            : this(null)
-        {
-        }
-
-        public HummingBoardDriver(Board board)
-        : base(board)
         {
             if (Environment.OSVersion.Platform != PlatformID.Win32NT)
             {
                 throw new PlatformNotSupportedException($"{GetType().Name} is only supported on Windows.");
             }
 
-            _internalDriver = new Windows10Driver(null);
+            _internalDriver = new Windows10Driver();
         }
 
         /// <inheritdoc/>
