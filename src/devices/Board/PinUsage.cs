@@ -1,4 +1,4 @@
-﻿namespace System.Device
+﻿namespace Iot.Device.Board
 {
     /// <summary>
     /// Designated (or active) usage of a pin

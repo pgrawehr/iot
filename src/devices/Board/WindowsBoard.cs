@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Device.Analog;
 using System.Device.Gpio;
 using System.Device.Gpio.Drivers;
 using System.Device.I2c;
@@ -8,9 +7,9 @@ using System.Device.Pwm;
 using System.Device.Spi;
 using System.Text;
 
-namespace System.Device.Boards
+namespace Iot.Device.Board
 {
-    public class WindowsBoard : Board
+    public class WindowsBoard : BoardBase
     {
         public WindowsBoard(PinNumberingScheme defaultNumberingScheme)
             : base(defaultNumberingScheme)
@@ -47,11 +46,6 @@ namespace System.Device.Boards
         }
 
         public override PwmChannel CreatePwmChannel(int chip, int channel, int frequency = 400, double dutyCyclePercentage = 0.5)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override AnalogController CreateAnalogController(int chip)
         {
             throw new NotImplementedException();
         }

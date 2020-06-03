@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Device.Analog;
-using System.Device.Boards;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Device.Pwm;
@@ -9,9 +7,9 @@ using System.Device.Spi;
 using System.IO;
 using System.Text;
 
-namespace System.Device
+namespace Iot.Device.Board
 {
-    public abstract class Board : MarshalByRefObject, IDisposable
+    public abstract class BoardBase : MarshalByRefObject, IDisposable
     {
         private readonly PinNumberingScheme _defaultNumberingScheme;
         private readonly object _pinReservationsLock;
@@ -19,7 +17,7 @@ namespace System.Device
         private bool _initialized;
         private bool _disposed;
 
-        protected Board(PinNumberingScheme defaultNumberingScheme)
+        protected BoardBase(PinNumberingScheme defaultNumberingScheme)
         {
             _defaultNumberingScheme = defaultNumberingScheme;
             _pinReservations = new Dictionary<int, PinReservation>();
@@ -28,7 +26,7 @@ namespace System.Device
             _disposed = false;
         }
 
-        ~Board()
+        ~BoardBase()
         {
             Dispose(false);
         }
@@ -196,13 +194,14 @@ namespace System.Device
             int frequency = 400,
             double dutyCyclePercentage = 0.5);
 
-        public abstract AnalogController CreateAnalogController(int chip);
+        //// Todo separately
+        //// public abstract AnalogController CreateAnalogController(int chip);
 
-        public static Board DetermineOptimalBoardForHardware(PinNumberingScheme defaultNumberingScheme = PinNumberingScheme.Logical)
+        public static BoardBase DetermineOptimalBoardForHardware(PinNumberingScheme defaultNumberingScheme = PinNumberingScheme.Logical)
         {
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
-                Board board = null;
+                BoardBase board = null;
                 try
                 {
                     board = new RaspberryPiBoard(defaultNumberingScheme, true);

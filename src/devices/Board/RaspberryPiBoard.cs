@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Device.Analog;
 using System.Device.Gpio;
 using System.Device.Gpio.Drivers;
 using System.Device.I2c;
@@ -8,7 +7,7 @@ using System.Device.Pwm;
 using System.Device.Spi;
 using System.Text;
 
-namespace System.Device.Boards
+namespace Iot.Device.Board
 {
     public class RaspberryPiBoard : UnixBoard
     {

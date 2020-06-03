@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Device.Analog;
 using System.Device.Gpio;
 using System.Device.Gpio.Drivers;
 using System.Device.I2c;
@@ -9,12 +8,12 @@ using System.Device.Pwm.Channels;
 using System.Device.Spi;
 using System.Text;
 
-namespace System.Device.Boards
+namespace Iot.Device.Board
 {
     /// <summary>
     /// A generic board for Unix platforms
     /// </summary>
-    public class UnixBoard : Board
+    public class UnixBoard : BoardBase
     {
         private GpioDriver _internalDriver;
         private bool _useLibgpiod;
@@ -111,12 +110,7 @@ namespace System.Device.Boards
         {
             return new UnixPwmChannel(this, chip, channel, frequency, dutyCyclePercentage);
         }
-
-        public override AnalogController CreateAnalogController(int chip)
-        {
-            throw new NotSupportedException("The Raspberry Pi has no on-board analog inputs.");
-        }
-
+        
         protected override void Dispose(bool disposing)
         {
             if (disposing)

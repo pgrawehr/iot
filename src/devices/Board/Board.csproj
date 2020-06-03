@@ -4,10 +4,19 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <EnableDefaultItems>false</EnableDefaultItems>
     <LangVersion>preview</LangVersion>
+    <RootNamespace>Iot.Device.Board</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>;CS8321;CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\System.Device.Gpio\System.Device.Gpio.csproj" />
   </ItemGroup>
 
 </Project>
