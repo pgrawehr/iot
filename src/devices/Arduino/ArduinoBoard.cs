@@ -9,6 +9,7 @@ using System.Device.Spi;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using UnitsNet;
 
 #pragma warning disable CS1591
 
@@ -151,6 +152,26 @@ namespace Iot.Device.Arduino
         public AnalogController CreateAnalogController(int chip)
         {
             return new AnalogController(PinNumberingScheme.Logical, new ArduinoAnalogControllerDriver(this, _supportedPinConfigurations));
+        }
+
+        /// <summary>
+        /// Special function to read DHT sensor, if supported
+        /// </summary>
+        /// <param name="pinNumber">Pin Number</param>
+        /// <param name="dhtType">Type of DHT Sensor: 11 = DHT11, 22 = DHT22, etc.</param>
+        /// <param name="temperature">Temperature</param>
+        /// <param name="humidity">Relative humidity</param>
+        /// <returns>True on success, false otherwise</returns>
+        public bool TryReadDht(int pinNumber, int dhtType, out Temperature temperature, out Ratio humidity)
+        {
+            if (!_supportedPinConfigurations[pinNumber].PinModes.Contains(SupportedMode.DHT))
+            {
+                temperature = default;
+                humidity = default;
+                return false;
+            }
+
+            return Firmata.TryReadDht(pinNumber, dhtType, out temperature, out humidity);
         }
 
         protected virtual void Dispose(bool disposing)

@@ -98,8 +98,9 @@ namespace Ft4222.Samples
             Console.WriteLine(" 6 Run PWM test with a simple led dimming on GPIO6 port");
             Console.WriteLine(" 7 Dim the LED according to the input on A1");
             Console.WriteLine(" 8 Read analog channel as fast as possible");
-            Console.WriteLine(" 9 Run SPI tests with an MCP3008");
+            Console.WriteLine(" 9 Run SPI tests with an MCP3008 (experimental)");
             Console.WriteLine(" 0 Detect all devices on the I2C bus");
+            Console.WriteLine(" H Read DHT11 Humidity sensor on GPIO 3 (experimental)");
             Console.WriteLine(" D Use a display");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
@@ -136,6 +137,10 @@ namespace Ft4222.Samples
                     break;
                 case '0':
                     ScanDeviceAddressesOnI2cBus(board);
+                    break;
+                case 'h':
+                case 'H':
+                    TestDht(board);
                     break;
                 case 'x':
                 case 'X':
@@ -457,6 +462,27 @@ namespace Ft4222.Samples
                     Console.WriteLine($"Converted values: VSS {vss:F2}V, VDD {vdd:F2}V, Average {middle:F2}V");
                     Thread.Sleep(200);
                 }
+            }
+
+            Console.ReadKey();
+        }
+
+        public static void TestDht(ArduinoBoard board)
+        {
+            Console.WriteLine("Reading DHT11. Any key to quit.");
+
+            while (!Console.KeyAvailable)
+            {
+                if (board.TryReadDht(3, 11, out var temperature, out var humidity))
+                {
+                    Console.WriteLine($"Temperature: {temperature}, Humidity {humidity}");
+                }
+                else
+                {
+                    Console.WriteLine("Unable to read DHT11");
+                }
+
+                Thread.Sleep(2000);
             }
 
             Console.ReadKey();

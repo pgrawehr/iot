@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Arduino
@@ -443,6 +444,7 @@ namespace Iot.Device.Arduino
                             _dataReceived.Set();
                             break;
 
+                        case FirmataSysexCommand.DHT_SENSOR_DATA_REQUEST:
                         case FirmataSysexCommand.PIN_STATE_RESPONSE:
                             _lastResponse = raw_data; // the instance is constant, so we can just remember the pointer
                             _dataReceived.Set();
@@ -918,6 +920,56 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
             }
+        }
+
+        public bool TryReadDht(int pinNumber, int dhtType, out Temperature temperature, out Ratio humidity)
+        {
+            temperature = default;
+            humidity = default;
+            lock (_synchronisationLock)
+            {
+                _dataReceived.Reset();
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.DHT_SENSOR_DATA_REQUEST);
+                _firmataStream.WriteByte((byte)dhtType);
+                _firmataStream.WriteByte((byte)pinNumber);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
+
+                bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
+                if (result == false)
+                {
+                    throw new TimeoutException("Timeout waiting for device reply");
+                }
+
+                // Command, type, pin number and 4x2 bytes data
+                if (_lastResponse.Count < 11)
+                {
+                    return false;
+                }
+
+                if (_lastResponse[2] != pinNumber)
+                {
+                    return false;
+                }
+
+                Span<byte> reply = stackalloc byte[4];
+                ReassembleByteString(_lastResponse, 3, 8, reply);
+
+                var arr = reply.ToArray();
+
+                short h = BitConverter.ToInt16(arr, 0);
+                float t = BitConverter.ToInt16(arr, 2) / 10.0f;
+                if (double.IsNaN(t) || double.IsNaN(h))
+                {
+                    return false;
+                }
+
+                temperature = Temperature.FromDegreesCelsius(t);
+                humidity = Ratio.FromPercent(h);
+            }
+
+            return true;
         }
 
         public uint GetAnalogRawValue(int pinNumber)

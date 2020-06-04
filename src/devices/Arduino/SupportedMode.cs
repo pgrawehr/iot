@@ -70,6 +70,23 @@
         /// The pin can be used for SPI transfer (Clock, MOSI, MISO and default CS pin)
         /// For most Arduinos, MOSI=11, MISO=12 and Clock = 13. The default CS pin is 10.
         /// </summary>
-        SPI = 0x0C
+        SPI = 0x0C,
+
+        //// Unofficial extensions (only supported by special firmware)
+
+        /// <summary>
+        /// HC-SR04
+        /// </summary>
+        SONAR = 0x0D,
+
+        /// <summary>
+        /// Arduino tone library
+        /// </summary>
+        TONE = 0x0E,
+
+        /// <summary>
+        /// DHT type sensors
+        /// </summary>
+        DHT = 0x0F,
     }
 }
