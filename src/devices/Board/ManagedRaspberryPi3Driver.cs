@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Device.Gpio;
+using System.Device.Gpio.Drivers;
 using System.Text;
 using System.Threading;
 
 namespace Iot.Device.Board
 {
-    public class ManagedGpioDriver : GpioDriver, IGpioDriver
+    public class ManagedRaspberryPi3Driver : RaspberryPi3Driver, IGpioDriver
     {
         private readonly BoardBase _board;
         private IGpioDriver _gpioDriverImplementation;
 
-        public ManagedGpioDriver(BoardBase board, IGpioDriver actualDriver)
+        public ManagedRaspberryPi3Driver(BoardBase board, IGpioDriver actualDriver)
         {
             _board = board;
             _gpioDriverImplementation = actualDriver;
@@ -39,7 +40,6 @@ namespace Iot.Device.Board
 
         protected override void OpenPin(int pinNumber)
         {
-
             _gpioDriverImplementation.OpenPin(pinNumber);
         }
 
