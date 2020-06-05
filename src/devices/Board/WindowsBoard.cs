@@ -14,7 +14,7 @@ namespace Iot.Device.Board
         public WindowsBoard(PinNumberingScheme defaultNumberingScheme)
             : base(defaultNumberingScheme)
         {
-            if (defaultNumberingScheme != PinNumberingScheme.Board)
+            if (defaultNumberingScheme != PinNumberingScheme.Logical)
             {
                 throw new NotSupportedException("This board only supports logical pin numbering");
             }
@@ -30,19 +30,34 @@ namespace Iot.Device.Board
             return pinNumber;
         }
 
+        private GpioDriver CreateDriver()
+        {
+            GpioDriver driver = null;
+            try
+            {
+                driver = new Windows10Driver();
+            }
+            catch (NotSupportedException)
+            {
+                driver = new KeyboardGpioDriver();
+            }
+
+            return new ManagedGpioDriver(this, driver);
+        }
+
         public override GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme)
         {
-            return new GpioController(DefaultPinNumberingScheme, new Windows10Driver(this), this);
+            return new GpioController(DefaultPinNumberingScheme, CreateDriver());
         }
 
         public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
         {
-            return new Windows10I2cDevice(connectionSettings, this);
+            return I2cDevice.Create(connectionSettings);
         }
 
         public override SpiDevice CreateSpiDevice(SpiConnectionSettings settings)
         {
-            return new Windows10SpiDevice(settings, this);
+            return SpiDevice.Create(settings);
         }
 
         public override PwmChannel CreatePwmChannel(int chip, int channel, int frequency = 400, double dutyCyclePercentage = 0.5)

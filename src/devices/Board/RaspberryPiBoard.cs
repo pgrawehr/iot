@@ -90,7 +90,7 @@ namespace Iot.Device.Board
 
         protected override GpioDriver CreateGpioDriver()
         {
-            return new RaspberryPi3Driver(this);
+            return new RaspberryPi3Driver();
         }
 
         /// <summary>
@@ -126,9 +126,10 @@ namespace Iot.Device.Board
                 {
                     // Lets assume here the user knows what he's doing. Otherwise, it will just fail later (or he'll not get any
                     // reply from the device
-                    sda = connectionSettings.SdaPin;
-                    scl = connectionSettings.SclPin;
-                    break;
+                    ////sda = connectionSettings.SdaPin;
+                    ////scl = connectionSettings.SclPin;
+                    throw new NotSupportedException("Need to know the pin numbers");
+                    // break;
                 }
             }
 
@@ -137,8 +138,8 @@ namespace Iot.Device.Board
                 throw new ArgumentException("For I2C buses other than 0 and 1, the SDA and SCL pins must be explicitly specified", nameof(connectionSettings));
             }
 
-            connectionSettings = new I2cConnectionSettings(connectionSettings.BusId, connectionSettings.DeviceAddress, sda, scl);
-            return new UnixI2cDevice(connectionSettings, this);
+            connectionSettings = new I2cConnectionSettings(connectionSettings.BusId, connectionSettings.DeviceAddress);
+            return I2cDevice.Create(connectionSettings);
         }
 
         protected override void ActivatePinMode(int pinNumber, PinUsage usage)

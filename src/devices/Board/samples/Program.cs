@@ -2,10 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Device.Gpio;
 using System.Threading;
-using Iot.Device.BoardLed;
+using Iot.Device.Board;
 
-namespace BoardLedSample
+namespace BoardSample
 {
     /// <summary>
     /// Test program main class
@@ -13,32 +15,43 @@ namespace BoardLedSample
     public class Program
     {
         /// <summary>
-        /// Entry point for example program
+        /// Example program for Windows board class (execute on desktop)
         /// </summary>
         /// <param name="args">Command line arguments</param>
         public static void Main(string[] args)
         {
-            // Open the green led on Raspberry Pi.
-            using BoardLed led = new BoardLed("led0");
+            const int led0 = 0;
+            const int led1 = 1;
+            const int led2 = 2;
+            using BoardBase b = new WindowsBoard(PinNumberingScheme.Logical);
 
-            string defaultTrigger = led.Trigger;
+            using GpioController controller = b.CreateGpioController(PinNumberingScheme.Logical);
 
-            // LED can be controlled only if the trigger is set to none.
-            led.Trigger = "none";
-
-            // Do your job.
-            for (int i = 0; i < 10; i++)
+            if (controller.PinCount > 0)
             {
-                // Because the Raspberry Pi LED does not support dimming, brightness values greater than 0 can turn the LED on.
-                led.Brightness = 1;
-                Thread.Sleep(500);
+                Console.WriteLine("Blinking keyboard test. Press ESC to quit");
+                controller.OpenPin(led0);
+                controller.OpenPin(led1);
+                controller.OpenPin(led2);
+                controller.SetPinMode(led0, PinMode.Output);
+                controller.SetPinMode(led1, PinMode.Output);
+                controller.SetPinMode(led2, PinMode.Output);
+                PinValue state = PinValue.Low;
 
-                led.Brightness = 0;
-                Thread.Sleep(500);
+                ConsoleKey key = ConsoleKey.NoName;
+                while (key != ConsoleKey.Escape)
+                {
+                    state = !state;
+                    controller.Write(led0, state);
+                    controller.Write(led1, state);
+                    controller.Write(led2, state);
+                    Thread.Sleep(500);
+                    if (Console.KeyAvailable)
+                    {
+                        key = Console.ReadKey().Key;
+                    }
+                }
             }
-
-            // Give the control of led to the kernel.
-            led.Trigger = defaultTrigger;
         }
     }
 }

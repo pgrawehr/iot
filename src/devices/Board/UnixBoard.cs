@@ -40,24 +40,24 @@ namespace Iot.Device.Board
         public override GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme)
         {
             var driver = CreateGpioDriver();
-            return new GpioController(DefaultPinNumberingScheme, driver, this);
+            return new GpioController(DefaultPinNumberingScheme, new ManagedGpioDriver(this, driver));
         }
 
         protected virtual GpioDriver CreateGpioDriver()
         {
             if (_useLibgpiod == false)
             {
-                return new SysFsDriver(this);
+                return new SysFsDriver();
             }
 
             UnixDriver driver = null;
             try
             {
-                driver = new LibGpiodDriver(this);
+                driver = new LibGpiodDriver();
             }
             catch (PlatformNotSupportedException)
             {
-                driver = new SysFsDriver(this);
+                driver = new SysFsDriver();
             }
 
             return driver;
@@ -86,8 +86,7 @@ namespace Iot.Device.Board
             // Try to create a GpioController - if that succeeds, we're probably on compatible hardware
             try
             {
-                UnixDriver driver = UnixDriver.Create(this);
-                driver.Initialize();
+                UnixDriver driver = UnixDriver.Create();
                 _internalDriver = driver;
             }
             catch (Exception x) when (!(x is NullReferenceException))
@@ -98,19 +97,19 @@ namespace Iot.Device.Board
 
         public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
         {
-            return new UnixI2cDevice(connectionSettings, this);
+            return I2cDevice.Create(connectionSettings);
         }
 
         public override SpiDevice CreateSpiDevice(SpiConnectionSettings settings)
         {
-            return new UnixSpiDevice(settings, this);
+            return SpiDevice.Create(settings);
         }
 
         public override PwmChannel CreatePwmChannel(int chip, int channel, int frequency = 400, double dutyCyclePercentage = 0.5)
         {
-            return new UnixPwmChannel(this, chip, channel, frequency, dutyCyclePercentage);
+            return PwmChannel.Create(chip, channel, frequency, dutyCyclePercentage);
         }
-        
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
