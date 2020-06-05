@@ -502,6 +502,7 @@ namespace Ft4222.Samples
             Console.WriteLine("The button on GPIO 2 changes modes");
             Console.WriteLine("Press x to exit");
             disp.Output.ScrollUpDelay = TimeSpan.FromMilliseconds(500);
+            AutoResetEvent buttonClicked = new AutoResetEvent(false);
 
             void ChangeMode(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
             {
@@ -511,6 +512,8 @@ namespace Ft4222.Samples
                     // Don't change back to 0
                     mode = 1;
                 }
+
+                buttonClicked.Set();
             }
 
             gpioController.RegisterCallbackForPinValueChangedEvent(Gpio2, PinEventTypes.Falling, ChangeMode);
@@ -530,7 +533,7 @@ namespace Ft4222.Samples
 
             OpenHardwareMonitor hardwareMonitor = new OpenHardwareMonitor();
             hardwareMonitor.EnableDerivedSensors();
-            TimeSpan updateRate = TimeSpan.FromMilliseconds(500);
+            TimeSpan sleeptime = TimeSpan.FromMilliseconds(500);
             string modeName = string.Empty;
             string previousModeName = string.Empty;
             int firstCharInText = 0;
@@ -542,7 +545,7 @@ namespace Ft4222.Samples
                 }
 
                 // Default
-                updateRate = TimeSpan.FromMilliseconds(500);
+                sleeptime = TimeSpan.FromMilliseconds(500);
 
                 switch (mode)
                 {
@@ -555,7 +558,7 @@ namespace Ft4222.Samples
                     {
                         modeName = "Time";
                         disp.Output.ReplaceLine(1, DateTime.Now.ToLongTimeString());
-                        updateRate = TimeSpan.FromMilliseconds(200);
+                        sleeptime = TimeSpan.FromMilliseconds(200);
                         break;
                     }
 
@@ -567,10 +570,11 @@ namespace Ft4222.Samples
                     }
 
                     case 3:
-                        modeName = "Temperature";
-                        if (bmp != null && bmp.TryReadTemperature(out Temperature temp))
+                        modeName = "Temperature / Barometric Pressure";
+                        if (bmp != null && bmp.TryReadTemperature(out Temperature temp) && bmp.TryReadPressure(out Pressure p2))
                         {
-                            disp.Output.ReplaceLine(1, temp.ToString("s1", CultureInfo.CurrentCulture));
+                            Pressure p3 = WeatherHelper.CalculateBarometricPressure(p2, temp, StationAltitude);
+                            disp.Output.ReplaceLine(1, string.Format(CultureInfo.CurrentCulture, "{0:s1} {1:s1}", temp, p2));
                         }
                         else
                         {
@@ -579,10 +583,10 @@ namespace Ft4222.Samples
 
                         break;
                     case 4:
-                        modeName = "Raw Pressure";
-                        if (bmp != null && bmp.TryReadPressure(out Pressure p))
+                        modeName = "Temperature / Humidity";
+                        if (board.TryReadDht(3, 11, out temp, out var humidity))
                         {
-                            disp.Output.ReplaceLine(1, p.ToString("g", CultureInfo.CurrentCulture));
+                            disp.Output.ReplaceLine(1, string.Format(CultureInfo.CurrentCulture, "{0:s1} {1:s0}", temp, humidity));
                         }
                         else
                         {
@@ -592,11 +596,11 @@ namespace Ft4222.Samples
                         break;
 
                     case 5:
-                        modeName = "Barometric Pressure";
-                        if (bmp != null && bmp.TryReadPressure(out Pressure p2) && bmp.TryReadTemperature(out temp))
+                        modeName = "Dew point";
+                        if (bmp != null && bmp.TryReadPressure(out p2) && board.TryReadDht(3, 11, out temp, out humidity))
                         {
-                            Pressure p3 = WeatherHelper.CalculateBarometricPressure(p2, temp, StationAltitude);
-                            disp.Output.ReplaceLine(1, p3.ToString("s1", CultureInfo.CurrentCulture));
+                            Temperature dewPoint = WeatherHelper.CalculateDewPoint(temp, humidity.Percent);
+                            disp.Output.ReplaceLine(1, dewPoint.ToString("s1", CultureInfo.CurrentCulture));
                         }
                         else
                         {
@@ -688,7 +692,7 @@ namespace Ft4222.Samples
                     firstCharInText = 0;
                 }
 
-                Thread.Sleep(updateRate);
+                buttonClicked.WaitOne(sleeptime);
             }
 
             hardwareMonitor.Dispose();
