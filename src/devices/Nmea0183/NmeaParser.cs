@@ -132,7 +132,7 @@ namespace Iot.Device.Nmea0183
 
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
-            Console.WriteLine($"Sending sentence ${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()} from {source.InterfaceName} to {InterfaceName}");
+            // Console.WriteLine($"Sending sentence ${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()} from {source.InterfaceName} to {InterfaceName}");
             TalkerSentence ts = new TalkerSentence(sentence);
             string dataToSend = ts.ToString() + "\r\n";
             byte[] buffer = _encoding.GetBytes(dataToSend);

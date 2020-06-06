@@ -22,6 +22,7 @@ namespace Iot.Device.Nmea0183.Sentences
         protected static Calendar gregorianCalendar = new GregorianCalendar(GregorianCalendarTypes.USEnglish);
 
         private static TalkerId _ownTalkerId = DefaultTalkerId;
+        private DateTimeOffset? _dateTime;
 
         /// <summary>
         /// Our own talker ID (default when we send messages ourselves)
@@ -72,8 +73,23 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public DateTimeOffset? DateTime
         {
-            get;
-            protected set;
+            get
+            {
+                return _dateTime;
+            }
+            protected set
+            {
+                if (value.HasValue)
+                {
+                    if (value.Value.Offset != TimeSpan.Zero)
+                    {
+                        // ?????
+                        throw new InvalidOperationException();
+                    }
+                }
+
+                _dateTime = value;
+            }
         }
 
         /// <summary>
@@ -98,7 +114,7 @@ namespace Iot.Device.Nmea0183.Sentences
                     return TimeSpan.Zero;
                 }
 
-                return DateTimeOffset.UtcNow - DateTime.Value.UtcDateTime;
+                return DateTimeOffset.UtcNow - DateTime.Value;
             }
 
         }
@@ -204,8 +220,8 @@ namespace Iot.Device.Nmea0183.Sentences
                 int minute = int.Parse(time.Substring(2, 2));
                 int seconds = int.Parse(time.Substring(4, 2));
                 double millis = double.Parse("0" + time.Substring(6)) * 1000;
-                var t1 = new TimeSpan(0, hour, minute, seconds, (int)millis);
-                dateTime = lastSeenDate.Date + t1;
+                dateTime = new DateTimeOffset(lastSeenDate.Year, lastSeenDate.Month, lastSeenDate.Day,
+                               hour, minute, seconds, (int)millis, gregorianCalendar, TimeSpan.Zero);
             }
             else
             {

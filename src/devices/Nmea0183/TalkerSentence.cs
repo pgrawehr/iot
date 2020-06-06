@@ -50,7 +50,7 @@ namespace Iot.Device.Nmea0183
         static TalkerSentence()
         {
             s_registeredSentences = GetKnownSentences();
-            LastMessageTime = DateTimeOffset.Now; // In case the messages contain no date, we have to assume the computer is right
+            LastMessageTime = DateTimeOffset.UtcNow; // In case the messages contain no date, we have to assume the computer is right
         }
 
         /// <summary>

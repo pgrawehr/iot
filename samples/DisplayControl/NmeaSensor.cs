@@ -71,7 +71,8 @@ namespace DisplayControl
         private GlobalPositioningSystemFixData _lastGgaMessage;
         private RecommendedMinimumNavigationInformation _lastRmcMessage;
         private TrackMadeGood _lastVtgMessage;
-        private WindSpeedAndAngle _lastMwvMessage;
+        private WindSpeedAndAngle _lastMwvRelativeMessage;
+        private WindSpeedAndAngle _lastMwvTrueMessage;
         private Temperature? _lastTemperature;
         private double? _lastHumidity;
         private SentenceCache _sentenceCache;
@@ -258,13 +259,13 @@ namespace DisplayControl
             _track = new ObservableValue<double>("Track", "°", 0);
             _elevation = new ObservableValue<double>("Höhe", "m", 0);
             _parserMsg = new ObservableValue<string>("Nmea parser msg", string.Empty, "Ok");
-            _parserMsg.SuppressWarnings = true; // Do many intermittent errors
+            _parserMsg.SuppressWarnings = true; // Too many intermittent errors
             _windSpeedRelative = new ObservableValue<double>("Scheinbarer Wind", "kts");
-            _windSpeedRelative.ValueFormatter = "F1";
+            _windSpeedRelative.ValueFormatter = "{0:F1}";
             _windSpeedAbsolute = new ObservableValue<double>("Wahrer Wind", "kts");
-            _windSpeedAbsolute.ValueFormatter = "F1";
-            _windDirectionAbsolute = new ObservableValue<double>("Scheinbare Windrichtung", "°T");
-            _windDirectionRelative = new ObservableValue<double>("Wahre Windrichtung", "°T");
+            _windSpeedAbsolute.ValueFormatter = "{0:F1}";
+            _windDirectionAbsolute = new ObservableValue<double>("Wahre Windrichtung", "°T");
+            _windDirectionRelative = new ObservableValue<double>("Scheinbare Windrichtung", "°");
             _magneticVariationField = new ObservableValue<double>("Deklination", "°E");
             
             SensorValueSources.AddRange(new SensorValueSource[]
@@ -329,7 +330,7 @@ namespace DisplayControl
         {
             if (sentence is GlobalPositioningSystemFixData gga && gga.Valid)
             {
-                if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(1))
+                if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(2))
                 {
                     return;
                 }
@@ -340,7 +341,7 @@ namespace DisplayControl
 
             if (sentence is RecommendedMinimumNavigationInformation rmc)
             {
-                if (_lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(1))
+                if (_lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(2))
                 {
                     return;
                 }
@@ -356,6 +357,10 @@ namespace DisplayControl
 
             if (sentence is TrackMadeGood vtg)
             {
+                if (_lastVtgMessage != null && _lastVtgMessage.Age < TimeSpan.FromSeconds(2))
+                {
+                    return;
+                }
                 _lastVtgMessage = vtg;
                 _speed.Value = vtg.Speed.Knots;
                 _track.Value = vtg.CourseOverGroundTrue.Degrees;
@@ -363,14 +368,24 @@ namespace DisplayControl
 
             if (sentence is WindSpeedAndAngle mwv)
             {
-                _lastMwvMessage = mwv;
                 if (mwv.Relative)
                 {
+                    if (_lastMwvRelativeMessage != null && _lastMwvRelativeMessage.Age < TimeSpan.FromSeconds(2))
+                    {
+                        return;
+                    }
+                    _lastMwvRelativeMessage = mwv;
+
                     _windSpeedRelative.Value = mwv.Speed.Knots;
                     _windDirectionRelative.Value = mwv.Angle.Degrees;
                 }
                 else
                 {
+                    if (_lastMwvTrueMessage != null && _lastMwvTrueMessage.Age < TimeSpan.FromSeconds(2))
+                    {
+                        return;
+                    }
+                    _lastMwvTrueMessage = mwv;
                     _windSpeedAbsolute.Value = mwv.Speed.Knots;
                     _windDirectionAbsolute.Value = mwv.Angle.Degrees;
                 }
