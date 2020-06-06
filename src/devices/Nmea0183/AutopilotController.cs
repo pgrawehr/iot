@@ -11,6 +11,9 @@ namespace Iot.Device.Nmea0183
 {
     public sealed class AutopilotController : IDisposable
     {
+        // Every nth iteration log the output (i.e. no route. This will repeat frequently, since normally
+        // a specific state rests for longer)
+        private const int LogSkip = 50;
         private readonly NmeaSinkAndSource _output;
         private readonly TimeSpan _loopTime = TimeSpan.FromMilliseconds(200);
         private bool _threadRunning;
@@ -88,7 +91,7 @@ namespace Iot.Device.Nmea0183
             {
                 // Note that the RMB message may be valid without a next WP
                 // TODO: Find out ourselves
-                if (loops % 20 == 0)
+                if (loops % LogSkip == 0)
                 {
                     Console.WriteLine("Autopilot: No current leg on incoming RMB");
                 }
@@ -98,6 +101,11 @@ namespace Iot.Device.Nmea0183
 
             if (!_cache.TryGetLastSentence(HeadingAndDeviation.Id, out HeadingAndDeviation deviation) || !deviation.Variation.HasValue)
             {
+                if (loops % LogSkip == 0)
+                {
+                    Console.WriteLine("Autopilot: No magnetic variance");
+                }
+
                 return;
             }
 
@@ -121,7 +129,9 @@ namespace Iot.Device.Nmea0183
                 }
                 else
                 {
-                    next = currentRoute.FirstOrDefault(x => x.WaypointName == nextWayPoint);
+                    // Better to compare by position rather than name, because the names (unless using identifiers) may
+                    // not be unique.
+                    next = currentRoute.FirstOrDefault(x => x.Position.EqualPosition(currentLeg.NextWayPoint));
                 }
 
                 if (next != null && next.Position != null && (_knownNextWaypoint == null || next.Position.EqualPosition(_knownNextWaypoint.Position) == false))
@@ -160,7 +170,12 @@ namespace Iot.Device.Nmea0183
 
                 if (next == null)
                 {
-                    // No next waypoint
+                    // No position for next waypoint
+                    if (loops % LogSkip == 0)
+                    {
+                        Console.WriteLine("Autopilot: No position for next waypoint");
+                    }
+
                     return;
                 }
 

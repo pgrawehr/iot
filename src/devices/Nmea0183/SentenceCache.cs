@@ -216,6 +216,12 @@ namespace Iot.Device.Nmea0183
                 return null;
             }
 
+            if (wpNames.GroupBy(x => x).Any(g => g.Count() > 1))
+            {
+                // TODO: Report why (route contains duplicates)
+                return null;
+            }
+
             for (var index = 0; index < wpNames.Count; index++)
             {
                 var name = wpNames[index];
@@ -223,6 +229,11 @@ namespace Iot.Device.Nmea0183
                 if (_wayPoints.TryGetValue(name, out var pt))
                 {
                     position = pt.Position;
+                }
+                else
+                {
+                    // Incomplete route - need to wait for all wpt messages
+                    return null;
                 }
 
                 RoutePoint rpt = new RoutePoint(routeName, index, wpNames.Count, name, position, null, null);
