@@ -27,6 +27,7 @@ namespace DisplayControl
         private VoltageWithLimits _button3;
         private VoltageWithLimits _button4;
         private VoltageWithLimits _voltage5V;
+        private bool _atLeastOneButtonPressed = false;
 
         public AdcSensors()
         {
@@ -176,10 +177,68 @@ namespace DisplayControl
                     // Todo: find out which button might be pressed (obstructed)
                     // if the low average is high the LED might not have an effect at all. 
                     // if the low average equals the high average, the led has no effect (or is broken)
-                    _button1.Value = b1High;
-                    _button2.Value = b2High;
-                    _button3.Value = b3High;
-                    _button4.Value = b4High;
+                    if (!sunIsShining)
+                    {
+                        _button1.Value = b1High;
+                        _button2.Value = b2High;
+                        _button3.Value = b3High;
+                        _button4.Value = b4High;
+
+                        // The "normal" button mode: buttons are pressed when the voltage rises
+                        double triggerValue = averageHigh + 0.3;
+                        if (b1High > triggerValue)
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Back);
+                        }
+                        else if (b2High > triggerValue)
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Previous);
+                        }
+                        else if (b3High > triggerValue)
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Next);
+                        }
+                        else if (b4High > triggerValue)
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Enter);
+                        }
+                        else
+                        {
+                            // Reset once no buttons are pressed any more
+                            _atLeastOneButtonPressed = false;
+                        }
+                    }
+                    else
+                    {
+                        // the environmental light is so high, that the LED has no effect and the input
+                        // is more or less saturated regardless of whether buttons are pressed or not
+                        _button1.Value = -b1Low; // Negative, so we can distinguish the case
+                        _button2.Value = -b2Low;
+                        _button3.Value = -b3Low;
+                        _button4.Value = -b4Low;
+                        const double lowThreshold = 0.5;
+                        if (b1Low < lowThreshold && Math.Abs(b1Low - averageLow) > 0.3)
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Back);
+                        }
+                        else if (b2Low < lowThreshold && Math.Abs(b2Low - averageLow) > 0.3)
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Previous);
+                        }
+                        else if (b3Low < lowThreshold && Math.Abs(b3Low - averageLow) > 0.3)
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Next);
+                        }
+                        else if (b4Low < lowThreshold && Math.Abs(b4Low - averageLow) > 0.3)
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Enter);
+                        }
+                        else
+                        {
+                            // Reset once no buttons are pressed any more
+                            _atLeastOneButtonPressed = false;
+                        }
+                    }
                 }
                 catch (IOException x)
                 {
@@ -189,6 +248,17 @@ namespace DisplayControl
                 m_cancellationTokenSource.Token.WaitHandle.WaitOne(200);
                 count++;
             }
+        }
+
+        private void SendButtonPressedIfOk(DisplayButton button)
+        {
+            if (_atLeastOneButtonPressed)
+            {
+                // Already one button pressed. Wait until released
+                return;
+            }
+
+            ButtonPressed?.Invoke(button, true);
         }
 
         public void Dispose()
