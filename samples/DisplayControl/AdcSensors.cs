@@ -1,6 +1,7 @@
 ﻿using Iot.Device.Ads1115;
 using System;
 using System.Collections.Generic;
+using System.Device.Gpio;
 using System.Device.I2c;
 using System.IO;
 using System.Text;
@@ -13,6 +14,8 @@ namespace DisplayControl
         private readonly List<SensorValueSource> _sensorValueSources;
         private Ads1115 m_cpuAdc;
         private Ads1115 m_displayAdc;
+        private GpioController _ledController;
+        private int _ledPin;
 
         private Thread m_pollThread;
         private CancellationTokenSource m_cancellationTokenSource;
@@ -34,8 +37,10 @@ namespace DisplayControl
 
         public IList<SensorValueSource> SensorValueSources => _sensorValueSources;
 
-        public void Init()
+        public void Init(GpioController ledController, int ledPin)
         {
+            _ledController = ledController ?? throw new ArgumentNullException(nameof(ledController));
+            _ledPin = ledPin;
             var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.GND));
             m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.PowerDown);
 
@@ -46,17 +51,15 @@ namespace DisplayControl
             _currentSunBrightness = new ObservableValue<double>("Sunlight strength", "V", 0.0);
             _voltage5V = new VoltageWithLimits("5V Supply Voltage", 4.8, 5.2);
             _button1 = new VoltageWithLimits("Button 1 voltage", -0.1, 2.55);
-            _button1.LimitTriggered += LimitTriggered;
             _button1.SuppressWarnings = true;
             _button2 = new VoltageWithLimits("Button 2 voltage", -0.1, 2.7);
-            _button2.LimitTriggered += LimitTriggered;
             _button2.SuppressWarnings = true;
             _button3 = new VoltageWithLimits("Button 3 voltage", -0.1, 2.7);
-            _button3.LimitTriggered += LimitTriggered;
             _button3.SuppressWarnings = true;
             _button4 = new VoltageWithLimits("Button 4 voltage", -0.1, 2.7);
-            _button4.LimitTriggered += LimitTriggered;
             _button4.SuppressWarnings = true;
+            _ledController.OpenPin(_ledPin, PinMode.Output);
+            _ledController.Write(_ledPin, PinValue.Low);
 
             _sensorValueSources.Add(_voltage3_3V);
             _sensorValueSources.Add(_currentSunBrightness);
@@ -154,10 +157,24 @@ namespace DisplayControl
 
                 try
                 {
-                    _button1.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
-                    _button2.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
-                    _button3.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
-                    _button4.Value = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
+                    // First, read all four inputs with the led off (default)
+                    double b1Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
+                    double b2Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
+                    double b3Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
+                    double b4Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
+                    _ledController.Write(_ledPin, PinValue.High);
+                    // Then read them again, now with the reflection led on
+                    double b1High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
+                    double b2High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
+                    double b3High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
+                    double b4High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
+                    _ledController.Write(_ledPin, PinValue.Low);
+                    double averageLow = (b1Low + b2Low + b3Low + b4Low) / 4;
+                    double averageHigh = (b1High + b2High + b3High + b4High) / 4;
+                    bool sunIsShining = averageLow > 1.5;
+                    // Todo: find out which button might be pressed (obstructed)
+                    // if the low average is high the LED might not have an effect at all. 
+                    // if the low average equals the high average, the led has no effect (or is broken)
                 }
                 catch (IOException x)
                 {
