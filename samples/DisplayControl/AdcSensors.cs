@@ -58,7 +58,8 @@ namespace DisplayControl
             _button3.SuppressWarnings = true;
             _button4 = new VoltageWithLimits("Button 4 voltage", -0.1, 2.7);
             _button4.SuppressWarnings = true;
-            _ledController.OpenPin(_ledPin, PinMode.Output);
+            // The led controller has the pin already opened, so only set the mode
+            _ledController.SetPinMode(_ledPin, PinMode.Output);
             _ledController.Write(_ledPin, PinValue.Low);
 
             _sensorValueSources.Add(_voltage3_3V);
@@ -175,6 +176,10 @@ namespace DisplayControl
                     // Todo: find out which button might be pressed (obstructed)
                     // if the low average is high the LED might not have an effect at all. 
                     // if the low average equals the high average, the led has no effect (or is broken)
+                    _button1.Value = b1High;
+                    _button2.Value = b2High;
+                    _button3.Value = b3High;
+                    _button4.Value = b4High;
                 }
                 catch (IOException x)
                 {

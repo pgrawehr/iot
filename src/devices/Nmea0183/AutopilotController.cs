@@ -51,6 +51,7 @@ namespace Iot.Device.Nmea0183
 
             _threadRunning = true;
             _updateThread = new Thread(Loop);
+            _updateThread.Name = "Autopilot Control Loop";
             _updateThread.Start();
         }
 
@@ -80,10 +81,18 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public void CalculateNewStatus(int loops, DateTimeOffset now)
         {
-            if (!_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination currentLeg))
+            if (!_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination currentLeg) ||
+                currentLeg == null ||
+                currentLeg.Valid == false ||
+                currentLeg.NextWayPoint == null)
             {
+                // Note that the RMB message may be valid without a next WP
                 // TODO: Find out ourselves
-                Console.WriteLine("No current leg.");
+                if (loops % 20 == 0)
+                {
+                    Console.WriteLine("Autopilot: No current leg on incoming RMB");
+                }
+
                 return;
             }
 
@@ -223,6 +232,7 @@ namespace Iot.Device.Nmea0183
                     }
                 }
 
+                // Console.WriteLine("Now sending AP sentences");
                 _output.SendSentences(sentencesToSend);
             }
         }

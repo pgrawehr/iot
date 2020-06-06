@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Ports;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
@@ -136,7 +137,7 @@ namespace DisplayControl
             {
                 // Send these from handheld to the nav software, so that this picks up the current destination.
                 // signalK is able to do this, OpenCPN is not
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut }, true, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut }, RemoveNonAsciiFromMessageForSignalk, false, true));
                 // And send the result of that nav operation to the ship 
                 // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
                 // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
@@ -163,6 +164,91 @@ namespace DisplayControl
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { HandheldSourceName }, true, true));
 
             return rules;
+        }
+
+        private NmeaSentence RemoveNonAsciiFromMessageForSignalk(NmeaSinkAndSource source, NmeaSinkAndSource destination, NmeaSentence sentence)
+        {
+            NmeaSentence correctedMessage = sentence;
+            if (sentence is RawSentence)
+            {
+                // Only the non-raw (recognized) sentences can be manipulated
+                return null;
+            }
+
+            if (sentence is RecommendedMinimumNavToDestination rmb)
+            {
+                if (rmb.NextWayPointName.Any(c => c >= 128) || rmb.PreviousWayPointName.Any(c => c >= 128))
+                {
+                    correctedMessage = new RecommendedMinimumNavToDestination(rmb.DateTime, rmb.CrossTrackError, RemoveNonAscii(rmb.PreviousWayPointName), 
+                        RemoveNonAscii(rmb.NextWayPointName), rmb.NextWayPoint, rmb.DistanceToWayPoint.GetValueOrDefault(Length.FromNauticalMiles(99)), 
+                        rmb.BearingToWayPoint.GetValueOrDefault(Angle.Zero), rmb.ApproachSpeed.GetValueOrDefault(Speed.Zero), rmb.Arrived);
+                }
+            }
+
+            if (sentence is BearingOriginToDestination bod)
+            {
+                if (bod.DestinationName.Any(c => c >= 128) || bod.OriginName.Any(c => c >= 128))
+                {
+                    correctedMessage = new BearingOriginToDestination(bod.BearingTrue, bod.BearingMagnetic, RemoveNonAscii(bod.OriginName), 
+                        RemoveNonAscii(bod.DestinationName));
+                }
+            }
+
+            if (sentence is BearingAndDistanceToWayPoint bwc)
+            {
+                if (bwc.NextWayPointName.Any(c => c >= 128))
+                {
+                    correctedMessage = new BearingAndDistanceToWayPoint(bwc.DateTime, RemoveNonAscii(bwc.NextWayPointName), bwc.NextWayPoint, 
+                        bwc.DistanceToWayPoint.GetValueOrDefault(Length.FromNauticalMiles(99)), 
+                        bwc.BearingTrueToWayPoint.GetValueOrDefault(Angle.Zero), bwc.BearingMagneticToWayPoint.GetValueOrDefault(Angle.Zero));
+                }
+            }
+
+            if (sentence is Route rte)
+            {
+                correctedMessage = new Route(RemoveNonAscii(rte.RouteName), rte.TotalSequences, rte.Sequence, rte.WaypointNames.Select(x => RemoveNonAscii(x)).ToList());
+            }
+
+            if (sentence is WayPoint wpl)
+            {
+                correctedMessage = new WayPoint(wpl.Position, RemoveNonAscii(wpl.Name));
+            }
+
+            if (correctedMessage.ToNmeaMessage().Any(x => x >= 128))
+            {
+                throw new InvalidOperationException();
+            }
+            return correctedMessage;
+        }
+
+        private string RemoveNonAscii(string input)
+        {
+            for (int i = 0; i < input.Length; i++)
+            {
+                char c = input[i];
+                switch (c)
+                {
+                    case 'ä':
+                        input = input.Replace("ä", "ae");
+                        break;
+                    case 'ü':
+                        input = input.Replace("ü", "ue");
+                        break;
+                    case 'ö':
+                        input = input.Replace("ö", "oe");
+                        break;
+
+                    default:
+                        if (c > 127)
+                        {
+                            input = input.Replace(c, '?');
+                        }
+
+                        break;
+                }
+            }
+
+            return input;
         }
 
         public void Initialize()
