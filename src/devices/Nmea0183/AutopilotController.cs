@@ -34,6 +34,14 @@ namespace Iot.Device.Nmea0183
             _knownNextWaypoint = null;
         }
 
+        public bool Running
+        {
+            get
+            {
+                return _threadRunning && _updateThread != null && _updateThread.IsAlive;
+            }
+        }
+
         public void Start()
         {
             if (_threadRunning)
