@@ -103,7 +103,7 @@ namespace Iot.Device.Nmea0183.Sentences
         : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
         {
             NextWayPointName = nextWayPointName;
-            NextWayPoint = nextWayPoint;
+            NextWayPoint = nextWayPoint ?? throw new ArgumentNullException(nameof(nextWayPoint));
             DistanceToWayPoint = distanceToWayPoint;
             BearingTrueToWayPoint = bearingTrueToWayPoint.Normalize(true);
             BearingMagneticToWayPoint = bearingMagneticToWayPoint.Normalize(true);

@@ -148,7 +148,8 @@ namespace Iot.Device.Nmea0183
             const int SentenceHeaderLength = 7;
 
             // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf page 2
-            const int MaxSentenceLength = 80 + 1; // + 1 for '$'
+            // defines this as 80 + 1 (for $), but we don't really care if it is something within a reasonable limit.
+            const int MaxSentenceLength = 256;
 
             if (sentence == null)
             {

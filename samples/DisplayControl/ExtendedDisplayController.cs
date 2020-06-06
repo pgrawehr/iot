@@ -22,6 +22,7 @@ namespace DisplayControl
             Led4Red = 7,
             Led5Green = 8,
             Led5Red = 9,
+            KeyPadLeds = 10,
             DisplayBrightnessStep = 12,
             DisplayBrightnessDirection = 11,
             DisplayBrightnessChipSelect = 13,
@@ -60,6 +61,14 @@ namespace DisplayControl
             Write(PinUsage.DisplayBrightnessStep, PinValue.High);
 
             ClearLedDisplay();
+        }
+
+        public GpioController McpController
+        {
+            get
+            {
+                return _controllerUsingMcp;
+            }
         }
 
         public void SoundAlarm(bool enable)

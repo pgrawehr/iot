@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -66,7 +68,7 @@ namespace Iot.Device.Nmea0183
                     var client = _server.AcceptTcpClient();
                     lock (_lock)
                     {
-                        NmeaParser parser = new NmeaParser(_activeParsers.Count.ToString(), client.GetStream(), client.GetStream());
+                        NmeaParser parser = new NmeaParser($"{InterfaceName}: {_activeParsers.Count}", client.GetStream(), client.GetStream());
                         parser.OnNewSequence += OnSentenceReceivedFromClient;
                         parser.OnParserError += ParserOnParserError;
                         parser.StartDecode();
@@ -131,9 +133,18 @@ namespace Iot.Device.Nmea0183
         {
             lock (_activeParsers)
             {
-                foreach (var parser in _activeParsers)
+                // Clone, because in case of an error, the list may change
+                var parsers = _activeParsers.ToList();
+                foreach (var parser in parsers)
                 {
-                    parser.SendSentence(source, sentence);
+                    try
+                    {
+                        parser.SendSentence(source, sentence);
+                    }
+                    catch (IOException x)
+                    {
+                        FireOnParserError($"Error sending message to {parser.InterfaceName}: {x.Message}", NmeaError.PortClosed);
+                    }
                 }
             }
         }

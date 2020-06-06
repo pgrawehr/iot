@@ -62,7 +62,7 @@ namespace Iot.Device.Nmea0183
 
                 _cancellationTokenSource = new CancellationTokenSource();
                 _parserThread = new Thread(Parser);
-                _parserThread.Name = "Nmea Parser";
+                _parserThread.Name = $"Nmea Parser for {InterfaceName}";
                 _parserThread.Start();
             }
         }
@@ -89,9 +89,16 @@ namespace Iot.Device.Nmea0183
 
                 if (currentLine == null)
                 {
-                    if (_reader.EndOfStream)
+                    try
                     {
-                        FireOnParserError("End of stream detected.", NmeaError.PortClosed);
+                        if (_reader.EndOfStream)
+                        {
+                            FireOnParserError("End of stream detected.", NmeaError.PortClosed);
+                        }
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Ignore here (already reported above)
                     }
 
                     Thread.Sleep(10); // to prevent busy-waiting
@@ -125,6 +132,7 @@ namespace Iot.Device.Nmea0183
 
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
+            // Console.WriteLine($"Sending sentence ${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()} from {source.InterfaceName} to {InterfaceName}");
             TalkerSentence ts = new TalkerSentence(sentence);
             string dataToSend = ts.ToString() + "\r\n";
             byte[] buffer = _encoding.GetBytes(dataToSend);

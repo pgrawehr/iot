@@ -184,7 +184,7 @@ namespace DisplayControl
 
                 WriteLineToConsoleAndDisplay("ADC...");
                 _adcSensors = new AdcSensors();
-                _adcSensors.Init();
+                _adcSensors.Init(extendedDisplayController.McpController, 10);
                 _adcSensors.ButtonPressed += DisplayButtonPressed;
 
                 allSources.AddRange(_adcSensors.SensorValueSources);

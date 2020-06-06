@@ -38,6 +38,16 @@ namespace Iot.Device.Nmea0183
 
         public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out Length distance, out Angle direction)
         {
+            if (position1 == null)
+            {
+                throw new ArgumentNullException(nameof(position1));
+            }
+
+            if (position2 == null)
+            {
+                throw new ArgumentNullException(nameof(position2));
+            }
+
             DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out double dist, out double dir);
             distance = Length.FromMeters(dist);
             direction = Angle.FromDegrees(dir).Normalize(true);
@@ -45,6 +55,16 @@ namespace Iot.Device.Nmea0183
 
         public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out Length distance, out Angle directionAtStart, out Angle directionAtEnd)
         {
+            if (position1 == null)
+            {
+                throw new ArgumentNullException(nameof(position1));
+            }
+
+            if (position2 == null)
+            {
+                throw new ArgumentNullException(nameof(position2));
+            }
+
             DistAndDir(position1.Latitude, position1.Longitude, position2.Latitude, position2.Longitude, out double dist, out double dirAtStart, out double dirAtEnd);
 
             distance = Length.FromMeters(dist);
@@ -74,6 +94,16 @@ namespace Iot.Device.Nmea0183
         public static void CrossTrackError(GeographicPosition origin, GeographicPosition destination, GeographicPosition currentPosition,
             out Length crossTrackError, out Length distanceTogoAlongRoute)
         {
+            if (origin == null)
+            {
+                throw new ArgumentNullException(nameof(origin));
+            }
+
+            if (destination == null)
+            {
+                throw new ArgumentNullException(nameof(destination));
+            }
+
             DistAndDir(origin, destination, out _, out _, out Angle trackEndDirection);
             DistAndDir(currentPosition, destination, out Length distanceToDestination, out Angle currentToDestination);
 
@@ -92,6 +122,16 @@ namespace Iot.Device.Nmea0183
         /// <returns>Speed towards target. Negative if moving away from target</returns>
         public static Speed CalculateVelocityTowardsTarget(GeographicPosition destination, GeographicPosition currentPosition, Speed currentSpeed, Angle currentTrack)
         {
+            if (destination == null)
+            {
+                throw new ArgumentNullException(nameof(destination));
+            }
+
+            if (currentPosition == null)
+            {
+                throw new ArgumentNullException(nameof(currentPosition));
+            }
+
             DistAndDir(currentPosition, destination, out Length distanceToDestination, out Angle currentToDestination);
             Angle delta = AngleExtensions.Difference(currentToDestination, currentTrack);
             return currentSpeed * Math.Cos(delta.Radians);
@@ -99,6 +139,11 @@ namespace Iot.Device.Nmea0183
 
         public static GeographicPosition CalcCoords(GeographicPosition start, double direction, double distance)
         {
+            if (start == null)
+            {
+                throw new ArgumentNullException(nameof(start));
+            }
+
             GeoidCalculations.geod_direct(_geod, start.Latitude, start.Longitude, direction, distance, out double resultLatitude, out double resultLongitude, out _);
             return new GeographicPosition(resultLatitude, resultLongitude, start.EllipsoidalHeight);
         }
@@ -110,6 +155,16 @@ namespace Iot.Device.Nmea0183
 
         public static IList<GeographicPosition> CalculateRoute(GeographicPosition start, GeographicPosition end, double distanceStep)
         {
+            if (start == null)
+            {
+                throw new ArgumentNullException(nameof(start));
+            }
+
+            if (end == null)
+            {
+                throw new ArgumentNullException(nameof(end));
+            }
+
             IList<GeographicPosition> ret = new List<GeographicPosition>();
             GeoidCalculations.geod_geodesicline line;
             GeoidCalculations.geod_inverseline(out line, _geod, start.Latitude, start.Longitude, end.Latitude, end.Longitude, 0);
@@ -125,6 +180,11 @@ namespace Iot.Device.Nmea0183
 
         public static IList<GeographicPosition> CalculateRoute(GeographicPosition start, double direction, double distance, double distanceStep)
         {
+            if (start == null)
+            {
+                throw new ArgumentNullException(nameof(start));
+            }
+
             IList<GeographicPosition> ret = new List<GeographicPosition>();
             GeoidCalculations.geod_geodesicline line;
             GeoidCalculations.geod_directline(out line, _geod, start.Latitude, start.Longitude, direction, distance, 0);
