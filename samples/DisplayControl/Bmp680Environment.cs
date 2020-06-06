@@ -44,6 +44,10 @@ namespace DisplayControl
 
             _bme680.PressureSampling = Sampling.HighResolution;
 
+            // Disable gas conversion - the value doesn't say much yet and it just heats up the sensor
+            _bme680.GasConversionIsEnabled = false;
+            _bme680.HeaterIsEnabled = false;
+
             _temperature = new ObservableValue<double>(MAIN_TEMP_SENSOR, "°C", double.NaN);
             _pressure = new ObservableValue<double>("Raw Pressure", "hPa", double.NaN);
             _barometric = new ObservableValue<double>(MAIN_PRESSURE_SENSOR, "hPa", double.NaN);
@@ -59,7 +63,7 @@ namespace DisplayControl
             SensorValueSources.Add(_temperature);
             SensorValueSources.Add(_pressure);
             SensorValueSources.Add(_humidity);
-            SensorValueSources.Add(_gasValue);
+            // SensorValueSources.Add(_gasValue);
             SensorValueSources.Add(_barometric);
             SensorValueSources.Add(_dewPoint);
 
@@ -90,10 +94,10 @@ namespace DisplayControl
                 _humidity.Value = humidity;
             }
 
-            if (_bme680.TryReadGasResistance(out var gasResistance))
-            {
-                _gasValue.Value = gasResistance;
-            }
+            ////if (_bme680.TryReadGasResistance(out var gasResistance))
+            ////{
+            ////    _gasValue.Value = gasResistance;
+            ////}
 
             if (temp && press && hum)
             {
