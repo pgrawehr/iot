@@ -35,6 +35,7 @@ namespace Iot.Device.Nmea0183
             _threadRunning = false;
             _currentOrigin = null;
             _knownNextWaypoint = null;
+            OperationState = AutopilotErrorState.Unknown;
         }
 
         public bool Running
@@ -43,6 +44,12 @@ namespace Iot.Device.Nmea0183
             {
                 return _threadRunning && _updateThread != null && _updateThread.IsAlive;
             }
+        }
+
+        public AutopilotErrorState OperationState
+        {
+            get;
+            private set;
         }
 
         public void Start()
@@ -114,17 +121,19 @@ namespace Iot.Device.Nmea0183
                 string previousWayPoint = currentLeg.PreviousWayPointName;
                 string nextWayPoint = currentLeg.NextWayPointName;
 
-                List<RoutePoint> currentRoute = _cache.GetCurrentRoute();
+                List<RoutePoint> currentRoute;
                 RoutePoint next;
-                if (currentRoute == null || currentRoute.Count == 0)
+                if (_cache.TryGetCurrentRoute(out currentRoute) != AutopilotErrorState.RoutePresent)
                 {
                     // No route. But if we have an RMB message, there could still be a current target (typically one that was
                     // directly selected with "Goto")
                     if (string.IsNullOrWhiteSpace(currentLeg.NextWayPointName) || currentLeg.NextWayPoint == null)
                     {
-                        Console.WriteLine("No route and RMB message empty");
+                        OperationState = AutopilotErrorState.NoRoute;
+                        return;
                     }
 
+                    OperationState = AutopilotErrorState.DirectGoto;
                     next = new RoutePoint("Goto", 0, 1, currentLeg.NextWayPointName, currentLeg.NextWayPoint, null, null);
                 }
                 else
@@ -171,11 +180,7 @@ namespace Iot.Device.Nmea0183
                 if (next == null)
                 {
                     // No position for next waypoint
-                    if (loops % LogSkip == 0)
-                    {
-                        Console.WriteLine("Autopilot: No position for next waypoint");
-                    }
-
+                    OperationState = AutopilotErrorState.InvalidNextWaypoint;
                     return;
                 }
 
@@ -223,7 +228,7 @@ namespace Iot.Device.Nmea0183
                 {
                     // Only send these once a second
                     IEnumerable<Route> rte;
-                    IEnumerable<WayPoint> wpt;
+                    IEnumerable<Waypoint> wpt;
                     if (currentRoute == null || currentRoute.Count == 0)
                     {
                         currentRoute = new List<RoutePoint>();
@@ -247,16 +252,16 @@ namespace Iot.Device.Nmea0183
                     }
                 }
 
-                // Console.WriteLine("Now sending AP sentences");
+                OperationState = AutopilotErrorState.OperatingAsSlave;
                 _output.SendSentences(sentencesToSend);
             }
         }
 
-        private bool CreateRouteMessages(List<RoutePoint> currentRoute, out IEnumerable<Route> rte, out IEnumerable<WayPoint> wpt)
+        private bool CreateRouteMessages(List<RoutePoint> currentRoute, out IEnumerable<Route> rte, out IEnumerable<Waypoint> wpt)
         {
             // empty route (but valid message)
             List<Route> route = new List<Route>() { new Route(string.Empty, 1, 1, new List<string>()) };
-            List<WayPoint> waypoints = new List<WayPoint>();
+            List<Waypoint> waypoints = new List<Waypoint>();
             if (currentRoute.Any() == false)
             {
                 rte = route;
@@ -277,7 +282,7 @@ namespace Iot.Device.Nmea0183
                     currentRouteElements = new List<string>();
                 }
 
-                waypoints.Add(new WayPoint(pt.Position, pt.WaypointName));
+                waypoints.Add(new Waypoint(pt.Position, pt.WaypointName));
             }
 
             if (currentRouteElements.Any())

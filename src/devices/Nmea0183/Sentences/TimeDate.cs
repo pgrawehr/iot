@@ -58,7 +58,8 @@ namespace Iot.Device.Nmea0183.Sentences
             if (localTimeOfDay.HasValue)
             {
                 DateTimeOffset t = new DateTimeOffset((int)year, (int)month, (int)day, localTimeOfDay.Value.Hours, localTimeOfDay.Value.Minutes, localTimeOfDay.Value.Seconds,
-                    localTimeOfDay.Value.Milliseconds, gregorianCalendar, TimeSpan.FromHours(offset));
+                    localTimeOfDay.Value.Milliseconds, gregorianCalendar, TimeSpan.Zero);
+                LocalTimeOffset = TimeSpan.FromHours(offset);
                 DateTime = t;
                 Valid = true;
             }
@@ -66,6 +67,7 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 // Set the reception time anyway, but tell clients that this was not a complete ZDA message
                 Valid = false;
+                LocalTimeOffset = TimeSpan.Zero;
                 DateTime = time;
             }
         }
@@ -73,6 +75,8 @@ namespace Iot.Device.Nmea0183.Sentences
         public TimeDate(DateTimeOffset dateTime)
         : base(OwnTalkerId, Id, dateTime)
         {
+            DateTime = dateTime.UtcDateTime;
+            LocalTimeOffset = dateTime.Offset;
             Valid = true;
         }
 
@@ -80,6 +84,11 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             get;
             set;
+        }
+
+        public TimeSpan LocalTimeOffset
+        {
+            get;
         }
 
         public override string ToNmeaMessage()
@@ -92,8 +101,8 @@ namespace Iot.Device.Nmea0183.Sentences
                 string year = t.ToString("yyyy", CultureInfo.InvariantCulture);
                 string month = t.ToString("MM", CultureInfo.InvariantCulture);
                 string day = t.ToString("dd", CultureInfo.InvariantCulture);
-                string offset = t.Offset.Hours.ToString("00", CultureInfo.InvariantCulture);
-                if (t.Offset >= TimeSpan.Zero)
+                string offset = LocalTimeOffset.Hours.ToString("00", CultureInfo.InvariantCulture);
+                if (LocalTimeOffset >= TimeSpan.Zero)
                 {
                     offset = "+" + offset;
                 }
@@ -102,7 +111,7 @@ namespace Iot.Device.Nmea0183.Sentences
                     offset = "-" + offset;
                 }
 
-                string minuteOffset = t.Offset.Minutes.ToString("00", CultureInfo.InvariantCulture);
+                string minuteOffset = LocalTimeOffset.Minutes.ToString("00", CultureInfo.InvariantCulture);
 
                 // Return as UTC for now
                 if (ReverseDateFormat)

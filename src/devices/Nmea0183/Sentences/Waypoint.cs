@@ -9,7 +9,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// <summary>
     /// WPT sentence: Identifies a single waypoint (may be sent multiple times with different names)
     /// </summary>
-    public class WayPoint : NmeaSentence
+    public class Waypoint : NmeaSentence
     {
         /// <summary>
         /// This sentence's id
@@ -21,7 +21,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs a new WPT sentence
         /// </summary>
-        public WayPoint(GeographicPosition position, string name)
+        public Waypoint(GeographicPosition position, string name)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Position = position ?? throw new ArgumentNullException(nameof(position));
@@ -32,7 +32,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Internal constructor
         /// </summary>
-        public WayPoint(TalkerSentence sentence, DateTimeOffset time)
+        public Waypoint(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
@@ -40,7 +40,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
         /// </summary>
-        public WayPoint(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+        public Waypoint(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();

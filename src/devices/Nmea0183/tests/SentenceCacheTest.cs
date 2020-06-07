@@ -44,7 +44,7 @@ namespace Iot.Device.Nmea0183.Tests
             var sentence1 = new Route("RT", 1, 1, new List<string>());
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
 
-            Assert.Null(_cache.GetCurrentRoute());
+            Assert.Equal(AutopilotErrorState.WaypointsWithoutPosition, _cache.TryGetCurrentRoute(out _));
         }
 
         [Fact]
@@ -53,7 +53,10 @@ namespace Iot.Device.Nmea0183.Tests
             var sentence1 = new Route("RT", 1, 1, new List<string>() { "A", "B" });
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
 
-            var route = _cache.GetCurrentRoute();
+            _cache.Add(new Waypoint(new GeographicPosition(), "A"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "B"));
+
+            Assert.Equal(AutopilotErrorState.RoutePresent, _cache.TryGetCurrentRoute(out var route));
             Assert.Equal(2, route.Count);
             Assert.Equal("RT", route[0].RouteName);
             Assert.Equal(2, route[0].TotalPointsInRoute);
@@ -61,25 +64,6 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Equal("A", route[0].WaypointName);
             Assert.Equal("B", route[1].WaypointName);
             Assert.Equal(1, route[1].IndexInRoute);
-        }
-
-        [Fact]
-        public void GetCompleteRouteWithWaypointLookup()
-        {
-            var sentence1 = new Route("RT", 1, 1, new List<string>() { "A", "B" });
-            var sentence2 = new WayPoint(new GeographicPosition(1, 2, 3), "A");
-            _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
-            _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
-
-            var route = _cache.GetCurrentRoute();
-            Assert.Equal(2, route.Count);
-            Assert.Equal("RT", route[0].RouteName);
-            Assert.Equal(2, route[0].TotalPointsInRoute);
-            Assert.Equal(0, route[0].IndexInRoute);
-            Assert.Equal("A", route[0].WaypointName);
-            Assert.Equal("B", route[1].WaypointName);
-            Assert.Equal(1, route[1].IndexInRoute);
-            Assert.NotEqual(0, route[0].Position.Latitude);
         }
 
         [Fact]
@@ -90,8 +74,12 @@ namespace Iot.Device.Nmea0183.Tests
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
+            var sentence2 = new Waypoint(new GeographicPosition(1, 2, 3), "A");
+            _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
+            var sentence3 = new Waypoint(new GeographicPosition(2, 3, 4), "B");
+            _sink.Raise(x => x.OnNewSequence += null, null, sentence3);
 
-            var route = _cache.GetCurrentRoute();
+            Assert.Equal(AutopilotErrorState.RoutePresent, _cache.TryGetCurrentRoute(out var route));
             Assert.Equal(2, route.Count);
         }
 
@@ -105,7 +93,12 @@ namespace Iot.Device.Nmea0183.Tests
             _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
 
-            var route = _cache.GetCurrentRoute();
+            _cache.Add(new Waypoint(new GeographicPosition(), "A"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "B"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "C"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "D"));
+
+            _cache.TryGetCurrentRoute(out var route);
             Assert.Equal(4, route.Count);
             Assert.Equal("RT", route[0].RouteName);
             Assert.Equal(4, route[0].TotalPointsInRoute);
@@ -124,9 +117,56 @@ namespace Iot.Device.Nmea0183.Tests
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
 
-            var route = _cache.GetCurrentRoute();
+            _cache.Add(new Waypoint(new GeographicPosition(), "A"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "B"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "C"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "D"));
+
+            _cache.TryGetCurrentRoute(out var route);
             Assert.Equal(2, route.Count);
             Assert.Equal("RTNew", route[0].RouteName);
+        }
+
+        [Fact]
+        public void FindOlderRouteIfNewIsIncomplete1()
+        {
+            // The latest route is interesting
+            var sentence1 = new Route("RTOld", 1, 1, new List<string>() { "A", "B" });
+            var sentence2 = new Route("RTNew", 1, 1, new List<string>() { "C", "D" });
+            _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
+            _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
+
+            _cache.Add(new Waypoint(new GeographicPosition(), "A"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "B"));
+            // Not all waypoints for new route
+            _cache.Add(new Waypoint(new GeographicPosition(), "D"));
+
+            // This will skip the iteration
+            Assert.Equal(AutopilotErrorState.WaypointsWithoutPosition, _cache.TryGetCurrentRoute(out _));
+        }
+
+        [Fact]
+        public void FindOlderRouteIfNewIsIncomplete()
+        {
+            var sentence1 = new Route("RTOld", 2, 1, new List<string>() { "A", "B" });
+            var sentence1b = new Route("RTOld", 2, 2, new List<string>()
+            {
+                "C"
+            });
+            var sentence2 = new Route("RTNew", 3, 1, new List<string>() { "C", "D" });
+            _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
+            _sink.Raise(x => x.OnNewSequence += null, null, sentence1b);
+            _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
+
+            _cache.Add(new Waypoint(new GeographicPosition(), "A"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "B"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "C"));
+            _cache.Add(new Waypoint(new GeographicPosition(), "D"));
+
+            // Only part 1 of the new route was transmitted - use the old one until we have all messages for the new route.
+            _cache.TryGetCurrentRoute(out var route);
+            Assert.Equal(3, route.Count);
+            Assert.Equal("RTOld", route[0].RouteName);
         }
     }
 }

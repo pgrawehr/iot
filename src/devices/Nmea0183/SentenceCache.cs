@@ -17,7 +17,7 @@ namespace Iot.Device.Nmea0183
         private readonly object _lock;
         private Dictionary<SentenceId, NmeaSentence> _sentences;
         private Queue<Route> _lastRouteSentences;
-        private Dictionary<string, WayPoint> _wayPoints;
+        private Dictionary<string, Waypoint> _wayPoints;
 
         private SentenceId[] _groupSentences = new SentenceId[]
         {
@@ -33,7 +33,7 @@ namespace Iot.Device.Nmea0183
             _lock = new object();
             _sentences = new Dictionary<SentenceId, NmeaSentence>();
             _lastRouteSentences = new Queue<Route>();
-            _wayPoints = new Dictionary<string, WayPoint>();
+            _wayPoints = new Dictionary<string, Waypoint>();
             StoreRawSentences = false;
             _source.OnNewSequence += OnNewSequence;
         }
@@ -195,13 +195,13 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        public List<RoutePoint> GetCurrentRoute()
+        public AutopilotErrorState TryGetCurrentRoute(out List<RoutePoint> routeList)
         {
-            List<RoutePoint> route = new List<RoutePoint>();
+            routeList = new List<RoutePoint>();
             List<Route> segments = FindLatestCompleteRoute(out string routeName);
             if (segments == null)
             {
-                return null;
+                return AutopilotErrorState.NoRoute;
             }
 
             List<string> wpNames = new List<string>();
@@ -210,16 +210,15 @@ namespace Iot.Device.Nmea0183
                 wpNames.AddRange(segment.WaypointNames);
             }
 
-            // RTE messages were present, but they contain no information
+            // We've seen RTE messages, but no waypoints yet
             if (wpNames.Count == 0)
             {
-                return null;
+                return AutopilotErrorState.WaypointsWithoutPosition;
             }
 
             if (wpNames.GroupBy(x => x).Any(g => g.Count() > 1))
             {
-                // TODO: Report why (route contains duplicates)
-                return null;
+                return AutopilotErrorState.RouteWithDuplicateWaypoints;
             }
 
             for (var index = 0; index < wpNames.Count; index++)
@@ -233,66 +232,80 @@ namespace Iot.Device.Nmea0183
                 else
                 {
                     // Incomplete route - need to wait for all wpt messages
-                    return null;
+                    return AutopilotErrorState.WaypointsWithoutPosition;
                 }
 
                 RoutePoint rpt = new RoutePoint(routeName, index, wpNames.Count, name, position, null, null);
-                route.Add(rpt);
+                routeList.Add(rpt);
             }
 
-            return route;
+            return AutopilotErrorState.RoutePresent;
         }
 
         private List<Route> FindLatestCompleteRoute(out string routeName)
         {
-            List<Route> temp;
+            List<Route> routeSentences;
             lock (_lock)
             {
                 // Newest shall be first in list
-                temp = _lastRouteSentences.ToList();
-                temp.Reverse();
+                routeSentences = _lastRouteSentences.ToList();
+                routeSentences.Reverse();
             }
 
-            if (temp.Count == 0)
+            if (routeSentences.Count == 0)
             {
                 routeName = "No route";
                 return null;
             }
 
-            // Last sentence, take this as the header for what we combine
-            var head = temp.First();
-            int numberOfSequences = head.TotalSequences;
-            routeName = head.RouteName;
+            routeName = string.Empty;
+            Route[] elements = null;
 
-            Route[] elements = new Route[numberOfSequences + 1]; // Use 1-based indexing
-            bool complete = false;
-            foreach (var sentence in temp)
+            // This is initially never 0 here
+            while (routeSentences.Count > 0)
             {
-                if (sentence.RouteName == routeName && sentence.Sequence <= numberOfSequences)
+                // Last initial sequence, take this as the header for what we combine
+                var head = routeSentences.FirstOrDefault(x => x.Sequence == 1);
+                if (head == null)
                 {
-                    // Iterate until we found one of each of the components of route
-                    elements[sentence.Sequence] = sentence;
-                    complete = true;
-                    for (int i = 1; i <= numberOfSequences; i++)
+                    routeName = "No complete route";
+                    return null;
+                }
+
+                int numberOfSequences = head.TotalSequences;
+                routeName = head.RouteName;
+
+                elements = new Route[numberOfSequences + 1]; // Use 1-based indexing
+                bool complete = false;
+                foreach (var sentence in routeSentences)
+                {
+                    if (sentence.RouteName == routeName && sentence.Sequence <= numberOfSequences)
                     {
-                        if (elements[i] == null)
+                        // Iterate until we found one of each of the components of route
+                        elements[sentence.Sequence] = sentence;
+                        complete = true;
+                        for (int i = 1; i <= numberOfSequences; i++)
                         {
-                            complete = false;
+                            if (elements[i] == null)
+                            {
+                                complete = false;
+                            }
+                        }
+
+                        if (complete)
+                        {
+                            break;
                         }
                     }
-
-                    if (complete)
-                    {
-                        break;
-                    }
                 }
-            }
 
-            if (!complete)
-            {
-                // The route was incomplete, or what we assumed to be the head doesn't match up with the
-                // entries (possibly because the route just changed and the new one is not yet complete)
-                return null;
+                if (complete)
+                {
+                    break;
+                }
+
+                // The sentence with the first header we found was incomplete - try the next (we're possibly just changing the route)
+                routeSentences.RemoveRange(0, routeSentences.IndexOf(head) + 1);
             }
 
             List<Route> ret = new List<Route>();
@@ -334,7 +347,7 @@ namespace Iot.Device.Nmea0183
                         _lastRouteSentences.Dequeue();
                     }
                 }
-                else if (sentence.SentenceId == WayPoint.Id && (sentence is WayPoint wpt))
+                else if (sentence.SentenceId == Waypoint.Id && (sentence is Waypoint wpt))
                 {
                     // No reason to clean this up, this will never grow larger than a few hundred entries
                     _wayPoints[wpt.Name] = wpt;

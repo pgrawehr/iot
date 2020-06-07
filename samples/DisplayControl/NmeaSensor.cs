@@ -210,9 +210,9 @@ namespace DisplayControl
                 correctedMessage = new Route(RemoveNonAscii(rte.RouteName), rte.TotalSequences, rte.Sequence, rte.WaypointNames.Select(x => RemoveNonAscii(x)).ToList());
             }
 
-            if (sentence is WayPoint wpl)
+            if (sentence is Waypoint wpl)
             {
-                correctedMessage = new WayPoint(wpl.Position, RemoveNonAscii(wpl.Name));
+                correctedMessage = new Waypoint(wpl.Position, RemoveNonAscii(wpl.Name));
             }
 
             if (correctedMessage.ToNmeaMessage().Any(x => x >= 128))

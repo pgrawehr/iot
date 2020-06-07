@@ -98,13 +98,13 @@ namespace Iot.Device.Nmea0183.Sentences
                 // Pressure needs 6 digits
                 formattedValue = Value.ToString("G6", CultureInfo.InvariantCulture);
             }
-            else if (Unit == "H" || Unit == "C")
+            else if (Unit == "H")
             {
-                formattedValue = Value.ToString("G1", CultureInfo.InvariantCulture);
+                formattedValue = Value.ToString("F1", CultureInfo.InvariantCulture);
             }
             else
             {
-                formattedValue = Value.ToString("G2", CultureInfo.InvariantCulture); // 2 significant digits
+                formattedValue = Value.ToString("F2", CultureInfo.InvariantCulture); // 2 significant digits
             }
 
             if (formattedValue.Contains("E"))

@@ -360,9 +360,9 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$SDDBS,177.9,f,54.21,M,29.6,F*36")]
         [InlineData("$YDDBS,10.3,f,3.14,M,1.7,F*09")]
         [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
-        [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
+        [InlineData("$IIXDR,A,4.00,D,ROLL,A,-2.00,D,PITCH*3E")]
         [InlineData("$GPXTE,A,A,0.000,L,N,D*36")]
-        [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
+        [InlineData("$IIXDR,C,18.20,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*4C")]
         // GGA with elevation
         [InlineData("$GPGGA,163810.000,4728.70270,N,00929.96660,E,2,12,0.6,397.4,M,46.8,M,,*52")]
         [InlineData("$YDVTG,124.0,T,121.2,M,0.0,N,0.0,K,A*2E")]
@@ -434,20 +434,21 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Theory]
-        [InlineData("$GPRMC,211730.997,A,3511.28000,S,13823.26000,E,7.000,229.000,190120,,*19")]
-        [InlineData("$GPZDA,135302.036,02,02,2020,+01,00*7F")]
-        [InlineData("$WIMWV,350.0,R,16.8,N,A*1A")]
-        [InlineData("$WIMWV,220.0,T,5.0,N,A*20")]
-        [InlineData("$SDDBS,177.9,f,54.21,M,29.6,F*36")]
-        [InlineData("$YDDBS,10.3,f,3.14,M,1.7,F*09")]
-        [InlineData("$IIXDR,P,1.02481,B,Barometer*29")]
-        [InlineData("$IIXDR,A,4,D,ROLL,A,-2,D,PITCH*3E")]
-        [InlineData("$GPXTE,A,A,0.000,L,N,D*36")]
-        [InlineData("$HCHDG,103.2,,,1.9,E*21")]
-        [InlineData("$GPRTE,1,1,c,Route 008,R1,R2,R3,R4,R5*39")]
-        [InlineData("$GPGLL,4729.49680,N,00930.39770,E,115611.000,A,D*54")]
-        [InlineData("$IIXDR,C,18.2,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P*7C")]
-        [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D*6D")]
+        // Note: No checksums here - not part of this test
+        [InlineData("$GPRMC,211730.997,A,3511.28000,S,13823.26000,E,7.000,229.000,190120,,")]
+        [InlineData("$GPZDA,135302.036,02,02,2020,+01,00")]
+        [InlineData("$WIMWV,350.0,R,16.8,N,A")]
+        [InlineData("$WIMWV,220.0,T,5.0,N,A")]
+        [InlineData("$SDDBS,177.9,f,54.21,M,29.6,F")]
+        [InlineData("$YDDBS,10.3,f,3.14,M,1.7,F")]
+        [InlineData("$IIXDR,P,1.02481,B,Barometer")]
+        [InlineData("$IIXDR,A,4.00,D,ROLL,A,-2.00,D,PITCH")]
+        [InlineData("$GPXTE,A,A,0.000,L,N,D")]
+        [InlineData("$HCHDG,103.2,,,1.9,E")]
+        [InlineData("$GPRTE,1,1,c,Route 008,R1,R2,R3,R4,R5")]
+        [InlineData("$GPGLL,4729.49680,N,00930.39770,E,115611.000,A,D")]
+        [InlineData("$IIXDR,C,18.20,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P")]
+        [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D")]
         public void SentenceRoundTripIsUnaffectedByCulture(string input)
         {
             // de-DE has "," as decimal separator. Big trouble if using CurrentCulture for any parsing or formatting here
@@ -460,6 +461,7 @@ namespace Iot.Device.Nmea0183.Tests
                 Assert.NotNull(decoded);
                 TalkerSentence outSentence = new TalkerSentence(decoded);
                 string output = outSentence.ToString();
+                output = output.Remove(output.IndexOf("*", StringComparison.Ordinal));
                 Assert.Equal(input, output);
             }
         }
