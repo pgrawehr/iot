@@ -25,7 +25,7 @@ namespace BoardSample
             const int led2 = 2;
             using Board b = new GenericBoard(PinNumberingScheme.Logical);
 
-            using GpioController controller = b.CreateGpioController(PinNumberingScheme.Logical);
+            using GpioController controller = b.CreateGpioController(null, PinNumberingScheme.Logical);
 
             if (controller.PinCount > 0)
             {

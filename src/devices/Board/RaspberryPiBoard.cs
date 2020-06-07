@@ -9,11 +9,19 @@ using System.Text;
 
 namespace Iot.Device.Board
 {
-    public class RaspberryPiBoard : UnixBoard
+    public class RaspberryPiBoard : GenericBoard
     {
-        public RaspberryPiBoard(PinNumberingScheme defaultNumberingScheme, bool useLibgpiod = true)
-            : base(defaultNumberingScheme, useLibgpiod)
+        public RaspberryPiBoard(PinNumberingScheme defaultNumberingScheme)
+            : base(defaultNumberingScheme)
         {
+            // TODO: Ideally detect board type, so that invalid combinations can be prevented (i.e. I2C bus 2 on Raspi 3)
+            PinCount = 28;
+        }
+
+        public int PinCount
+        {
+            get;
+            protected set;
         }
 
         public override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
@@ -88,27 +96,21 @@ namespace Iot.Device.Board
             };
         }
 
-        protected override GpioDriver CreateGpioDriver()
+        public override GpioController CreateGpioController(int[] pinAssignment = null)
         {
-            return new RaspberryPi3Driver();
+            return new GpioController(PinNumberingScheme.Logical, new ManagedGpioDriver(this, new RaspberryPi3Driver(), pinAssignment));
         }
 
-        /// <summary>
-        /// Creates an I2C device object for the given bus and device id.
-        /// See the Raspberry Pi manual for possible bus-to-pin assignments.
-        /// </summary>
-        /// <param name="connectionSettings">I2C connection settings</param>
-        /// <returns>An <see cref="I2cDevice"/> instance</returns>
-        public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
+        protected override int[] GetPinAssignmentForI2c(I2cConnectionSettings connectionSettings, int[] logicalPinAssignment)
         {
-            int scl = -1;
-            int sda = -1;
+            int scl;
+            int sda;
             switch (connectionSettings.BusId)
             {
                 case 0:
                 {
                     // Bus 0 is the one on logical pins 0 and 1. According to the docs, it should not
-                    // be used by application software and instead is reserved for HATs, but who does really care?
+                    // be used by application software and instead is reserved for HATs, but if you don't have one, it is free for other purposes
                     scl = 1;
                     sda = 0;
                     break;
@@ -122,24 +124,110 @@ namespace Iot.Device.Board
                     break;
                 }
 
+                case 2:
+                {
+                    throw new NotSupportedException("I2C Bus number 2 doesn't exist");
+                }
+
                 default:
                 {
+                    // This could be refined using the alternate function map in the Raspberry Pi Manual
                     // Lets assume here the user knows what he's doing. Otherwise, it will just fail later (or he'll not get any
                     // reply from the device
-                    ////sda = connectionSettings.SdaPin;
-                    ////scl = connectionSettings.SclPin;
-                    throw new NotSupportedException("Need to know the pin numbers");
-                    // break;
+                    if (logicalPinAssignment == null || logicalPinAssignment.Length != 2)
+                    {
+                        throw new ArgumentException("Must provide exactly two pins for I2C support on buses 3-6");
+                    }
+
+                    sda = logicalPinAssignment[0];
+                    scl = logicalPinAssignment[1];
+                    break;
                 }
             }
 
-            if (scl == -1 || sda == -1)
+            return new int[]
             {
-                throw new ArgumentException("For I2C buses other than 0 and 1, the SDA and SCL pins must be explicitly specified", nameof(connectionSettings));
+                sda, scl
+            };
+        }
+
+        public override AlternatePinMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0)
+        {
+            pinNumber = RemapPin(pinNumber, pinNumberingScheme);
+            if (pinNumber >= PinCount)
+            {
+                return AlternatePinMode.NotSupported;
             }
 
-            connectionSettings = new I2cConnectionSettings(connectionSettings.BusId, connectionSettings.DeviceAddress);
-            return I2cDevice.Create(connectionSettings);
+            if (usage == PinUsage.Gpio)
+            {
+                // all pins support GPIO
+                return AlternatePinMode.Gpio;
+            }
+
+            if (usage == PinUsage.I2c)
+            {
+                // The Pi4 has a big number of pins that can become I2C pins
+                switch (pinNumber)
+                {
+                    // Busses 0 and 1 run on Alt0
+                    case 0:
+                    case 1:
+                    case 2:
+                    case 3:
+                        return AlternatePinMode.Alt0;
+                    case 4:
+                    case 5:
+                    case 6:
+                    case 7:
+                    case 8:
+                    case 9:
+                    case 10:
+                    case 11:
+                    case 12:
+                    case 13:
+                    case 14:
+                        return AlternatePinMode.Alt5;
+                    case 22:
+                    case 23:
+                        return AlternatePinMode.Alt5;
+                }
+
+                return AlternatePinMode.NotSupported;
+            }
+
+            if (usage == PinUsage.Pwm)
+            {
+                if (pinNumber == 12 || pinNumber == 13)
+                {
+                    return AlternatePinMode.Alt0;
+                }
+
+                if (pinNumber == 18 || pinNumber == 19)
+                {
+                    return AlternatePinMode.Alt5;
+                }
+
+                return AlternatePinMode.NotSupported;
+            }
+
+            return AlternatePinMode.NotSupported;
+        }
+
+        protected override int GetPinAssignmentForPwm(int chip, int channel)
+        {
+            // The default assignment is 12 & 13, but 18 and 19 is supported as well
+            if (chip == 0 && channel == 0)
+            {
+                return 12;
+            }
+
+            if (chip == 0 && channel == 1)
+            {
+                return 13;
+            }
+
+            throw new NotSupportedException($"No such PWM Channel: Chip {chip} channel {channel}.");
         }
 
         protected override void ActivatePinMode(int pinNumber, PinUsage usage)

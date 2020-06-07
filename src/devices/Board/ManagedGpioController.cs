@@ -35,7 +35,7 @@ namespace Iot.Device.Board
             {
                 foreach (var pin in pinAssignment)
                 {
-                    if (!_board.IsPinUsableFor(pin, PinUsage.Gpio))
+                    if (_board.GetHardwareModeForPinUsage(pin, PinUsage.Gpio) != AlternatePinMode.Gpio)
                     {
                         throw new NotSupportedException($"Logical pin {pin} does not support Gpio");
                     }

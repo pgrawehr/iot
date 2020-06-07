@@ -190,26 +190,59 @@ namespace Iot.Device.Board
             return CreateGpioController(RemapPins(pinAssignment, pinNumberingScheme));
         }
 
-        public abstract I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment);
+        public abstract I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme);
 
-        public virtual I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
+        public virtual I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
         {
-            pinAssignment = GetPinAssignmentForI2c(connectionSettings, RemapPins(pinAssignment, pinNumberingScheme));
-            return CreateI2cDevice(connectionSettings, pinAssignment);
+            // Returns logical pin numbers for the selected bus (or an exception if using a bus number > 1, because that
+            // requires specifying the pins)
+            int[] pinAssignment = GetPinAssignmentForI2c(connectionSettings, null);
+            return CreateI2cDevice(connectionSettings, pinAssignment, PinNumberingScheme.Logical);
         }
 
         public abstract SpiDevice CreateSpiDevice(SpiConnectionSettings settings);
 
-        public abstract PwmChannel CreatePwmChannel(
+        public abstract PwmChannel CreatePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage,
+            int pin, PinNumberingScheme pinNumberingScheme);
+
+        public virtual PwmChannel CreatePwmChannel(
             int chip,
             int channel,
             int frequency = 400,
-            double dutyCyclePercentage = 0.5);
+            double dutyCyclePercentage = 0.5)
+        {
+            int pin = GetPinAssignmentForPwm(chip, channel);
+            return CreatePwmChannel(chip, channel, frequency, dutyCyclePercentage, pin, PinNumberingScheme.Logical);
+        }
 
-        public abstract bool IsPinUsableFor(int pinNumber, PinUsage usage,
+        protected abstract int GetPinAssignmentForPwm(int chip, int channel);
+
+        /// <summary>
+        /// Gets the board-specific hardware mode for a particular pin and pin usage (i.e. the different ALTn modes on the raspberry pi)
+        /// </summary>
+        /// <param name="pinNumber">Pin number to use</param>
+        /// <param name="usage">Requested usage</param>
+        /// <param name="pinNumberingScheme">Pin numbering scheme for the pin provided (logical or physical)</param>
+        /// <param name="bus">Optional bus argument, for SPI and I2C pins</param>
+        /// <returns>
+        /// -2: It is unknown whether this pin can be used for the given usage
+        /// -1: Pin does not support the given usage
+        /// 0: Pin supports the given usage, no special mode is needed (i.e. digital in/out)
+        /// >0: Mode to set (hardware dependent)</returns>
+        public abstract AlternatePinMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage,
             PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0);
 
         protected abstract int[] GetPinAssignmentForI2c(I2cConnectionSettings connectionSettings, int[] logicalPinAssignment);
+
+        protected int RemapPin(int pin, PinNumberingScheme providedScheme)
+        {
+            if (providedScheme == PinNumberingScheme.Logical)
+            {
+                return pin;
+            }
+
+            return ConvertPinNumberToLogicalNumberingScheme(pin);
+        }
 
         protected int[] RemapPins(int[] pins, PinNumberingScheme providedScheme)
         {
@@ -242,7 +275,7 @@ namespace Iot.Device.Board
                 Board board = null;
                 try
                 {
-                    board = new RaspberryPiBoard(defaultNumberingScheme, true);
+                    board = new RaspberryPiBoard(defaultNumberingScheme);
                     board.Initialize();
                 }
                 catch (Exception x) when ((x is NotSupportedException) || (x is IOException))
@@ -258,7 +291,7 @@ namespace Iot.Device.Board
 
                 try
                 {
-                    board = new UnixBoard(defaultNumberingScheme, true);
+                    board = new GenericBoard(defaultNumberingScheme);
                     board.Initialize();
                 }
                 catch (Exception x) when ((x is NotSupportedException) || (x is IOException))

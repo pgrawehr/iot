@@ -23,10 +23,11 @@ namespace Iot.Device.Board
                 _board.ReservePin(_sclPin, PinUsage.I2c, this);
                 _i2cDeviceImplementation = I2cDevice.Create(settings);
             }
-            finally
+            catch (Exception)
             {
                 _board.ReleasePin(_sdaPin, PinUsage.I2c, this);
                 _board.ReleasePin(_sclPin, PinUsage.I2c, this);
+                throw;
             }
         }
 

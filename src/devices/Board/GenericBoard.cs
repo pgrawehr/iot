@@ -42,14 +42,14 @@ namespace Iot.Device.Board
             return new GpioController(PinNumberingScheme.Logical, CreateDriver(pinAssignment));
         }
 
-        public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment)
+        public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
         {
             if (pinAssignment == null || pinAssignment.Length != 2)
             {
                 throw new ArgumentException($"Invalid argument. Must provide exactly two pins for I2C", nameof(pinAssignment));
             }
 
-            return new I2cDeviceManager(this, connectionSettings, pinAssignment);
+            return new I2cDeviceManager(this, connectionSettings, RemapPins(pinAssignment, pinNumberingScheme));
         }
 
         public override SpiDevice CreateSpiDevice(SpiConnectionSettings settings)
@@ -57,18 +57,19 @@ namespace Iot.Device.Board
             return SpiDevice.Create(settings);
         }
 
-        public override PwmChannel CreatePwmChannel(int chip, int channel, int frequency = 400, double dutyCyclePercentage = 0.5)
+        public override PwmChannel CreatePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage,
+            int pin, PinNumberingScheme pinNumberingScheme)
         {
-            return PwmChannel.Create(chip, channel, frequency, dutyCyclePercentage);
+            return new PwmChannelManager(this, RemapPin(pin, pinNumberingScheme), chip, channel, frequency, dutyCyclePercentage);
         }
 
         /// <summary>
         /// Check whether the given pin is usable for the given purpose.
-        /// This implementation always returns true, since the generic board requires the user to know what he's doing.
+        /// This implementation always returns unknown, since the generic board requires the user to know what he's doing.
         /// </summary>
-        public override bool IsPinUsableFor(int pinNumber, PinUsage usage, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0)
+        public override AlternatePinMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0)
         {
-            return true;
+            return AlternatePinMode.Unknown;
         }
 
         protected override int[] GetPinAssignmentForI2c(I2cConnectionSettings connectionSettings, int[] logicalPinAssignment)
@@ -79,6 +80,11 @@ namespace Iot.Device.Board
             }
 
             return logicalPinAssignment;
+        }
+
+        protected override int GetPinAssignmentForPwm(int chip, int channel)
+        {
+            throw new NotSupportedException("For the generic board, you need to specify the pin to use for pwm");
         }
     }
 }
