@@ -72,17 +72,12 @@ namespace Iot.Device.Board
             return AlternatePinMode.Unknown;
         }
 
-        protected override int[] GetPinAssignmentForI2c(I2cConnectionSettings connectionSettings, int[] logicalPinAssignment)
+        protected override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
         {
-            if (logicalPinAssignment == null || logicalPinAssignment.Length != 2)
-            {
-                throw new NotSupportedException("For the generic board, exactly two pins need to be assigned to an I2C bus");
-            }
-
-            return logicalPinAssignment;
+            throw new NotSupportedException("For the generic board, you need to specify the pin to use for I2C");
         }
 
-        protected override int GetPinAssignmentForPwm(int chip, int channel)
+        protected override int GetDefaultPinAssignmentForPwm(int chip, int channel)
         {
             throw new NotSupportedException("For the generic board, you need to specify the pin to use for pwm");
         }

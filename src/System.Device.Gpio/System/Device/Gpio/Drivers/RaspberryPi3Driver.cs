@@ -14,6 +14,7 @@ namespace System.Device.Gpio.Drivers
     public class RaspberryPi3Driver : GpioDriver
     {
         private GpioDriver _internalDriver;
+        private RaspberryPi3LinuxDriver _linuxRegisterDriver;
 
         /* private delegates for register Properties */
         private delegate void Set_Register(ulong value);
@@ -32,12 +33,12 @@ namespace System.Device.Gpio.Drivers
         {
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
-                _internalDriver = new RaspberryPi3LinuxDriver();
-                RaspberryPi3LinuxDriver linuxDriver = _internalDriver as RaspberryPi3LinuxDriver;
-                _setSetRegister = (value) => linuxDriver.SetRegister = value;
-                _setClearRegister = (value) => linuxDriver.ClearRegister = value;
-                _getSetRegister = () => linuxDriver.SetRegister;
-                _getClearRegister = () => linuxDriver.ClearRegister;
+                _linuxRegisterDriver = new RaspberryPi3LinuxDriver();
+                _internalDriver = _linuxRegisterDriver;
+                _setSetRegister = (value) => _linuxRegisterDriver.SetRegister = value;
+                _setClearRegister = (value) => _linuxRegisterDriver.ClearRegister = value;
+                _getSetRegister = () => _linuxRegisterDriver.SetRegister;
+                _getClearRegister = () => _linuxRegisterDriver.ClearRegister;
             }
             else
             {
@@ -131,6 +132,26 @@ namespace System.Device.Gpio.Drivers
 
         /// <inheritdoc/>
         protected internal override void Write(int pinNumber, PinValue value) => _internalDriver.Write(pinNumber, value);
+
+        internal int GetAlternatePinMode(int pinNumber)
+        {
+            if (_linuxRegisterDriver == null)
+            {
+                throw new NotSupportedException("Getting alternate pin mode not supported");
+            }
+
+            return _linuxRegisterDriver.GetAlternatePinMode(pinNumber);
+        }
+
+        internal void SetAlternatePinMode(int pinNumber, int altMode)
+        {
+            if (_linuxRegisterDriver == null)
+            {
+                throw new NotSupportedException("Setting alternate pin mode not supported");
+            }
+
+            _linuxRegisterDriver.SetAlternatePinMode(pinNumber, altMode);
+        }
 
         /// <summary>
         /// Allows directly setting the "Set pin high" register. Used for special applications only

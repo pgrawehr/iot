@@ -196,7 +196,7 @@ namespace Iot.Device.Board
         {
             // Returns logical pin numbers for the selected bus (or an exception if using a bus number > 1, because that
             // requires specifying the pins)
-            int[] pinAssignment = GetPinAssignmentForI2c(connectionSettings, null);
+            int[] pinAssignment = GetDefaultPinAssignmentForI2c(connectionSettings);
             return CreateI2cDevice(connectionSettings, pinAssignment, PinNumberingScheme.Logical);
         }
 
@@ -211,11 +211,11 @@ namespace Iot.Device.Board
             int frequency = 400,
             double dutyCyclePercentage = 0.5)
         {
-            int pin = GetPinAssignmentForPwm(chip, channel);
+            int pin = GetDefaultPinAssignmentForPwm(chip, channel);
             return CreatePwmChannel(chip, channel, frequency, dutyCyclePercentage, pin, PinNumberingScheme.Logical);
         }
 
-        protected abstract int GetPinAssignmentForPwm(int chip, int channel);
+        protected abstract int GetDefaultPinAssignmentForPwm(int chip, int channel);
 
         /// <summary>
         /// Gets the board-specific hardware mode for a particular pin and pin usage (i.e. the different ALTn modes on the raspberry pi)
@@ -232,7 +232,7 @@ namespace Iot.Device.Board
         public abstract AlternatePinMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage,
             PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0);
 
-        protected abstract int[] GetPinAssignmentForI2c(I2cConnectionSettings connectionSettings, int[] logicalPinAssignment);
+        protected abstract int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings);
 
         protected int RemapPin(int pin, PinNumberingScheme providedScheme)
         {

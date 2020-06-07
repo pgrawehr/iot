@@ -11,6 +11,8 @@ namespace Iot.Device.Board
 {
     public class RaspberryPiBoard : GenericBoard
     {
+        private ManagedGpioDriver _managedGpioDriver;
+
         public RaspberryPiBoard(PinNumberingScheme defaultNumberingScheme)
             : base(defaultNumberingScheme)
         {
@@ -22,6 +24,13 @@ namespace Iot.Device.Board
         {
             get;
             protected set;
+        }
+
+        public override void Initialize()
+        {
+            // Needs to be a raspi 3 driver here (either unix or windows)
+            _managedGpioDriver = new ManagedGpioDriver(this, new RaspberryPi3Driver(), null);
+            base.Initialize();
         }
 
         public override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
@@ -101,7 +110,7 @@ namespace Iot.Device.Board
             return new GpioController(PinNumberingScheme.Logical, new ManagedGpioDriver(this, new RaspberryPi3Driver(), pinAssignment));
         }
 
-        protected override int[] GetPinAssignmentForI2c(I2cConnectionSettings connectionSettings, int[] logicalPinAssignment)
+        protected override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
         {
             int scl;
             int sda;
@@ -111,8 +120,8 @@ namespace Iot.Device.Board
                 {
                     // Bus 0 is the one on logical pins 0 and 1. According to the docs, it should not
                     // be used by application software and instead is reserved for HATs, but if you don't have one, it is free for other purposes
-                    scl = 1;
                     sda = 0;
+                    scl = 1;
                     break;
                 }
 
@@ -129,20 +138,34 @@ namespace Iot.Device.Board
                     throw new NotSupportedException("I2C Bus number 2 doesn't exist");
                 }
 
-                default:
+                case 3:
                 {
-                    // This could be refined using the alternate function map in the Raspberry Pi Manual
-                    // Lets assume here the user knows what he's doing. Otherwise, it will just fail later (or he'll not get any
-                    // reply from the device
-                    if (logicalPinAssignment == null || logicalPinAssignment.Length != 2)
-                    {
-                        throw new ArgumentException("Must provide exactly two pins for I2C support on buses 3-6");
-                    }
-
-                    sda = logicalPinAssignment[0];
-                    scl = logicalPinAssignment[1];
+                    sda = 4;
+                    scl = 5;
                     break;
                 }
+
+                case 4:
+                {
+                    sda = 6;
+                    scl = 7;
+                    break;
+                }
+
+                case 5:
+                {
+                    sda = 10;
+                    scl = 11;
+                    break;
+                }
+
+                case 6:
+                    sda = 22;
+                    scl = 23;
+                    break;
+
+                default:
+                    throw new NotSupportedException($"I2C bus {connectionSettings.BusId} does not exist.");
             }
 
             return new int[]
@@ -214,7 +237,7 @@ namespace Iot.Device.Board
             return AlternatePinMode.NotSupported;
         }
 
-        protected override int GetPinAssignmentForPwm(int chip, int channel)
+        protected override int GetDefaultPinAssignmentForPwm(int chip, int channel)
         {
             // The default assignment is 12 & 13, but 18 and 19 is supported as well
             if (chip == 0 && channel == 0)
@@ -233,6 +256,7 @@ namespace Iot.Device.Board
         protected override void ActivatePinMode(int pinNumber, PinUsage usage)
         {
             // TODO: Set extended pin modes (ALT0-ALT5)
+            AlternatePinMode modeToSet = GetHardwareModeForPinUsage(pinNumber, usage, PinNumberingScheme.Logical);
             base.ActivatePinMode(pinNumber, usage);
         }
     }
