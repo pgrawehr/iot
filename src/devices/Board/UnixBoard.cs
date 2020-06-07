@@ -13,7 +13,7 @@ namespace Iot.Device.Board
     /// <summary>
     /// A generic board for Unix platforms
     /// </summary>
-    public class UnixBoard : BoardBase
+    public class UnixBoard : Board
     {
         private GpioDriver _internalDriver;
         private bool _useLibgpiod;
@@ -37,10 +37,10 @@ namespace Iot.Device.Board
             }
         }
 
-        public override GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme)
+        public override GpioController CreateGpioController(int[] pinAssignment = null)
         {
             var driver = CreateGpioDriver();
-            return new GpioController(DefaultPinNumberingScheme, new ManagedGpioDriver(this, driver));
+            return new GpioController(DefaultPinNumberingScheme, new ManagedGpioDriver(this, driver, pinAssignment));
         }
 
         protected virtual GpioDriver CreateGpioDriver()
@@ -95,9 +95,9 @@ namespace Iot.Device.Board
             }
         }
 
-        public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
+        public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment)
         {
-            return I2cDevice.Create(connectionSettings);
+            return new I2cDeviceManager(this, connectionSettings, pinAssignment);
         }
 
         public override SpiDevice CreateSpiDevice(SpiConnectionSettings settings)

@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Iot.Device.Board
 {
-    public abstract class BoardBase : MarshalByRefObject, IDisposable
+    public abstract class Board : MarshalByRefObject, IDisposable
     {
         private readonly PinNumberingScheme _defaultNumberingScheme;
         private readonly object _pinReservationsLock;
@@ -17,7 +17,7 @@ namespace Iot.Device.Board
         private bool _initialized;
         private bool _disposed;
 
-        protected BoardBase(PinNumberingScheme defaultNumberingScheme)
+        protected Board(PinNumberingScheme defaultNumberingScheme)
         {
             _defaultNumberingScheme = defaultNumberingScheme;
             _pinReservations = new Dictionary<int, PinReservation>();
@@ -26,7 +26,7 @@ namespace Iot.Device.Board
             _disposed = false;
         }
 
-        ~BoardBase()
+        ~Board()
         {
             Dispose(false);
         }
@@ -183,8 +183,20 @@ namespace Iot.Device.Board
             public object Owner { get; }
         }
 
-        public abstract GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme);
-        public abstract I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings);
+        public abstract GpioController CreateGpioController(int[] pinAssignment = null);
+
+        public virtual GpioController CreateGpioController(int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
+        {
+            return CreateGpioController(RemapPins(pinAssignment, pinNumberingScheme));
+        }
+
+        public abstract I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment);
+
+        public virtual I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
+        {
+            pinAssignment = GetPinAssignmentForI2c(connectionSettings, RemapPins(pinAssignment, pinNumberingScheme));
+            return CreateI2cDevice(connectionSettings, pinAssignment);
+        }
 
         public abstract SpiDevice CreateSpiDevice(SpiConnectionSettings settings);
 
@@ -194,14 +206,40 @@ namespace Iot.Device.Board
             int frequency = 400,
             double dutyCyclePercentage = 0.5);
 
+        public abstract bool IsPinUsableFor(int pinNumber, PinUsage usage,
+            PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0);
+
+        protected abstract int[] GetPinAssignmentForI2c(I2cConnectionSettings connectionSettings, int[] logicalPinAssignment);
+
+        protected int[] RemapPins(int[] pins, PinNumberingScheme providedScheme)
+        {
+            if (pins == null)
+            {
+                return null;
+            }
+
+            if (providedScheme == PinNumberingScheme.Logical)
+            {
+                return pins;
+            }
+
+            int[] newPins = new int[pins.Length];
+            for (int i = 0; i < pins.Length; i++)
+            {
+                newPins[i] = ConvertPinNumberToLogicalNumberingScheme(pins[i]);
+            }
+
+            return newPins;
+        }
+
         //// Todo separately
         //// public abstract AnalogController CreateAnalogController(int chip);
 
-        public static BoardBase DetermineOptimalBoardForHardware(PinNumberingScheme defaultNumberingScheme = PinNumberingScheme.Logical)
+        public static Board DetermineOptimalBoardForHardware(PinNumberingScheme defaultNumberingScheme = PinNumberingScheme.Logical)
         {
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
-                BoardBase board = null;
+                Board board = null;
                 try
                 {
                     board = new RaspberryPiBoard(defaultNumberingScheme, true);

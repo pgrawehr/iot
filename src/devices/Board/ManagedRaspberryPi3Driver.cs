@@ -9,10 +9,10 @@ namespace Iot.Device.Board
 {
     public class ManagedRaspberryPi3Driver : RaspberryPi3Driver, IGpioDriver
     {
-        private readonly BoardBase _board;
+        private readonly Board _board;
         private IGpioDriver _gpioDriverImplementation;
 
-        public ManagedRaspberryPi3Driver(BoardBase board, IGpioDriver actualDriver)
+        public ManagedRaspberryPi3Driver(Board board, IGpioDriver actualDriver)
         {
             _board = board;
             _gpioDriverImplementation = actualDriver;

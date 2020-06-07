@@ -10,8 +10,9 @@ namespace Iot.Device.Board
 {
     internal class ManagedGpioDriver : GpioDriver
     {
-        private BoardBase _board;
-        private GpioDriver _driver;
+        private readonly int[] _pinAssignment;
+        private readonly Board _board;
+        private readonly GpioDriver _driver;
         private int _pinCount;
         private MethodInfo _openPinMethodInfo;
         private MethodInfo _closePinMethodInfo;
@@ -24,11 +25,22 @@ namespace Iot.Device.Board
         private MethodInfo _addCallbackForPinValueChangedEventMethodInfo;
         private MethodInfo _removeCallbackForPinValueChangedEventMethodInfo;
 
-        public ManagedGpioDriver(BoardBase board, GpioDriver driver)
+        public ManagedGpioDriver(Board board, GpioDriver driver, int[] pinAssignment)
         {
             _board = board;
             _driver = driver;
+            _pinAssignment = pinAssignment;
             InitFunctionPointers();
+            if (pinAssignment != null)
+            {
+                foreach (var pin in pinAssignment)
+                {
+                    if (!_board.IsPinUsableFor(pin, PinUsage.Gpio))
+                    {
+                        throw new NotSupportedException($"Logical pin {pin} does not support Gpio");
+                    }
+                }
+            }
         }
 
         protected override int PinCount
@@ -56,6 +68,33 @@ namespace Iot.Device.Board
             _removeCallbackForPinValueChangedEventMethodInfo = typeof(GpioDriver).GetMethod("RemoveCallbackForPinValueChangedEvent", BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
+        internal static GpioDriver GetBestDriverForBoard()
+        {
+            var methodInfo = typeof(GpioController).GetMethod("GetBestDriverForBoard", BindingFlags.NonPublic | BindingFlags.Static);
+            GpioDriver driver = null;
+            try
+            {
+                driver = (GpioDriver)methodInfo.Invoke(null, new object[0]);
+            }
+            catch (Exception x) when (!(x is NullReferenceException) && (!(x is TargetInvocationException))) // That would be serious
+            {
+            }
+
+            if (driver == null)
+            {
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                {
+                    driver = new KeyboardGpioDriver();
+                }
+                else
+                {
+                    driver = new DummyGpioDriver();
+                }
+            }
+
+            return driver;
+        }
+
         protected override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
         {
             return _board.ConvertPinNumberToLogicalNumberingScheme(pinNumber);
@@ -63,12 +102,14 @@ namespace Iot.Device.Board
 
         protected override void OpenPin(int pinNumber)
         {
+            _board.ReservePin(pinNumber, PinUsage.Gpio, this);
             _openPinMethodInfo.Invoke(_driver, new object[] { pinNumber });
         }
 
         protected override void ClosePin(int pinNumber)
         {
             _closePinMethodInfo.Invoke(_driver, new object[] { pinNumber });
+            _board.ReleasePin(pinNumber, PinUsage.Gpio, this);
         }
 
         protected override void SetPinMode(int pinNumber, PinMode mode)
