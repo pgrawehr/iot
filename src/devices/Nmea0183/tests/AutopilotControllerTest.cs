@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Iot.Device.Nmea0183.Sentences;
 using Moq;
+using UnitsNet;
 using Xunit;
 
 namespace Iot.Device.Nmea0183.Tests
@@ -13,14 +14,12 @@ namespace Iot.Device.Nmea0183.Tests
         private AutopilotController _autopilot;
         private Mock<NmeaSinkAndSource> _source;
         private Mock<NmeaSinkAndSource> _output;
-        private SentenceCache _sentenceCache;
 
         public AutopilotControllerTest()
         {
             _source = new Mock<NmeaSinkAndSource>(MockBehavior.Loose, "Input");
             _output = new Mock<NmeaSinkAndSource>(MockBehavior.Strict, "Output");
-            _sentenceCache = new SentenceCache(_source.Object);
-            _autopilot = new AutopilotController(_sentenceCache, _output.Object);
+            _autopilot = new AutopilotController(_source.Object, _output.Object);
         }
 
         [Fact]
@@ -95,8 +94,46 @@ namespace Iot.Device.Nmea0183.Tests
                 Assert.Equal(NmeaError.None, error);
                 Assert.NotNull(decoded);
                 var s = decoded.TryGetTypedValue();
-                _sentenceCache.Add(s);
+                _autopilot.SentenceCache.Add(s);
             }
+        }
+
+        [Fact]
+        public void FullAutoRouting()
+        {
+            var testRoute = new List<RoutePoint>();
+            testRoute.Add(new RoutePoint("R1", 0, 3, "A1", new GeographicPosition(1, 0, 0), Angle.Zero, Length.Zero));
+            testRoute.Add(new RoutePoint("R1", 1, 3, "A2", new GeographicPosition(1.001, 0, 0), Angle.FromDegrees(10), Length.Zero));
+            testRoute.Add(new RoutePoint("R1", 2, 3, "A3", new GeographicPosition(1.002, 0.001, 0), Angle.Zero, Length.Zero));
+            _autopilot.ActivateRoute(testRoute);
+            SetPositionAndTrack(new GeographicPosition(0.9, 0, 0), Angle.Zero);
+
+            bool outputGenerated = false;
+            _output.Setup(x => x.SendSentences(It.IsNotNull<IEnumerable<NmeaSentence>>())).Callback<IEnumerable<NmeaSentence>>(
+                outputSentence =>
+                {
+                    Assert.True(outputSentence.Any());
+                    outputGenerated = true;
+                });
+
+            _autopilot.CalculateNewStatus(0, DateTimeOffset.UtcNow);
+            Assert.Equal(AutopilotErrorState.OperatingAsMaster, _autopilot.OperationState);
+            Assert.Equal(testRoute[0], _autopilot.NextWaypoint);
+            Assert.True(outputGenerated);
+
+            outputGenerated = false;
+            SetPositionAndTrack(new GeographicPosition(0.9001, 0.001, 0), Angle.FromDegrees(5));
+            _autopilot.CalculateNewStatus(1, DateTimeOffset.UtcNow);
+
+            Assert.Equal(AutopilotErrorState.OperatingAsMaster, _autopilot.OperationState);
+            Assert.Equal(testRoute[0], _autopilot.NextWaypoint);
+            Assert.True(outputGenerated);
+        }
+
+        private void SetPositionAndTrack(GeographicPosition position, Angle track)
+        {
+            _autopilot.SentenceCache.Add(new RecommendedMinimumNavigationInformation(null, RecommendedMinimumNavigationInformation.NavigationStatus.Valid,
+                position, Speed.FromMetersPerSecond(10), track, Angle.FromDegrees(-2)));
         }
     }
 }

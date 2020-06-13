@@ -38,6 +38,11 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         RoutePresent,
         DirectGoto,
-        InvalidNextWaypoint
+        InvalidNextWaypoint,
+
+        /// <summary>
+        /// Full self-controlled operation
+        /// </summary>
+        OperatingAsMaster
     }
 }

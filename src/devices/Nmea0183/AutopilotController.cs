@@ -16,9 +16,9 @@ namespace Iot.Device.Nmea0183
         private const int LogSkip = 50;
         private readonly NmeaSinkAndSource _output;
         private readonly TimeSpan _loopTime = TimeSpan.FromMilliseconds(200);
+        private readonly SentenceCache _cache;
         private bool _threadRunning;
         private Thread _updateThread;
-        private SentenceCache _cache;
 
         /// <summary>
         /// Last "origin" position. Used if the current route does not specify one.
@@ -27,15 +27,23 @@ namespace Iot.Device.Nmea0183
         private RoutePoint _currentOrigin;
 
         private RoutePoint _knownNextWaypoint;
+        private bool _selfNavMode;
+        private RoutePoint _manualNextWaypoint;
 
-        public AutopilotController(SentenceCache sentenceCache, NmeaSinkAndSource output)
+        private List<RoutePoint> _activeRoute;
+
+        public AutopilotController(NmeaSinkAndSource input, NmeaSinkAndSource output)
         {
             _output = output;
-            _cache = sentenceCache;
+            _cache = new SentenceCache(input);
             _threadRunning = false;
             _currentOrigin = null;
             _knownNextWaypoint = null;
             OperationState = AutopilotErrorState.Unknown;
+            _selfNavMode = false;
+            _manualNextWaypoint = null;
+            _activeRoute = null;
+            WaypointSwitchDistance = Length.FromMeters(200);
         }
 
         public bool Running
@@ -50,6 +58,74 @@ namespace Iot.Device.Nmea0183
         {
             get;
             private set;
+        }
+
+        /// <summary>
+        /// Use for testing purposes only
+        /// </summary>
+        public SentenceCache SentenceCache
+        {
+            get
+            {
+                return _cache;
+            }
+        }
+
+        public RoutePoint NextWaypoint
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// When routing ourselves (no RMB message as input), we switch to the next waypoint
+        /// when closer than this distance or over the bisecting angle to the next leg
+        /// </summary>
+        public Length WaypointSwitchDistance
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Explicitly activates a new route. This gets precedence over an externally defined route.
+        /// </summary>
+        /// <param name="route">The new route</param>
+        /// <param name="nextPoint">The next point on the route (optional, defaults to the first point)</param>
+        /// <exception cref="ArgumentException">Different semantic errors with the definition of the route.</exception>
+        public void ActivateRoute(List<RoutePoint> route, RoutePoint nextPoint = null)
+        {
+            if (route == null || route.Count == 0)
+            {
+                throw new ArgumentException("Must provide a route with at least one element");
+            }
+
+            if (nextPoint == null)
+            {
+                nextPoint = route.First();
+            }
+
+            if (!route.Contains(nextPoint))
+            {
+                throw new ArgumentException("The next point must be part of the route");
+            }
+
+            if (route.Any(x => x.Position == null || string.IsNullOrWhiteSpace(x.WaypointName)))
+            {
+                throw new ArgumentException("Invalid route - No positions or no names given");
+            }
+
+            _activeRoute = route;
+            _manualNextWaypoint = nextPoint;
+        }
+
+        /// <summary>
+        /// Disables a manually activated route.
+        /// </summary>
+        public void DisableActiveRoute()
+        {
+            _activeRoute = null;
+            _manualNextWaypoint = null;
         }
 
         public void Start()
@@ -73,6 +149,8 @@ namespace Iot.Device.Nmea0183
                 _updateThread.Join();
                 _updateThread = null;
             }
+
+            _cache.Clear();
         }
 
         private void Loop()
@@ -91,43 +169,63 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public void CalculateNewStatus(int loops, DateTimeOffset now)
         {
-            if (!_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination currentLeg) ||
-                currentLeg == null ||
-                currentLeg.Valid == false ||
-                currentLeg.NextWayPoint == null)
+            bool passedWp = false;
+            if (_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination currentLeg)
+                && currentLeg != null
+                && currentLeg.Valid
+                && currentLeg.NextWayPoint != null)
             {
-                // Note that the RMB message may be valid without a next WP
-                // TODO: Find out ourselves
-                if (loops % LogSkip == 0)
+                passedWp = currentLeg.Arrived;
+                if (_selfNavMode)
                 {
-                    Console.WriteLine("Autopilot: No current leg on incoming RMB");
+                    // Reset navigation
+                    _manualNextWaypoint = null;
+                    _selfNavMode = false;
                 }
 
-                return;
+                OperationState = AutopilotErrorState.OperatingAsSlave;
+            }
+            else
+            {
+                // So we have to test only one condition
+                currentLeg = null;
             }
 
+            // TODO: Optimize. This rarely changes
             if (!_cache.TryGetLastSentence(HeadingAndDeviation.Id, out HeadingAndDeviation deviation) || !deviation.Variation.HasValue)
             {
-                if (loops % LogSkip == 0)
+                if (!_cache.TryGetLastSentence(RecommendedMinimumNavigationInformation.Id, out RecommendedMinimumNavigationInformation rmc) || !rmc.MagneticVariationInDegrees.HasValue)
                 {
-                    Console.WriteLine("Autopilot: No magnetic variance");
+                    if (loops % LogSkip == 0)
+                    {
+                        Console.WriteLine("Autopilot: No magnetic variance");
+                    }
+
+                    return;
                 }
 
-                return;
+                deviation = new HeadingAndDeviation(Angle.Zero, Angle.Zero, rmc.MagneticVariationInDegrees);
             }
 
             if (_cache.TryGetCurrentPosition(out var position, out Angle track, out Speed sog, out Angle? heading))
             {
-                string previousWayPoint = currentLeg.PreviousWayPointName;
-                string nextWayPoint = currentLeg.NextWayPointName;
+                string previousWayPoint = string.Empty;
+                string nextWayPoint = string.Empty;
 
-                List<RoutePoint> currentRoute;
+                if (currentLeg != null)
+                {
+                    previousWayPoint = currentLeg.PreviousWayPointName;
+                    nextWayPoint = currentLeg.NextWayPointName;
+                }
+
+                List<RoutePoint> currentRoute = _activeRoute;
                 RoutePoint next;
-                if (_cache.TryGetCurrentRoute(out currentRoute) != AutopilotErrorState.RoutePresent)
+                // This returns RoutePresent if at least one valid waypoint is in the list
+                if (currentRoute == null && _cache.TryGetCurrentRoute(out currentRoute) != AutopilotErrorState.RoutePresent)
                 {
                     // No route. But if we have an RMB message, there could still be a current target (typically one that was
                     // directly selected with "Goto")
-                    if (string.IsNullOrWhiteSpace(currentLeg.NextWayPointName) || currentLeg.NextWayPoint == null)
+                    if (currentLeg == null)
                     {
                         OperationState = AutopilotErrorState.NoRoute;
                         return;
@@ -136,11 +234,34 @@ namespace Iot.Device.Nmea0183
                     OperationState = AutopilotErrorState.DirectGoto;
                     next = new RoutePoint("Goto", 0, 1, currentLeg.NextWayPointName, currentLeg.NextWayPoint, null, null);
                 }
-                else
+                else if (currentLeg != null)
                 {
                     // Better to compare by position rather than name, because the names (unless using identifiers) may
                     // not be unique.
                     next = currentRoute.FirstOrDefault(x => x.Position.EqualPosition(currentLeg.NextWayPoint));
+                }
+                else
+                {
+                    if (_manualNextWaypoint == null)
+                    {
+                        next = currentRoute.First();
+                        _manualNextWaypoint = next;
+                    }
+                    else if (!HasPassedWaypoint(position, track, ref _manualNextWaypoint, currentRoute))
+                    {
+                        next = _manualNextWaypoint;
+                    }
+                    else
+                    {
+                        passedWp = true;
+                        next = _manualNextWaypoint;
+                        if (next == null) // reached end of route
+                        {
+                            currentRoute = null;
+                        }
+                    }
+
+                    OperationState = AutopilotErrorState.OperatingAsMaster;
                 }
 
                 if (next != null && next.Position != null && (_knownNextWaypoint == null || next.Position.EqualPosition(_knownNextWaypoint.Position) == false))
@@ -169,6 +290,7 @@ namespace Iot.Device.Nmea0183
                         GreatCircle.DistAndDir(position, next.Position, out Length distance, out Angle direction);
                         _currentOrigin = new RoutePoint("Goto", 1, 1, "Origin", position, direction,
                             distance);
+                        previous = _currentOrigin;
                     }
                 }
                 else
@@ -181,6 +303,8 @@ namespace Iot.Device.Nmea0183
                 {
                     // No position for next waypoint
                     OperationState = AutopilotErrorState.InvalidNextWaypoint;
+                    NextWaypoint = null;
+                    // Note: Possibly reached destination
                     return;
                 }
 
@@ -207,10 +331,11 @@ namespace Iot.Device.Nmea0183
                     }
                 }
 
+                NextWaypoint = next;
                 List<NmeaSentence> sentencesToSend = new List<NmeaSentence>();
                 RecommendedMinimumNavToDestination rmb = new RecommendedMinimumNavToDestination(now,
                     crossTrackError, previousWayPoint, nextWayPoint, nextPosition, distanceToNext, bearingCurrentToDestination,
-                    approachSpeedToWayPoint, currentLeg.Arrived);
+                    approachSpeedToWayPoint, passedWp);
 
                 CrossTrackError xte = new CrossTrackError(crossTrackError);
 
@@ -252,9 +377,63 @@ namespace Iot.Device.Nmea0183
                     }
                 }
 
-                OperationState = AutopilotErrorState.OperatingAsSlave;
                 _output.SendSentences(sentencesToSend);
             }
+        }
+
+        private bool HasPassedWaypoint(GeographicPosition position, Angle courseOverGround, ref RoutePoint nextWaypoint, List<RoutePoint> currentRoute)
+        {
+            RoutePoint previousWayPoint = null;
+            RoutePoint wayPointAfterNext = null;
+            int idx = currentRoute.IndexOf(nextWaypoint);
+            if (idx < 0)
+            {
+                // This is weird
+                return false;
+            }
+
+            if (idx == 0)
+            {
+                previousWayPoint = _currentOrigin;
+            }
+            else
+            {
+                previousWayPoint = currentRoute[idx - 1];
+            }
+
+            if (idx < currentRoute.Count - 2)
+            {
+                wayPointAfterNext = currentRoute[idx + 1];
+            }
+
+            GreatCircle.DistAndDir(position, nextWaypoint.Position, out var distanceToNext, out var angleToNext);
+            if (distanceToNext < WaypointSwitchDistance)
+            {
+                nextWaypoint = wayPointAfterNext;
+                return true;
+            }
+
+            if (previousWayPoint != null && wayPointAfterNext != null)
+            {
+                GreatCircle.CrossTrackError(previousWayPoint.Position, nextWaypoint.Position, position, out var crossTrackCurrentLeg,
+                    out _);
+                GreatCircle.CrossTrackError(nextWaypoint.Position, wayPointAfterNext.Position, position, out var crossTrackNextLeg,
+                    out var distanceToAfterNext);
+                Angle delta = AngleExtensions.Difference(courseOverGround, angleToNext);
+
+                // We switch to the next leg if the cross track error to it is smaller than to the current leg.
+                // This condition is obvious for the side of the route with the smaller angle (that's the one in which the
+                // route bends at nextWaypoint), for the other side we need the additional condition that that waypoint
+                // is no longer ahead of us. This is the case if the direction to it and our current track are pointing in
+                // opposite directions
+                if (crossTrackCurrentLeg > crossTrackNextLeg && Math.Abs(delta.Normalize(false).Degrees) > 90)
+                {
+                    nextWaypoint = wayPointAfterNext;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool CreateRouteMessages(List<RoutePoint> currentRoute, out IEnumerable<Route> rte, out IEnumerable<Waypoint> wpt)
