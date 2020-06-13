@@ -173,7 +173,7 @@ namespace DisplayControl
                     _ledController.Write(_ledPin, PinValue.Low);
                     double averageLow = (b1Low + b2Low + b3Low + b4Low) / 4;
                     double averageHigh = (b1High + b2High + b3High + b4High) / 4;
-                    bool sunIsShining = averageLow > 1.5;
+                    bool sunIsShining = averageLow > 1.1;
                     // Todo: find out which button might be pressed (obstructed)
                     // if the low average is high the LED might not have an effect at all. 
                     // if the low average equals the high average, the led has no effect (or is broken)
@@ -217,19 +217,26 @@ namespace DisplayControl
                         _button3.Value = -b3Low;
                         _button4.Value = -b4Low;
                         const double lowThreshold = 0.5;
-                        if (b1Low < lowThreshold && Math.Abs(b1Low - averageLow) > 0.3)
+                        double bt1Delta = b1Low - (b2Low + b3Low + b4Low) / 3;
+                        double bt2Delta = b2Low - (b1Low + b3Low + b4Low) / 3;
+                        double bt3Delta = b3Low - (b1Low + b2Low + b4Low) / 3;
+                        double bt4Delta = b4Low - (b1Low + b2Low + b3Low) / 3;
+                        // All the deltas are negative, if relevant
+                        // Only the maximum (the one with the largest difference) is relevant
+                        double maxDelta = Math.Min(Math.Min(bt1Delta, bt2Delta), Math.Min(bt3Delta, bt4Delta));
+                        if (Math.Abs(bt1Delta) > lowThreshold && Math.Abs(maxDelta - bt1Delta) < 1E-10)
                         {
                             SendButtonPressedIfOk(DisplayButton.Back);
                         }
-                        else if (b2Low < lowThreshold && Math.Abs(b2Low - averageLow) > 0.3)
+                        else if (Math.Abs(bt2Delta) > lowThreshold && Math.Abs(maxDelta - bt2Delta) < 1E-10)
                         {
                             SendButtonPressedIfOk(DisplayButton.Previous);
                         }
-                        else if (b3Low < lowThreshold && Math.Abs(b3Low - averageLow) > 0.3)
+                        else if (Math.Abs(bt3Delta) > lowThreshold && Math.Abs(maxDelta - bt3Delta) < 1E-10)
                         {
                             SendButtonPressedIfOk(DisplayButton.Next);
                         }
-                        else if (b4Low < lowThreshold && Math.Abs(b4Low - averageLow) > 0.3)
+                        else if (Math.Abs(bt4Delta) > lowThreshold && Math.Abs(maxDelta - bt4Delta) < 1E-10)
                         {
                             SendButtonPressedIfOk(DisplayButton.Enter);
                         }
