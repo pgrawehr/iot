@@ -64,11 +64,6 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.True(TestDistAndDir(0, -179, 0, 179));
             Assert.True(TestDistAndDir(45, 10, -55, -170));
             Assert.True(TestDistAndDir(-35.84, 94, 35.87, -85));
-            // These are (why?) special cases that get inexact releases.
-            // Assert.True(TestDistAndDir(35.8725750473666, -85.696011868164,
-            //    - 35.8447055545844, 94.3611548069683));
-            // Assert.True(TestDistAndDir(-35.8447055545844, 94.3611548069683,
-            //    35.8725750473666, -85.696011868164));
             double dist = 0;
             double dir = 0;
             GreatCircle.DistAndDir(47, 9, 47, 9, out dist, out dir);
@@ -84,6 +79,28 @@ namespace Iot.Device.Nmea0183.Tests
                 35.87, -85, out dist2, out dir2);
             Assert.True(dist2 > dist);
 
+        }
+
+        [Fact]
+        public void StructureArgumentGetsSameResultDistAndDir()
+        {
+            GreatCircle.DistAndDir(-35.84, 94,
+                35.87, -85, out var dist1, out var dir1);
+
+            GreatCircle.DistAndDir(new GeographicPosition(-35.84, 94, 100), new GeographicPosition(35.87, -85, 200), out var dist2, out var dir2);
+
+            Assert.Equal(dist1, dist2.Meters);
+            Assert.Equal(dir1 + 360.0, dir2.Degrees);
+        }
+
+        [Fact]
+        public void StructureArgumentGetsSameResultCalcCoords()
+        {
+            GreatCircle.CalcCoords(21.0, -120.12, 88.0, 1002, out double resLat, out double resLon);
+            var newPos = GreatCircle.CalcCoords(new GeographicPosition(21, -120.12, 250), Angle.FromDegrees(88.0), Length.FromMeters(1002));
+
+            Assert.Equal(resLat, newPos.Latitude);
+            Assert.Equal(resLon, newPos.Longitude);
         }
 
         private static bool TestDistAndDir(double startlat, double startlon, double endlat, double endlon)

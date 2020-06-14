@@ -209,12 +209,23 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
-        public void XteEncode()
+        public void XteEncodeRight()
         {
             string msg = "A,A,10.912,R,N,D";
 
             NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
             CrossTrackError mwv = new CrossTrackError(Length.FromNauticalMiles(-10.91234));
+            Assert.True(mwv.Valid);
+            Assert.Equal(msg, mwv.ToNmeaMessage());
+        }
+
+        [Fact]
+        public void XteEncodeLeft()
+        {
+            string msg = "A,A,10.912,L,N,D";
+
+            NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
+            CrossTrackError mwv = new CrossTrackError(Length.FromNauticalMiles(10.91234));
             Assert.True(mwv.Valid);
             Assert.Equal(msg, mwv.ToNmeaMessage());
         }
@@ -374,6 +385,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$IIDBK,29.2,f,8.90,M,4.9,F*0B")] // Unknown sentence (for now)
         [InlineData("$GPGLL,4729.49680,N,00930.39770,E,115611.000,A,D*54")]
         [InlineData("$GPRTE,1,1,c,Route 008,R1,R2,R3,R4,R5*39")]
+        [InlineData("$YDVHW,,T,,M,3.1,N,5.7,K,*64")]
         public void SentenceRoundTrip(string input)
         {
             var inSentence = TalkerSentence.FromSentenceString(input, out var error);
@@ -423,6 +435,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$GPBWC,115617,4728.8150,N,00929.9999,E,201.6,T,199.7,M,0.737,N,R5,D")]
         [InlineData("$GPVTG,41.3,T,39.3,M,1.8,N,3.3,K,A")]
         [InlineData("$HCHDG,30.9,,,1.9,E")]
+        [InlineData("$YDVHW,,T,,M,3.1,N,5.7,K,*64")]
         public void CanParseAllTheseMessages(string input)
         {
             var inSentence = TalkerSentence.FromSentenceString(input, out var error);
@@ -449,6 +462,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$GPGLL,4729.49680,N,00930.39770,E,115611.000,A,D")]
         [InlineData("$IIXDR,C,18.20,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P")]
         [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D")]
+        [InlineData("$YDVHW,,T,,M,3.1,N,5.7,K,")]
         public void SentenceRoundTripIsUnaffectedByCulture(string input)
         {
             // de-DE has "," as decimal separator. Big trouble if using CurrentCulture for any parsing or formatting here

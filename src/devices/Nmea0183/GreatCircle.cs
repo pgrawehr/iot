@@ -137,14 +137,14 @@ namespace Iot.Device.Nmea0183
             return currentSpeed * Math.Cos(delta.Radians);
         }
 
-        public static GeographicPosition CalcCoords(GeographicPosition start, double direction, double distance)
+        public static GeographicPosition CalcCoords(GeographicPosition start, Angle direction, Length distance)
         {
             if (start == null)
             {
                 throw new ArgumentNullException(nameof(start));
             }
 
-            GeoidCalculations.geod_direct(_geod, start.Latitude, start.Longitude, direction, distance, out double resultLatitude, out double resultLongitude, out _);
+            GeoidCalculations.geod_direct(_geod, start.Latitude, start.Longitude, direction.Degrees, distance.Meters, out double resultLatitude, out double resultLongitude, out _);
             return new GeographicPosition(resultLatitude, resultLongitude, start.EllipsoidalHeight);
         }
 

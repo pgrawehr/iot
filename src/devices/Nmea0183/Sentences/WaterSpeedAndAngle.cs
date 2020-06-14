@@ -71,7 +71,8 @@ namespace Iot.Device.Nmea0183.Sentences
                 Speed = Speed.FromKnots(speed.Value);
             }
 
-            if (speed.HasValue && (angleMagnetic.HasValue || angleTrue.HasValue))
+            // The other information can be obtained by other messages, the water speed is the only we really need this message
+            if (speed.HasValue)
             {
                 Valid = true;
             }
@@ -115,7 +116,8 @@ namespace Iot.Device.Nmea0183.Sentences
                 string normalizedT = HeadingTrue.HasValue ? HeadingTrue.Value.Normalize(true).ToString("F1", CultureInfo.InvariantCulture) : string.Empty;
                 string normalizedM = HeadingMagnetic.HasValue ? HeadingMagnetic.Value.Normalize(true).ToString("F1", CultureInfo.InvariantCulture) : string.Empty;
 
-                return FormattableString.Invariant($"{normalizedT},T,{normalizedM},M,{Speed.Knots:F1},N,{Speed.KilometersPerHour:F1},K");
+                // This ends with a comma. What extra parameter is expected there is unclear
+                return FormattableString.Invariant($"{normalizedT},T,{normalizedM},M,{Speed.Knots:F1},N,{Speed.KilometersPerHour:F1},K,");
             }
 
             return string.Empty;
@@ -126,10 +128,10 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"True heading: {HeadingTrue.GetValueOrDefault(Angle.Zero).Degrees:F1}° Magnetic heading: {HeadingMagnetic.GetValueOrDefault(Angle.Zero).Degrees:F1}° Speed: {Speed.Knots:F1}Kts";
+                return $"True heading: {HeadingTrue.GetValueOrDefault(Angle.Zero).Degrees:F1}° Magnetic heading: {HeadingMagnetic.GetValueOrDefault(Angle.Zero).Degrees:F1}° Speed: {Speed.Knots:F1}kts";
             }
 
-            return "Wind speed/direction unknown";
+            return "Speed/Direction trough water unknown";
         }
     }
 }
