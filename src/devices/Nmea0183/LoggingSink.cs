@@ -45,14 +45,28 @@ namespace Iot.Device.Nmea0183
 
         private void StartNewFile()
         {
-            string datePart = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
-            string fileName = Path.Combine(Configuration.Path, "Nmea-" + datePart + ".txt");
+            var now = DateTime.UtcNow;
+            string path = Configuration.Path;
+            string fileName;
+            if (Configuration.SortByDate)
+            {
+                string file = now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
+                fileName = Path.Combine(path, "Nmea-" + file + ".txt");
+            }
+            else
+            {
+                path = Path.Combine(path, "Log-" + now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                string file = now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
+                fileName = Path.Combine(path, "Nmea-" + file + ".txt");
+            }
+
             if (_logFile != null)
             {
                 _textWriter.Flush();
                 _logFile.Close();
             }
 
+            Directory.CreateDirectory(path);
             _logFile = new FileStream(fileName, FileMode.Append, FileAccess.Write);
             _textWriter = new StreamWriter(_logFile);
         }

@@ -120,8 +120,8 @@ namespace Nmea.Simulator
             while (!_terminate)
             {
                 var newData = _activeData.Clone();
-                GeographicPosition newPosition = GreatCircle.CalcCoords(newData.Position, _activeData.Course.Degrees,
-                    _activeData.Speed.MetersPerSecond * UpdateRate.TotalSeconds);
+                GeographicPosition newPosition = GreatCircle.CalcCoords(newData.Position, _activeData.Course,
+                    _activeData.Speed * UpdateRate);
                 newData.Position = newPosition;
                 _activeData = newData;
 

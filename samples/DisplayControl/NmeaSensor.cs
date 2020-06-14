@@ -204,9 +204,9 @@ namespace DisplayControl
                 }
             }
 
-            if (sentence is Route rte)
+            if (sentence is RoutePart rte)
             {
-                correctedMessage = new Route(RemoveNonAscii(rte.RouteName), rte.TotalSequences, rte.Sequence, rte.WaypointNames.Select(x => RemoveNonAscii(x)).ToList());
+                correctedMessage = new RoutePart(RemoveNonAscii(rte.RouteName), rte.TotalSequences, rte.Sequence, rte.WaypointNames.Select(x => RemoveNonAscii(x)).ToList());
             }
 
             if (sentence is Waypoint wpl)
@@ -304,7 +304,7 @@ namespace DisplayControl
             // _signalKClientParser.ExclusiveTalkerId = new TalkerId('I', 'I');
             _signalKClientParser.StartDecode();
 
-            _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/", MaxFileSize = 1024 * 1024 * 5 });
+            _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/ShipLogs", MaxFileSize = 1024 * 1024 * 5 , SortByDate = true });
 
             _autopilot = new AutopilotController(_router, _router);
 
