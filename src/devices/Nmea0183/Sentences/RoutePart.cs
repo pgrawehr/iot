@@ -9,7 +9,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// <summary>
     /// RTE sentence: Identifiers of waypoints of current route
     /// </summary>
-    public class Route : NmeaSentence
+    public class RoutePart : NmeaSentence
     {
         /// <summary>
         /// This sentence's id
@@ -21,7 +21,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs a new RTE sentence
         /// </summary>
-        public Route(string routeName, int totalSequences, int sequence, List<string> waypointNames)
+        public RoutePart(string routeName, int totalSequences, int sequence, List<string> waypointNames)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             RouteName = routeName;
@@ -40,7 +40,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Internal constructor
         /// </summary>
-        public Route(TalkerSentence sentence, DateTimeOffset time)
+        public RoutePart(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
@@ -48,7 +48,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Date and time message (ZDA). This should not normally need the last time as argument, because it defines it.
         /// </summary>
-        public Route(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+        public RoutePart(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();

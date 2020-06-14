@@ -30,7 +30,7 @@ namespace Iot.Device.Nmea0183
         private bool _selfNavMode;
         private RoutePoint _manualNextWaypoint;
 
-        private List<RoutePoint> _activeRoute;
+        private Route _activeRoute;
 
         public AutopilotController(NmeaSinkAndSource input, NmeaSinkAndSource output)
         {
@@ -88,35 +88,15 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Explicitly activates a new route. This gets precedence over an externally defined route.
+        /// Activates the given route.
+        /// Note that it is cloned. The <see cref="Route.NextPoint"/> property is not updated automatically as the route progresses.
+        /// Investigate <see cref="NextWaypoint"/> regularly instead.
         /// </summary>
         /// <param name="route">The new route</param>
-        /// <param name="nextPoint">The next point on the route (optional, defaults to the first point)</param>
-        /// <exception cref="ArgumentException">Different semantic errors with the definition of the route.</exception>
-        public void ActivateRoute(List<RoutePoint> route, RoutePoint nextPoint = null)
+        public void ActivateRoute(Route route)
         {
-            if (route == null || route.Count == 0)
-            {
-                throw new ArgumentException("Must provide a route with at least one element");
-            }
-
-            if (nextPoint == null)
-            {
-                nextPoint = route.First();
-            }
-
-            if (!route.Contains(nextPoint))
-            {
-                throw new ArgumentException("The next point must be part of the route");
-            }
-
-            if (route.Any(x => x.Position == null || string.IsNullOrWhiteSpace(x.WaypointName)))
-            {
-                throw new ArgumentException("Invalid route - No positions or no names given");
-            }
-
             _activeRoute = route;
-            _manualNextWaypoint = nextPoint;
+            _manualNextWaypoint = route.NextPoint ?? route.StartPoint;
         }
 
         /// <summary>
@@ -218,7 +198,12 @@ namespace Iot.Device.Nmea0183
                     nextWayPoint = currentLeg.NextWayPointName;
                 }
 
-                List<RoutePoint> currentRoute = _activeRoute;
+                List<RoutePoint> currentRoute = null;
+                if (_activeRoute != null)
+                {
+                    currentRoute = _activeRoute.Points;
+                }
+
                 RoutePoint next;
                 // This returns RoutePresent if at least one valid waypoint is in the list
                 if (currentRoute == null && _cache.TryGetCurrentRoute(out currentRoute) != AutopilotErrorState.RoutePresent)
@@ -352,7 +337,7 @@ namespace Iot.Device.Nmea0183
                 if (loops % 2 == 0)
                 {
                     // Only send these once a second
-                    IEnumerable<Route> rte;
+                    IEnumerable<RoutePart> rte;
                     IEnumerable<Waypoint> wpt;
                     if (currentRoute == null || currentRoute.Count == 0)
                     {
@@ -436,10 +421,10 @@ namespace Iot.Device.Nmea0183
             return false;
         }
 
-        private bool CreateRouteMessages(List<RoutePoint> currentRoute, out IEnumerable<Route> rte, out IEnumerable<Waypoint> wpt)
+        private bool CreateRouteMessages(List<RoutePoint> currentRoute, out IEnumerable<RoutePart> rte, out IEnumerable<Waypoint> wpt)
         {
             // empty route (but valid message)
-            List<Route> route = new List<Route>() { new Route(string.Empty, 1, 1, new List<string>()) };
+            List<RoutePart> route = new List<RoutePart>() { new RoutePart(string.Empty, 1, 1, new List<string>()) };
             List<Waypoint> waypoints = new List<Waypoint>();
             if (currentRoute.Any() == false)
             {
@@ -457,7 +442,7 @@ namespace Iot.Device.Nmea0183
                 // Add 3 points to each route message
                 if (currentRouteElements.Count >= 3)
                 {
-                    route.Add(new Route(pt.RouteName, totalElements, route.Count + 1, currentRouteElements));
+                    route.Add(new RoutePart(pt.RouteName, totalElements, route.Count + 1, currentRouteElements));
                     currentRouteElements = new List<string>();
                 }
 
@@ -467,7 +452,7 @@ namespace Iot.Device.Nmea0183
             if (currentRouteElements.Any())
             {
                 // Remainder
-                route.Add(new Route(currentRoute[0].RouteName, totalElements, route.Count + 1, currentRouteElements));
+                route.Add(new RoutePart(currentRoute[0].RouteName, totalElements, route.Count + 1, currentRouteElements));
             }
 
             wpt = waypoints;

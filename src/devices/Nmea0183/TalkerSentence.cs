@@ -42,7 +42,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[BearingOriginToDestination.Id] = (sentence, time) => new BearingOriginToDestination(sentence, time);
             knownSentences[BearingAndDistanceToWayPoint.Id] = (sentence, time) => new BearingAndDistanceToWayPoint(sentence, time);
             knownSentences[PositionFastUpdate.Id] = (sentence, time) => new PositionFastUpdate(sentence, time);
-            knownSentences[Route.Id] = (sentence, time) => new Route(sentence, time);
+            knownSentences[RoutePart.Id] = (sentence, time) => new RoutePart(sentence, time);
 
             return knownSentences;
         }

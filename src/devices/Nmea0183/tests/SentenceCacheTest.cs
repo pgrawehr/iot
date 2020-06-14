@@ -41,7 +41,7 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void GetNothingEmptyRoute()
         {
-            var sentence1 = new Route("RT", 1, 1, new List<string>());
+            var sentence1 = new RoutePart("RT", 1, 1, new List<string>());
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
 
             Assert.Equal(AutopilotErrorState.WaypointsWithoutPosition, _cache.TryGetCurrentRoute(out _));
@@ -50,7 +50,7 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void GetCompleteRouteOneElement()
         {
-            var sentence1 = new Route("RT", 1, 1, new List<string>() { "A", "B" });
+            var sentence1 = new RoutePart("RT", 1, 1, new List<string>() { "A", "B" });
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
 
             _cache.Add(new Waypoint(new GeographicPosition(), "A"));
@@ -70,7 +70,7 @@ namespace Iot.Device.Nmea0183.Tests
         public void GetCompleteRouteOneElement2()
         {
             // Even with three times the same message, this should return just one route
-            var sentence1 = new Route("RT", 1, 1, new List<string>() { "A", "B" });
+            var sentence1 = new RoutePart("RT", 1, 1, new List<string>() { "A", "B" });
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
@@ -87,8 +87,8 @@ namespace Iot.Device.Nmea0183.Tests
         public void GetCompleteRouteTwoElements()
         {
             // Even with three times the same message, this should return just one route
-            var sentence1 = new Route("RT", 2, 1, new List<string>() { "A", "B" });
-            var sentence2 = new Route("RT", 2, 2, new List<string>() { "C", "D" });
+            var sentence1 = new RoutePart("RT", 2, 1, new List<string>() { "A", "B" });
+            var sentence2 = new RoutePart("RT", 2, 2, new List<string>() { "C", "D" });
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
@@ -112,8 +112,8 @@ namespace Iot.Device.Nmea0183.Tests
         public void GetNewestRoute()
         {
             // The latest route is interesting
-            var sentence1 = new Route("RTOld", 1, 1, new List<string>() { "A", "B" });
-            var sentence2 = new Route("RTNew", 1, 1, new List<string>() { "C", "D" });
+            var sentence1 = new RoutePart("RTOld", 1, 1, new List<string>() { "A", "B" });
+            var sentence2 = new RoutePart("RTNew", 1, 1, new List<string>() { "C", "D" });
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
 
@@ -131,8 +131,8 @@ namespace Iot.Device.Nmea0183.Tests
         public void FindOlderRouteIfNewIsIncomplete1()
         {
             // The latest route is interesting
-            var sentence1 = new Route("RTOld", 1, 1, new List<string>() { "A", "B" });
-            var sentence2 = new Route("RTNew", 1, 1, new List<string>() { "C", "D" });
+            var sentence1 = new RoutePart("RTOld", 1, 1, new List<string>() { "A", "B" });
+            var sentence2 = new RoutePart("RTNew", 1, 1, new List<string>() { "C", "D" });
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence2);
 
@@ -148,12 +148,12 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void FindOlderRouteIfNewIsIncomplete()
         {
-            var sentence1 = new Route("RTOld", 2, 1, new List<string>() { "A", "B" });
-            var sentence1b = new Route("RTOld", 2, 2, new List<string>()
+            var sentence1 = new RoutePart("RTOld", 2, 1, new List<string>() { "A", "B" });
+            var sentence1b = new RoutePart("RTOld", 2, 2, new List<string>()
             {
                 "C"
             });
-            var sentence2 = new Route("RTNew", 3, 1, new List<string>() { "C", "D" });
+            var sentence2 = new RoutePart("RTNew", 3, 1, new List<string>() { "C", "D" });
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence1b);
             _sink.Raise(x => x.OnNewSequence += null, null, sentence2);

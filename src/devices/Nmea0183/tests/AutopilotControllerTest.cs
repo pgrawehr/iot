@@ -105,7 +105,8 @@ namespace Iot.Device.Nmea0183.Tests
             testRoute.Add(new RoutePoint("R1", 0, 3, "A1", new GeographicPosition(1, 0, 0), Angle.Zero, Length.Zero));
             testRoute.Add(new RoutePoint("R1", 1, 3, "A2", new GeographicPosition(1.001, 0, 0), Angle.FromDegrees(10), Length.Zero));
             testRoute.Add(new RoutePoint("R1", 2, 3, "A3", new GeographicPosition(1.002, 0.001, 0), Angle.Zero, Length.Zero));
-            _autopilot.ActivateRoute(testRoute);
+            Route rt = new Route("TEST", testRoute);
+            _autopilot.ActivateRoute(rt);
             SetPositionAndTrack(new GeographicPosition(0.9, 0, 0), Angle.Zero);
 
             bool outputGenerated = false;
@@ -127,6 +128,15 @@ namespace Iot.Device.Nmea0183.Tests
 
             Assert.Equal(AutopilotErrorState.OperatingAsMaster, _autopilot.OperationState);
             Assert.Equal(testRoute[0], _autopilot.NextWaypoint);
+            Assert.True(outputGenerated);
+
+            // Run over first waypoint (on the left of the track)
+            outputGenerated = false;
+            SetPositionAndTrack(new GeographicPosition(1.0005, -0.001, 0), Angle.FromDegrees(5));
+            _autopilot.CalculateNewStatus(2, DateTimeOffset.UtcNow);
+
+            Assert.Equal(AutopilotErrorState.OperatingAsMaster, _autopilot.OperationState);
+            Assert.Equal(testRoute[1], _autopilot.NextWaypoint);
             Assert.True(outputGenerated);
         }
 

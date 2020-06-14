@@ -75,7 +75,6 @@ namespace DisplayControl
         private WindSpeedAndAngle _lastMwvTrueMessage;
         private Temperature? _lastTemperature;
         private double? _lastHumidity;
-        private SentenceCache _sentenceCache;
         private AutopilotController _autopilot;
 
         public NmeaSensor()
@@ -307,8 +306,7 @@ namespace DisplayControl
 
             _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/", MaxFileSize = 1024 * 1024 * 5 });
 
-            _sentenceCache = new SentenceCache(_router);
-            _autopilot = new AutopilotController(_sentenceCache, _router);
+            _autopilot = new AutopilotController(_router, _router);
 
             _router.AddEndPoint(_parserShipInterface);
             _router.AddEndPoint(_parserHandheldInterface);
@@ -470,8 +468,6 @@ namespace DisplayControl
 
             _parserHandheldInterface?.Dispose();
             _parserHandheldInterface = null;
-
-            _sentenceCache.Clear();
         }
 
         public void SendTemperature(Temperature value)

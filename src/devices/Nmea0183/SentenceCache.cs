@@ -16,7 +16,7 @@ namespace Iot.Device.Nmea0183
         private readonly NmeaSinkAndSource _source;
         private readonly object _lock;
         private Dictionary<SentenceId, NmeaSentence> _sentences;
-        private Queue<Route> _lastRouteSentences;
+        private Queue<RoutePart> _lastRouteSentences;
         private Dictionary<string, Waypoint> _wayPoints;
 
         private SentenceId[] _groupSentences = new SentenceId[]
@@ -32,7 +32,7 @@ namespace Iot.Device.Nmea0183
             _source = source;
             _lock = new object();
             _sentences = new Dictionary<SentenceId, NmeaSentence>();
-            _lastRouteSentences = new Queue<Route>();
+            _lastRouteSentences = new Queue<RoutePart>();
             _wayPoints = new Dictionary<string, Waypoint>();
             StoreRawSentences = false;
             _source.OnNewSequence += OnNewSequence;
@@ -198,7 +198,7 @@ namespace Iot.Device.Nmea0183
         public AutopilotErrorState TryGetCurrentRoute(out List<RoutePoint> routeList)
         {
             routeList = new List<RoutePoint>();
-            List<Route> segments = FindLatestCompleteRoute(out string routeName);
+            List<RoutePart> segments = FindLatestCompleteRoute(out string routeName);
             if (segments == null)
             {
                 return AutopilotErrorState.NoRoute;
@@ -242,9 +242,9 @@ namespace Iot.Device.Nmea0183
             return AutopilotErrorState.RoutePresent;
         }
 
-        private List<Route> FindLatestCompleteRoute(out string routeName)
+        private List<RoutePart> FindLatestCompleteRoute(out string routeName)
         {
-            List<Route> routeSentences;
+            List<RoutePart> routeSentences;
             lock (_lock)
             {
                 // Newest shall be first in list
@@ -259,7 +259,7 @@ namespace Iot.Device.Nmea0183
             }
 
             routeName = string.Empty;
-            Route[] elements = null;
+            RoutePart[] elements = null;
 
             // This is initially never 0 here
             while (routeSentences.Count > 0)
@@ -275,7 +275,7 @@ namespace Iot.Device.Nmea0183
                 int numberOfSequences = head.TotalSequences;
                 routeName = head.RouteName;
 
-                elements = new Route[numberOfSequences + 1]; // Use 1-based indexing
+                elements = new RoutePart[numberOfSequences + 1]; // Use 1-based indexing
                 bool complete = false;
                 foreach (var sentence in routeSentences)
                 {
@@ -308,7 +308,7 @@ namespace Iot.Device.Nmea0183
                 routeSentences.RemoveRange(0, routeSentences.IndexOf(head) + 1);
             }
 
-            List<Route> ret = new List<Route>();
+            List<RoutePart> ret = new List<RoutePart>();
             for (var index = 1; index < elements.Length; index++)
             {
                 var elem = elements[index];
@@ -338,7 +338,7 @@ namespace Iot.Device.Nmea0183
                     // Standalone sequences. Only the last message needs to be kept
                     _sentences[sentence.SentenceId] = sentence;
                 }
-                else if (sentence.SentenceId == Route.Id && (sentence is Route rte))
+                else if (sentence.SentenceId == RoutePart.Id && (sentence is RoutePart rte))
                 {
                     _lastRouteSentences.Enqueue(rte);
                     while (_lastRouteSentences.Count > 100)
