@@ -75,12 +75,17 @@ namespace Iot.Device.Board
         internal static GpioDriver GetBestDriverForBoard()
         {
             var methodInfo = typeof(GpioController).GetMethod("GetBestDriverForBoard", BindingFlags.NonPublic | BindingFlags.Static);
+            if (methodInfo == null)
+            {
+                throw new InvalidOperationException($"{nameof(GpioController)} is missing an implementation for GetBestDriverForBoard");
+            }
+
             GpioDriver driver = null;
             try
             {
-                driver = (GpioDriver)methodInfo.Invoke(null, new object[0]);
+                driver = RethrowInnerException(() => (GpioDriver)methodInfo.Invoke(null, new object[0]));
             }
-            catch (Exception x) when (!(x is NullReferenceException) && (!(x is TargetInvocationException))) // That would be serious
+            catch (Exception x) when (x is PlatformNotSupportedException || x is NotSupportedException) // That would be serious
             {
             }
 
@@ -101,59 +106,59 @@ namespace Iot.Device.Board
 
         protected override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
         {
-            return _board.ConvertPinNumberToLogicalNumberingScheme(pinNumber);
+            return RethrowInnerException(() => _board.ConvertPinNumberToLogicalNumberingScheme(pinNumber));
         }
 
         protected override void OpenPin(int pinNumber)
         {
             _board.ReservePin(pinNumber, PinUsage.Gpio, this);
-            _openPinMethodInfo.Invoke(_driver, new object[] { pinNumber });
+            RethrowInnerException(() => _openPinMethodInfo.Invoke(_driver, new object[] { pinNumber }));
         }
 
         protected override void ClosePin(int pinNumber)
         {
-            _closePinMethodInfo.Invoke(_driver, new object[] { pinNumber });
+            RethrowInnerException(() => _closePinMethodInfo.Invoke(_driver, new object[] { pinNumber }));
             _board.ReleasePin(pinNumber, PinUsage.Gpio, this);
         }
 
         protected override void SetPinMode(int pinNumber, PinMode mode)
         {
-            _setPinModeMethodInfo.Invoke(_driver, new object[] { pinNumber, mode });
+            RethrowInnerException(() => _setPinModeMethodInfo.Invoke(_driver, new object[] { pinNumber, mode }));
         }
 
         protected override PinMode GetPinMode(int pinNumber)
         {
-            return (PinMode)_getPinModeMethodInfo.Invoke(_driver, new object[] { pinNumber });
+            return RethrowInnerException(() => (PinMode)_getPinModeMethodInfo.Invoke(_driver, new object[] { pinNumber }));
         }
 
         protected override bool IsPinModeSupported(int pinNumber, PinMode mode)
         {
-            return (bool)_isPinModeSupportedMethodInfo.Invoke(_driver, new object[] { pinNumber, mode });
+            return RethrowInnerException(() => (bool)_isPinModeSupportedMethodInfo.Invoke(_driver, new object[] { pinNumber, mode }));
         }
 
         protected override PinValue Read(int pinNumber)
         {
-            return (PinValue)_readMethodInfo.Invoke(_driver, new object[] { pinNumber });
+            return RethrowInnerException(() => (PinValue)_readMethodInfo.Invoke(_driver, new object[] { pinNumber }));
         }
 
         protected override void Write(int pinNumber, PinValue value)
         {
-            _writeMethodInfo.Invoke(_driver, new object[] { pinNumber, value });
+            RethrowInnerException(() => _writeMethodInfo.Invoke(_driver, new object[] { pinNumber, value }));
         }
 
         protected override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            return (WaitForEventResult)_waitForEventMethodInfo.Invoke(_driver, new object[] { pinNumber, eventTypes, cancellationToken });
+            return RethrowInnerException(() => (WaitForEventResult)_waitForEventMethodInfo.Invoke(_driver, new object[] { pinNumber, eventTypes, cancellationToken }));
         }
 
         protected override void AddCallbackForPinValueChangedEvent(int pinNumber, PinEventTypes eventTypes, PinChangeEventHandler callback)
         {
-            _addCallbackForPinValueChangedEventMethodInfo.Invoke(_driver, new object[] { pinNumber, eventTypes, callback });
+            RethrowInnerException(() => _addCallbackForPinValueChangedEventMethodInfo.Invoke(_driver, new object[] { pinNumber, eventTypes, callback }));
         }
 
         protected override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
         {
-            _removeCallbackForPinValueChangedEventMethodInfo.Invoke(_driver, new object[] { pinNumber, callback });
+            RethrowInnerException(() => _removeCallbackForPinValueChangedEventMethodInfo.Invoke(_driver, new object[] { pinNumber, callback }));
         }
 
         /// <summary>
@@ -168,7 +173,7 @@ namespace Iot.Device.Board
                 return AlternatePinMode.NotSupported;
             }
 
-            int mode = (int)_getAlternatePinModeMethodInfo.Invoke(_driver, new object[] { pinNumber });
+            int mode = RethrowInnerException(() => (int)_getAlternatePinModeMethodInfo.Invoke(_driver, new object[] { pinNumber }));
             if (mode < 0)
             {
                 return AlternatePinMode.Gpio;
@@ -197,7 +202,26 @@ namespace Iot.Device.Board
                 mode = (int)altMode + 1;
             }
 
-            _setAlternatePinModeMethodInfo.Invoke(_driver, new object[] { pinNumber, mode });
+            RethrowInnerException(() => _setAlternatePinModeMethodInfo.Invoke(_driver, new object[] { pinNumber, mode }));
+        }
+
+        private static T RethrowInnerException<T>(Func<T> operation)
+        {
+            try
+            {
+                return operation();
+            }
+            catch (TargetInvocationException x)
+            {
+                // methodInfo.Invoke() returns a TargetInvocationException wrapping the original exception - so unpack and
+                // throw the original.
+                if (x.InnerException != null)
+                {
+                    throw x.InnerException;
+                }
+
+                throw;
+            }
         }
     }
 }
