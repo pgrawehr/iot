@@ -4,8 +4,12 @@ using System.Text;
 
 namespace Iot.Device.Board
 {
+    /// <summary>
+    /// Alternate pin modes, for pins that support them
+    /// </summary>
     public enum AlternatePinMode
     {
+        // Note: Do not change the enum values without reviewing the impact
         Unknown = -2,
         NotSupported = -1,
         Gpio = 0,

@@ -255,9 +255,24 @@ namespace Iot.Device.Board
 
         protected override void ActivatePinMode(int pinNumber, PinUsage usage)
         {
-            // TODO: Set extended pin modes (ALT0-ALT5)
             AlternatePinMode modeToSet = GetHardwareModeForPinUsage(pinNumber, usage, PinNumberingScheme.Logical);
+            if (modeToSet != AlternatePinMode.Unknown)
+            {
+                _managedGpioDriver.SetAlternatePinMode(pinNumber, modeToSet);
+            }
+
             base.ActivatePinMode(pinNumber, usage);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _managedGpioDriver?.Dispose();
+                _managedGpioDriver = null;
+            }
+
+            base.Dispose(disposing);
         }
     }
 }

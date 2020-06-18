@@ -24,6 +24,8 @@ namespace Iot.Device.Board
         private MethodInfo _waitForEventMethodInfo;
         private MethodInfo _addCallbackForPinValueChangedEventMethodInfo;
         private MethodInfo _removeCallbackForPinValueChangedEventMethodInfo;
+        private MethodInfo _getAlternatePinModeMethodInfo;
+        private MethodInfo _setAlternatePinModeMethodInfo;
 
         public ManagedGpioDriver(Board board, GpioDriver driver, int[] pinAssignment)
         {
@@ -66,6 +68,8 @@ namespace Iot.Device.Board
             _waitForEventMethodInfo = typeof(GpioDriver).GetMethod("WaitForEvent", BindingFlags.NonPublic | BindingFlags.Instance);
             _addCallbackForPinValueChangedEventMethodInfo = typeof(GpioDriver).GetMethod("AddCallbackForPinValueChangedEvent", BindingFlags.NonPublic | BindingFlags.Instance);
             _removeCallbackForPinValueChangedEventMethodInfo = typeof(GpioDriver).GetMethod("RemoveCallbackForPinValueChangedEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+            _getAlternatePinModeMethodInfo = typeof(GpioDriver).GetMethod("GetAlternatePinMode", BindingFlags.NonPublic | BindingFlags.Instance);
+            _setAlternatePinModeMethodInfo = typeof(GpioDriver).GetMethod("SetAlternatePinMode", BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
         internal static GpioDriver GetBestDriverForBoard()
@@ -150,6 +154,50 @@ namespace Iot.Device.Board
         protected override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
         {
             _removeCallbackForPinValueChangedEventMethodInfo.Invoke(_driver, new object[] { pinNumber, callback });
+        }
+
+        /// <summary>
+        /// Returns the currently set "alternate" pin mode, for pins which are multiplexed between different functions
+        /// </summary>
+        /// <param name="pinNumber">The pin number</param>
+        /// <returns>The returned pin mode</returns>
+        internal AlternatePinMode GetAlternatePinMode(int pinNumber)
+        {
+            if (_getAlternatePinModeMethodInfo == null)
+            {
+                return AlternatePinMode.NotSupported;
+            }
+
+            int mode = (int)_getAlternatePinModeMethodInfo.Invoke(_driver, new object[] { pinNumber });
+            if (mode < 0)
+            {
+                return AlternatePinMode.Gpio;
+            }
+            else
+            {
+                return (AlternatePinMode)(mode + 1);
+            }
+        }
+
+        internal void SetAlternatePinMode(int pinNumber, AlternatePinMode altMode)
+        {
+            int mode = 0;
+            if (altMode < 0)
+            {
+                throw new ArgumentException("Invalid mode requested", nameof(altMode));
+            }
+
+            if (altMode == AlternatePinMode.Gpio)
+            {
+                // When going back to Gpio, default to input
+                mode = -1;
+            }
+            else
+            {
+                mode = (int)altMode + 1;
+            }
+
+            _setAlternatePinModeMethodInfo.Invoke(_driver, new object[] { pinNumber, mode });
         }
     }
 }
