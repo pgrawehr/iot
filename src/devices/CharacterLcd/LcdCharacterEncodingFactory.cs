@@ -46,6 +46,22 @@ namespace Iot.Device.CharacterLcd
                 DefaultSplC780Map.Add(c, (byte)c);
             }
 
+            // Mappings that should be used for all maps
+            List<(char, byte)> commonMappings = new List<(char, byte)>()
+            {
+                ('’', (byte)0x27),
+            };
+
+            foreach (var item in commonMappings)
+            {
+                var c = item.Item1;
+                byte b = item.Item2;
+                DefaultCustomMap.Add(c, b);
+                DefaultA00Map.Add(c, b);
+                DefaultA02Map.Add(c, b);
+                DefaultSplC780Map.Add(c, b);
+            }
+
             DefaultA00Map.Remove('\\'); // Instead of the backspace, the Yen letter is in the map, but we can use char 164 instead
             DefaultA00Map.Add('\\', 164);
             DefaultA00Map.Add('¥', 92);
