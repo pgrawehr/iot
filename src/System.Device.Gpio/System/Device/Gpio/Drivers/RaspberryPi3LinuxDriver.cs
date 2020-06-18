@@ -374,6 +374,7 @@ namespace System.Device.Gpio.Drivers
         /// <param name="altMode">Mode to set</param>
         internal void SetAlternatePinMode(int pinNumber, int altMode)
         {
+            Initialize();
             /*
              * There are 6 registers(4-byte ints) that control the mode for all pins. Each
              * register controls the mode for 10 pins. Each pin uses 3 bits in the register
@@ -423,6 +424,7 @@ namespace System.Device.Gpio.Drivers
         /// <returns>(Alternate) Pin mode. 0 = Alt0, 1= Alt1... -1 Gpio Input, -2 Gpio Output</returns>
         internal int GetAlternatePinMode(int pinNumber)
         {
+            Initialize();
             /*
              * There are 6 registers(4-byte ints) that control the mode for all pins. Each
              * register controls the mode for 10 pins. Each pin uses 3 bits in the register

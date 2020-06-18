@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Device.Gpio;
+using System.Device.Gpio.Drivers;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
@@ -68,8 +69,8 @@ namespace Iot.Device.Board
             _waitForEventMethodInfo = typeof(GpioDriver).GetMethod("WaitForEvent", BindingFlags.NonPublic | BindingFlags.Instance);
             _addCallbackForPinValueChangedEventMethodInfo = typeof(GpioDriver).GetMethod("AddCallbackForPinValueChangedEvent", BindingFlags.NonPublic | BindingFlags.Instance);
             _removeCallbackForPinValueChangedEventMethodInfo = typeof(GpioDriver).GetMethod("RemoveCallbackForPinValueChangedEvent", BindingFlags.NonPublic | BindingFlags.Instance);
-            _getAlternatePinModeMethodInfo = typeof(GpioDriver).GetMethod("GetAlternatePinMode", BindingFlags.NonPublic | BindingFlags.Instance);
-            _setAlternatePinModeMethodInfo = typeof(GpioDriver).GetMethod("SetAlternatePinMode", BindingFlags.NonPublic | BindingFlags.Instance);
+            _getAlternatePinModeMethodInfo = typeof(RaspberryPi3Driver).GetMethod("GetAlternatePinMode", BindingFlags.NonPublic | BindingFlags.Instance);
+            _setAlternatePinModeMethodInfo = typeof(RaspberryPi3Driver).GetMethod("SetAlternatePinMode", BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
         internal static GpioDriver GetBestDriverForBoard()
@@ -199,7 +200,7 @@ namespace Iot.Device.Board
             }
             else
             {
-                mode = (int)altMode + 1;
+                mode = (int)altMode - 1;
             }
 
             RethrowInnerException(() => _setAlternatePinModeMethodInfo.Invoke(_driver, new object[] { pinNumber, mode }));

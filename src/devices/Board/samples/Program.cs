@@ -20,6 +20,8 @@ namespace BoardSample
         /// <param name="args">Command line arguments</param>
         public static void Main(string[] args)
         {
+            Console.WriteLine("Board abstraction test. Press any key to start.");
+            Console.ReadKey(true);
             var os = Environment.OSVersion;
             if (os.Platform == PlatformID.Win32NT)
             {
@@ -127,6 +129,33 @@ namespace BoardSample
 
         private static void RaspberryPiTest()
         {
+            using var raspi = new RaspberryPiBoard(PinNumberingScheme.Logical);
+            int pinNumber = 12; // PWM0 pin
+
+            Console.WriteLine("Blinking and dimming an LED - Press any key to quit");
+            while (!Console.KeyAvailable)
+            {
+                GpioController ctrl = raspi.CreateGpioController(new int[] { pinNumber });
+                ctrl.OpenPin(pinNumber);
+                ctrl.SetPinMode(pinNumber, PinMode.Output);
+                ctrl.Write(pinNumber, PinValue.Low);
+                Thread.Sleep(500);
+                ctrl.Write(pinNumber, PinValue.High);
+                Thread.Sleep(1000);
+                ctrl.ClosePin(pinNumber);
+                ctrl.Dispose();
+
+                var pwm = raspi.CreatePwmChannel(0, 0, 9000, 0.1);
+                pwm.Start();
+                for (int i = 0; i < 10; i++)
+                {
+                    pwm.DutyCycle = i * 0.1;
+                    Thread.Sleep(500);
+                }
+
+                pwm.Stop();
+                pwm.Dispose();
+            }
         }
     }
 }

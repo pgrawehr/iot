@@ -92,7 +92,12 @@ namespace Iot.Device.Board
                 Initialize();
             }
 
-            int logicalPin = ConvertPinNumberToLogicalNumberingScheme(pinNumber);
+            int logicalPin = pinNumber;
+            if (DefaultPinNumberingScheme == PinNumberingScheme.Board)
+            {
+                logicalPin = ConvertPinNumberToLogicalNumberingScheme(pinNumber);
+            }
+
             lock (_pinReservationsLock)
             {
                 if (_pinReservations.TryGetValue(logicalPin, out var reservation))
@@ -114,7 +119,12 @@ namespace Iot.Device.Board
                 throw new InvalidOperationException("Cannot release a pin if board is not initialized.");
             }
 
-            int logicalPin = ConvertPinNumberToLogicalNumberingScheme(pinNumber);
+            int logicalPin = pinNumber;
+            if (DefaultPinNumberingScheme == PinNumberingScheme.Board)
+            {
+                logicalPin = ConvertPinNumberToLogicalNumberingScheme(pinNumber);
+            }
+
             lock (_pinReservationsLock)
             {
                 if (_pinReservations.TryGetValue(logicalPin, out var reservation))
