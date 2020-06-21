@@ -224,6 +224,41 @@ namespace System.Device.Gpio
         }
 
         /// <summary>
+        /// Returns the currently set pin mode by directly reading the hardware
+        /// </summary>
+        /// <param name="pinNumber">Pin number</param>
+        /// <returns>(Alternate) Pin mode. 0 = Alt0, 1= Alt1... -1 Gpio Input, -2 Gpio Output</returns>
+        protected internal int GetAlternatePinMode(int pinNumber)
+        {
+            int logicalPinNumber = GetLogicalPinNumber(pinNumber, NumberingScheme);
+            // TODO: Maybe use an interface for this feature query instead?
+            RaspberryPi3Driver driver = _driver as RaspberryPi3Driver;
+            if (driver != null)
+            {
+                return driver.GetAlternatePinMode(logicalPinNumber);
+            }
+
+            throw new NotSupportedException("Driver does not support alternate pin modes");
+        }
+
+        /// <summary>
+        /// Sets the alternate pin mode for drivers that support this.
+        /// </summary>
+        /// <param name="pinNumber">The pin number to use</param>
+        /// <param name="altMode">Alternate mode (0 = Alt0, 1 = Alt1... anything else = Back to Gpio)</param>
+        protected internal void SetAlternatePinMode(int pinNumber, int altMode)
+        {
+            int logicalPinNumber = GetLogicalPinNumber(pinNumber, NumberingScheme);
+            RaspberryPi3Driver driver = _driver as RaspberryPi3Driver;
+            if (driver != null)
+            {
+                driver.SetAlternatePinMode(logicalPinNumber, altMode);
+            }
+
+            throw new NotSupportedException("Driver does not support alternate pin modes");
+        }
+
+        /// <summary>
         /// Blocks execution until an event of type eventType is received or a period of time has expired.
         /// </summary>
         /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
