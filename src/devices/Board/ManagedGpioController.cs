@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.Gpio.Drivers;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
 
 namespace Iot.Device.Board
 {
-    internal class ManagedGpioDriver : GpioController
+    internal class ManagedGpioController : GpioController
     {
         private readonly int[] _pinAssignment;
         private readonly Board _board;
         private readonly GpioDriver _driver;
 
-        public ManagedGpioDriver(Board board, PinNumberingScheme numberingScheme, GpioDriver driver, int[] pinAssignment)
+        public ManagedGpioController(Board board, PinNumberingScheme numberingScheme, GpioDriver driver, int[] pinAssignment)
         : base(numberingScheme, driver)
         {
             _board = board ?? throw new ArgumentNullException(nameof(board));
@@ -62,11 +63,19 @@ namespace Iot.Device.Board
 
         protected override int GetLogicalPinNumber(int pinNumber, PinNumberingScheme givenScheme)
         {
-            return _board.ConvertPinNumberToLogicalNumberingScheme(pinNumber);
+            return _board.ConvertPinNumber(pinNumber, givenScheme, PinNumberingScheme.Logical);
         }
 
         public override void OpenPin(int pinNumber)
         {
+            if (_pinAssignment != null)
+            {
+                if (!_pinAssignment.Contains(pinNumber))
+                {
+                    throw new InvalidOperationException($"Pin {pinNumber} is not reserved for this GpioController");
+                }
+            }
+
             _board.ReservePin(pinNumber, PinUsage.Gpio, this);
             base.OpenPin(pinNumber);
         }

@@ -63,20 +63,13 @@ namespace Iot.Device.Board
         }
 
         /// <summary>
-        /// Converts pin numbers in the active <see cref="PinNumberingScheme"/> to logical pin numbers.
-        /// Does nothing if <see cref="PinNumberingScheme"/> is logical
+        /// Converts pin numbers from one numbering scheme to another.
         /// </summary>
-        /// <param name="pinNumber">Pin numbers</param>
-        /// <returns>The logical pin number</returns>
-        public abstract int ConvertPinNumberToLogicalNumberingScheme(int pinNumber);
-
-        /// <summary>
-        /// Converts logical pin numbers to the active numbering scheme.
-        /// This is the opposite of <see cref="ConvertPinNumberToLogicalNumberingScheme"/>.
-        /// </summary>
-        /// <param name="pinNumber">Logical pin number</param>
-        /// <returns>The pin number in the given pin numbering scheme</returns>
-        public abstract int ConvertLogicalNumberingSchemeToPinNumber(int pinNumber);
+        /// <param name="pinNumber">Pin number to convert</param>
+        /// <param name="inputScheme">The numbering scheme of the input pin</param>
+        /// <param name="outputScheme">The desired numbering scheme</param>
+        /// <returns>The converted pin number</returns>
+        public abstract int ConvertPinNumber(int pinNumber, PinNumberingScheme inputScheme, PinNumberingScheme outputScheme);
 
         /// <summary>
         /// Reserves a pin for a specific usage. This is done automatically if a known interface (i.e. GpioController) is
@@ -92,11 +85,7 @@ namespace Iot.Device.Board
                 Initialize();
             }
 
-            int logicalPin = pinNumber;
-            if (DefaultPinNumberingScheme == PinNumberingScheme.Board)
-            {
-                logicalPin = ConvertPinNumberToLogicalNumberingScheme(pinNumber);
-            }
+            int logicalPin = ConvertPinNumber(pinNumber, DefaultPinNumberingScheme, PinNumberingScheme.Logical);
 
             lock (_pinReservationsLock)
             {
@@ -119,11 +108,7 @@ namespace Iot.Device.Board
                 throw new InvalidOperationException("Cannot release a pin if board is not initialized.");
             }
 
-            int logicalPin = pinNumber;
-            if (DefaultPinNumberingScheme == PinNumberingScheme.Board)
-            {
-                logicalPin = ConvertPinNumberToLogicalNumberingScheme(pinNumber);
-            }
+            int logicalPin = ConvertPinNumber(pinNumber, DefaultPinNumberingScheme, PinNumberingScheme.Logical);
 
             lock (_pinReservationsLock)
             {
@@ -246,12 +231,7 @@ namespace Iot.Device.Board
 
         protected int RemapPin(int pin, PinNumberingScheme providedScheme)
         {
-            if (providedScheme == PinNumberingScheme.Logical)
-            {
-                return pin;
-            }
-
-            return ConvertPinNumberToLogicalNumberingScheme(pin);
+            return ConvertPinNumber(pin, providedScheme, PinNumberingScheme.Logical);
         }
 
         protected int[] RemapPins(int[] pins, PinNumberingScheme providedScheme)
@@ -269,7 +249,7 @@ namespace Iot.Device.Board
             int[] newPins = new int[pins.Length];
             for (int i = 0; i < pins.Length; i++)
             {
-                newPins[i] = ConvertPinNumberToLogicalNumberingScheme(pins[i]);
+                newPins[i] = ConvertPinNumber(pins[i], providedScheme, PinNumberingScheme.Logical);
             }
 
             return newPins;
@@ -280,44 +260,37 @@ namespace Iot.Device.Board
 
         public static Board DetermineOptimalBoardForHardware(PinNumberingScheme defaultNumberingScheme = PinNumberingScheme.Logical)
         {
-            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            Board board = null;
+            try
             {
-                Board board = null;
-                try
-                {
-                    board = new RaspberryPiBoard(defaultNumberingScheme);
-                    board.Initialize();
-                }
-                catch (Exception x) when ((x is NotSupportedException) || (x is IOException))
-                {
-                    board?.Dispose();
-                    board = null;
-                }
-
-                if (board != null)
-                {
-                    return board;
-                }
-
-                try
-                {
-                    board = new GenericBoard(defaultNumberingScheme);
-                    board.Initialize();
-                }
-                catch (Exception x) when ((x is NotSupportedException) || (x is IOException))
-                {
-                    board?.Dispose();
-                    board = null;
-                }
-
-                if (board != null)
-                {
-                    return board;
-                }
+                board = new RaspberryPiBoard(defaultNumberingScheme);
+                board.Initialize();
             }
-            else
+            catch (Exception x) when ((x is NotSupportedException) || (x is IOException))
             {
-                // TODO: Create WindowsBoard()
+                board?.Dispose();
+                board = null;
+            }
+
+            if (board != null)
+            {
+                return board;
+            }
+
+            try
+            {
+                board = new GenericBoard(defaultNumberingScheme);
+                board.Initialize();
+            }
+            catch (Exception x) when ((x is NotSupportedException) || (x is IOException))
+            {
+                board?.Dispose();
+                board = null;
+            }
+
+            if (board != null)
+            {
+                return board;
             }
 
             throw new PlatformNotSupportedException("Could not find a matching board driver for this hardware");

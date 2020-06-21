@@ -14,32 +14,26 @@ namespace Iot.Device.Board
         public GenericBoard(PinNumberingScheme defaultNumberingScheme)
             : base(defaultNumberingScheme)
         {
-            if (defaultNumberingScheme != PinNumberingScheme.Logical)
+        }
+
+        public override int ConvertPinNumber(int pinNumber, PinNumberingScheme inputScheme, PinNumberingScheme outputScheme)
+        {
+            if (inputScheme == outputScheme)
             {
-                throw new NotSupportedException("This board only supports logical pin numbering");
+                return pinNumber;
             }
+
+            throw new NotSupportedException("This board only supports logical pin numbering");
         }
 
-        public override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
+        protected virtual GpioDriver CreateDriver()
         {
-            return pinNumber;
-        }
-
-        public override int ConvertLogicalNumberingSchemeToPinNumber(int pinNumber)
-        {
-            return pinNumber;
-        }
-
-        private GpioDriver CreateDriver(int[] pinAssignment)
-        {
-            GpioDriver driver = ManagedGpioDriver.GetBestDriverForBoard();
-
-            return new ManagedGpioDriver(this, driver, pinAssignment);
+            return ManagedGpioController.GetBestDriverForBoard();
         }
 
         public override GpioController CreateGpioController(int[] pinAssignment = null)
         {
-            return new GpioController(PinNumberingScheme.Logical, CreateDriver(pinAssignment));
+            return new ManagedGpioController(this, PinNumberingScheme.Logical, CreateDriver(), pinAssignment);
         }
 
         public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)

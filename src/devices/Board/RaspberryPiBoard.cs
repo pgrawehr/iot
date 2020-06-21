@@ -11,7 +11,7 @@ namespace Iot.Device.Board
 {
     public class RaspberryPiBoard : GenericBoard
     {
-        private ManagedGpioDriver _managedGpioDriver;
+        private ManagedGpioController _managedGpioController;
 
         public RaspberryPiBoard(PinNumberingScheme defaultNumberingScheme)
             : base(defaultNumberingScheme)
@@ -26,88 +26,103 @@ namespace Iot.Device.Board
             protected set;
         }
 
+        protected override GpioDriver CreateDriver()
+        {
+            return new RaspberryPi3Driver();
+        }
+
         public override void Initialize()
         {
             // Needs to be a raspi 3 driver here (either unix or windows)
-            _managedGpioDriver = new ManagedGpioDriver(this, new RaspberryPi3Driver(), null);
+            _managedGpioController = new ManagedGpioController(this, DefaultPinNumberingScheme, CreateDriver(), null);
+            PinCount = _managedGpioController.PinCount;
             base.Initialize();
         }
 
-        public override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
+        public override int ConvertPinNumber(int pinNumber, PinNumberingScheme inputScheme, PinNumberingScheme outputScheme)
         {
-            return pinNumber switch
+            if (inputScheme == outputScheme)
             {
-                3 => 2,
-                5 => 3,
-                7 => 4,
-                8 => 14,
-                10 => 15,
-                11 => 17,
-                12 => 18,
-                13 => 27,
-                15 => 22,
-                16 => 23,
-                18 => 24,
-                19 => 10,
-                21 => 9,
-                22 => 25,
-                23 => 11,
-                24 => 8,
-                26 => 7,
-                27 => 0,
-                28 => 1,
-                29 => 5,
-                31 => 6,
-                32 => 12,
-                33 => 13,
-                35 => 19,
-                36 => 16,
-                37 => 26,
-                38 => 20,
-                40 => 21,
-                _ => throw new ArgumentException($"Board (header) pin {pinNumber} is not a GPIO pin on the {GetType().Name} device.", nameof(pinNumber))
-            };
-        }
+                return pinNumber;
+            }
 
-        public override int ConvertLogicalNumberingSchemeToPinNumber(int pinNumber)
-        {
-            return pinNumber switch
+            if (inputScheme == PinNumberingScheme.Board && outputScheme == PinNumberingScheme.Logical)
             {
-                2 => 3,
-                3 => 5,
-                4 => 7,
-                14 => 8,
-                15 => 10,
-                17 => 11,
-                18 => 12,
-                27 => 13,
-                22 => 15,
-                23 => 16,
-                24 => 18,
-                10 => 19,
-                9 => 21,
-                25 => 22,
-                11 => 23,
-                8 => 24,
-                7 => 26,
-                0 => 27,
-                1 => 28,
-                5 => 29,
-                6 => 31,
-                12 => 23,
-                13 => 33,
-                19 => 35,
-                16 => 36,
-                26 => 37,
-                20 => 38,
-                21 => 40,
-                _ => throw new ArgumentException($"Board (header) pin {pinNumber} is not a GPIO pin on the {GetType().Name} device.", nameof(pinNumber))
-            };
+                return pinNumber switch
+                {
+                    3 => 2,
+                    5 => 3,
+                    7 => 4,
+                    8 => 14,
+                    10 => 15,
+                    11 => 17,
+                    12 => 18,
+                    13 => 27,
+                    15 => 22,
+                    16 => 23,
+                    18 => 24,
+                    19 => 10,
+                    21 => 9,
+                    22 => 25,
+                    23 => 11,
+                    24 => 8,
+                    26 => 7,
+                    27 => 0,
+                    28 => 1,
+                    29 => 5,
+                    31 => 6,
+                    32 => 12,
+                    33 => 13,
+                    35 => 19,
+                    36 => 16,
+                    37 => 26,
+                    38 => 20,
+                    40 => 21,
+                    _ => throw new ArgumentException($"Board (header) pin {pinNumber} is not a GPIO pin on the {GetType().Name} device.", nameof(pinNumber))
+                };
+            }
+            else if (inputScheme == PinNumberingScheme.Logical && outputScheme == PinNumberingScheme.Board)
+            {
+                return pinNumber switch
+                {
+                    2 => 3,
+                    3 => 5,
+                    4 => 7,
+                    14 => 8,
+                    15 => 10,
+                    17 => 11,
+                    18 => 12,
+                    27 => 13,
+                    22 => 15,
+                    23 => 16,
+                    24 => 18,
+                    10 => 19,
+                    9 => 21,
+                    25 => 22,
+                    11 => 23,
+                    8 => 24,
+                    7 => 26,
+                    0 => 27,
+                    1 => 28,
+                    5 => 29,
+                    6 => 31,
+                    12 => 32,
+                    13 => 33,
+                    19 => 35,
+                    16 => 36,
+                    26 => 37,
+                    20 => 38,
+                    21 => 40,
+                    _ => throw new ArgumentException($"Board (header) pin {pinNumber} is not a GPIO pin on the {GetType().Name} device.", nameof(pinNumber))
+                };
+            }
+
+            throw new NotSupportedException("Unsupported numbering scheme combination");
         }
 
         public override GpioController CreateGpioController(int[] pinAssignment = null)
         {
-            return new GpioController(PinNumberingScheme.Logical, new ManagedGpioDriver(this, new RaspberryPi3Driver(), pinAssignment));
+            return new ManagedGpioController(this, DefaultPinNumberingScheme, CreateDriver(), pinAssignment);
         }
 
         protected override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
@@ -258,7 +273,7 @@ namespace Iot.Device.Board
             AlternatePinMode modeToSet = GetHardwareModeForPinUsage(pinNumber, usage, PinNumberingScheme.Logical);
             if (modeToSet != AlternatePinMode.Unknown)
             {
-                _managedGpioDriver.SetAlternatePinMode(pinNumber, modeToSet);
+                _managedGpioController.SetAlternatePinMode(pinNumber, modeToSet);
             }
 
             base.ActivatePinMode(pinNumber, usage);
@@ -268,8 +283,8 @@ namespace Iot.Device.Board
         {
             if (disposing)
             {
-                _managedGpioDriver?.Dispose();
-                _managedGpioDriver = null;
+                _managedGpioController?.Dispose();
+                _managedGpioController = null;
             }
 
             base.Dispose(disposing);
