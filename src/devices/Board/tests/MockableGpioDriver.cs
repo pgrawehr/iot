@@ -78,19 +78,25 @@ namespace Board.Tests
             WriteEx(pinNumber, value);
         }
 
+        public abstract WaitForEventResult WaitForEventEx(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken);
+
         protected override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return WaitForEventEx(pinNumber, eventTypes, cancellationToken);
         }
+
+        public abstract void AddCallbackForPinValueChangedEventEx(int pinNumber, PinEventTypes eventTypes, PinChangeEventHandler callback);
 
         protected override void AddCallbackForPinValueChangedEvent(int pinNumber, PinEventTypes eventTypes, PinChangeEventHandler callback)
         {
-            throw new NotImplementedException();
+            AddCallbackForPinValueChangedEventEx(pinNumber, eventTypes, callback);
         }
+
+        public abstract void RemoveCallbackForPinValueChangedEventEx(int pinNumber, PinChangeEventHandler callback);
 
         protected override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
         {
-            throw new NotImplementedException();
+            RemoveCallbackForPinValueChangedEventEx(pinNumber, callback);
         }
     }
 }

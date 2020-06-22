@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
     <LangVersion>latest</LangVersion>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <RootNamespace>Iot.Device.Board.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

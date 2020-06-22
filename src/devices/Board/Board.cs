@@ -178,12 +178,12 @@ namespace Iot.Device.Board
             public object Owner { get; }
         }
 
-        public abstract GpioController CreateGpioController(int[] pinAssignment = null);
-
-        public virtual GpioController CreateGpioController(int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
+        public virtual GpioController CreateGpioController(int[] pinAssignment = null)
         {
-            return CreateGpioController(RemapPins(pinAssignment, pinNumberingScheme));
+            return CreateGpioController(pinAssignment, DefaultPinNumberingScheme);
         }
+
+        public abstract GpioController CreateGpioController(int[] pinAssignment, PinNumberingScheme pinNumberingScheme);
 
         public abstract I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme);
 
@@ -207,10 +207,10 @@ namespace Iot.Device.Board
             double dutyCyclePercentage = 0.5)
         {
             int pin = GetDefaultPinAssignmentForPwm(chip, channel);
-            return CreatePwmChannel(chip, channel, frequency, dutyCyclePercentage, pin, PinNumberingScheme.Logical);
+            return CreatePwmChannel(chip, channel, frequency, dutyCyclePercentage, RemapPin(pin, DefaultPinNumberingScheme), PinNumberingScheme.Logical);
         }
 
-        protected abstract int GetDefaultPinAssignmentForPwm(int chip, int channel);
+        public abstract int GetDefaultPinAssignmentForPwm(int chip, int channel);
 
         /// <summary>
         /// Gets the board-specific hardware mode for a particular pin and pin usage (i.e. the different ALTn modes on the raspberry pi)
@@ -227,7 +227,7 @@ namespace Iot.Device.Board
         public abstract AlternatePinMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage,
             PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0);
 
-        protected abstract int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings);
+        public abstract int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings);
 
         protected int RemapPin(int pin, PinNumberingScheme providedScheme)
         {

@@ -31,9 +31,9 @@ namespace Iot.Device.Board
             return ManagedGpioController.GetBestDriverForBoard();
         }
 
-        public override GpioController CreateGpioController(int[] pinAssignment = null)
+        public override GpioController CreateGpioController(int[] pinAssignment, PinNumberingScheme numberingScheme)
         {
-            return new ManagedGpioController(this, PinNumberingScheme.Logical, CreateDriver(), pinAssignment);
+            return new ManagedGpioController(this, numberingScheme, CreateDriver(), pinAssignment);
         }
 
         public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
@@ -66,12 +66,12 @@ namespace Iot.Device.Board
             return AlternatePinMode.Unknown;
         }
 
-        protected override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
+        public override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
         {
             throw new NotSupportedException("For the generic board, you need to specify the pin to use for I2C");
         }
 
-        protected override int GetDefaultPinAssignmentForPwm(int chip, int channel)
+        public override int GetDefaultPinAssignmentForPwm(int chip, int channel)
         {
             throw new NotSupportedException("For the generic board, you need to specify the pin to use for pwm");
         }

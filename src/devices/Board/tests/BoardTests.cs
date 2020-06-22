@@ -4,6 +4,7 @@
 
 using System;
 using System.Device.Gpio;
+using System.Device.I2c;
 using Board.Tests;
 using Moq;
 using Xunit;
@@ -84,10 +85,15 @@ namespace Iot.Device.Board.Tests
         public void UsingBoardNumberingWorks()
         {
             _mockedGpioDriver.Setup(x => x.OpenPinEx(1));
+            _mockedGpioDriver.Setup(x => x.SetPinModeEx(1, PinMode.Output));
             _mockedGpioDriver.Setup(x => x.IsPinModeSupportedEx(1, PinMode.Output)).Returns(true);
+            _mockedGpioDriver.Setup(x => x.GetPinModeEx(1)).Returns(PinMode.Output);
+            _mockedGpioDriver.Setup(x => x.WriteEx(1, PinValue.High));
+            _mockedGpioDriver.Setup(x => x.ReadEx(1)).Returns(PinValue.High);
+            _mockedGpioDriver.Setup(x => x.ClosePinEx(1));
             Board b = new CustomGenericBoard(PinNumberingScheme.Board) { MockedDriver = _mockedGpioDriver.Object };
             var ctrl = b.CreateGpioController();
-            ctrl.OpenPin(2); // Our test board maps physical pin 2 to logical pin 1
+            ctrl.OpenPin(2, PinMode.Output); // Our test board maps physical pin 2 to logical pin 1
             ctrl.Write(2, PinValue.High);
             Assert.Equal(PinValue.High, ctrl.Read(2));
             ctrl.ClosePin(2);
@@ -96,45 +102,72 @@ namespace Iot.Device.Board.Tests
         [Fact]
         public void UsingBoardNumberingForCallbackWorks()
         {
+            _mockedGpioDriver.Setup(x => x.OpenPinEx(1));
+            _mockedGpioDriver.Setup(x => x.AddCallbackForPinValueChangedEventEx(1,
+                PinEventTypes.Rising, It.IsAny<PinChangeEventHandler>()));
             Board b = new CustomGenericBoard(PinNumberingScheme.Board) { MockedDriver = _mockedGpioDriver.Object };
             var ctrl = b.CreateGpioController();
-            ctrl.OpenPin(1);
-            ctrl.RegisterCallbackForPinValueChangedEvent(1, PinEventTypes.Rising, (sender, args) =>
+            ctrl.OpenPin(2); // logical pin 1 on our test board
+            ctrl.RegisterCallbackForPinValueChangedEvent(2, PinEventTypes.Rising, (sender, args) =>
             {
                 Assert.Equal(1, args.PinNumber);
             });
         }
 
-        /// <summary>
-        /// This shouldn't map anything in either direction
-        /// </summary>
         [Fact]
-        public void PinMappingIsReversibleLogical()
+        public void UsingMultiplePinsWorks()
         {
-            RaspberryPiBoard b = new RaspberryPiBoard(PinNumberingScheme.Logical);
-            for (int i = 0; i < b.PinCount; i++)
-            {
-                int mapped = b.ConvertPinNumber(i, PinNumberingScheme.Logical, PinNumberingScheme.Logical);
-                int reverse = b.ConvertPinNumber(i, PinNumberingScheme.Logical, PinNumberingScheme.Logical);
-                Assert.Equal(reverse, mapped);
-                Assert.Equal(mapped, i);
-            }
+            _mockedGpioDriver.Setup(x => x.OpenPinEx(1));
+            _mockedGpioDriver.Setup(x => x.IsPinModeSupportedEx(1, PinMode.Output)).Returns(true);
+            Board b = new CustomGenericBoard(PinNumberingScheme.Logical) { MockedDriver = _mockedGpioDriver.Object };
+            var ctrl = b.CreateGpioController(new int[] { 2, 4, 8 }, PinNumberingScheme.Board);
+            ctrl.OpenPin(2, PinMode.Output); // Our test board maps physical pin 2 to logical pin 1
         }
 
-        /// <summary>
-        /// The mapping is not 1:1, but must be reversible
-        /// </summary>
         [Fact]
-        public void PinMappingIsReversibleBoard()
+        public void ReservePin()
         {
-            RaspberryPiBoard b = new RaspberryPiBoard(PinNumberingScheme.Board);
-            Assert.NotEqual(3, b.ConvertPinNumber(3, PinNumberingScheme.Board, PinNumberingScheme.Logical));
-            for (int i = 0; i < b.PinCount; i++)
-            {
-                int mapped = b.ConvertPinNumber(i, PinNumberingScheme.Logical, PinNumberingScheme.Board);
-                int reverse = b.ConvertPinNumber(mapped, PinNumberingScheme.Board, PinNumberingScheme.Logical);
-                Assert.Equal(i, reverse);
-            }
+            var board = CreateBoard();
+            board.ReservePin(1, PinUsage.I2c, this);
+            // Already in use for I2c
+            Assert.Throws<InvalidOperationException>(() => board.ReservePin(1, PinUsage.Gpio, this));
+            // Already in use
+            Assert.Throws<InvalidOperationException>(() => board.ReservePin(1, PinUsage.I2c, this));
+        }
+
+        [Fact]
+        public void ReserveReleasePin()
+        {
+            var board = CreateBoard();
+            board.ReservePin(1, PinUsage.I2c, this);
+            // Not reserved for Gpio
+            Assert.Throws<InvalidOperationException>(() => board.ReleasePin(1, PinUsage.Gpio, this));
+            // Reserved by somebody else
+            Assert.Throws<InvalidOperationException>(() => board.ReleasePin(1, PinUsage.I2c, new object()));
+            // Not reserved
+            Assert.Throws<InvalidOperationException>(() => board.ReleasePin(2, PinUsage.Pwm, this));
+
+            board.ReleasePin(1, PinUsage.I2c, this);
+        }
+
+        [Fact]
+        public void CreateI2cDeviceDefault()
+        {
+            var board = CreateBoard();
+            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, 3)) as I2cDummyDevice;
+            Assert.NotNull(device);
+            Assert.Equal(0, device.PinAssignment[0]);
+            Assert.Equal(1, device.PinAssignment[1]);
+        }
+
+        [Fact]
+        public void CreateI2cDeviceBoardNumbering()
+        {
+            var board = CreateBoard();
+            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, 3), new int[] { 2, 4 }, PinNumberingScheme.Board) as I2cDummyDevice;
+            Assert.NotNull(device);
+            Assert.Equal(1, device.PinAssignment[0]);
+            Assert.Equal(2, device.PinAssignment[1]);
         }
 
         private Board CreateBoard()
@@ -197,6 +230,21 @@ namespace Iot.Device.Board.Tests
             protected override GpioDriver CreateDriver()
             {
                 return MockedDriver;
+            }
+
+            public override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
+            {
+                if (connectionSettings.BusId == 0)
+                {
+                    return new int[] { 0, 1 };
+                }
+
+                throw new NotSupportedException($"No simulated bus id {connectionSettings.BusId}");
+            }
+
+            public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pins, PinNumberingScheme pinNumberingScheme)
+            {
+                return new I2cDummyDevice(connectionSettings, RemapPins(pins, pinNumberingScheme));
             }
         }
     }

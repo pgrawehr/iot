@@ -125,7 +125,7 @@ namespace Iot.Device.Board
             return new ManagedGpioController(this, DefaultPinNumberingScheme, CreateDriver(), pinAssignment);
         }
 
-        protected override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
+        public override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
         {
             int scl;
             int sda;
@@ -185,7 +185,9 @@ namespace Iot.Device.Board
 
             return new int[]
             {
-                sda, scl
+                // Return in the default scheme of the board
+                ConvertPinNumber(sda, PinNumberingScheme.Logical, DefaultPinNumberingScheme),
+                ConvertPinNumber(scl, PinNumberingScheme.Logical, DefaultPinNumberingScheme)
             };
         }
 
@@ -252,17 +254,17 @@ namespace Iot.Device.Board
             return AlternatePinMode.NotSupported;
         }
 
-        protected override int GetDefaultPinAssignmentForPwm(int chip, int channel)
+        public override int GetDefaultPinAssignmentForPwm(int chip, int channel)
         {
             // The default assignment is 12 & 13, but 18 and 19 is supported as well
             if (chip == 0 && channel == 0)
             {
-                return 12;
+                return ConvertPinNumber(12, PinNumberingScheme.Logical, DefaultPinNumberingScheme);
             }
 
             if (chip == 0 && channel == 1)
             {
-                return 13;
+                return ConvertPinNumber(13, PinNumberingScheme.Logical, DefaultPinNumberingScheme);
             }
 
             throw new NotSupportedException($"No such PWM Channel: Chip {chip} channel {channel}.");
