@@ -154,7 +154,7 @@ namespace Iot.Device.Nmea0183
                 {
                     _cancellationTokenSource.Cancel();
                     _dataSource.Dispose();
-                    _dataSink.Dispose();
+                    _dataSink?.Dispose();
                     _reader.Dispose();
                     _parserThread.Join();
                     _cancellationTokenSource = null;

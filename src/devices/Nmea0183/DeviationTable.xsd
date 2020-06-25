@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema id="DeviationTable"
+    targetNamespace="http://tempuri.org/DeviationTable.xsd"
+    elementFormDefault="qualified"
+    xmlns="http://tempuri.org/DeviationTable.xsd"
+    xmlns:mstns="http://tempuri.org/DeviationTable.xsd"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+>
+	<xs:element name="Identification">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element type="xs:string" name="ShipName" minOccurs="1" maxOccurs="1"/>
+				<xs:element type="xs:string" name="Callsign" minOccurs="0" maxOccurs="1" />
+				<xs:element type="xs:string" name="MMSI" minOccurs="0" maxOccurs="1" />
+				<xs:element type="xs:date" name="CalibrationDate" minOccurs="1" maxOccurs="1" />
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="CompassCalibrationData">
+		<xs:complexType>
+		<xs:sequence>
+			<xs:element name="Points" type="DeviationPoint" minOccurs="0" maxOccurs="unbounded" />
+		</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="DeviationPoint">
+		<xs:sequence>
+            <xs:element type="xs:float" name="CompassReading" minOccurs="1" maxOccurs="1"/>
+            <xs:element type="xs:float" name="MagneticHeading" minOccurs="1" maxOccurs="1"/>
+            <xs:element type="xs:float" name="Deviation" minOccurs="1" maxOccurs="1" />
+        </xs:sequence>
+	</xs:complexType>
+</xs:schema>
