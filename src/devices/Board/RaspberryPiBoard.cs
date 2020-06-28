@@ -281,6 +281,43 @@ namespace Iot.Device.Board
             base.ActivatePinMode(pinNumber, usage);
         }
 
+        public override PinUsage DetermineCurrentPinUsage(int pinNumber)
+        {
+            PinUsage cached = base.DetermineCurrentPinUsage(pinNumber);
+            if (cached != PinUsage.Unknown)
+            {
+                return cached;
+            }
+
+            AlternatePinMode pinMode = _managedGpioController.GetAlternatePinMode(pinNumber);
+            if (pinMode == AlternatePinMode.Gpio)
+            {
+                return PinUsage.Gpio;
+            }
+
+            // Do some heuristics: If the given pin number can be used for I2C with the same Alt mode, we can assume that's what it
+            // it set to.
+            AlternatePinMode possibleAltMode = GetHardwareModeForPinUsage(pinNumber, PinUsage.I2c, DefaultPinNumberingScheme);
+            if (possibleAltMode == pinMode)
+            {
+                return PinUsage.I2c;
+            }
+
+            possibleAltMode = GetHardwareModeForPinUsage(pinNumber, PinUsage.Spi, DefaultPinNumberingScheme);
+            if (possibleAltMode == pinMode)
+            {
+                return PinUsage.Spi;
+            }
+
+            possibleAltMode = GetHardwareModeForPinUsage(pinNumber, PinUsage.Pwm, DefaultPinNumberingScheme);
+            if (possibleAltMode == pinMode)
+            {
+                return PinUsage.Pwm;
+            }
+
+            return PinUsage.Unknown;
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)

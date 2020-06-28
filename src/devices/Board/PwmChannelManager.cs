@@ -9,14 +9,14 @@ namespace Iot.Device.Board
         private readonly int _pin;
         private readonly PwmChannel _pwm;
 
-        public PwmChannelManager(Board board, int pin, int chip, int channel, int frequency, double dutyCyclePercentage)
+        public PwmChannelManager(Board board, int pin, int chip, int channel, int frequency, double dutyCyclePercentage, Func<int, int, int, double, PwmChannel> createOperation)
         {
             _board = board;
             _pin = pin;
             try
             {
                 _board.ReservePin(pin, PinUsage.Pwm, this);
-                _pwm = PwmChannel.Create(chip, channel, frequency, dutyCyclePercentage);
+                _pwm = createOperation(chip, channel, frequency, dutyCyclePercentage);
             }
             catch (Exception)
             {

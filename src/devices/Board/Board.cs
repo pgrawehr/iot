@@ -5,6 +5,7 @@ using System.Device.I2c;
 using System.Device.Pwm;
 using System.Device.Spi;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Iot.Device.Board
@@ -13,14 +14,14 @@ namespace Iot.Device.Board
     {
         private readonly PinNumberingScheme _defaultNumberingScheme;
         private readonly object _pinReservationsLock;
-        private readonly Dictionary<int, PinReservation> _pinReservations;
+        private readonly Dictionary<int, List<PinReservation>> _pinReservations;
         private bool _initialized;
         private bool _disposed;
 
         protected Board(PinNumberingScheme defaultNumberingScheme)
         {
             _defaultNumberingScheme = defaultNumberingScheme;
-            _pinReservations = new Dictionary<int, PinReservation>();
+            _pinReservations = new Dictionary<int, List<PinReservation>>();
             _pinReservationsLock = new object();
             _initialized = false;
             _disposed = false;
@@ -89,13 +90,36 @@ namespace Iot.Device.Board
 
             lock (_pinReservationsLock)
             {
-                if (_pinReservations.TryGetValue(logicalPin, out var reservation))
+                if (!UsageCanSharePins(usage))
                 {
-                    throw new InvalidOperationException($"Pin {pinNumber} has already been reserved for {reservation.Usage} by class {reservation.Owner}.");
-                }
+                    if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation> reservations))
+                    {
+                        PinReservation reservation = reservations.First();
+                        throw new InvalidOperationException($"Pin {pinNumber} has already been reserved for {reservation.Usage} by class {reservation.Owner}.");
+                    }
 
-                PinReservation rsv = new PinReservation(logicalPin, usage, owner);
-                _pinReservations.Add(logicalPin, rsv);
+                    PinReservation rsv = new PinReservation(logicalPin, usage, owner);
+                    _pinReservations.Add(logicalPin, new List<PinReservation>() { rsv });
+                }
+                else
+                {
+                    if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation> reservations))
+                    {
+                        PinReservation reservation = reservations.First();
+                        if (reservation.Usage != usage)
+                        {
+                            throw new InvalidOperationException($"Pin {pinNumber} has already been reserved for {reservation.Usage} by class {reservation.Owner}.");
+                        }
+                    }
+                    else
+                    {
+                        reservations = new List<PinReservation>();
+                        _pinReservations.Add(logicalPin, reservations);
+                    }
+
+                    PinReservation rsv = new PinReservation(logicalPin, usage, owner);
+                    reservations.Add(rsv);
+                }
             }
 
             ActivatePinMode(logicalPin, usage);
@@ -112,14 +136,37 @@ namespace Iot.Device.Board
 
             lock (_pinReservationsLock)
             {
-                if (_pinReservations.TryGetValue(logicalPin, out var reservation))
+                if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation> reservations))
                 {
-                    if (reservation.Owner != owner || reservation.Usage != usage)
+                    if (!UsageCanSharePins(usage))
                     {
-                        throw new InvalidOperationException($"Cannot release Pin {pinNumber}, because you are not the owner or the usage is wrong. Class {reservation.Owner} has reserved the Pin for {reservation.Usage}");
-                    }
+                        PinReservation reservation = reservations.Single();
+                        if (reservation.Owner != owner || reservation.Usage != usage)
+                        {
+                            throw new InvalidOperationException($"Cannot release Pin {pinNumber}, because you are not the owner or the usage is wrong. Class {reservation.Owner} has reserved the Pin for {reservation.Usage}");
+                        }
 
-                    _pinReservations.Remove(logicalPin);
+                        _pinReservations.Remove(logicalPin);
+                    }
+                    else
+                    {
+                        PinReservation reservation = reservations.FirstOrDefault(x => x.Owner == owner);
+                        if (reservation == null)
+                        {
+                            throw new InvalidOperationException($"Cannot release Pin {pinNumber}, because you are not a valid owner.");
+                        }
+
+                        if (reservation.Usage != usage)
+                        {
+                            throw new InvalidOperationException($"Cannot release Pin {pinNumber}, because you are not the owner or the usage is wrong. Class {reservation.Owner} has reserved the Pin for {reservation.Usage}");
+                        }
+
+                        reservations.Remove(reservation);
+                        if (reservations.Count == 0)
+                        {
+                            _pinReservations.Remove(logicalPin);
+                        }
+                    }
                 }
                 else
                 {
@@ -127,6 +174,8 @@ namespace Iot.Device.Board
                 }
             }
         }
+
+        public abstract PinUsage DetermineCurrentPinUsage(int pinNumber);
 
         /// <summary>
         /// Override this method if something special needs to be done to use the pin for the given device.
@@ -185,9 +234,25 @@ namespace Iot.Device.Board
 
         public abstract GpioController CreateGpioController(int[] pinAssignment, PinNumberingScheme pinNumberingScheme);
 
-        public abstract I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme);
+        /// <summary>
+        /// This method shall be overriden by clients, providing just the basic interface to an I2cDevice.
+        /// </summary>
+        /// <param name="connectionSettings">I2C Connection settings</param>
+        /// <param name="pinAssignment">Pins assigned to the device</param>
+        /// <returns>An I2cDevice connection</returns>
+        protected abstract I2cDevice CreateSimpleI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment);
 
-        public virtual I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
+        public I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
+        {
+            if (pinAssignment == null || pinAssignment.Length != 2)
+            {
+                throw new ArgumentException($"Invalid argument. Must provide exactly two pins for I2C", nameof(pinAssignment));
+            }
+
+            return new I2cDeviceManager(this, connectionSettings, RemapPins(pinAssignment, pinNumberingScheme), CreateSimpleI2cDevice);
+        }
+
+        public I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings)
         {
             // Returns logical pin numbers for the selected bus (or an exception if using a bus number > 1, because that
             // requires specifying the pins)
@@ -195,12 +260,40 @@ namespace Iot.Device.Board
             return CreateI2cDevice(connectionSettings, pinAssignment, PinNumberingScheme.Logical);
         }
 
-        public abstract SpiDevice CreateSpiDevice(SpiConnectionSettings settings);
+        public SpiDevice CreateSpiDevice(SpiConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
+        {
+            if (pinAssignment == null)
+            {
+                throw new ArgumentNullException(nameof(pinAssignment));
+            }
 
-        public abstract PwmChannel CreatePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage,
-            int pin, PinNumberingScheme pinNumberingScheme);
+            if (pinAssignment.Length != 3 && pinAssignment.Length != 4)
+            {
+                throw new ArgumentException($"Invalid argument. Must provide three or four pins for SPI", nameof(pinAssignment));
+            }
 
-        public virtual PwmChannel CreatePwmChannel(
+            return new SpiDeviceManager(this, connectionSettings, RemapPins(pinAssignment, pinNumberingScheme), CreateSimpleSpiDevice);
+        }
+
+        public SpiDevice CreateSpiDevice(SpiConnectionSettings connectionSettings)
+        {
+            // Returns logical pin numbers for the selected bus (or an exception if using a bus number > 1, because that
+            // requires specifying the pins)
+            int[] pinAssignment = GetDefaultPinAssignmentForSpi(connectionSettings);
+            return CreateSpiDevice(connectionSettings, pinAssignment, PinNumberingScheme.Logical);
+        }
+
+        protected abstract SpiDevice CreateSimpleSpiDevice(SpiConnectionSettings settings);
+
+        protected abstract PwmChannel CreateSimplePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage);
+
+        public PwmChannel CreatePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage,
+            int pin, PinNumberingScheme pinNumberingScheme)
+        {
+            return new PwmChannelManager(this, pin, chip, channel, frequency, dutyCyclePercentage, CreateSimplePwmChannel);
+        }
+
+        public PwmChannel CreatePwmChannel(
             int chip,
             int channel,
             int frequency = 400,
@@ -229,6 +322,8 @@ namespace Iot.Device.Board
 
         public abstract int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings);
 
+        public abstract int[] GetDefaultPinAssignmentForSpi(SpiConnectionSettings connectionSettings);
+
         protected int RemapPin(int pin, PinNumberingScheme providedScheme)
         {
             return ConvertPinNumber(pin, providedScheme, PinNumberingScheme.Logical);
@@ -253,6 +348,19 @@ namespace Iot.Device.Board
             }
 
             return newPins;
+        }
+
+        private bool UsageCanSharePins(PinUsage usage)
+        {
+            switch (usage)
+            {
+                // Several I2C devices can share the same Pins (because we're allocating devices, not buses)
+                case PinUsage.I2c:
+                case PinUsage.Spi:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         //// Todo separately

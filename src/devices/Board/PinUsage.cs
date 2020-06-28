@@ -41,8 +41,8 @@
         AnalogIn = 6,
 
         /// <summary>
-        /// Reserved usage, other than the above
+        /// Unknown usage (i.e. for boards where this state is write-only)
         /// </summary>
-        Other = -1
+        Unknown = -1
     }
 }

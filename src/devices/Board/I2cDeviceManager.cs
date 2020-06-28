@@ -12,7 +12,7 @@ namespace Iot.Device.Board
         private readonly int _sclPin;
         private readonly I2cDevice _i2cDeviceImplementation;
 
-        public I2cDeviceManager(Board board, I2cConnectionSettings settings, int[] pins)
+        public I2cDeviceManager(Board board, I2cConnectionSettings settings, int[] pins, Func<I2cConnectionSettings, int[], I2cDevice> creationOperation)
         {
             _board = board;
             _sdaPin = pins[0];
@@ -21,7 +21,7 @@ namespace Iot.Device.Board
             {
                 _board.ReservePin(_sdaPin, PinUsage.I2c, this);
                 _board.ReservePin(_sclPin, PinUsage.I2c, this);
-                _i2cDeviceImplementation = I2cDevice.Create(settings);
+                _i2cDeviceImplementation = creationOperation(settings, pins);
             }
             catch (Exception)
             {
@@ -36,6 +36,14 @@ namespace Iot.Device.Board
             get
             {
                 return _i2cDeviceImplementation.ConnectionSettings;
+            }
+        }
+
+        internal I2cDevice RawDevice
+        {
+            get
+            {
+                return _i2cDeviceImplementation;
             }
         }
 

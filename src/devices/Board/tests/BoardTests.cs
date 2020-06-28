@@ -5,6 +5,7 @@
 using System;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.Device.Spi;
 using Board.Tests;
 using Moq;
 using Xunit;
@@ -125,14 +126,25 @@ namespace Iot.Device.Board.Tests
         }
 
         [Fact]
-        public void ReservePin()
+        public void ReservePinI2c()
         {
             var board = CreateBoard();
             board.ReservePin(1, PinUsage.I2c, this);
             // Already in use for I2c
             Assert.Throws<InvalidOperationException>(() => board.ReservePin(1, PinUsage.Gpio, this));
-            // Already in use
+            // Works, I2c can share pins
+            board.ReservePin(1, PinUsage.I2c, this);
+        }
+
+        [Fact]
+        public void ReservePinGpio()
+        {
+            var board = CreateBoard();
+            board.ReservePin(1, PinUsage.Gpio, this);
+            // Already in use for Gpio
             Assert.Throws<InvalidOperationException>(() => board.ReservePin(1, PinUsage.I2c, this));
+            // Fails, Gpio cannot share pins
+            Assert.Throws<InvalidOperationException>(() => board.ReservePin(1, PinUsage.Gpio, this));
         }
 
         [Fact]
@@ -154,20 +166,48 @@ namespace Iot.Device.Board.Tests
         public void CreateI2cDeviceDefault()
         {
             var board = CreateBoard();
-            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, 3)) as I2cDummyDevice;
+            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, 3)) as I2cDeviceManager;
             Assert.NotNull(device);
-            Assert.Equal(0, device.PinAssignment[0]);
-            Assert.Equal(1, device.PinAssignment[1]);
+            var simDevice = device.RawDevice as I2cDummyDevice;
+            Assert.Equal(0, simDevice.Pins[0]);
+            Assert.Equal(1, simDevice.Pins[1]);
         }
 
         [Fact]
         public void CreateI2cDeviceBoardNumbering()
         {
             var board = CreateBoard();
-            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, 3), new int[] { 2, 4 }, PinNumberingScheme.Board) as I2cDummyDevice;
+            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, 3), new int[] { 2, 4 }, PinNumberingScheme.Board) as I2cDeviceManager;
             Assert.NotNull(device);
-            Assert.Equal(1, device.PinAssignment[0]);
-            Assert.Equal(2, device.PinAssignment[1]);
+            var simDevice = device.RawDevice as I2cDummyDevice;
+            Assert.NotNull(simDevice);
+            Assert.Equal(1, simDevice.Pins[0]);
+            Assert.Equal(2, simDevice.Pins[1]);
+        }
+
+        [Fact]
+        public void TwoI2cDevicesCanSharePins()
+        {
+            var board = CreateBoard();
+            var device1 = board.CreateI2cDevice(new I2cConnectionSettings(0, 1));
+            var device2 = board.CreateI2cDevice(new I2cConnectionSettings(0, 2));
+            // Now all fine
+            Assert.Equal(0xff, device1.ReadByte());
+            Assert.Equal(0xff, device2.ReadByte());
+            Assert.Equal(PinUsage.I2c, board.DetermineCurrentPinUsage(0));
+            Assert.Equal(PinUsage.I2c, board.DetermineCurrentPinUsage(1));
+            device1.Dispose();
+
+            // Still fine
+            Assert.Equal(0xff, device2.ReadByte());
+            // Not so fine
+            Assert.Throws<ObjectDisposedException>(() => device1.ReadByte());
+            // Also not fine (since pins still open)
+            var ctrl = board.CreateGpioController();
+            Assert.Throws<InvalidOperationException>(() => ctrl.OpenPin(0));
+            device2.Dispose();
+            // Now fine
+            ctrl.OpenPin(0);
         }
 
         private Board CreateBoard()
@@ -242,9 +282,19 @@ namespace Iot.Device.Board.Tests
                 throw new NotSupportedException($"No simulated bus id {connectionSettings.BusId}");
             }
 
-            public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pins, PinNumberingScheme pinNumberingScheme)
+            public override int[] GetDefaultPinAssignmentForSpi(SpiConnectionSettings connectionSettings)
             {
-                return new I2cDummyDevice(connectionSettings, RemapPins(pins, pinNumberingScheme));
+                if (connectionSettings.BusId == 0)
+                {
+                    return new int[] { 2, 3, 4, 5 };
+                }
+
+                throw new NotSupportedException($"No simulated bus id {connectionSettings.BusId}");
+            }
+
+            protected override I2cDevice CreateSimpleI2cDevice(I2cConnectionSettings connectionSettings, int[] pins)
+            {
+                return new I2cDummyDevice(connectionSettings, pins);
             }
         }
     }

@@ -11,9 +11,12 @@ namespace Iot.Device.Board
 {
     public class GenericBoard : Board
     {
+        private Dictionary<int, PinUsage> _knownUsages;
+
         public GenericBoard(PinNumberingScheme defaultNumberingScheme)
             : base(defaultNumberingScheme)
         {
+            _knownUsages = new Dictionary<int, PinUsage>();
         }
 
         public override int ConvertPinNumber(int pinNumber, PinNumberingScheme inputScheme, PinNumberingScheme outputScheme)
@@ -36,25 +39,19 @@ namespace Iot.Device.Board
             return new ManagedGpioController(this, numberingScheme, CreateDriver(), pinAssignment);
         }
 
-        public override I2cDevice CreateI2cDevice(I2cConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
-        {
-            if (pinAssignment == null || pinAssignment.Length != 2)
-            {
-                throw new ArgumentException($"Invalid argument. Must provide exactly two pins for I2C", nameof(pinAssignment));
-            }
-
-            return new I2cDeviceManager(this, connectionSettings, RemapPins(pinAssignment, pinNumberingScheme));
-        }
-
-        public override SpiDevice CreateSpiDevice(SpiConnectionSettings settings)
+        protected override SpiDevice CreateSimpleSpiDevice(SpiConnectionSettings settings)
         {
             return SpiDevice.Create(settings);
         }
 
-        public override PwmChannel CreatePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage,
-            int pin, PinNumberingScheme pinNumberingScheme)
+        protected override PwmChannel CreateSimplePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage)
         {
-            return new PwmChannelManager(this, RemapPin(pin, pinNumberingScheme), chip, channel, frequency, dutyCyclePercentage);
+            return PwmChannel.Create(chip, channel, frequency, dutyCyclePercentage);
+        }
+
+        protected override I2cDevice CreateSimpleI2cDevice(I2cConnectionSettings connectionSettings, int[] pins)
+        {
+            return I2cDevice.Create(connectionSettings);
         }
 
         /// <summary>
@@ -66,14 +63,37 @@ namespace Iot.Device.Board
             return AlternatePinMode.Unknown;
         }
 
+        protected override void ActivatePinMode(int pinNumber, PinUsage usage)
+        {
+            _knownUsages[pinNumber] = usage;
+            base.ActivatePinMode(pinNumber, usage);
+        }
+
+        public override PinUsage DetermineCurrentPinUsage(int pinNumber)
+        {
+            PinUsage usage;
+            if (_knownUsages.TryGetValue(pinNumber, out usage))
+            {
+                return usage;
+            }
+
+            // The generic board only knows the usage if it has been explicitly set before
+            return PinUsage.Unknown;
+        }
+
         public override int[] GetDefaultPinAssignmentForI2c(I2cConnectionSettings connectionSettings)
         {
-            throw new NotSupportedException("For the generic board, you need to specify the pin to use for I2C");
+            throw new NotSupportedException("For the generic board, you need to specify the pins to use for I2C");
         }
 
         public override int GetDefaultPinAssignmentForPwm(int chip, int channel)
         {
             throw new NotSupportedException("For the generic board, you need to specify the pin to use for pwm");
+        }
+
+        public override int[] GetDefaultPinAssignmentForSpi(SpiConnectionSettings connectionSettings)
+        {
+            throw new NotSupportedException("For the generic board, you need to specify the pins to use for SPI");
         }
     }
 }

@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <Compile Include="*.cs" />
+    <Compile Include="..\Interop\Windows\WinUser.cs" Link="WinUser.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -9,18 +9,25 @@ namespace Board.Tests
 {
     internal class I2cDummyDevice : I2cDevice
     {
-        public I2cDummyDevice(I2cConnectionSettings settings, int[] pinAssignment)
+        private bool _disposed;
+        public I2cDummyDevice(I2cConnectionSettings settings, int[] pins)
         {
             ConnectionSettings = settings;
-            PinAssignment = pinAssignment;
+            Pins = pins;
+            _disposed = false;
         }
 
         public override I2cConnectionSettings ConnectionSettings { get; }
-        public int[] PinAssignment { get; }
+        public int[] Pins { get; }
 
         public override byte ReadByte()
         {
-            throw new Win32Exception(2, "No answer from device");
+            if (_disposed)
+            {
+                throw new ObjectDisposedException("This dummy instance is disposed");
+            }
+
+            return 0xFF;
         }
 
         public override void Read(Span<byte> buffer)
@@ -41,6 +48,12 @@ namespace Board.Tests
         public override void WriteRead(ReadOnlySpan<byte> writeBuffer, Span<byte> readBuffer)
         {
             throw new Win32Exception(2, "No answer from device");
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _disposed = true;
+            base.Dispose(disposing);
         }
     }
 }
