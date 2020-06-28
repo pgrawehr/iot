@@ -9,7 +9,7 @@ namespace Iot.Device.Board
         private readonly int[] _pins;
         private readonly SpiDevice _device;
 
-        public SpiDeviceManager(Board board, SpiConnectionSettings connectionSettings, int[] pins, Func<SpiConnectionSettings, SpiDevice> createOperation)
+        public SpiDeviceManager(Board board, SpiConnectionSettings connectionSettings, int[] pins, Func<SpiConnectionSettings, int[], SpiDevice> createOperation)
         {
             _board = board;
             _pins = pins;
@@ -27,7 +27,7 @@ namespace Iot.Device.Board
                     _board.ReservePin(pins[3], PinUsage.Spi, this);
                 }
 
-                _device = createOperation(connectionSettings);
+                _device = createOperation(connectionSettings, pins);
             }
             catch (Exception)
             {
@@ -46,6 +46,14 @@ namespace Iot.Device.Board
         public override SpiConnectionSettings ConnectionSettings
         {
             get;
+        }
+
+        internal SpiDevice RawDevice
+        {
+            get
+            {
+                return _device;
+            }
         }
 
         public override byte ReadByte()

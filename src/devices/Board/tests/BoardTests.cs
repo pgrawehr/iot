@@ -210,6 +210,44 @@ namespace Iot.Device.Board.Tests
             ctrl.OpenPin(0);
         }
 
+        [Fact]
+        public void CreateSpiDeviceDefault()
+        {
+            var board = CreateBoard();
+            var device = board.CreateSpiDevice(new SpiConnectionSettings(0, 0)) as SpiDeviceManager;
+            Assert.NotNull(device);
+            var simDevice = device.RawDevice as SpiDummyDevice;
+            Assert.NotNull(simDevice);
+            Assert.Equal(0xF8, simDevice.ReadByte());
+            // See simulation board implementation why this should be the case
+            Assert.Equal(new int[] { 2, 3, 4, 10 }, simDevice.Pins);
+        }
+
+        [Fact]
+        public void TwoSpiDevicesCanSharePins()
+        {
+            var board = CreateBoard();
+            var device1 = board.CreateSpiDevice(new SpiConnectionSettings(0, 1));
+            var device2 = board.CreateSpiDevice(new SpiConnectionSettings(0, 2));
+            // Now all fine
+            Assert.Equal(0xff, device1.ReadByte());
+            Assert.Equal(0xff, device2.ReadByte());
+            Assert.Equal(PinUsage.Spi, board.DetermineCurrentPinUsage(0));
+            Assert.Equal(PinUsage.Spi, board.DetermineCurrentPinUsage(1));
+            device1.Dispose();
+
+            // Still fine
+            Assert.Equal(0xf8, device2.ReadByte());
+            // Not so fine
+            Assert.Throws<ObjectDisposedException>(() => device1.ReadByte());
+            // Also not fine (since pins still open)
+            var ctrl = board.CreateGpioController();
+            Assert.Throws<InvalidOperationException>(() => ctrl.OpenPin(0));
+            device2.Dispose();
+            // Now fine
+            ctrl.OpenPin(0);
+        }
+
         private Board CreateBoard()
         {
             return new CustomGenericBoard(PinNumberingScheme.Logical) { MockedDriver = _mockedGpioDriver.Object };
@@ -286,7 +324,17 @@ namespace Iot.Device.Board.Tests
             {
                 if (connectionSettings.BusId == 0)
                 {
-                    return new int[] { 2, 3, 4, 5 };
+                    if (connectionSettings.ChipSelectLine == 0 || connectionSettings.ChipSelectLine == -1)
+                    {
+                        return new int[]
+                        {
+                            2, 3, 4, 10 // simulate: CE0 is logical pin 10
+                        };
+                    }
+                    else
+                    {
+                        return new int[] { 2, 3, 4 };
+                    }
                 }
 
                 throw new NotSupportedException($"No simulated bus id {connectionSettings.BusId}");
@@ -295,6 +343,11 @@ namespace Iot.Device.Board.Tests
             protected override I2cDevice CreateSimpleI2cDevice(I2cConnectionSettings connectionSettings, int[] pins)
             {
                 return new I2cDummyDevice(connectionSettings, pins);
+            }
+
+            protected override SpiDevice CreateSimpleSpiDevice(SpiConnectionSettings connectionSettings, int[] pins)
+            {
+                return new SpiDummyDevice(connectionSettings, pins);
             }
         }
     }

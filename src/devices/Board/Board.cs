@@ -283,7 +283,7 @@ namespace Iot.Device.Board
             return CreateSpiDevice(connectionSettings, pinAssignment, PinNumberingScheme.Logical);
         }
 
-        protected abstract SpiDevice CreateSimpleSpiDevice(SpiConnectionSettings settings);
+        protected abstract SpiDevice CreateSimpleSpiDevice(SpiConnectionSettings settings, int[] pins);
 
         protected abstract PwmChannel CreateSimplePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage);
 
