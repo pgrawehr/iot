@@ -191,6 +191,112 @@ namespace Iot.Device.Board
             };
         }
 
+        public override int[] GetDefaultPinAssignmentForSpi(SpiConnectionSettings connectionSettings)
+        {
+            int cs = connectionSettings.ChipSelectLine;
+            // If hardware CS is used, the CS selection must be 0 or 1, since only that is supported
+            // (except for bus 1, which has 3 pre-defined CS lines)
+            if ((cs >= 2 || cs < -1) && !((connectionSettings.BusId == 1) && cs == 2))
+            {
+                throw new ArgumentOutOfRangeException(nameof(connectionSettings), "Chip select line must be 0 or 1");
+            }
+
+            List<int> pins = new List<int>();
+            switch (connectionSettings.BusId)
+            {
+                case 0:
+                    pins.Add(9);
+                    pins.Add(10);
+                    pins.Add(11);
+                    if (cs == 0)
+                    {
+                        pins.Add(8);
+                    }
+                    else if (cs == 1)
+                    {
+                        pins.Add(7);
+                    }
+
+                    break;
+                case 1:
+                    pins.Add(19);
+                    pins.Add(20);
+                    pins.Add(21);
+                    if (cs == 0)
+                    {
+                        pins.Add(18);
+                    }
+                    else if (cs == 1)
+                    {
+                        pins.Add(17);
+                    }
+                    else if (cs == 2)
+                    {
+                        pins.Add(16);
+                    }
+
+                    break;
+                case 3:
+                    pins.Add(1);
+                    pins.Add(2);
+                    pins.Add(3);
+                    if (cs == 0)
+                    {
+                        pins.Add(0);
+                    }
+                    else if (cs == 1)
+                    {
+                        pins.Add(24);
+                    }
+
+                    break;
+                case 4:
+                    pins.Add(5);
+                    pins.Add(6);
+                    pins.Add(7);
+                    if (cs == 0)
+                    {
+                        pins.Add(4);
+                    }
+                    else if (cs == 1)
+                    {
+                        pins.Add(25);
+                    }
+
+                    break;
+                case 5:
+                    pins.Add(13);
+                    pins.Add(14);
+                    pins.Add(15);
+                    if (cs == 0)
+                    {
+                        pins.Add(12);
+                    }
+                    else if (cs == 1)
+                    {
+                        pins.Add(26);
+                    }
+
+                    break;
+                case 6:
+                    pins.Add(19);
+                    pins.Add(20);
+                    pins.Add(21);
+                    if (cs == 0)
+                    {
+                        pins.Add(18);
+                    }
+                    else if (cs == 1)
+                    {
+                        pins.Add(27);
+                    }
+
+                    break;
+            }
+
+            return base.GetDefaultPinAssignmentForSpi(connectionSettings);
+        }
+
         public override AlternatePinMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0)
         {
             pinNumber = RemapPin(pinNumber, pinNumberingScheme);
@@ -249,6 +355,90 @@ namespace Iot.Device.Board
                 }
 
                 return AlternatePinMode.NotSupported;
+            }
+
+            if (usage == PinUsage.Spi)
+            {
+                switch (pinNumber)
+                {
+                    case 7: // Pin 7 can be assigned to either SPI0 or SPI4
+                        return bus == 0 ? AlternatePinMode.Alt0 : AlternatePinMode.Alt3;
+                    case 8:
+                    case 9:
+                    case 10:
+                    case 11:
+                        return AlternatePinMode.Alt0;
+                    case 0:
+                    case 1:
+                    case 2:
+                    case 3:
+                        return AlternatePinMode.Alt3;
+                    case 4:
+                    case 5:
+                    case 6:
+                        return AlternatePinMode.Alt3;
+                    case 12:
+                    case 13:
+                    case 14:
+                    case 15:
+                        return AlternatePinMode.Alt3;
+                    case 16:
+                    case 17:
+                        return AlternatePinMode.Alt4;
+                    case 18:
+                    case 19:
+                    case 20:
+                    case 21:
+                        return bus == 6 ? AlternatePinMode.Alt3 : AlternatePinMode.Alt4;
+                    case 24:
+                    case 25:
+                    case 26:
+                    case 27:
+                        return AlternatePinMode.Alt5;
+                }
+
+                return AlternatePinMode.NotSupported;
+            }
+
+            if (usage == PinUsage.Uart)
+            {
+                switch (pinNumber)
+                {
+                    case 0:
+                    case 1:
+                    case 2:
+                    case 3:
+                    case 4:
+                    case 5:
+                    case 6:
+                    case 7:
+                    case 8:
+                    case 9:
+                    case 10:
+                    case 11:
+                    case 12:
+                    case 13:
+                        return AlternatePinMode.Alt4;
+                    case 14:
+                    case 15:
+                        if (bus == 0)
+                        {
+                            return AlternatePinMode.Alt0;
+                        }
+                        else if (bus == 5)
+                        {
+                            return AlternatePinMode.Alt4;
+                        }
+                        else if (bus == 1)
+                        {
+                            return AlternatePinMode.Alt5;
+                        }
+
+                        break;
+                    case 16:
+                    case 17:
+                        return (bus == 0) ? AlternatePinMode.Alt3 : AlternatePinMode.Alt5;
+                }
             }
 
             return AlternatePinMode.NotSupported;

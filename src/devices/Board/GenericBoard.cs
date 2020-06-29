@@ -39,7 +39,7 @@ namespace Iot.Device.Board
             return new ManagedGpioController(this, numberingScheme, CreateDriver(), pinAssignment);
         }
 
-        protected override SpiDevice CreateSimpleSpiDevice(SpiConnectionSettings settings)
+        protected override SpiDevice CreateSimpleSpiDevice(SpiConnectionSettings settings, int[] pins)
         {
             return SpiDevice.Create(settings);
         }

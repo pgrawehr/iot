@@ -230,10 +230,10 @@ namespace Iot.Device.Board.Tests
             var device1 = board.CreateSpiDevice(new SpiConnectionSettings(0, 1));
             var device2 = board.CreateSpiDevice(new SpiConnectionSettings(0, 2));
             // Now all fine
-            Assert.Equal(0xff, device1.ReadByte());
-            Assert.Equal(0xff, device2.ReadByte());
-            Assert.Equal(PinUsage.Spi, board.DetermineCurrentPinUsage(0));
-            Assert.Equal(PinUsage.Spi, board.DetermineCurrentPinUsage(1));
+            Assert.Equal(0xf8, device1.ReadByte());
+            Assert.Equal(0xf8, device2.ReadByte());
+            Assert.Equal(PinUsage.Spi, board.DetermineCurrentPinUsage(2));
+            Assert.Equal(PinUsage.Spi, board.DetermineCurrentPinUsage(3));
             device1.Dispose();
 
             // Still fine
@@ -242,7 +242,7 @@ namespace Iot.Device.Board.Tests
             Assert.Throws<ObjectDisposedException>(() => device1.ReadByte());
             // Also not fine (since pins still open)
             var ctrl = board.CreateGpioController();
-            Assert.Throws<InvalidOperationException>(() => ctrl.OpenPin(0));
+            Assert.Throws<InvalidOperationException>(() => ctrl.OpenPin(2));
             device2.Dispose();
             // Now fine
             ctrl.OpenPin(0);
