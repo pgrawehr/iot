@@ -292,9 +292,12 @@ namespace Iot.Device.Board
                     }
 
                     break;
+
+                default:
+                    throw new NotSupportedException($"No bus number {connectionSettings.BusId}");
             }
 
-            return base.GetDefaultPinAssignmentForSpi(connectionSettings);
+            return pins.ToArray();
         }
 
         public override AlternatePinMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0)

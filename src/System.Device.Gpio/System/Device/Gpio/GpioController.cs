@@ -253,6 +253,7 @@ namespace System.Device.Gpio
             if (driver != null)
             {
                 driver.SetAlternatePinMode(logicalPinNumber, altMode);
+                return;
             }
 
             throw new NotSupportedException("Driver does not support alternate pin modes");

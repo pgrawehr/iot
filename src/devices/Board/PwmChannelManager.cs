@@ -7,7 +7,7 @@ namespace Iot.Device.Board
     {
         private readonly Board _board;
         private readonly int _pin;
-        private readonly PwmChannel _pwm;
+        private PwmChannel _pwm;
 
         public PwmChannelManager(Board board, int pin, int chip, int channel, int frequency, double dutyCyclePercentage, Func<int, int, int, double, PwmChannel> createOperation)
         {
@@ -51,8 +51,13 @@ namespace Iot.Device.Board
         {
             if (disposing)
             {
-                _pwm.Dispose();
-                _board.ReleasePin(_pin, PinUsage.Pwm, this);
+                if (_pwm != null)
+                {
+                    _pwm.Dispose();
+                    _board.ReleasePin(_pin, PinUsage.Pwm, this);
+                }
+
+                _pwm = null;
             }
 
             base.Dispose(disposing);

@@ -7,12 +7,11 @@ namespace Iot.Device.Board
     {
         private readonly Board _board;
         private readonly int[] _pins;
-        private readonly SpiDevice _device;
+        private SpiDevice _device;
 
         public SpiDeviceManager(Board board, SpiConnectionSettings connectionSettings, int[] pins, Func<SpiConnectionSettings, int[], SpiDevice> createOperation)
         {
             _board = board;
-            _pins = pins;
             ConnectionSettings = connectionSettings;
             try
             {
@@ -29,8 +28,9 @@ namespace Iot.Device.Board
 
                 _device = createOperation(connectionSettings, pins);
             }
-            catch (Exception)
+            catch (Exception x)
             {
+                Console.WriteLine($"Exception: {x}");
                 _board.ReleasePin(pins[0], PinUsage.Spi, this);
                 _board.ReleasePin(pins[1], PinUsage.Spi, this);
                 _board.ReleasePin(pins[2], PinUsage.Spi, this);
@@ -41,6 +41,8 @@ namespace Iot.Device.Board
 
                 throw;
             }
+
+            _pins = pins;
         }
 
         public override SpiConnectionSettings ConnectionSettings
@@ -85,11 +87,17 @@ namespace Iot.Device.Board
         {
             if (disposing)
             {
-                _device.Dispose();
-                foreach (int pin in _pins)
+                if (_device != null)
                 {
-                    _board.ReleasePin(pin, PinUsage.Spi, this);
+                    _device.Dispose();
+                    foreach (int pin in _pins)
+                    {
+                        _board.ReleasePin(pin, PinUsage.Spi, this);
+                    }
                 }
+
+                // Do not release pins a second time
+                _device = null;
             }
 
             base.Dispose(disposing);

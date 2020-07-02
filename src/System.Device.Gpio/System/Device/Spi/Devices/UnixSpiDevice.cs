@@ -221,7 +221,7 @@ namespace System.Device.Spi
                 len = (uint)buffersLength,
                 speed_hz = (uint)_settings.ClockFrequency,
                 bits_per_word = (byte)_settings.DataBitLength,
-                delay_usecs = 0
+                delay_usecs = 0,
             };
 
             int result = Interop.ioctl(_deviceFileDescriptor, SPI_IOC_MESSAGE_1, new IntPtr(&tr));

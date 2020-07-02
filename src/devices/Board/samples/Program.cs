@@ -4,7 +4,9 @@
 
 using System;
 using System.Device.Gpio;
+using System.Device.Spi;
 using System.Threading;
+using Iot.Device.Adc;
 using Iot.Device.Board;
 
 namespace BoardSample
@@ -130,6 +132,12 @@ namespace BoardSample
         private static void RaspberryPiTest()
         {
             using var raspi = new RaspberryPiBoard(PinNumberingScheme.Logical);
+            // PwmRaspiTest(raspi);
+            SpiRaspiTest(raspi);
+        }
+
+        private static void PwmRaspiTest(RaspberryPiBoard raspi)
+        {
             int pinNumber = 12; // PWM0 pin
 
             Console.WriteLine("Blinking and dimming an LED - Press any key to quit");
@@ -155,6 +163,26 @@ namespace BoardSample
 
                 pwm.Stop();
                 pwm.Dispose();
+            }
+        }
+
+        private static void SpiRaspiTest(Board raspi)
+        {
+            Console.WriteLine("MCP3008 SPI test");
+
+            SpiConnectionSettings spiSettings = new SpiConnectionSettings(0, -1) { ChipSelectLineActiveState = PinValue.Low };
+            using SpiDevice dev = raspi.CreateSpiDevice(spiSettings);
+            using Mcp3008 mcp = new Mcp3008(dev);
+            while (!Console.KeyAvailable)
+            {
+                for (int i = 0; i < 8; i++)
+                {
+                    int value = mcp.Read(i);
+                    Console.WriteLine($"Channel {i} has value {value}.");
+                    Thread.Sleep(100);
+                }
+
+                Thread.Sleep(500);
             }
         }
     }

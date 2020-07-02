@@ -10,7 +10,7 @@ namespace Iot.Device.Board
         private readonly Board _board;
         private readonly int _sdaPin;
         private readonly int _sclPin;
-        private readonly I2cDevice _i2cDeviceImplementation;
+        private I2cDevice _i2cDeviceImplementation;
 
         public I2cDeviceManager(Board board, I2cConnectionSettings settings, int[] pins, Func<I2cConnectionSettings, int[], I2cDevice> creationOperation)
         {
@@ -76,9 +76,15 @@ namespace Iot.Device.Board
         {
             if (disposing)
             {
-                _i2cDeviceImplementation.Dispose();
-                _board.ReleasePin(_sdaPin, PinUsage.I2c, this);
-                _board.ReleasePin(_sclPin, PinUsage.I2c, this);
+                if (_i2cDeviceImplementation != null)
+                {
+                    _i2cDeviceImplementation.Dispose();
+                    _board.ReleasePin(_sdaPin, PinUsage.I2c, this);
+                    _board.ReleasePin(_sclPin, PinUsage.I2c, this);
+                }
+
+                // So we don't release pins a second time
+                _i2cDeviceImplementation = null;
             }
 
             base.Dispose(disposing);
