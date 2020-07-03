@@ -34,9 +34,6 @@ namespace System.Device.Gpio.Drivers
 
         private UnixDriver? _interruptDriver = null;
 
-        /// <summary>
-        /// Returns true if this is a Raspberry Pi4
-        /// </summary>
         public RaspberryPi3LinuxDriver()
         {
             _pinModes = new PinState[PinCount];
@@ -47,6 +44,9 @@ namespace System.Device.Gpio.Drivers
         /// </summary>
         protected internal override int PinCount => 28;
 
+        /// <summary>
+        /// Returns true if this is a Raspberry Pi4
+        /// </summary>
         private bool IsPi4
         {
             get;
@@ -362,6 +362,102 @@ namespace System.Device.Gpio.Drivers
             for (int i = 0; i < 150; i++)
             {
             }
+        }
+
+        /// <summary>
+        /// Sets the given alternate pin mode (0 = Alt0, 1 = Alt1... anything else = Back to Gpio)
+        /// </summary>
+        /// <param name="pinNumber">Pin to set</param>
+        /// <param name="altMode">Mode to set</param>
+        internal void SetAlternatePinMode(int pinNumber, int altMode)
+        {
+            Initialize();
+            /*
+             * There are 6 registers(4-byte ints) that control the mode for all pins. Each
+             * register controls the mode for 10 pins. Each pin uses 3 bits in the register
+             * containing the mode.
+             */
+
+            // Define the shift to get the right 3 bits in the register
+            int shift = (pinNumber % 10) * 3;
+            // Gets a pointer to the register that holds the mode for the pin
+            uint* registerPointer = &_registerViewPointer->GPFSEL[pinNumber / 10];
+            uint register = *registerPointer;
+            // Clear the 3 bits to 0 for the pin Number.
+            register &= ~(0b111U << shift);
+            // Set the 3 bits to the desired mode for that pin.
+            uint modeBits = 0; // Default: Gpio input
+
+            switch (altMode)
+            {
+                case 0:
+                    modeBits = 0b100;
+                    break;
+                case 1:
+                    modeBits = 0b101;
+                    break;
+                case 2:
+                    modeBits = 0b110;
+                    break;
+                case 3:
+                    modeBits = 0b111;
+                    break;
+                case 4:
+                    modeBits = 0b011;
+                    break;
+                case 5:
+                    modeBits = 0b010;
+                    break;
+            }
+
+            register |= (modeBits) << shift;
+            *registerPointer = register;
+        }
+
+        /// <summary>
+        /// Returns the currently set pin mode by directly reading the hardware
+        /// </summary>
+        /// <param name="pinNumber">Pin number</param>
+        /// <returns>(Alternate) Pin mode. 0 = Alt0, 1= Alt1... -1 Gpio Input, -2 Gpio Output</returns>
+        internal int GetAlternatePinMode(int pinNumber)
+        {
+            Initialize();
+            /*
+             * There are 6 registers(4-byte ints) that control the mode for all pins. Each
+             * register controls the mode for 10 pins. Each pin uses 3 bits in the register
+             * containing the mode.
+             */
+
+            // Define the shift to get the right 3 bits in the register
+            int shift = (pinNumber % 10) * 3;
+            // Gets a pointer to the register that holds the mode for the pin
+            uint* registerPointer = &_registerViewPointer->GPFSEL[pinNumber / 10];
+            uint register = *registerPointer;
+            // get the three bits of the register
+            register = (register >> shift) & 0b111;
+
+            switch (register)
+            {
+                case 0b000:
+                    // Input
+                    return -1;
+                case 0b001:
+                    return -2;
+                case 0b100:
+                    return 0;
+                case 0b101:
+                    return 1;
+                case 0b110:
+                    return 2;
+                case 0b111:
+                    return 3;
+                case 0b011:
+                    return 4;
+                case 0b010:
+                    return 5;
+            }
+
+            return -1;
         }
 
         /// <summary>
