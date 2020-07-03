@@ -80,9 +80,9 @@ namespace Iot.Device.Board
             base.OpenPin(pinNumber);
         }
 
-        public override void ClosePin(int pinNumber)
+        protected override void ClosePin(int pinNumber, PinNumberingScheme numberingScheme)
         {
-            base.ClosePin(pinNumber);
+            base.ClosePin(pinNumber, numberingScheme);
             _board.ReleasePin(pinNumber, PinUsage.Gpio, this);
         }
 

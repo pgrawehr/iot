@@ -114,16 +114,27 @@ namespace System.Device.Gpio
         /// Closes an open pin.
         /// </summary>
         /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
-        public virtual void ClosePin(int pinNumber)
+        public void ClosePin(int pinNumber)
         {
             int logicalPinNumber = GetLogicalPinNumber(pinNumber, NumberingScheme);
-            if (!_openPins.Contains(logicalPinNumber))
+            ClosePin(pinNumber, NumberingScheme);
+        }
+
+        /// <summary>
+        /// Closes an open pin.
+        /// </summary>
+        /// <param name="pinNumber">The pin number.</param>
+        /// <param name="numberingScheme">Numbering scheme for the given pin</param>
+        /// <remarks>Internal use, to make Dispose work consistently</remarks>
+        protected virtual void ClosePin(int pinNumber, PinNumberingScheme numberingScheme)
+        {
+            if (!_openPins.Contains(pinNumber))
             {
                 throw new InvalidOperationException("Can not close a pin that is not open.");
             }
 
-            _driver.ClosePin(logicalPinNumber);
-            _openPins.Remove(logicalPinNumber);
+            _driver.ClosePin(pinNumber);
+            _openPins.Remove(pinNumber);
         }
 
         /// <summary>
@@ -364,9 +375,11 @@ namespace System.Device.Gpio
         /// <param name="disposing">True to dispose all instances, false to dispose only unmanaged resources</param>
         protected virtual void Dispose(bool disposing)
         {
-            foreach (int pin in _openPins)
+            var tempList = new List<int>(_openPins); // Because ClosePin modifies this list
+            foreach (int pin in tempList)
             {
-                _driver.ClosePin(pin);
+                // We need to call this special overload, because the _openPins list always contains logical numbers.
+                ClosePin(pin, PinNumberingScheme.Logical);
             }
 
             _openPins.Clear();
