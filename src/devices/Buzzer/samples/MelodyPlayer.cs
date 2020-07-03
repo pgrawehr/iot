@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using UnitsNet;
 
 namespace Iot.Device.Buzzer.Samples
 {
@@ -15,7 +16,7 @@ namespace Iot.Device.Buzzer.Samples
     internal class MelodyPlayer : IDisposable
     {
         private readonly Buzzer _buzzer;
-        private int _wholeNoteDurationInMilliseconds;
+        private Duration _wholeNoteDurationInMilliseconds;
 
         /// <summary>
         /// Create MelodyPlayer.
@@ -94,14 +95,14 @@ namespace Iot.Device.Buzzer.Samples
             if (noteElement == null)
             {
                 // In case it's a pause element we have only just wait desired time.
-                Thread.Sleep(durationInMilliseconds);
+                Thread.Sleep(durationInMilliseconds.ToTimeSpan());
             }
             else
             {
                 // In case it's a note element we play it.
                 var frequency = GetFrequency(noteElement.Note, noteElement.Octave);
-                _buzzer.PlayTone(frequency, (int)(durationInMilliseconds * 0.7));
-                Thread.Sleep((int)(durationInMilliseconds * 0.3));
+                _buzzer.PlayTone(frequency, (durationInMilliseconds * 0.7));
+                Thread.Sleep((durationInMilliseconds * 0.3).ToTimeSpan());
             }
         }
 
@@ -122,15 +123,15 @@ namespace Iot.Device.Buzzer.Samples
                     { Note.B,  7902.13 }
                 };
 
-        private static int GetWholeNoteDurationInMilliseconds(int tempo)
+        private static Duration GetWholeNoteDurationInMilliseconds(int tempo)
         {
             // In music tempo defines amount of quarter notes per minute.
             // Dividing minute (60 * 1000) by tempo we get duration of quarter note.
             // Whole note duration equals to four quarters.
-            return 4 * 60 * 1000 / tempo;
+            return Duration.FromMilliseconds(4 * 60 * 1000 / tempo);
         }
 
-        private static double GetFrequency(Note note, Octave octave)
+        private static Frequency GetFrequency(Note note, Octave octave)
         {
             // We could decrease octave of every note by 1 by dividing it's frequency by 2.
             // We have predefined frequency of every note of eighth octave rounded to 2 decimals.
@@ -138,18 +139,18 @@ namespace Iot.Device.Buzzer.Samples
             // where n is a difference between eight octave and desired octave.
             var eightOctaveNoteFrequency = GetNoteFrequencyOfEightOctave(note);
             var frequencyDivider = Math.Pow(2, 8 - (int)octave);
-            return Math.Round(eightOctaveNoteFrequency / frequencyDivider, 2);
+            return eightOctaveNoteFrequency / frequencyDivider;
         }
 
-        private static double GetNoteFrequencyOfEightOctave(Note note)
+        private static Frequency GetNoteFrequencyOfEightOctave(Note note)
         {
             double result;
             if (notesOfEightOctaveToFrequenciesMap.TryGetValue(note, out result))
             {
-                return result;
+                return Frequency.FromHertz(result);
             }
 
-            return 0;
+            return Frequency.Zero;
         }
     }
 }

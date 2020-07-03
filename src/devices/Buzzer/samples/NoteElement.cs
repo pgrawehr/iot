@@ -25,7 +25,7 @@ namespace Iot.Device.Buzzer.Samples
         /// <param name="note">Note of sound.</param>
         /// <param name="octave">Octave of sound.</param>
         /// <param name="duration">Duration of sound in melody sequence timeline.</param>
-        public NoteElement(Note note, Octave octave, Duration duration)
+        public NoteElement(Note note, Octave octave, NoteDuration duration)
             : base(duration)
         {
             Note = note;

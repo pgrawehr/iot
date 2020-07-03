@@ -6,6 +6,7 @@ using System;
 using System.Device.Pwm;
 using System.Device.Pwm.Drivers;
 using System.Threading;
+using UnitsNet;
 
 namespace Iot.Device.Buzzer
 {
@@ -48,9 +49,9 @@ namespace Iot.Device.Buzzer
         /// Set new or overwrite previously set frequency and start playing the sound.
         /// </summary>
         /// <param name="frequency">Tone frequency in Hertz.</param>
-        public void StartPlaying(double frequency)
+        public void StartPlaying(Frequency frequency)
         {
-            _pwmChannel.Frequency = (int)frequency;
+            _pwmChannel.Frequency = (int)frequency.Hertz;
             _pwmChannel.Start();
         }
 
@@ -65,12 +66,12 @@ namespace Iot.Device.Buzzer
         /// <summary>
         /// Play tone of specific frequency for specified duration.
         /// </summary>
-        /// <param name="frequency">Tone frequency in Hertz.</param>
-        /// <param name="duraton">Playing duration in millisecons.</param>
-        public void PlayTone(double frequency, int duraton)
+        /// <param name="frequency">Tone frequency.</param>
+        /// <param name="duration">Playing duration.</param>
+        public void PlayTone(Frequency frequency, Duration duration)
         {
             StartPlaying(frequency);
-            Thread.Sleep(duraton);
+            Thread.Sleep(duration.ToTimeSpan());
             StopPlaying();
         }
 

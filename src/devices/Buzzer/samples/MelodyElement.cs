@@ -12,9 +12,9 @@ namespace Iot.Device.Buzzer.Samples
         /// <summary>
         /// Duration which defines how long should element take on melody sequence timeline.
         /// </summary>
-        public Duration Duration { get; set; }
+        public NoteDuration Duration { get; set; }
 
-        public MelodyElement(Duration duration)
+        public MelodyElement(NoteDuration duration)
         {
             Duration = duration;
         }

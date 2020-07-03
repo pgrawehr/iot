@@ -41,7 +41,7 @@ namespace Iot.Device.Buzzer.Samples
     /// <summary>
     /// Represents music note duration.
     /// </summary>
-    internal enum Duration
+    internal enum NoteDuration
     {
         Whole = 1,
         Half = 2,
