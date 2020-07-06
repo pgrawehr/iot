@@ -574,7 +574,7 @@ namespace Ft4222.Samples
                         if (bmp != null && bmp.TryReadTemperature(out Temperature temp) && bmp.TryReadPressure(out Pressure p2))
                         {
                             Pressure p3 = WeatherHelper.CalculateBarometricPressure(p2, temp, StationAltitude);
-                            disp.Output.ReplaceLine(1, string.Format(CultureInfo.CurrentCulture, "{0:s1} {1:s1}", temp, p2));
+                            disp.Output.ReplaceLine(1, string.Format(CultureInfo.CurrentCulture, "{0:s1} {1:s1}", temp, p3));
                         }
                         else
                         {
