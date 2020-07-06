@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Iot.Device.Mcp23xxx;
@@ -15,7 +16,10 @@ namespace DisplayControl
     {
         private const int InterruptPin = 21;
         private static readonly TimeSpan MaxIdleTime = TimeSpan.FromSeconds(8);
+        private static readonly TimeSpan AveragingTime = TimeSpan.FromSeconds(5);
         private const double TicksPerRevolution = 1.0;
+        private int _maxCounterValue;
+        private Queue<CounterEvent> _lastEvents;
 
         private enum PinUsage
         {
@@ -39,7 +43,7 @@ namespace DisplayControl
         private GpioController _controllerUsingMcp;
         private ObservableValue<int> _rpm;
         private ObservableValue<bool> _engineOn;
-        private DateTimeOffset _lastInterrupt;
+        private long _lastInterrupt;
         private ObservableValue<TimeSpan> _engineOperatingHours;
 
         private int _lastCounterValue;
@@ -51,10 +55,13 @@ namespace DisplayControl
         /// Create an instance of this class.
         /// Note: Adapt polling timeout when needed
         /// </summary>
-        public EngineSurveillance() 
+        /// <param name="maxCounterValue">The maximum value of the counter. 9 for a BCD type counter, 15 for a binary counter</param>
+        public EngineSurveillance(int maxCounterValue)
             : base(TimeSpan.FromSeconds(5))
         {
             _counterLock = new object();
+            _maxCounterValue = maxCounterValue;
+            _lastEvents = new Queue<CounterEvent>();
         }
 
         public GpioController MainController
@@ -86,7 +93,6 @@ namespace DisplayControl
             SensorValueSources.Add(_rpm);
             SensorValueSources.Add(_engineOperatingHours);
 
-            bool initialCarryIn = false;
             _controllerUsingMcp.SetPinMode((int)PinUsage.Reset, PinMode.Output);
             Write(PinUsage.Reset, PinValue.Low);
             _controllerUsingMcp.SetPinMode((int)PinUsage.Q1, PinMode.Input);
@@ -96,7 +102,7 @@ namespace DisplayControl
             _controllerUsingMcp.SetPinMode((int)PinUsage.CarryOut, PinMode.Input);
             _controllerUsingMcp.SetPinMode((int)PinUsage.PresetEnable, PinMode.Output);
             _controllerUsingMcp.SetPinMode((int)PinUsage.CarryIn, PinMode.Output);
-            Write(PinUsage.CarryIn, initialCarryIn); // This pin is inverted (?)
+            Write(PinUsage.CarryIn, false);
             Write(PinUsage.PresetEnable, PinValue.Low);
             _controllerUsingMcp.SetPinMode((int)PinUsage.P1, PinMode.Output);
             _controllerUsingMcp.SetPinMode((int)PinUsage.P2, PinMode.Output);
@@ -106,13 +112,13 @@ namespace DisplayControl
             // Set the initial value to something other than 0, so we are sure we're not stuck in reset mode
             int initialValue = 0;
             // Run trough all possible values, to check all bit lines are working
-            for (initialValue = 10; initialValue >= 0; initialValue--)
+            for (initialValue = _maxCounterValue; initialValue >= 0; initialValue--)
             {
                 Write(PinUsage.P1, initialValue & 0x1);
                 Write(PinUsage.P2, initialValue & 0x2);
                 Write(PinUsage.P3, initialValue & 0x4);
                 Write(PinUsage.P4, initialValue & 0x8);
-                Write(PinUsage.UpDown, PinValue.High); // Count up. TODO: Check this is right (it may not properly roll over)
+                Write(PinUsage.UpDown, PinValue.High); // Count up.
 
                 // Reset to 0
                 Write(PinUsage.PresetEnable, PinValue.High);
@@ -133,8 +139,8 @@ namespace DisplayControl
             }
 
             _lastCounterValue = 0;
-            _lastInterrupt = DateTimeOffset.UtcNow;
-            // Enable interrupt if Q1 (the lowest bit of the counter) changes
+            _lastInterrupt = Environment.TickCount64;
+            // Enable interrupt if any of the Q pins change
             _mcp23017.EnableInterruptOnChange((int)PinUsage.Q1, PinEventTypes.Rising | PinEventTypes.Falling);
             _mcp23017.EnableInterruptOnChange((int)PinUsage.Q2, PinEventTypes.Rising | PinEventTypes.Falling);
             _mcp23017.EnableInterruptOnChange((int)PinUsage.Q3, PinEventTypes.Rising | PinEventTypes.Falling);
@@ -152,27 +158,21 @@ namespace DisplayControl
             lock (_counterLock)
             {
                 int newValue = ReadCurrentCounterValue();
-                DateTimeOffset now = DateTimeOffset.UtcNow;
+                long now = Environment.TickCount64;
                 int ticksSinceLast = newValue - _lastCounterValue;
                 if (ticksSinceLast < 0)
                 {
-                    // Our counter chip is a BCD counter, so it's maximum value is 10, consider this in a wrap around case
-                    ticksSinceLast = 10 - _lastCounterValue + newValue;
+                    // Check the possible max value for the wrap around case
+                    ticksSinceLast = _maxCounterValue + 1 - _lastCounterValue + newValue;
                 }
-
-                _totalCounterValue += ticksSinceLast;
-                TimeSpan timeSinceLastInterrupt = now - _lastInterrupt;
-                // This should probably be calculated using a filter. Now it just calculates the revs/minute on every tick
-                double umin = (ticksSinceLast / TicksPerRevolution) / timeSinceLastInterrupt.TotalMinutes;
-
-                if (_engineOn.Value)
+                else if (ticksSinceLast == 0)
                 {
-                    // The engine ran during this tick, only if previously it ran already
-                    _engineOperatingHours.Value += timeSinceLastInterrupt;
+                    return;
                 }
-
-                _rpm.Value = (int)umin;
-                _engineOn.Value = true;
+                
+                _totalCounterValue += ticksSinceLast;
+                var ce = new CounterEvent(now, _totalCounterValue);
+                _lastEvents.Enqueue(ce);
 
                 _lastCounterValue = newValue;
                 _lastInterrupt = now;
@@ -191,22 +191,49 @@ namespace DisplayControl
 
         protected override void UpdateSensors()
         {
-            TimeSpan timeSinceLastInterrupt = DateTimeOffset.UtcNow - _lastInterrupt;
+            long now = Environment.TickCount64;
+            List<CounterEvent> eventsToObserve = null;
             lock (_counterLock)
             {
-                int value = ReadCurrentCounterValue();
-                if (value != _lastCounterValue)
+                // In case we lost one interrupt, we poll occasionally to reset the interrupt flag
+                Interrupt(this, new PinValueChangedEventArgs(PinEventTypes.None, InterruptPin));
+                long removeOlderThan = now - (long)Math.Max(AveragingTime.TotalMilliseconds, MaxIdleTime.TotalMilliseconds);
+                while (_lastEvents.TryPeek(out var result) && result.TickCount < removeOlderThan)
                 {
-                    // We probably lost an interrupt. The above call will reset the interrupt pending flag and
-                    // we'll resync with the next interrupt.
-                    return;
+                    _lastEvents.Dequeue();
                 }
-                if (timeSinceLastInterrupt > MaxIdleTime)
+
+                eventsToObserve = _lastEvents.OrderBy(x => x.TickCount).ToList();
+            }
+
+            if (eventsToObserve.Count == 0)
+            {
+                _engineOn.Value = false;
+            }
+            else
+            {
+                _engineOn.Value = true;
+            }
+
+            double umin = 0;
+            long oldestToInspect = now - (long)AveragingTime.TotalMilliseconds;
+            var firstEventInTimeFrame = eventsToObserve.FirstOrDefault(x => x.TickCount >= oldestToInspect);
+            var lastEventInTimeFrame = eventsToObserve.LastOrDefault();
+            if (firstEventInTimeFrame != null && lastEventInTimeFrame != firstEventInTimeFrame)
+            {
+                // This cannot be null here (because if first is not null, last can't be)
+                long deltaTime = lastEventInTimeFrame.TickCount - firstEventInTimeFrame.TickCount;
+                int revolutions = lastEventInTimeFrame.TotalCounter - firstEventInTimeFrame.TotalCounter;
+                if (deltaTime > 0)
                 {
-                    _engineOn.Value = false;
-                    _rpm.Value = 0;
+                    // revs per ms
+                    umin = (revolutions / TicksPerRevolution) / deltaTime;
+                    // revs per minute
+                    umin = umin * 1000 * 60;
                 }
             }
+
+            _rpm.Value = (int)umin;
         }
 
         protected override void Dispose(bool disposing)
@@ -219,6 +246,18 @@ namespace DisplayControl
             _controllerUsingMcp.Dispose();
             _mcp23017.Dispose();
             base.Dispose(disposing);
+        }
+
+        private class CounterEvent
+        {
+            public CounterEvent(long tickCount, int totalCounter)
+            {
+                TickCount = tickCount;
+                TotalCounter = totalCounter;
+            }
+
+            public long TickCount { get; }
+            public int TotalCounter { get; }
         }
     }
 }
