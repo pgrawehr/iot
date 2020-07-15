@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using UnitsNet;
 
@@ -81,9 +82,76 @@ namespace Iot.Device.Nmea0183
         /// <param name="variation">Variation. Positive for east</param>
         /// <returns>The magnetic course</returns>
         /// <remarks>From true to false with the wrong sign</remarks>
-        public static Angle TrueToMagnetic(Angle angleTrue, Angle variation)
+        public static Angle TrueToMagnetic(this Angle angleTrue, Angle variation)
         {
             return (angleTrue - variation).Normalize(true);
+        }
+
+        /// <summary>
+        /// Convert magnetic angle to true angle, given the variation
+        /// </summary>
+        /// <param name="angleMagnetic">Magnetic north angle</param>
+        /// <param name="variation">Variation (positive east)</param>
+        /// <returns>True north angle</returns>
+        public static Angle MagneticToTrue(this Angle angleMagnetic, Angle variation)
+        {
+            return (angleMagnetic + variation).Normalize(true);
+        }
+
+        /// <summary>
+        /// Calculates the average (medium) of a set of points.
+        /// See https://en.wikipedia.org/wiki/Mean_of_circular_quantities
+        /// This method fails if an empty input set is provided or the inputs are evenly distributed over the circle.
+        /// </summary>
+        /// <param name="inputAngles">A set of angles</param>
+        /// <param name="result">The angle that is the mean of the given angles.</param>
+        /// <returns>True on success, false otherwise.</returns>
+        public static bool TryAverageAngle(this IEnumerable<Angle> inputAngles, out Angle result)
+        {
+            if (inputAngles == null)
+            {
+                throw new ArgumentNullException(nameof(inputAngles));
+            }
+
+            var cnt = inputAngles.Count();
+            if (cnt == 0)
+            {
+                result = default;
+                return false;
+            }
+
+            double sin = 0;
+            double cos = 0;
+            foreach (var a in inputAngles)
+            {
+                sin += Math.Sin(a.Radians);
+                cos += Math.Cos(a.Radians);
+            }
+
+            sin /= cnt;
+            cos /= cnt;
+
+            if (sin > 0 && cos > 0)
+            {
+                result = Angle.FromRadians(Math.Atan(sin / cos));
+                return true;
+            }
+
+            if (cos < 0)
+            {
+                result = Angle.FromRadians(Math.Atan(sin / cos) + Math.PI);
+                return true;
+            }
+
+            if (sin < 0 && cos > 0)
+            {
+                result = Angle.FromRadians(Math.Atan(sin / cos) + 2 * Math.PI);
+                return true;
+            }
+
+            // cos == 0
+            result = default;
+            return false;
         }
     }
 }
