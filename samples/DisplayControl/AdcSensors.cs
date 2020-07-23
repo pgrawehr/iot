@@ -26,7 +26,6 @@ namespace DisplayControl
         private VoltageWithLimits _button2;
         private VoltageWithLimits _button3;
         private VoltageWithLimits _button4;
-        private VoltageWithLimits _voltage5V;
         private bool _atLeastOneButtonPressed = false;
 
         public AdcSensors()
@@ -50,7 +49,6 @@ namespace DisplayControl
 
             _voltage3_3V = new VoltageWithLimits("3.3V Supply Voltage", 3.2, 3.4);
             _currentSunBrightness = new ObservableValue<double>("Sunlight strength", "V", 0.0);
-            _voltage5V = new VoltageWithLimits("5V Supply Voltage", 4.8, 5.2);
             _button1 = new VoltageWithLimits("Button 1 voltage", -0.1, 2.55);
             _button1.SuppressWarnings = true;
             _button2 = new VoltageWithLimits("Button 2 voltage", -0.1, 2.7);
@@ -65,7 +63,6 @@ namespace DisplayControl
 
             _sensorValueSources.Add(_voltage3_3V);
             _sensorValueSources.Add(_currentSunBrightness);
-            _sensorValueSources.Add(_voltage5V);
             _sensorValueSources.Add(_button1);
             _sensorValueSources.Add(_button2);
             _sensorValueSources.Add(_button3);
