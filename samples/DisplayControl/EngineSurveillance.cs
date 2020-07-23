@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Iot.Device.Mcp23xxx;
+using Iot.Device.Persistence;
+using UnitsNet;
 
 namespace DisplayControl
 {
@@ -14,13 +16,6 @@ namespace DisplayControl
     /// </summary>
     public class EngineSurveillance : PollingSensorBase
     {
-        private const int InterruptPin = 21;
-        private static readonly TimeSpan MaxIdleTime = TimeSpan.FromSeconds(8);
-        private static readonly TimeSpan AveragingTime = TimeSpan.FromSeconds(5);
-        private const double TicksPerRevolution = 1.0;
-        private int _maxCounterValue;
-        private Queue<CounterEvent> _lastEvents;
-
         private enum PinUsage
         {
             P1 = 0,
@@ -38,13 +33,23 @@ namespace DisplayControl
             PresetEnable = 15,
         }
 
+        private const int InterruptPin = 21;
+        private static readonly TimeSpan MaxIdleTime = TimeSpan.FromSeconds(8);
+        private static readonly TimeSpan AveragingTime = TimeSpan.FromSeconds(5);
+        private const double TicksPerRevolution = 1.0;
+        private int _maxCounterValue;
+        private Queue<CounterEvent> _lastEvents;
+        private bool _engineOn;
+        private PersistentTimeSpan _engineOperatingTime;
+        private long _lastTickForUpdate;
+        private PersistenceFile _enginePersistenceFile;
         private I2cDevice _device;
         private Mcp23017Ex _mcp23017;
         private GpioController _controllerUsingMcp;
         private ObservableValue<int> _rpm;
-        private ObservableValue<bool> _engineOn;
+        private ObservableValue<bool> _engineOnValue;
         private long _lastInterrupt;
-        private ObservableValue<TimeSpan> _engineOperatingHours;
+        private ObservableValue<TimeSpan> _engineOperatingHoursValue;
 
         private int _lastCounterValue;
         private int _totalCounterValue;
@@ -62,7 +67,14 @@ namespace DisplayControl
             _counterLock = new object();
             _maxCounterValue = maxCounterValue;
             _lastEvents = new Queue<CounterEvent>();
+            _engineOn = false;
+            _lastTickForUpdate = 0;
+            _enginePersistenceFile = new PersistenceFile("/home/pi/projects/ShipLogs/Engine.txt");
+            _engineOperatingTime = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours", TimeSpan.Zero, TimeSpan.FromMinutes(1));
         }
+
+        // Todo: Better interface (maybe some generic data provider interface)
+        public event Action<RotationalSpeed, Ratio> DataChanged;
 
         public GpioController MainController
         {
@@ -78,9 +90,9 @@ namespace DisplayControl
             _mcp23017 = new Mcp23017Ex(_device, -1, -1, InterruptPin, gpioController, false);
             _controllerUsingMcp = new GpioController(PinNumberingScheme.Logical, _mcp23017);
 
-            _engineOn = new ObservableValue<bool>("Motor läuft", string.Empty, false);
+            _engineOnValue = new ObservableValue<bool>("Motor läuft", string.Empty, false);
             _rpm = new ObservableValue<int>("Motordrehzahl", "U/Min", 0);
-            _engineOperatingHours = new ObservableValue<TimeSpan>("Motorstunden", "h");
+            _engineOperatingHoursValue = new ObservableValue<TimeSpan>("Motorstunden", "h");
             _totalCounterValue = 0;
 
             // Just open all the pins
@@ -89,9 +101,9 @@ namespace DisplayControl
                 _controllerUsingMcp.OpenPin(i);
             }
 
-            SensorValueSources.Add(_engineOn);
+            SensorValueSources.Add(_engineOnValue);
             SensorValueSources.Add(_rpm);
-            SensorValueSources.Add(_engineOperatingHours);
+            SensorValueSources.Add(_engineOperatingHoursValue);
 
             _controllerUsingMcp.SetPinMode((int)PinUsage.Reset, PinMode.Output);
             Write(PinUsage.Reset, PinValue.Low);
@@ -208,22 +220,26 @@ namespace DisplayControl
 
             if (eventsToObserve.Count == 0)
             {
-                _engineOn.Value = false;
+                _engineOn = false;
             }
             else
             {
-                _engineOn.Value = true;
+                _engineOn = true;
+                long elapsedSinceLastUpdate = now - _lastTickForUpdate;
+                _engineOperatingTime.Value += TimeSpan.FromMilliseconds(elapsedSinceLastUpdate);
             }
 
             double umin = 0;
             long oldestToInspect = now - (long)AveragingTime.TotalMilliseconds;
             var firstEventInTimeFrame = eventsToObserve.FirstOrDefault(x => x.TickCount >= oldestToInspect);
             var lastEventInTimeFrame = eventsToObserve.LastOrDefault();
+            long deltaTime = 0;
+            double revolutions = 0;
             if (firstEventInTimeFrame != null && lastEventInTimeFrame != firstEventInTimeFrame)
             {
                 // This cannot be null here (because if first is not null, last can't be)
-                long deltaTime = lastEventInTimeFrame.TickCount - firstEventInTimeFrame.TickCount;
-                int revolutions = lastEventInTimeFrame.TotalCounter - firstEventInTimeFrame.TotalCounter;
+                deltaTime = lastEventInTimeFrame.TickCount - firstEventInTimeFrame.TickCount;
+                revolutions = lastEventInTimeFrame.TotalCounter - firstEventInTimeFrame.TotalCounter;
                 if (deltaTime > 0)
                 {
                     // revs per ms
@@ -233,7 +249,17 @@ namespace DisplayControl
                 }
             }
 
+            _lastTickForUpdate = now;
+
+            if (_engineOn)
+            {
+                Console.WriteLine($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
+            }
+            // Final step: Send values to UI
             _rpm.Value = (int)umin;
+            _engineOnValue.Value = _engineOn;
+            _engineOperatingHoursValue.Value = _engineOperatingTime.Value;
+            DataChanged?.Invoke(RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100)); // Pitch unknown
         }
 
         protected override void Dispose(bool disposing)

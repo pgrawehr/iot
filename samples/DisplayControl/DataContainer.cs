@@ -14,6 +14,7 @@ using System.Threading;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Iot.Device.CharacterLcd;
+using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
 namespace DisplayControl
@@ -223,8 +224,9 @@ namespace DisplayControl
             allSources.AddRange(_nmeaSensor.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("Motor");
-            _engine = new EngineSurveillance();
+            _engine = new EngineSurveillance(9);
             _engine.Init(Controller);
+            _engine.DataChanged += NewEngineData;
             allSources.AddRange(_engine.SensorValueSources);
 
             foreach (var sensor in allSources)
@@ -234,6 +236,12 @@ namespace DisplayControl
             }
 
             WriteLineToConsoleAndDisplay($"Found {allSources.Count} sensors.");
+        }
+
+        private void NewEngineData(RotationalSpeed rpm, Ratio pitch)
+        {
+            EngineRevolutions rv = new EngineRevolutions(RotationSource.Engine, rpm, 1, pitch);
+            _nmeaSensor.Send(rv);
         }
 
 
