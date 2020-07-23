@@ -514,5 +514,10 @@ namespace DisplayControl
             _router.SendSentence(msg);
             _lastHumidity = value;
         }
+
+        public void Send(NmeaSentence sentence)
+        {
+            _router.SendSentence(sentence);
+        }
     }
 }
