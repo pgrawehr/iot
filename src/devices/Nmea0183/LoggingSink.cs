@@ -50,12 +50,12 @@ namespace Iot.Device.Nmea0183
             string fileName;
             if (Configuration.SortByDate)
             {
+                path = Path.Combine(path, "Log-" + now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
                 string file = now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
                 fileName = Path.Combine(path, "Nmea-" + file + ".txt");
             }
             else
             {
-                path = Path.Combine(path, "Log-" + now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
                 string file = now.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
                 fileName = Path.Combine(path, "Nmea-" + file + ".txt");
             }
