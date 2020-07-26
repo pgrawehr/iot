@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Linq;
@@ -48,7 +49,6 @@ namespace DisplayControl
         private GpioController _controllerUsingMcp;
         private ObservableValue<int> _rpm;
         private ObservableValue<bool> _engineOnValue;
-        private long _lastInterrupt;
         private ObservableValue<TimeSpan> _engineOperatingHoursValue;
 
         private int _lastCounterValue;
@@ -126,16 +126,7 @@ namespace DisplayControl
             // Run trough all possible values, to check all bit lines are working
             for (initialValue = _maxCounterValue; initialValue >= 0; initialValue--)
             {
-                Write(PinUsage.P1, initialValue & 0x1);
-                Write(PinUsage.P2, initialValue & 0x2);
-                Write(PinUsage.P3, initialValue & 0x4);
-                Write(PinUsage.P4, initialValue & 0x8);
-                Write(PinUsage.UpDown, PinValue.High); // Count up.
-
-                // Reset to 0
-                Write(PinUsage.PresetEnable, PinValue.High);
-                Thread.Sleep(1);
-                Write(PinUsage.PresetEnable, PinValue.Low);
+                WritePresetValue(initialValue);
 
                 // Set all preset bits 0, to make sure there isn't a short between Ps and Qs (did occur to me - nasty to find)
                 Write(PinUsage.P1, 0);
@@ -151,7 +142,6 @@ namespace DisplayControl
             }
 
             _lastCounterValue = 0;
-            _lastInterrupt = Environment.TickCount64;
             // Enable interrupt if any of the Q pins change
             _mcp23017.EnableInterruptOnChange((int)PinUsage.Q1, PinEventTypes.Rising | PinEventTypes.Falling);
             _mcp23017.EnableInterruptOnChange((int)PinUsage.Q2, PinEventTypes.Rising | PinEventTypes.Falling);
@@ -160,8 +150,67 @@ namespace DisplayControl
             // The interrupt is signaled with a falling edge
             gpioController.RegisterCallbackForPinValueChangedEvent(InterruptPin, PinEventTypes.Falling, Interrupt);
             // To ensure the interrupt register is reset (if we missed a previous interrupt, a new one would never trigger)
-            ReadCurrentCounterValue(); 
+            ReadCurrentCounterValue();
+            _lastTickForUpdate = Environment.TickCount64;
+            PerformExtendedSelfTests();
+
+            _lastTickForUpdate = Environment.TickCount64;
             base.Init(gpioController);
+        }
+
+        private void WritePresetValue(int initialValue)
+        {
+            Write(PinUsage.P1, initialValue & 0x1);
+            Write(PinUsage.P2, initialValue & 0x2);
+            Write(PinUsage.P3, initialValue & 0x4);
+            Write(PinUsage.P4, initialValue & 0x8);
+            Write(PinUsage.UpDown, PinValue.High); // Count up.
+
+            // Pulse the PresetEnable line
+            Write(PinUsage.PresetEnable, PinValue.High);
+            Thread.Sleep(1);
+            Write(PinUsage.PresetEnable, PinValue.Low);
+        }
+
+        private void SimulateSteps(int noSteps)
+        {
+            int valueToWrite = (_lastCounterValue + noSteps) % (_maxCounterValue + 1);
+            WritePresetValue(valueToWrite);
+            Interrupt(this, new PinValueChangedEventArgs(PinEventTypes.Falling, InterruptPin));
+        }
+
+        private void PerformExtendedSelfTests()
+        {
+            // Note: while this runs, the update thread is not running yet
+            var timePrev = _engineOperatingTime;
+            _engineOperatingTime = new PersistentTimeSpan(null, "Operating Hours", TimeSpan.Zero, TimeSpan.FromMinutes(1));
+
+            Check(_engineOn == false);
+            // This simulates 100 revolutions per second, that is 6000 per minute
+            for (int i = 0; i < 100; i++)
+            {
+                SimulateSteps(1);
+                Thread.Sleep(1);
+            }
+
+            UpdateSensors();
+            Check(_engineOn == true);
+            Check(_engineOperatingTime.Value > TimeSpan.Zero);
+            Check(_rpm.Value > 0);
+            Check(_rpm.Value > 2500 && _rpm.Value < 7000);
+            _engineOn = false;
+            _rpm.Value = 0;
+            Check(_engineOn == false);
+            _engineOperatingTime = timePrev;
+        }
+
+        private void Check(bool condition)
+        {
+            if (!condition)
+            {
+                Console.WriteLine("Error: Extended self test validation failed");
+                throw new InvalidOperationException("Engine counter validation failure");
+            }
         }
 
         private void Interrupt(object sender, PinValueChangedEventArgs pinvaluechangedeventargs)
@@ -187,7 +236,6 @@ namespace DisplayControl
                 _lastEvents.Enqueue(ce);
 
                 _lastCounterValue = newValue;
-                _lastInterrupt = now;
             }
         }
 
@@ -268,6 +316,7 @@ namespace DisplayControl
             _mcp23017.DisableInterruptOnChange((int)PinUsage.Q2);
             _mcp23017.DisableInterruptOnChange((int)PinUsage.Q3);
             _mcp23017.DisableInterruptOnChange((int)PinUsage.Q4);
+            _engineOperatingTime?.Dispose();
             MainController.UnregisterCallbackForPinValueChangedEvent(InterruptPin, Interrupt);
             _controllerUsingMcp.Dispose();
             _mcp23017.Dispose();
