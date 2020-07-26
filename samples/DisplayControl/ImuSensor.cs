@@ -6,6 +6,8 @@ using System.IO.Ports;
 using System.Numerics;
 using System.Text;
 using Iot.Device.Imu;
+using Iot.Device.Nmea0183;
+using UnitsNet;
 
 namespace DisplayControl
 {
@@ -25,6 +27,7 @@ namespace DisplayControl
         private ObservableValue<double> _imuTemperature;
 
         private Vector3 _lastEulerAngles;
+        private MagneticDeviationCorrection _deviationCorrection;
 
         public event Action<Vector3> OnNewOrientation;
 
@@ -101,6 +104,9 @@ namespace DisplayControl
             SensorValueSources.Add(_roll);
             SensorValueSources.Add(_heading);
             SensorValueSources.Add(_imuTemperature);
+
+            _deviationCorrection = new MagneticDeviationCorrection();
+            _deviationCorrection.Load(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Calibration_Cirrus.xml"));
             base.Init(gpioController);
         }
 
@@ -114,7 +120,9 @@ namespace DisplayControl
         {
             _pitch.Value = _lastEulerAngles.Z;
             _roll.Value = _lastEulerAngles.Y;
-            _heading.Value = _lastEulerAngles.X;
+            Angle hdg = Angle.FromDegrees(_lastEulerAngles.X);
+            hdg = _deviationCorrection.ToMagneticHeading(hdg);
+            _heading.Value = hdg.Normalize(true).Degrees;
             _imuTemperature.Value = _imu.Temperature.DegreesCelsius;
         }
 
