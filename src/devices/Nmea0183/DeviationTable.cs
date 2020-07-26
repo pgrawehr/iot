@@ -9,19 +9,69 @@
 //------------------------------------------------------------------------------
 
 // 
-// Dieser Quellcode wurde automatisch generiert von xsd, Version=4.8.3928.0.
+// Dieser Quellcode wurde automatisch generiert von xsd, Version=4.6.1055.0.
 // 
 namespace Iot.Device.Nmea0183 {
     using System.Xml.Serialization;
     
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.6.1055.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="http://tempuri.org/DeviationTable.xsd")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/DeviationTable.xsd")]
     [System.Xml.Serialization.XmlRootAttribute(Namespace="http://tempuri.org/DeviationTable.xsd", IsNullable=false)]
+    public partial class CompassCalibration {
+        
+        private Identification identificationField;
+        
+        private DeviationPoint[] calibrationDataToCompassReadingField;
+        
+        private DeviationPoint[] calibrationDataFromCompassReadingField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public Identification Identification {
+            get {
+                return this.identificationField;
+            }
+            set {
+                this.identificationField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlArrayAttribute(Order=1)]
+        [System.Xml.Serialization.XmlArrayItemAttribute("Points", IsNullable=false)]
+        public DeviationPoint[] CalibrationDataToCompassReading {
+            get {
+                return this.calibrationDataToCompassReadingField;
+            }
+            set {
+                this.calibrationDataToCompassReadingField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlArrayAttribute(Order=2)]
+        [System.Xml.Serialization.XmlArrayItemAttribute("Points", IsNullable=false)]
+        public DeviationPoint[] CalibrationDataFromCompassReading {
+            get {
+                return this.calibrationDataFromCompassReadingField;
+            }
+            set {
+                this.calibrationDataFromCompassReadingField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.6.1055.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/DeviationTable.xsd")]
     public partial class Identification {
         
         private string shipNameField;
@@ -78,7 +128,7 @@ namespace Iot.Device.Nmea0183 {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.6.1055.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -87,9 +137,13 @@ namespace Iot.Device.Nmea0183 {
         
         private float compassReadingField;
         
+        private float compassReadingSmoothField;
+        
         private float magneticHeadingField;
         
         private float deviationField;
+        
+        private float deviationSmoothField;
         
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order=0)]
@@ -104,6 +158,17 @@ namespace Iot.Device.Nmea0183 {
         
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public float CompassReadingSmooth {
+            get {
+                return this.compassReadingSmoothField;
+            }
+            set {
+                this.compassReadingSmoothField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=2)]
         public float MagneticHeading {
             get {
                 return this.magneticHeadingField;
@@ -114,7 +179,7 @@ namespace Iot.Device.Nmea0183 {
         }
         
         /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(Order=2)]
+        [System.Xml.Serialization.XmlElementAttribute(Order=3)]
         public float Deviation {
             get {
                 return this.deviationField;
@@ -123,27 +188,15 @@ namespace Iot.Device.Nmea0183 {
                 this.deviationField = value;
             }
         }
-    }
-    
-    /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
-    [System.SerializableAttribute()]
-    [System.Diagnostics.DebuggerStepThroughAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true, Namespace="http://tempuri.org/DeviationTable.xsd")]
-    [System.Xml.Serialization.XmlRootAttribute(Namespace="http://tempuri.org/DeviationTable.xsd", IsNullable=false)]
-    public partial class CompassCalibrationData {
-        
-        private DeviationPoint[] pointsField;
         
         /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute("Points", Order=0)]
-        public DeviationPoint[] Points {
+        [System.Xml.Serialization.XmlElementAttribute(Order=4)]
+        public float DeviationSmooth {
             get {
-                return this.pointsField;
+                return this.deviationSmoothField;
             }
             set {
-                this.pointsField = value;
+                this.deviationSmoothField = value;
             }
         }
     }
