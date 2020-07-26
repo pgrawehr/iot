@@ -63,7 +63,12 @@ namespace Iot.Device.Nmea0183
             if (_logFile != null)
             {
                 _textWriter.Flush();
+                _textWriter.Close();
                 _logFile.Close();
+                _textWriter.Dispose();
+                _logFile.Dispose();
+                _textWriter = null;
+                _logFile = null;
             }
 
             Directory.CreateDirectory(path);
