@@ -7,7 +7,12 @@ namespace Iot.Device.Persistence
     public delegate string Serializer<T>(T value);
     public delegate bool Deserializer<T>(string data, out T value);
 
-    public class PersistentValue<T>
+    /// <summary>
+    /// Keeps a value persistent across application sessions. Usefull i.e. to store a total run time of an application
+    /// or the total number of items produced. Will also be (approximately) exact if power is lost unexpectedly.
+    /// </summary>
+    /// <typeparam name="T">Type of value to store</typeparam>
+    public class PersistentValue<T> : IDisposable
     {
         private readonly PersistenceFile _file;
         private readonly Serializer<T> _serializer;
@@ -16,16 +21,32 @@ namespace Iot.Device.Persistence
         private T _value;
         private TimeSpan _saveInterval;
 
+        /// <summary>
+        /// Creates an instance of a persisting value. Preferably use subclasses instead.
+        /// </summary>
+        /// <param name="file">File that store the data (will only ever grow for now). Pass null if storing is not required (i.e. for tests)</param>
+        /// <param name="name">Name of the parameter. Should be unique for the application.</param>
+        /// <param name="initialValue">Initial value, if nothing has ever been stored with this name.</param>
+        /// <param name="saveInterval">Interval for persisting the value.</param>
+        /// <param name="serializer">Serializer callback (usually something like <see cref="Object.ToString()"/> with a matching format)</param>
+        /// <param name="deserializer">Deserializer callback (usually a type.TryParse() call)</param>
         public PersistentValue(PersistenceFile file, string name, T initialValue, TimeSpan saveInterval, Serializer<T> serializer, Deserializer<T> deserializer)
         {
-            _file = file ?? throw new ArgumentNullException(nameof(file));
+            _file = file;
             Name = name;
             SaveInterval = saveInterval;
 
             _serializer = serializer;
             _deserializer = deserializer;
             _lastSave = Environment.TickCount;
-            _value = file.GetLastValue(name, _deserializer, initialValue);
+            if (file != null)
+            {
+                _value = file.GetLastValue(name, _deserializer, initialValue);
+            }
+            else
+            {
+                _value = initialValue;
+            }
         }
 
         public T Value
@@ -40,7 +61,7 @@ namespace Iot.Device.Persistence
                 int now = Environment.TickCount;
                 if (_lastSave + SaveInterval.TotalMilliseconds < now || now < _lastSave)
                 {
-                    _file.SaveValue(Name, _serializer, _value);
+                    _file?.SaveValue(Name, _serializer, _value);
                     _lastSave = now;
                 }
             }
@@ -74,7 +95,22 @@ namespace Iot.Device.Persistence
         /// </summary>
         public void Save()
         {
-            _file.SaveValue(Name, _serializer, _value);
+            _file?.SaveValue(Name, _serializer, _value);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // Make sure we save the last value (there might have been value updates that were not persisted yet)
+                Save();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }
