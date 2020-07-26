@@ -23,6 +23,7 @@ namespace DisplayControl
         private SerialPort _serialPort;
         private ObservableValue<double> _pitch;
         private ObservableValue<double> _roll;
+        private ObservableValue<double> _headingUncorrected;
         private ObservableValue<double> _heading;
         private ObservableValue<double> _imuTemperature;
 
@@ -44,8 +45,13 @@ namespace DisplayControl
             _roll.ValueFormatter = "{0:F1}";
             _heading = new ObservableValue<double>(ShipMagneticHeading, "°M", 0);
             _heading.ValueFormatter = "{0:F1}";
+            _headingUncorrected = new ObservableValue<double>("Magnetic Compass reading", "°", 0);
+            _headingUncorrected.ValueFormatter = "{0:F1}";
             _imuTemperature = new ObservableValue<double>("IMU Temperature", "°C", -273);
             _imuTemperature.ValueFormatter = "{0:F1}";
+
+            _deviationCorrection = new MagneticDeviationCorrection();
+            _deviationCorrection.Load(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Calibration_Cirrus.xml"));
 
             bool success = false;
             string errorMessage = string.Empty;
@@ -98,22 +104,24 @@ namespace DisplayControl
             }
 
             _imu = imu;
-            imu.OnNewData += ImuOnOnNewData;
+            imu.OnNewData += ImuOnNewData;
 
             SensorValueSources.Add(_pitch);
             SensorValueSources.Add(_roll);
             SensorValueSources.Add(_heading);
+            SensorValueSources.Add(_headingUncorrected);
             SensorValueSources.Add(_imuTemperature);
 
-            _deviationCorrection = new MagneticDeviationCorrection();
-            _deviationCorrection.Load(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Calibration_Cirrus.xml"));
             base.Init(gpioController);
         }
 
-        private void ImuOnOnNewData(Vector3 eulerAngles)
+        private void ImuOnNewData(Vector3 eulerAngles)
         {
             _lastEulerAngles = eulerAngles;
-            OnNewOrientation?.Invoke(eulerAngles);
+            Angle correctedHdg = Angle.FromDegrees(eulerAngles.X);
+            correctedHdg = _deviationCorrection.ToMagneticHeading(correctedHdg);
+            var correctedAngles = new Vector3((float)correctedHdg.Degrees, eulerAngles.Y, eulerAngles.Z);
+            OnNewOrientation?.Invoke(correctedAngles);
         }
 
         protected override void UpdateSensors()
@@ -121,6 +129,8 @@ namespace DisplayControl
             _pitch.Value = _lastEulerAngles.Z;
             _roll.Value = _lastEulerAngles.Y;
             Angle hdg = Angle.FromDegrees(_lastEulerAngles.X);
+            _headingUncorrected.Value = hdg.Normalize(true).Degrees;
+            
             hdg = _deviationCorrection.ToMagneticHeading(hdg);
             _heading.Value = hdg.Normalize(true).Degrees;
             _imuTemperature.Value = _imu.Temperature.DegreesCelsius;
@@ -132,7 +142,7 @@ namespace DisplayControl
             {
                 if (_imu != null)
                 {
-                    _imu.OnNewData -= ImuOnOnNewData;
+                    _imu.OnNewData -= ImuOnNewData;
                     _imu.Dispose();
                     _serialPort.Dispose();
                     _imu = null;

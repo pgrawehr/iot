@@ -21,7 +21,7 @@ xsd DeviationTable.xsd /c /namespace:Iot.Device.Nmea0183 /order
 	</xs:complexType>
 	<xs:complexType name="CalibrationData">
 		<xs:sequence>
-			<xs:element name="Points" type="DeviationPoint" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element name="Point" type="DeviationPoint" minOccurs="0" maxOccurs="unbounded" />
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="DeviationPoint">
@@ -36,8 +36,8 @@ xsd DeviationTable.xsd /c /namespace:Iot.Device.Nmea0183 /order
     <xs:complexType name="CompassCalibration">
         <xs:sequence>
             <xs:element type="Identification" name="Identification" minOccurs="1" maxOccurs="1" />
-            <xs:element type="CalibrationData" name="CalibrationDataToCompassReading" minOccurs="1" maxOccurs="1" />
             <xs:element type="CalibrationData" name="CalibrationDataFromCompassReading" minOccurs="1" maxOccurs="1" />
+            <xs:element type="CalibrationData" name="CalibrationDataToCompassReading" minOccurs="1" maxOccurs="1" />
         </xs:sequence>
     </xs:complexType>
 </xs:schema>

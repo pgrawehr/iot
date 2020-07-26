@@ -63,9 +63,7 @@ namespace Iot.Device.Nmea0183
                 FindAllTracksWith(i, out var tracks, out var headings);
                 if (tracks.Count > 0 && headings.Count > 0)
                 {
-                    // Add another circle, so we don't have to worry about wraparounds, but this means
-                    // that if we sum values that wrap around (i.e. 350 and 5), the result may be 180° off.
-                    Angle averageTrack;
+                    Angle averageTrack; // Computed from COG (GPS course)
                     if (!tracks.TryAverageAngle(out averageTrack))
                     {
                         averageTrack = tracks[0]; // Should be a rare case - just use the first one then
@@ -79,9 +77,9 @@ namespace Iot.Device.Nmea0183
                     var pt = new DeviationPoint()
                     {
                         // First is less "true" than second, so CompassReading + Deviation => MagneticHeading
-                        CompassReading = (float)magneticTrack.Degrees,
-                        MagneticHeading = (float)averageHeading,
-                        Deviation = (float)deviation,
+                        CompassReading = (float)averageHeading,
+                        MagneticHeading = (float)magneticTrack.Degrees,
+                        Deviation = (float)-deviation,
                     };
 
                     averageOffset += deviation;
@@ -108,7 +106,7 @@ namespace Iot.Device.Nmea0183
                 }
                 else
                 {
-                    if (Math.Abs(pt.Deviation - averageOffset) > 30)
+                    if (Math.Abs(pt.Deviation + averageOffset) > 30)
                     {
                         pointsWithProblems[i] = ($"Your magnetic compass shows deviations of more than 30 degrees. Use a better installation location or buy a new one.");
                     }
@@ -155,21 +153,22 @@ namespace Iot.Device.Nmea0183
 
             CalculateSmoothing(circle);
 
-            _deviationPointsToCompassReading = circle;
-            _deviationPointsFromCompassReading = null;
+            _deviationPointsFromCompassReading = circle;
+            _deviationPointsToCompassReading = null;
 
             circle = new DeviationPoint[360];
             for (int i = 0; i < 360; i++)
             {
                 var ptToUse =
-                    _deviationPointsToCompassReading.FirstOrDefault(x => (int)x.CompassReadingSmooth == i);
+                    _deviationPointsFromCompassReading.FirstOrDefault(x => (int)x.MagneticHeading == i);
 
                 int offs = 1;
                 while (ptToUse == null)
                 {
                     ptToUse =
-                        _deviationPointsToCompassReading.FirstOrDefault(x => (int)x.CompassReadingSmooth == (i + offs) % 360 ||
-                                                                             (int)x.CompassReadingSmooth == (i + 360 - offs) % 360);
+                        _deviationPointsFromCompassReading.FirstOrDefault(x => (int)x.MagneticHeading == (i + offs) % 360 ||
+                                                                             (int)x.MagneticHeading == (i + 360 - offs) % 360);
+                    offs++;
                 }
 
                 circle[i] = new DeviationPoint()
@@ -182,7 +181,7 @@ namespace Iot.Device.Nmea0183
                 };
             }
 
-            _deviationPointsFromCompassReading = circle;
+            _deviationPointsToCompassReading = circle;
 
             // Now create the inverse of the above map, to get from compass reading back to undisturbed magnetic heading
             _interestingSentences.Clear();
@@ -211,17 +210,16 @@ namespace Iot.Device.Nmea0183
                 {
                     circle[i].DeviationSmooth = (float)avgDeviation;
                     // The compass reading we get if we apply the smoothed deviation
-                    circle[i].CompassReadingSmooth = (float)Angle.FromDegrees((-1 * (avgDeviation - (i + 0.5)))).Normalize(true).Degrees;
+                    circle[i].CompassReadingSmooth = (float)Angle.FromDegrees(circle[i].MagneticHeading - avgDeviation).Normalize(true).Degrees;
                 }
                 else
                 {
-                    // The value that we would have read if we had a value for this direction
-                    Angle expectedReading = Angle.FromDegrees((-1 * (avgDeviation - (i + 0.5)))).Normalize(true);
+                    float avgReading = i + 0.5f;
                     circle[i] = new DeviationPoint()
                     {
-                        CompassReading = (float)expectedReading.Degrees, // Constructed from the result
-                        CompassReadingSmooth = (float)expectedReading.Degrees,
-                        MagneticHeading = (i + 0.5f),
+                        CompassReading = (float)avgReading, // Constructed from the result
+                        CompassReadingSmooth = (float)avgReading,
+                        MagneticHeading = (float)Angle.FromDegrees(avgReading + avgDeviation).Normalize(true).Degrees,
                         Deviation = (float)avgDeviation,
                         DeviationSmooth = (float)avgDeviation
                     };

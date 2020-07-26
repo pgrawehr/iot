@@ -28,8 +28,8 @@ namespace Iot.Device.Nmea0183.Tests
 
             Assert.True(dev.Identification != null);
             Assert.Equal("Cirrus", dev.Identification.ShipName);
-            Assert.Equal(357.607643318176, dev.FromMagneticHeading(Angle.FromDegrees(10.2)).Degrees, 3);
-            Assert.Equal(9.0023454284668, dev.ToMagneticHeading(Angle.FromDegrees(-2.39)).Degrees, 3);
+            Assert.Equal(316.743820953369, dev.ToMagneticHeading(Angle.FromDegrees(303.3)).Degrees, 3);
+            Assert.Equal(301.097492027283, dev.FromMagneticHeading(Angle.FromDegrees(316.743820953369)).Degrees, 3);
 
             // For all angles, converting back and forth should result in a small delta (not exactly zero though, since the
             // operation is not exactly invertible)
@@ -37,7 +37,7 @@ namespace Iot.Device.Nmea0183.Tests
             {
                 Angle backAndForth = dev.FromMagneticHeading(dev.ToMagneticHeading(Angle.FromDegrees(d)));
                 Angle delta = backAndForth - Angle.FromDegrees(d);
-                Assert.True(Math.Abs(delta.Normalize(false).Degrees) < 3);
+                Assert.True(Math.Abs(delta.Normalize(false).Degrees) < 8);
             }
         }
     }

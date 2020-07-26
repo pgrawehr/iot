@@ -26,9 +26,9 @@ namespace Iot.Device.Nmea0183 {
         
         private Identification identificationField;
         
-        private DeviationPoint[] calibrationDataToCompassReadingField;
-        
         private DeviationPoint[] calibrationDataFromCompassReadingField;
+        
+        private DeviationPoint[] calibrationDataToCompassReadingField;
         
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order=0)]
@@ -43,25 +43,25 @@ namespace Iot.Device.Nmea0183 {
         
         /// <remarks/>
         [System.Xml.Serialization.XmlArrayAttribute(Order=1)]
-        [System.Xml.Serialization.XmlArrayItemAttribute("Points", IsNullable=false)]
-        public DeviationPoint[] CalibrationDataToCompassReading {
-            get {
-                return this.calibrationDataToCompassReadingField;
-            }
-            set {
-                this.calibrationDataToCompassReadingField = value;
-            }
-        }
-        
-        /// <remarks/>
-        [System.Xml.Serialization.XmlArrayAttribute(Order=2)]
-        [System.Xml.Serialization.XmlArrayItemAttribute("Points", IsNullable=false)]
+        [System.Xml.Serialization.XmlArrayItemAttribute("Point", IsNullable=false)]
         public DeviationPoint[] CalibrationDataFromCompassReading {
             get {
                 return this.calibrationDataFromCompassReadingField;
             }
             set {
                 this.calibrationDataFromCompassReadingField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlArrayAttribute(Order=2)]
+        [System.Xml.Serialization.XmlArrayItemAttribute("Point", IsNullable=false)]
+        public DeviationPoint[] CalibrationDataToCompassReading {
+            get {
+                return this.calibrationDataToCompassReadingField;
+            }
+            set {
+                this.calibrationDataToCompassReadingField = value;
             }
         }
     }
