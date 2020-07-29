@@ -37,7 +37,7 @@ namespace DisplayControl
         private const int InterruptPin = 21;
         private static readonly TimeSpan MaxIdleTime = TimeSpan.FromSeconds(8);
         private static readonly TimeSpan AveragingTime = TimeSpan.FromSeconds(5);
-        private const double TicksPerRevolution = 1.0;
+        private const double TicksPerRevolution = 1.48; // Because our sensor sits on the smaller wheel from the alternator
         private int _maxCounterValue;
         private Queue<CounterEvent> _lastEvents;
         private bool _engineOn;
@@ -62,7 +62,7 @@ namespace DisplayControl
         /// </summary>
         /// <param name="maxCounterValue">The maximum value of the counter. 9 for a BCD type counter, 15 for a binary counter</param>
         public EngineSurveillance(int maxCounterValue)
-            : base(TimeSpan.FromSeconds(5))
+            : base(TimeSpan.FromSeconds(1))
         {
             _counterLock = new object();
             _maxCounterValue = maxCounterValue;
@@ -74,7 +74,7 @@ namespace DisplayControl
         }
 
         // Todo: Better interface (maybe some generic data provider interface)
-        public event Action<RotationalSpeed, Ratio> DataChanged;
+        public event Action<EngineData> DataChanged;
 
         public GpioController MainController
         {
@@ -307,7 +307,8 @@ namespace DisplayControl
             _rpm.Value = (int)umin;
             _engineOnValue.Value = _engineOn;
             _engineOperatingHoursValue.Value = _engineOperatingTime.Value;
-            DataChanged?.Invoke(RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100)); // Pitch unknown
+            var msg = new EngineData(0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100), _engineOperatingTime.Value); // Pitch unknown so far
+            DataChanged?.Invoke(msg);
         }
 
         protected override void Dispose(bool disposing)
