@@ -162,7 +162,7 @@ namespace Iot.Device.Common
         {
             Density absoluteHumidity =
                 CalculateAbsoluteHumidity(airTemperatureFromHumiditySensor, relativeHumidityMeasured);
-            double avp = absoluteHumidity.GramsPerCubicMeter * ((airTemperatureFromBetterPlacedSensor.Kelvins * 461.5) * 1000);
+            double avp = absoluteHumidity.GramsPerCubicMeter * (airTemperatureFromBetterPlacedSensor.Kelvins * 461.5) / 1000;
             double ret = avp / CalculateSaturatedVaporPressureOverWater(airTemperatureFromBetterPlacedSensor).Hectopascals;
             return Ratio.FromPercent(ret);
 

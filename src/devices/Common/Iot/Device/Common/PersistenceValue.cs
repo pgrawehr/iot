@@ -8,7 +8,7 @@ namespace Iot.Device.Persistence
     public delegate bool Deserializer<T>(string data, out T value);
 
     /// <summary>
-    /// Keeps a value persistent across application sessions. Usefull i.e. to store a total run time of an application
+    /// Keeps a value persistent across application sessions. Useful i.e. to store a total run time of an application
     /// or the total number of items produced. Will also be (approximately) exact if power is lost unexpectedly.
     /// </summary>
     /// <typeparam name="T">Type of value to store</typeparam>
