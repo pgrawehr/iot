@@ -74,13 +74,15 @@ namespace DisplayControl
         private WindSpeedAndAngle _lastMwvRelativeMessage;
         private WindSpeedAndAngle _lastMwvTrueMessage;
         private Temperature? _lastTemperature;
-        private double? _lastHumidity;
+        private Ratio? _lastHumidity;
         private AutopilotController _autopilot;
+        private int _sequence;
 
         public NmeaSensor()
         {
             _values = new List<SensorValueSource>();
             _magneticVariation = null;
+            _sequence = 1;
         }
 
         public List<SensorValueSource> SensorValueSources
@@ -432,6 +434,30 @@ namespace DisplayControl
             var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees(value.Y),
                 Angle.FromDegrees(value.Z));
             _router.SendSentence(attitude);
+
+            // If the above doesn't work, try this instead (See also the engine data below, this is actually an NMEA-2000 sequence)
+            // $PCDIN,01F119,000C76CA,09,3DFF7F86FFBF00FF*5B
+            string sequenceNoText = (_sequence % 256).ToString("X2", CultureInfo.InvariantCulture);
+            _sequence++;
+            string yawText = ConvertAngle(value.X);
+            string pitchText = ConvertAngle(value.Z);
+            string rollText = ConvertAngle(value.Y);
+            string timeStampText = Environment.TickCount.ToString("X8", CultureInfo.InvariantCulture);
+            var rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
+            {
+                "01F119",
+                timeStampText,
+                "02",
+                sequenceNoText + yawText + pitchText + rollText + "FF"
+            }, DateTimeOffset.UtcNow);
+            _router.SendSentence(rs);
+        }
+
+        private string ConvertAngle(double angle)
+        {
+            // Degrees = X * 57.29 *.0001
+            int val = (int)Math.Round(angle / 57.29 / 0.0001);
+            return val.ToString("X4", CultureInfo.InvariantCulture);
         }
 
         public void Dispose()
@@ -493,25 +519,16 @@ namespace DisplayControl
             if (_lastTemperature.HasValue && _lastHumidity.HasValue)
             {
                 // MDA sentence is actually obsolete, but it may still be recognized by more hardware than the XDR sentences
-                Temperature dewPoint = WeatherHelper.CalculateDewPoint(_lastTemperature.Value, _lastHumidity.Value);
-                RawSentence rs = new RawSentence(new TalkerId('E', 'C'), new SentenceId("MDA"),
-                    new string[]
-                    {
-                        value.InchesOfMercury.ToString("F2", CultureInfo.InvariantCulture), "I",
-                        (value.Hectopascals / 1000).ToString("F3", CultureInfo.InvariantCulture), "B", 
-                        _lastTemperature.Value.DegreesCelsius.ToString("F1", CultureInfo.InvariantCulture), "C", // air temp
-                        "", "C", // Water temp
-                        _lastHumidity.Value.ToString("F1", CultureInfo.InvariantCulture), "", // Relative and absolute humidity 
-                        dewPoint.DegreesCelsius.ToString("F1", CultureInfo.InvariantCulture), "C", // dew point
-                        "", "T", "", "M", "", "N", "", "M" // Wind speed, direction (not given here, since would be a round-trip)
-                    }, DateTimeOffset.UtcNow);
-                _router.SendSentence(rs);
+                Temperature dewPoint = WeatherHelper.CalculateDewPoint(_lastTemperature.Value, _lastHumidity.Value.Percent);
+                MeteorologicalComposite ms =
+                    new MeteorologicalComposite(value, _lastTemperature, null, _lastHumidity, dewPoint);
+                _router.SendSentence(ms);
             }
         }
 
-        public void SendHumidity(double value)
+        public void SendHumidity(Ratio value)
         {
-            TransducerDataSet ds = new TransducerDataSet("H", value, "P", "ENV_INSIDE_H");
+            TransducerDataSet ds = new TransducerDataSet("H", value.Percent, "P", "ENV_INSIDE_H");
             var msg = new TransducerMeasurement(new[] { ds });
             _router.SendSentence(msg);
             _lastHumidity = value;
@@ -520,6 +537,80 @@ namespace DisplayControl
         public void Send(NmeaSentence sentence)
         {
             _router.SendSentence(sentence);
+        }
+
+        /// <summary>
+        /// Sends engine specific data (this uses the so-called SeaSmart.Net protocol, actually a kind of
+        /// NMEA-2000 messages wrapped in NMEA0183, which my YDNG-03 can convert to real NMEA-2000.
+        /// </summary>
+        public void SendEngineData(EngineData engineData)
+        {
+            if (_router == null)
+            {
+                return; // cleanup in progress
+            }
+
+            // This is the old-stlye RPM message. Can carry only a limited set of information and is often no longer
+            // recognized by NMEA-2000 displays or converters.
+            EngineRevolutions rv = new EngineRevolutions(RotationSource.Engine, engineData.Revolutions, engineData.EngineNo + 1, engineData.Pitch);
+            _router.SendSentence(rv);
+
+            // Example data set: (bad example from the docs, since the engine is just not running here)
+            // $PCDIN,01F200,000C7A4F,02,000000FFFF7FFFFF*21
+            int rpm = (int)engineData.Revolutions.RevolutionsPerMinute;
+            rpm = rpm / 64; // Some trying shows that the last 6 bits are shifted out
+            if (rpm > short.MaxValue)
+            {
+                rpm = short.MaxValue;
+            }
+
+            string engineNoText = engineData.EngineNo.ToString("X2", CultureInfo.InvariantCulture);
+            string rpmText = rpm.ToString("X4", CultureInfo.InvariantCulture);
+            int pitchPercent = (int)engineData.Pitch.Percent;
+            string pitchText = pitchPercent.ToString("X2", CultureInfo.InvariantCulture);
+            string timeStampText = Environment.TickCount.ToString("X8", CultureInfo.InvariantCulture);
+            var rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
+            {
+                "01F200",
+                timeStampText,
+                "02",
+                engineNoText + rpmText + "FFFF" /*Boost*/ + pitchText + "FFFF"
+            }, DateTimeOffset.UtcNow);
+            _router.SendSentence(rs);
+
+            // $PCDIN,01F201,000C7E1B,02,000000FFFF407F0005000000000000FFFF000000000000007F7F*24
+            //                           1-2---3---4---5---6---7-------8---9---1011--12--1314
+            // 1) Engine no. 0: Cntr/Single
+            // 2) Oil pressure
+            // 3) Oil temp
+            // 4) Engine Temp
+            // 5) Alternator voltage
+            // 6) Fuel rate
+            // 7) Engine operating time (seconds)
+            // 8) Coolant pressure
+            // 9) Fuel pressure
+            // 10) Reserved
+            // 11) Status
+            // 12) Status
+            // 13) Load percent
+            // 14) Torque percent
+            int operatingTimeSeconds = (int)engineData.OperatingTime.TotalSeconds;
+            string operatingTimeString = operatingTimeSeconds.ToString("X8", CultureInfo.InvariantCulture);
+            // For whatever reason, this expects this as little endian (all the other way round)
+            string swappedString = operatingTimeString.Substring(6, 2) + operatingTimeString.Substring(4, 2) +
+                                   operatingTimeString.Substring(2, 2) + operatingTimeString.Substring(0, 2);
+
+            // Status = 0 is ok, anything else seems to indicate a fault
+            int status = rpm != 0 ? 0 : 1;
+            string statusString = status.ToString("X4", CultureInfo.InvariantCulture);
+            rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
+            {
+                "01F201",
+                timeStampText,
+                "02",
+                engineNoText + "0000FFFF407F00050000" + swappedString + "FFFF000000" + statusString + "00007F7F"
+            }, DateTimeOffset.UtcNow);
+            _router.SendSentence(rs);
         }
     }
 }

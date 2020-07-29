@@ -185,7 +185,7 @@ namespace DisplayControl
 
                 WriteLineToConsoleAndDisplay("ADC...");
                 _adcSensors = new AdcSensors();
-                _adcSensors.Init(extendedDisplayController.McpController, 10);
+                _adcSensors.Init(extendedDisplayController);
                 _adcSensors.ButtonPressed += DisplayButtonPressed;
 
                 allSources.AddRange(_adcSensors.SensorValueSources);
@@ -215,7 +215,7 @@ namespace DisplayControl
             WriteLineToConsoleAndDisplay("IMU...");
             _imuSensor = new ImuSensor();
             _imuSensor.Init(Controller);
-            _imuSensor.OnNewOrientation += ImuSensorOnOnNewOrientation;
+            _imuSensor.OnNewOrientation += ImuSensorOnNewOrientation;
             allSources.AddRange(_imuSensor.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("NMEA Source...");
@@ -238,10 +238,9 @@ namespace DisplayControl
             WriteLineToConsoleAndDisplay($"Found {allSources.Count} sensors.");
         }
 
-        private void NewEngineData(RotationalSpeed rpm, Ratio pitch)
+        private void NewEngineData(EngineData data)
         {
-            EngineRevolutions rv = new EngineRevolutions(RotationSource.Engine, rpm, 1, pitch);
-            _nmeaSensor.Send(rv);
+            _nmeaSensor.SendEngineData(data);
         }
 
 
@@ -257,7 +256,7 @@ namespace DisplayControl
             }
         }
 
-        private void ImuSensorOnOnNewOrientation(Vector3 orientation)
+        private void ImuSensorOnNewOrientation(Vector3 orientation)
         {
             if (_nmeaSensor != null)
             {
@@ -487,7 +486,7 @@ namespace DisplayControl
 
             if (source.ValueDescription == Bmp680Environment.MAIN_HUMIDITY_SENSOR)
             {
-                _nmeaSensor.SendHumidity((double)source.GenericValue);
+                _nmeaSensor.SendHumidity(Ratio.FromPercent((double)source.GenericValue));
             }
 
         }
