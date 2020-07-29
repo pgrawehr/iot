@@ -10,7 +10,7 @@ namespace DisplayControl
 {
     internal sealed class ExtendedDisplayController : IDisposable
     {
-        private enum PinUsage
+        internal enum PinUsage
         {
             Led1Green = 0,
             Led1Red = 3,
@@ -55,6 +55,8 @@ namespace DisplayControl
             _controllerUsingMcp.SetPinMode((int)PinUsage.DisplayBrightnessChipSelect, PinMode.Output);
             _controllerUsingMcp.SetPinMode((int)PinUsage.DisplayBrightnessDirection, PinMode.Output);
             _controllerUsingMcp.SetPinMode((int)PinUsage.DisplayBrightnessStep, PinMode.Output);
+            _controllerUsingMcp.SetPinMode((int)PinUsage.KeyPadLeds, PinMode.Output);
+            _controllerUsingMcp.Write((int)PinUsage.KeyPadLeds, PinValue.Low);
             Write(PinUsage.DisplayBrightnessDirection, PinValue.Low);
             // CS is low active, so set it high
             Write(PinUsage.DisplayBrightnessChipSelect, PinValue.High);
@@ -75,6 +77,11 @@ namespace DisplayControl
         {
             Write(PinUsage.Buzzer, enable ? PinValue.High : PinValue.Low);
             Write(PinUsage.RedLed, enable ? PinValue.High : PinValue.Low);
+        }
+
+        public void WriteLed(PinUsage pin, PinValue value)
+        {
+            Write(pin, value);
         }
 
         public void IncreaseBrightness(int steps)

@@ -14,8 +14,7 @@ namespace DisplayControl
         private readonly List<SensorValueSource> _sensorValueSources;
         private Ads1115 m_cpuAdc;
         private Ads1115 m_displayAdc;
-        private GpioController _ledController;
-        private int _ledPin;
+        private ExtendedDisplayController _ledController;
 
         private Thread m_pollThread;
         private CancellationTokenSource m_cancellationTokenSource;
@@ -37,10 +36,9 @@ namespace DisplayControl
 
         public IList<SensorValueSource> SensorValueSources => _sensorValueSources;
 
-        public void Init(GpioController ledController, int ledPin)
+        internal void Init(ExtendedDisplayController ledController)
         {
             _ledController = ledController ?? throw new ArgumentNullException(nameof(ledController));
-            _ledPin = ledPin;
             var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.GND));
             m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.PowerDown);
 
@@ -57,9 +55,7 @@ namespace DisplayControl
             _button3.SuppressWarnings = true;
             _button4 = new VoltageWithLimits("Button 4 voltage", -0.1, 2.7);
             _button4.SuppressWarnings = true;
-            // The led controller has the pin already opened, so only set the mode
-            _ledController.SetPinMode(_ledPin, PinMode.Output);
-            _ledController.Write(_ledPin, PinValue.Low);
+             _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
 
             _sensorValueSources.Add(_voltage3_3V);
             _sensorValueSources.Add(_currentSunBrightness);
@@ -161,16 +157,16 @@ namespace DisplayControl
                     double b2Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
                     double b3Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
                     double b4Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
-                    _ledController.Write(_ledPin, PinValue.High);
+                    _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.High);
                     // Then read them again, now with the reflection led on
                     double b1High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
                     double b2High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
                     double b3High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
                     double b4High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
-                    _ledController.Write(_ledPin, PinValue.Low);
+                    _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
                     double averageLow = (b1Low + b2Low + b3Low + b4Low) / 4;
                     double averageHigh = (b1High + b2High + b3High + b4High) / 4;
-                    bool sunIsShining = averageLow > 1.1;
+                    bool sunIsShining = averageLow > 0.9;
                     // Todo: find out which button might be pressed (obstructed)
                     // if the low average is high the LED might not have an effect at all. 
                     // if the low average equals the high average, the led has no effect (or is broken)
@@ -181,6 +177,7 @@ namespace DisplayControl
                         _button3.Value = b3High;
                         _button4.Value = b4High;
 
+                        _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.High);
                         // The "normal" button mode: buttons are pressed when the voltage rises
                         double triggerValue = averageHigh + 0.3;
                         if (b1High > triggerValue)
@@ -213,6 +210,9 @@ namespace DisplayControl
                         _button2.Value = -b2Low;
                         _button3.Value = -b3Low;
                         _button4.Value = -b4Low;
+                        // Disable the green led 5, meaning the display is locked.
+                        _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.Low);
+                        /* Disabled - not reliable enough (causes many random button presses)
                         const double lowThreshold = 0.5;
                         double bt1Delta = b1Low - (b2Low + b3Low + b4Low) / 3;
                         double bt2Delta = b2Low - (b1Low + b3Low + b4Low) / 3;
@@ -242,6 +242,7 @@ namespace DisplayControl
                             // Reset once no buttons are pressed any more
                             _atLeastOneButtonPressed = false;
                         }
+                        */
                     }
                 }
                 catch (IOException x)
@@ -261,6 +262,27 @@ namespace DisplayControl
                 // Already one button pressed. Wait until released
                 return;
             }
+
+            ExtendedDisplayController.PinUsage usage = ExtendedDisplayController.PinUsage.Led1Green;
+            switch (button)
+            {
+                case DisplayButton.Back:
+                    usage = ExtendedDisplayController.PinUsage.Led1Green;
+                    break;
+                case DisplayButton.Previous:
+                    usage = ExtendedDisplayController.PinUsage.Led2Green;
+                    break;
+                case DisplayButton.Next:
+                    usage = ExtendedDisplayController.PinUsage.Led3Green;
+                    break;
+                case DisplayButton.Enter:
+                    usage = ExtendedDisplayController.PinUsage.Led4Green;
+                    break;
+            }
+
+            _ledController.WriteLed(usage, PinValue.High);
+            Thread.Sleep(300);
+            _ledController.WriteLed(usage, PinValue.Low);
 
             ButtonPressed?.Invoke(button, true);
         }
