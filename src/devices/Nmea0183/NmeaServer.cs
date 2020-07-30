@@ -53,9 +53,11 @@ namespace Iot.Device.Nmea0183
             _server = new TcpListener(_bindTo, _port);
             _server.Start();
             _serverThread = new Thread(ConnectionWatcher);
+            _serverThread.Name = "Server connection watcher";
             _serverThread.Start();
 
             _serverControlThread = new Thread(ServerControl);
+            _serverControlThread.Name = "Server control thread";
             _serverControlThread.Start();
         }
 
