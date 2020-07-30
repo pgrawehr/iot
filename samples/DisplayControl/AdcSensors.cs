@@ -139,10 +139,10 @@ namespace DisplayControl
                     // Do this only every once in a while
                     try
                     {
-                        _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3);
+                        _voltage3_3V.Value = m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3).Volts;
                         // Todo: Voltage is not really the correct unit for this.
-                        _currentSunBrightness.Value = m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) -
-                                                      m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2);
+                        _currentSunBrightness.Value = (m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) -
+                                                      m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2)).Volts;
                     }
                     catch (IOException x)
                     {
@@ -153,16 +153,16 @@ namespace DisplayControl
                 try
                 {
                     // First, read all four inputs with the led off (default)
-                    double b1Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
-                    double b2Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
-                    double b3Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
-                    double b4Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
+                    double b1Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0).Volts;
+                    double b2Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1).Volts;
+                    double b3Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2).Volts;
+                    double b4Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3).Volts;
                     _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.High);
                     // Then read them again, now with the reflection led on
-                    double b1High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0);
-                    double b2High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1);
-                    double b3High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2);
-                    double b4High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3);
+                    double b1High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0).Volts;
+                    double b2High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1).Volts;
+                    double b3High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2).Volts;
+                    double b4High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3).Volts;
                     _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
                     double averageLow = (b1Low + b2Low + b3Low + b4Low) / 4;
                     double averageHigh = (b1High + b2High + b3High + b4High) / 4;

@@ -7,6 +7,7 @@ using System.Threading;
 using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
 using Iot.Device.Common;
+using UnitsNet;
 
 namespace DisplayControl
 {
@@ -25,13 +26,13 @@ namespace DisplayControl
 
         public Bmp680Environment() : base(TimeSpan.FromSeconds(5))
         {
-            Altitude = 0;
+            Altitude = Length.Zero;
         }
 
         /// <summary>
         /// Set this regularly from the GPS receiver
         /// </summary>
-        public double Altitude
+        public Length Altitude
         {
             get;
             set;
@@ -75,7 +76,7 @@ namespace DisplayControl
             // Take one measurement, then sleep as long as this takes
             _bme680.SetPowerMode(Bme680PowerMode.Forced);
             var measurementTime = _bme680.GetMeasurementDuration(_bme680.HeaterProfile);
-            Thread.Sleep(measurementTime);
+            Thread.Sleep(measurementTime.ToTimeSpan());
             bool temp = _bme680.TryReadTemperature(out var tempValue);
             if (temp)
             {
@@ -91,7 +92,7 @@ namespace DisplayControl
             bool hum = _bme680.TryReadHumidity(out var humidity);
             if (hum)
             {
-                _humidity.Value = humidity;
+                _humidity.Value = humidity.Percent;
             }
 
             ////if (_bme680.TryReadGasResistance(out var gasResistance))

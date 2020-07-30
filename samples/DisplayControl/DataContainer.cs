@@ -470,7 +470,7 @@ namespace DisplayControl
 
             if (source is PositionValue pos)
             {
-                _weatherSensor.Altitude = pos.Value.EllipsoidalHeight;
+                _weatherSensor.Altitude = Length.FromMeters(pos.Value.EllipsoidalHeight);
             }
 
 

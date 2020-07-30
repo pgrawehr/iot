@@ -519,7 +519,7 @@ namespace DisplayControl
             if (_lastTemperature.HasValue && _lastHumidity.HasValue)
             {
                 // MDA sentence is actually obsolete, but it may still be recognized by more hardware than the XDR sentences
-                Temperature dewPoint = WeatherHelper.CalculateDewPoint(_lastTemperature.Value, _lastHumidity.Value.Percent);
+                Temperature dewPoint = WeatherHelper.CalculateDewPoint(_lastTemperature.Value, _lastHumidity.Value);
                 MeteorologicalComposite ms =
                     new MeteorologicalComposite(value, _lastTemperature, null, _lastHumidity, dewPoint);
                 _router.SendSentence(ms);

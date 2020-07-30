@@ -38,7 +38,7 @@ namespace DisplayControl
             // This sensor can deliver an accuracy of 0.1% at most
             _insideHumidity.ValueFormatter = "{0:F1}";
             _sensorValueSources.Add(_insideHumidity);
-            _dht11 = new Dht11(gpioController, 16);
+            _dht11 = new Dht11(16, PinNumberingScheme.Logical, gpioController, false);
 
             _cancellationTokenSource = new CancellationTokenSource();
             _pollThread = new Thread(PollThread);
@@ -58,7 +58,7 @@ namespace DisplayControl
                 if (_dht11.IsLastReadSuccessful)
                 {
                     _insideTemperature.Value = temp.DegreesCelsius;
-                    _insideHumidity.Value = _dht11.Humidity;
+                    _insideHumidity.Value = _dht11.Humidity.Percent;
                 }
                 _cancellationTokenSource.Token.WaitHandle.WaitOne(3000);
             }
