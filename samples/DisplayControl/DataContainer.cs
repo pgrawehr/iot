@@ -240,7 +240,7 @@ namespace DisplayControl
 
         private void NewEngineData(EngineData data)
         {
-            _nmeaSensor.SendEngineData(data);
+            _nmeaSensor?.SendEngineData(data);
         }
 
 
