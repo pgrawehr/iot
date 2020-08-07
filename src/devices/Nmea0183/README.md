@@ -21,7 +21,8 @@ Fields for all types of sentences can be inspected.
 
 ## Samples
 
-Please refer to [NEO-M8 sample](../Neo-M8/samples/README.md).
+See [NEO-M8 sample](../samples/NEO-M8-README.md) for a simple parser
+See the samples directory for a simple NMEA simulator (generates sentences for a trip along a path)
 
 ## Guidelines for adding new sentence identifiers
 
