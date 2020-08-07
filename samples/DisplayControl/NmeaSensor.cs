@@ -77,6 +77,7 @@ namespace DisplayControl
         private Ratio? _lastHumidity;
         private AutopilotController _autopilot;
         private int _sequence;
+        private ObservableValue<double> _waterDepthField;
 
         public NmeaSensor()
         {
@@ -270,11 +271,12 @@ namespace DisplayControl
             _windDirectionAbsolute = new ObservableValue<double>("Wahre Windrichtung", "°T");
             _windDirectionRelative = new ObservableValue<double>("Scheinbare Windrichtung", "°");
             _magneticVariationField = new ObservableValue<double>("Deklination", "°E");
+            _waterDepthField = new ObservableValue<double>("Wassertiefe", "m");
             
             SensorValueSources.AddRange(new SensorValueSource[]
             {
                 _windSpeedRelative, _windDirectionRelative, _windSpeedAbsolute, _windDirectionAbsolute,
-                _speed, _track, _parserMsg, _elevation, _position
+                _speed, _track, _parserMsg, _elevation, _position, _waterDepthField
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -330,47 +332,42 @@ namespace DisplayControl
 
         private void ParserOnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
-            if (sentence is GlobalPositioningSystemFixData gga && gga.Valid)
+            switch (sentence)
             {
-                if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(2))
+                case GlobalPositioningSystemFixData gga when gga.Valid:
                 {
+                    if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(2))
+                    {
+                        return;
+                    }
+                    _lastGgaMessage = gga;
+                    _position.Value = gga.Position;
+                    _elevation.Value = gga.GeoidAltitude.GetValueOrDefault(0);
+                    break;
+                }
+                case RecommendedMinimumNavigationInformation rmc when _lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(2):
                     return;
-                }
-                _lastGgaMessage = gga;
-                _position.Value = gga.Position;
-                _elevation.Value = gga.GeoidAltitude.GetValueOrDefault(0);
-            }
-
-            if (sentence is RecommendedMinimumNavigationInformation rmc)
-            {
-                if (_lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(2))
+                case RecommendedMinimumNavigationInformation rmc:
                 {
+                    _lastRmcMessage = rmc;
+                    _speed.Value = rmc.SpeedOverGround.Knots;
+                    _track.Value = rmc.TrackMadeGoodInDegreesTrue.Degrees;
+                    _magneticVariation = rmc.MagneticVariationInDegrees;
+                    if (_magneticVariation.HasValue)
+                    {
+                        _magneticVariationField.Value = _magneticVariation.Value.Degrees;
+                    }
+
+                    break;
+                }
+                case TrackMadeGood vtg when _lastVtgMessage != null && _lastVtgMessage.Age < TimeSpan.FromSeconds(2):
                     return;
-                }
-                _lastRmcMessage = rmc;
-                _speed.Value = rmc.SpeedOverGround.Knots;
-                _track.Value = rmc.TrackMadeGoodInDegreesTrue.Degrees;
-                _magneticVariation = rmc.MagneticVariationInDegrees;
-                if (_magneticVariation.HasValue)
-                {
-                    _magneticVariationField.Value = _magneticVariation.Value.Degrees;
-                }
-            }
-
-            if (sentence is TrackMadeGood vtg)
-            {
-                if (_lastVtgMessage != null && _lastVtgMessage.Age < TimeSpan.FromSeconds(2))
-                {
-                    return;
-                }
-                _lastVtgMessage = vtg;
-                _speed.Value = vtg.Speed.Knots;
-                _track.Value = vtg.CourseOverGroundTrue.Degrees;
-            }
-
-            if (sentence is WindSpeedAndAngle mwv)
-            {
-                if (mwv.Relative)
+                case TrackMadeGood vtg:
+                    _lastVtgMessage = vtg;
+                    _speed.Value = vtg.Speed.Knots;
+                    _track.Value = vtg.CourseOverGroundTrue.Degrees;
+                    break;
+                case WindSpeedAndAngle mwv when mwv.Relative:
                 {
                     if (_lastMwvRelativeMessage != null && _lastMwvRelativeMessage.Age < TimeSpan.FromSeconds(2))
                     {
@@ -380,17 +377,19 @@ namespace DisplayControl
 
                     _windSpeedRelative.Value = mwv.Speed.Knots;
                     _windDirectionRelative.Value = mwv.Angle.Degrees;
+                    break;
                 }
-                else
-                {
-                    if (_lastMwvTrueMessage != null && _lastMwvTrueMessage.Age < TimeSpan.FromSeconds(2))
-                    {
-                        return;
-                    }
+                case WindSpeedAndAngle mwv when _lastMwvTrueMessage != null && _lastMwvTrueMessage.Age < TimeSpan.FromSeconds(2):
+                    return;
+                case WindSpeedAndAngle mwv:
                     _lastMwvTrueMessage = mwv;
                     _windSpeedAbsolute.Value = mwv.Speed.Knots;
                     _windDirectionAbsolute.Value = mwv.Angle.Degrees;
-                }
+                    break;
+
+                case DepthBelowSurface dpt when dpt.Valid:
+                    _waterDepthField.Value = dpt.Depth.Meters;
+                    break;
             }
 
             // Reset warning if we get a valid message again (TODO: Improve condition)
