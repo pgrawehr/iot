@@ -42,6 +42,7 @@ namespace DisplayControl
         private Queue<CounterEvent> _lastEvents;
         private bool _engineOn;
         private PersistentTimeSpan _engineOperatingTime;
+        private PersistentTimeSpan _engineOperatingTimeAtLastRefill;
         private long _lastTickForUpdate;
         private PersistenceFile _enginePersistenceFile;
         private I2cDevice _device;
@@ -50,6 +51,7 @@ namespace DisplayControl
         private ObservableValue<int> _rpm;
         private ObservableValue<bool> _engineOnValue;
         private ObservableValue<TimeSpan> _engineOperatingHoursValue;
+        private ObservableValue<TimeSpan> _engineOperatingHoursSinceRefill;
 
         private int _lastCounterValue;
         private int _totalCounterValue;
@@ -71,6 +73,7 @@ namespace DisplayControl
             _lastTickForUpdate = 0;
             _enginePersistenceFile = new PersistenceFile("/home/pi/projects/ShipLogs/Engine.txt");
             _engineOperatingTime = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours", TimeSpan.Zero, TimeSpan.FromMinutes(1));
+            _engineOperatingTimeAtLastRefill = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours at last refill", new TimeSpan(0, 15, 33, 0), TimeSpan.Zero);
         }
 
         // Todo: Better interface (maybe some generic data provider interface)
@@ -94,6 +97,7 @@ namespace DisplayControl
             _rpm = new ObservableValue<int>("Motordrehzahl", "U/Min", 0);
             _engineOperatingHoursValue = new ObservableValue<TimeSpan>("Motorstunden", "h");
             _totalCounterValue = 0;
+            _engineOperatingHoursSinceRefill = new ObservableValue<TimeSpan>("Motorstunden seit Betankung", "h", TimeSpan.Zero);
 
             // Just open all the pins
             for (int i = 0; i < _controllerUsingMcp.PinCount; i++)
@@ -104,6 +108,7 @@ namespace DisplayControl
             SensorValueSources.Add(_engineOnValue);
             SensorValueSources.Add(_rpm);
             SensorValueSources.Add(_engineOperatingHoursValue);
+            SensorValueSources.Add(_engineOperatingHoursSinceRefill);
 
             _controllerUsingMcp.SetPinMode((int)PinUsage.Reset, PinMode.Output);
             Write(PinUsage.Reset, PinValue.Low);
@@ -307,6 +312,7 @@ namespace DisplayControl
             _rpm.Value = (int)umin;
             _engineOnValue.Value = _engineOn;
             _engineOperatingHoursValue.Value = _engineOperatingTime.Value;
+            _engineOperatingHoursSinceRefill.Value = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
             var msg = new EngineData(0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100), _engineOperatingTime.Value); // Pitch unknown so far
             DataChanged?.Invoke(msg);
         }
@@ -318,6 +324,7 @@ namespace DisplayControl
             _mcp23017.DisableInterruptOnChange((int)PinUsage.Q3);
             _mcp23017.DisableInterruptOnChange((int)PinUsage.Q4);
             _engineOperatingTime?.Dispose();
+            _engineOperatingTimeAtLastRefill?.Dispose();
             MainController.UnregisterCallbackForPinValueChangedEvent(InterruptPin, Interrupt);
             _controllerUsingMcp.Dispose();
             _mcp23017.Dispose();
