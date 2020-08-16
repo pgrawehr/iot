@@ -4,6 +4,7 @@
 
 using System;
 using System.Device.Gpio;
+using System.Device.Gpio.Drivers;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -47,7 +48,7 @@ namespace DisplayControl
             }
 
             Console.WriteLine($"Initializing Hardware...");
-            using (GpioController controller = new GpioController())
+            using (GpioController controller = new GpioController(PinNumberingScheme.Logical, new RaspberryPi3Driver()))
             {
                 Program prog = new Program(controller);
                 try
