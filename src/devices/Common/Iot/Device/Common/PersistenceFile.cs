@@ -4,7 +4,7 @@ using System;
 using System.Globalization;
 using System.IO;
 
-namespace Iot.Device.Persistence
+namespace Iot.Device.Common
 {
     public sealed class PersistenceFile
     {
@@ -24,6 +24,7 @@ namespace Iot.Device.Persistence
                 {
                     string dataLine = String.Format(CultureInfo.InvariantCulture, "{0:s}|{1}|{2}|$", DateTime.Now, name, serializer(value));
                     w.WriteLine(dataLine);
+                    w.Flush();
                 }
             }
         }

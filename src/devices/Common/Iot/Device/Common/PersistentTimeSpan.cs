@@ -3,7 +3,7 @@ using System.Globalization;
 using System.IO;
 
 #pragma warning disable CS1591
-namespace Iot.Device.Persistence
+namespace Iot.Device.Common
 {
     public class PersistentTimeSpan : PersistentValue<TimeSpan>
     {

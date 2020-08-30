@@ -2,7 +2,7 @@
 using System.IO;
 
 #pragma warning disable CS1591
-namespace Iot.Device.Persistence
+namespace Iot.Device.Common
 {
     public delegate string Serializer<T>(T value);
     public delegate bool Deserializer<T>(string data, out T value);
@@ -14,9 +14,9 @@ namespace Iot.Device.Persistence
     /// <typeparam name="T">Type of value to store</typeparam>
     public class PersistentValue<T> : IDisposable
     {
-        private readonly PersistenceFile _file;
         private readonly Serializer<T> _serializer;
         private readonly Deserializer<T> _deserializer;
+        private PersistenceFile _file;
         private int _lastSave;
         private T _value;
         private TimeSpan _saveInterval;
@@ -59,7 +59,7 @@ namespace Iot.Device.Persistence
             {
                 _value = value;
                 int now = Environment.TickCount;
-                if (_lastSave + SaveInterval.TotalMilliseconds < now || now < _lastSave)
+                if (_lastSave + SaveInterval.TotalMilliseconds < now || now < _lastSave || SaveInterval.TotalMilliseconds <= 0)
                 {
                     _file?.SaveValue(Name, _serializer, _value);
                     _lastSave = now;
@@ -105,6 +105,8 @@ namespace Iot.Device.Persistence
                 // Make sure we save the last value (there might have been value updates that were not persisted yet)
                 Save();
             }
+
+            _file = null;
         }
 
         public void Dispose()

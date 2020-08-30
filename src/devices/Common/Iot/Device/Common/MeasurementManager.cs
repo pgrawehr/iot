@@ -6,7 +6,7 @@ using UnitsNet;
 #pragma warning disable CS1591
 namespace Iot.Device.Common
 {
-    public class MeasurementManager
+    public sealed class MeasurementManager : IDisposable
     {
         private readonly List<SensorMeasurement> _measurements;
         private readonly List<MeasurementHistoryConfiguration> _historyConfigurations;
@@ -17,6 +17,13 @@ namespace Iot.Device.Common
             _measurements = new List<SensorMeasurement>();
             _historyConfigurations = new List<MeasurementHistoryConfiguration>();
             _lock = new object();
+        }
+
+        public void Dispose()
+        {
+            // That's mostly to prevent memory leaks (or more precise, dangling big instances)
+            _measurements.Clear();
+            _historyConfigurations.Clear();
         }
 
         /// <summary>
@@ -75,6 +82,52 @@ namespace Iot.Device.Common
             }
         }
 
+        public List<HistoricValue> ObtainHistory(SensorMeasurement measurement, TimeSpan maxAge, TimeSpan interval)
+        {
+            lock (_lock)
+            {
+                var entry = _historyConfigurations.FirstOrDefault(x => x.Measurement == measurement);
+                if (entry == null)
+                {
+                    throw new InvalidOperationException("No history enabled for this measurement");
+                }
+
+                // Pick all entries that are younger than the given age
+                List<HistoricValue> ret = new List<HistoricValue>();
+                DateTime oldest = DateTime.UtcNow - maxAge;
+                foreach (var e in entry.Measurements().Where(x => x.MeasurementTime >= oldest))
+                {
+                    ret.Add(e);
+                }
+
+                if (ret.Count == 0)
+                {
+                    return ret;
+                }
+
+                // Now remove all but the first entry withing each interval.
+                // Note that the resulting list may contain gaps in time if the resolution of the history
+                // is less thant the expected interval.
+                DateTime nextIntervalStart = ret.First().MeasurementTime;
+                for (int i = 0; i < ret.Count; i++)
+                {
+                    // If it's less than where we expect the next value, remove it
+                    if (ret[i].MeasurementTime < nextIntervalStart)
+                    {
+                        ret.RemoveAt(i);
+                        i--;
+                    }
+                    else
+                    {
+                        // otherwise keep the value and move to the next step
+                        nextIntervalStart += interval;
+                    }
+                }
+
+                return ret;
+            }
+        }
+
         private void AddMeasurement(SensorMeasurement measurement, MeasurementHistoryConfiguration historyConfiguration)
         {
             lock (_lock)
@@ -113,11 +166,6 @@ namespace Iot.Device.Common
             return new List<SensorMeasurement>(_measurements);
         }
 
-        public IEnumerable<SensorMeasurement> Measurements(Func<SensorMeasurement, bool> predicate)
-        {
-            return _measurements.Where(predicate);
-        }
-
         public IEnumerable<SensorMeasurement> Measurements(Predicate<SensorMeasurement> predicate)
         {
             return _measurements.Where(x => predicate(x));
@@ -125,22 +173,35 @@ namespace Iot.Device.Common
 
         private void MeasurementOnValueChanged(SensorMeasurement measurement)
         {
+            lock (_lock)
+            {
+                var entry = _historyConfigurations.FirstOrDefault(x => x.Measurement == measurement);
+                if (entry != null)
+                {
+                    entry.TryAddMeasurement(measurement.Value);
+                    entry.RemoveOldEntries();
+                }
+            }
         }
 
         private sealed class MeasurementHistoryConfiguration
         {
-            private List<(DateTime, IQuantity)> _values;
+            private readonly List<HistoricValue> _values;
             private DateTime _lastAddedTime;
 
+            /// <summary>
+            /// Configures a history data set.
+            /// </summary>
+            /// <param name="measurement">The handle to the measurement. The value associated is not added to the list.</param>
+            /// <param name="historyInterval">The resolution of the history data to keep</param>
+            /// <param name="maxMeasurementAge">The maximum age of the history data</param>
             public MeasurementHistoryConfiguration(SensorMeasurement measurement, TimeSpan historyInterval, TimeSpan maxMeasurementAge)
             {
                 Measurement = measurement;
                 HistoryInterval = historyInterval;
                 MaxMeasurementAge = maxMeasurementAge;
-                _values = new List<(DateTime, IQuantity)>();
-                var now = DateTime.UtcNow;
-                _values.Add((now, measurement.Value));
-                _lastAddedTime = now;
+                _values = new List<HistoricValue>();
+                _lastAddedTime = DateTime.MinValue;
             }
 
             public SensorMeasurement Measurement
@@ -160,12 +221,12 @@ namespace Iot.Device.Common
                 set;
             }
 
-            public bool TryAddMeasurement(SensorMeasurement measurement, DateTime utcTimeOfMeasurement)
+            public bool TryAddMeasurement(IQuantity updatedValue, DateTime utcTimeOfMeasurement)
             {
                 var now = utcTimeOfMeasurement;
                 if (now > _lastAddedTime + HistoryInterval)
                 {
-                    _values.Add((now, measurement.Value));
+                    _values.Add(new HistoricValue(now, updatedValue));
                     _lastAddedTime = now;
                     return true;
                 }
@@ -173,12 +234,12 @@ namespace Iot.Device.Common
                 return false;
             }
 
-            public bool TryAddMeasurement(SensorMeasurement measurement)
+            public bool TryAddMeasurement(IQuantity updatedValue)
             {
-                return TryAddMeasurement(measurement, DateTime.UtcNow);
+                return TryAddMeasurement(updatedValue, DateTime.UtcNow);
             }
 
-            public IList<(DateTime, IQuantity)> Measurements()
+            public IList<HistoricValue> Measurements()
             {
                 // No clone here, could be expensive!
                 return _values;
@@ -186,20 +247,21 @@ namespace Iot.Device.Common
 
             public void RemoveOldEntries()
             {
-                var oldest = DateTime.UtcNow - MaxMeasurementAge;
-                for (int i = 0; i < _values.Count; i++)
+                if (MaxMeasurementAge == TimeSpan.MaxValue)
                 {
-                    if (_values[i].Item1 < oldest)
+                    return;
+                }
+
+                var oldest = DateTime.UtcNow - MaxMeasurementAge;
+                // Never remove the last entry
+                for (int i = 0; i < _values.Count - 1; i++)
+                {
+                    if (_values[i].MeasurementTime < oldest)
                     {
                         _values.RemoveAt(i);
                         i--;
                     }
                 }
-            }
-
-            public void Clear()
-            {
-                _values.Clear();
             }
         }
     }

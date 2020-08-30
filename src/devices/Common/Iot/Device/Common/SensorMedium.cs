@@ -15,7 +15,7 @@ namespace Iot.Device.Common
         Undefined,
 
         /// <summary>
-        /// Air (temperature, pressure, humidity)
+        /// Air (temperature, pressure, humidity). Use with speed for airspeed, not for wind speed
         /// </summary>
         Air,
 
@@ -25,7 +25,7 @@ namespace Iot.Device.Common
         Water,
 
         /// <summary>
-        /// Wind (Speed, Direction)
+        /// Wind (Speed, Direction). Use Air for Air temperature.
         /// </summary>
         Wind,
 
