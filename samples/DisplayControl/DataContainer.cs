@@ -15,6 +15,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Iot.Device.CharacterLcd;
 using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Persistence;
 using UnitsNet;
 
 namespace DisplayControl
@@ -46,6 +47,7 @@ namespace DisplayControl
         private MenuController _menuController;
         private Bmp680Environment _weatherSensor;
         private EngineSurveillance _engine;
+        private PersistenceFile _configFile;
 
         private enum MenuOptionResult
         {
@@ -174,6 +176,7 @@ namespace DisplayControl
             m_systemSensors = new SystemSensors();
             m_systemSensors.Init(Controller);
             allSources.AddRange(m_systemSensors.SensorValueSources);
+            _configFile = new PersistenceFile("/home/pi/projects/ShipLogs/NavigationConfig.txt");
 
             WriteLineToConsoleAndDisplay("Display controller...");
             try
@@ -213,7 +216,7 @@ namespace DisplayControl
             allSources.AddRange(_weatherSensor.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("IMU...");
-            _imuSensor = new ImuSensor();
+            _imuSensor = new ImuSensor(_configFile);
             _imuSensor.Init(Controller);
             _imuSensor.OnNewOrientation += ImuSensorOnNewOrientation;
             allSources.AddRange(_imuSensor.SensorValueSources);

@@ -5,8 +5,10 @@ using System.IO;
 using System.IO.Ports;
 using System.Numerics;
 using System.Text;
+using Iot.Device.Common;
 using Iot.Device.Imu;
 using Iot.Device.Nmea0183;
+using Iot.Device.Persistence;
 using UnitsNet;
 
 namespace DisplayControl
@@ -19,6 +21,8 @@ namespace DisplayControl
         public const string ShipPitch = "Ship Pitch";
         public const string ShipRoll = "Ship Roll";
         public const string ShipMagneticHeading = "Ship Mag Heading";
+
+        private readonly PersistentBool _correctionEnabled;
         private Ig500Sensor _imu;
         private SerialPort _serialPort;
         private ObservableValue<double> _pitch;
@@ -32,9 +36,22 @@ namespace DisplayControl
 
         public event Action<Vector3> OnNewOrientation;
 
-        public ImuSensor() : base(TimeSpan.FromSeconds(1))
+        public ImuSensor(PersistenceFile file) : base(TimeSpan.FromSeconds(1))
         {
             _lastEulerAngles = new Vector3();
+            _correctionEnabled = new PersistentBool(file, "DeviationCorrectionEnabled", true);
+        }
+
+        public bool DeviationCorrectionEnabled
+        {
+            get
+            {
+                return _correctionEnabled.Value;
+            }
+            set
+            {
+                _correctionEnabled.Value = value;
+            }
         }
 
         public override void Init(GpioController gpioController)
@@ -119,7 +136,11 @@ namespace DisplayControl
         {
             _lastEulerAngles = eulerAngles;
             Angle correctedHdg = Angle.FromDegrees(eulerAngles.X);
-            correctedHdg = _deviationCorrection.ToMagneticHeading(correctedHdg);
+            if (DeviationCorrectionEnabled)
+            {
+                correctedHdg = _deviationCorrection.ToMagneticHeading(correctedHdg);
+            }
+
             var correctedAngles = new Vector3((float)correctedHdg.Degrees, eulerAngles.Y, eulerAngles.Z);
             OnNewOrientation?.Invoke(correctedAngles);
         }
@@ -149,6 +170,7 @@ namespace DisplayControl
                     _serialPort = null;
                 }
 
+                _correctionEnabled.Dispose();
                 SensorValueSources.Clear();
             }
 
