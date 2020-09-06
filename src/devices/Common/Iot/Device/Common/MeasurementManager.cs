@@ -19,6 +19,11 @@ namespace Iot.Device.Common
             _lock = new object();
         }
 
+        /// <summary>
+        /// Triggers when any measurement changes.
+        /// </summary>
+        public event Action<SensorMeasurement> AnyMeasurementChanged;
+
         public void Dispose()
         {
             // That's mostly to prevent memory leaks (or more precise, dangling big instances)
@@ -151,6 +156,25 @@ namespace Iot.Device.Common
             }
         }
 
+        /// <summary>
+        /// Adds the measurement if it doesn't exist yet
+        /// </summary>
+        /// <param name="measurement">New measurement</param>
+        /// <returns>True on success, false if it existed already</returns>
+        public bool TryAddMeasurement(SensorMeasurement measurement)
+        {
+            lock (_lock)
+            {
+                if (_measurements.Contains(measurement))
+                {
+                    return false;
+                }
+
+                AddMeasurement(measurement, null);
+                return true;
+            }
+        }
+
         public void RemoveMeasurement(SensorMeasurement measurement)
         {
             lock (_lock)
@@ -182,6 +206,8 @@ namespace Iot.Device.Common
                     entry.RemoveOldEntries();
                 }
             }
+
+            AnyMeasurementChanged?.Invoke(measurement);
         }
 
         private sealed class MeasurementHistoryConfiguration

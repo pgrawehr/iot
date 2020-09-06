@@ -18,8 +18,7 @@ namespace Iot.Device.Common
     /// </summary>
     public class SensorMeasurement : INotifyPropertyChanged
     {
-        private SensorLocation _sensorLocation;
-        private SensorMedium _sensorMedium;
+        private SensorSource _sensorSource;
 
         private IQuantity _value;
 
@@ -38,11 +37,14 @@ namespace Iot.Device.Common
         /// is only used to define the physical quantity and the default unit for the values that will be managed.
         /// </summary>
         /// <param name="value">The value definition (quantity, unit)</param>
-        public SensorMeasurement(IQuantity value)
+        /// <param name="source">Sensor source identification</param>
+        /// <param name="instanceNumber">Sensor instance (if there are multiple sensors of the same kind)</param>
+        public SensorMeasurement(IQuantity value, SensorSource source, int instanceNumber = 1)
         {
             _value = value ?? throw new ArgumentNullException(nameof(value));
-            SensorLocation = SensorLocation.Undefined;
-            SensorMedium = SensorMedium.Undefined;
+            Name = source.ToString() + " " + value.Type;
+            SensorSource = source;
+            Instance = instanceNumber;
             _hasProperValue = false;
         }
 
@@ -51,47 +53,60 @@ namespace Iot.Device.Common
         /// The actual value of the instance is ignored until a first value is set using <see cref="UpdateValue"/>, the argument
         /// is only used to define the physical quantity and the default unit for the values that will be managed.
         /// </summary>
+        /// <param name="name">Name of element (english, probably needs translation outside)</param>
         /// <param name="value">The value definition (quantity, unit)</param>
-        /// <param name="location">Location of the sensor (i.e. inside, outside, engine)</param>
-        /// <param name="medium">What is being measured (water, air)</param>
-        public SensorMeasurement(IQuantity value, SensorLocation location, SensorMedium medium)
+        /// <param name="source">Sensor source identification</param>
+        /// <param name="instanceNumber">Sensor instance (if there are multiple sensors of the same kind)</param>
+        public SensorMeasurement(string name, IQuantity value, SensorSource source, int instanceNumber = 1)
         {
             _value = value ?? throw new ArgumentNullException(nameof(value));
-            SensorLocation = location;
-            SensorMedium = medium;
+            Name = name;
+            SensorSource = source;
+            Instance = instanceNumber;
             _hasProperValue = false;
         }
 
+        public static SensorMeasurement AirTemperatureOutside = new SensorMeasurement(Temperature.Zero, SensorSource.Air);
+        public static SensorMeasurement AirPressureRawOutside = new SensorMeasurement(Pressure.Zero, SensorSource.Air);
+        public static SensorMeasurement AirPressureBarometricOutside = new SensorMeasurement(Pressure.Zero, SensorSource.Air, 2);
+        public static SensorMeasurement AirHumidityOutside = new SensorMeasurement(Ratio.Zero, SensorSource.Air);
+        public static SensorMeasurement AirTemperatureInside = new SensorMeasurement(Temperature.Zero, SensorSource.Air, -1);
+        public static SensorMeasurement AirPressureRawInside = new SensorMeasurement(Pressure.Zero, SensorSource.Air, -1);
+        public static SensorMeasurement AirPressureBarometricInside = new SensorMeasurement(Pressure.Zero, SensorSource.Air, -2);
+        public static SensorMeasurement AirHumidityInside = new SensorMeasurement(Ratio.Zero, SensorSource.Air, -1);
+
+        // Prefer an instance of GeographicPosition, but these make things more compatible to the unit system
+        public static SensorMeasurement Latitude = new SensorMeasurement(Angle.Zero, SensorSource.Position, 0);
+        public static SensorMeasurement Longitude = new SensorMeasurement(Angle.Zero, SensorSource.Position, 1);
+        public static SensorMeasurement Altitude = new SensorMeasurement(Length.Zero, SensorSource.Position, 1);
+
         /// <summary>
-        /// Where the sensor is located.
+        /// Source of the measurement
         /// </summary>
-        public SensorLocation SensorLocation
+        public SensorSource SensorSource
         {
             get
             {
-                return _sensorLocation;
+                return _sensorSource;
             }
             set
             {
-                _sensorLocation = value;
+                _sensorSource = value;
                 OnPropertyChanged();
             }
         }
 
         /// <summary>
-        /// Sensor medium (what kind of substance is being measured)
+        /// Sensor instance number
         /// </summary>
-        public SensorMedium SensorMedium
+        public int Instance
         {
-            get
-            {
-                return _sensorMedium;
-            }
-            set
-            {
-                _sensorMedium = value;
-                OnPropertyChanged();
-            }
+            get;
+        }
+
+        public string Name
+        {
+            get;
         }
 
         /// <summary>
@@ -162,6 +177,11 @@ namespace Iot.Device.Common
             _hasProperValue = true;
             OnPropertyChanged(nameof(Value));
             ValueChanged?.Invoke(this);
+        }
+
+        public T GetAs<T>()
+        {
+            return Value is T ? (T)Value : default;
         }
     }
 }
