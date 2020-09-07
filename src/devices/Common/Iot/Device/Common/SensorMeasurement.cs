@@ -76,9 +76,11 @@ namespace Iot.Device.Common
         public static SensorMeasurement AirHumidityInside = new SensorMeasurement(Ratio.Zero, SensorSource.Air, -1);
 
         // Prefer an instance of GeographicPosition, but these make things more compatible to the unit system
-        public static SensorMeasurement Latitude = new SensorMeasurement(Angle.Zero, SensorSource.Position, 0);
-        public static SensorMeasurement Longitude = new SensorMeasurement(Angle.Zero, SensorSource.Position, 1);
-        public static SensorMeasurement Altitude = new SensorMeasurement(Length.Zero, SensorSource.Position, 1);
+        public static SensorMeasurement Latitude = new SensorMeasurement("Latitude", Angle.Zero, SensorSource.Position, 0);
+        public static SensorMeasurement Longitude = new SensorMeasurement("Longitude", Angle.Zero, SensorSource.Position, 1);
+        public static SensorMeasurement Altitude = new SensorMeasurement("Altitude above mean sea level (ellipsoid)", Length.Zero, SensorSource.Position, 1);
+        public static SensorMeasurement HeatIndex = new SensorMeasurement("Heat index", Temperature.Zero, SensorSource.Air, 3);
+        public static SensorMeasurement DewPointOutside = new SensorMeasurement("Dew Point", Temperature.Zero, SensorSource.Air, 4);
 
         /// <summary>
         /// Source of the measurement
@@ -179,9 +181,24 @@ namespace Iot.Device.Common
             ValueChanged?.Invoke(this);
         }
 
-        public T GetAs<T>()
+        public bool TryGetAs<T>(out T convertedValue)
         {
-            return Value is T ? (T)Value : default;
+            if (_hasProperValue == false)
+            {
+                convertedValue = default(T);
+                return false;
+            }
+
+            if (Value is T)
+            {
+                convertedValue = (T)Value;
+                return true;
+            }
+            else
+            {
+                convertedValue = default(T);
+                return false;
+            }
         }
     }
 }

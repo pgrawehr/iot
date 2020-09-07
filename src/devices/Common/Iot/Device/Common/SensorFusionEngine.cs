@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Common
@@ -21,7 +22,7 @@ namespace Iot.Device.Common
         }
 
         public void RegisterFusionOperation(List<SensorMeasurement> arguments,
-            Action<List<SensorMeasurement>> operation, SensorMeasurement result)
+            Func<List<SensorMeasurement>, IQuantity> operation, SensorMeasurement result)
         {
             _manager.TryAddMeasurement(result); // Must be there, otherwise the result will be sent to the void usually
             foreach (var a in arguments)
@@ -53,7 +54,8 @@ namespace Iot.Device.Common
         {
             // We do not need to query the manager, since the SensorMeasurement instances within the operation already
             // contain the proper handle to the values we need
-            op.OperationToPerform(op.OnMeasurementChanges);
+            var result = op.OperationToPerform(op.OnMeasurementChanges);
+            op.Result.UpdateValue(result);
         }
 
         public void Dispose()
@@ -66,7 +68,7 @@ namespace Iot.Device.Common
 
         private sealed class FusionOperation
         {
-            public FusionOperation(List<SensorMeasurement> onMeasurementChanges, Action<List<SensorMeasurement>> operationToPerform, SensorMeasurement result)
+            public FusionOperation(List<SensorMeasurement> onMeasurementChanges, Func<List<SensorMeasurement>, IQuantity> operationToPerform, SensorMeasurement result)
             {
                 OnMeasurementChanges = onMeasurementChanges;
                 OperationToPerform = operationToPerform;
@@ -74,7 +76,7 @@ namespace Iot.Device.Common
             }
 
             public List<SensorMeasurement> OnMeasurementChanges { get; }
-            public Action<List<SensorMeasurement>> OperationToPerform { get; }
+            public Func<List<SensorMeasurement>, IQuantity> OperationToPerform { get; }
             public SensorMeasurement Result { get; }
         }
     }
