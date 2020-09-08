@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Iot.Device.Mcp23xxx;
-using Iot.Device.Persistence;
+using Iot.Device.Common;
 using UnitsNet;
 
 namespace DisplayControl
@@ -48,13 +48,12 @@ namespace DisplayControl
         private I2cDevice _device;
         private Mcp23017Ex _mcp23017;
         private GpioController _controllerUsingMcp;
-        private ObservableValue<int> _rpm;
-        private ObservableValue<bool> _engineOnValue;
-        private ObservableValue<TimeSpan> _engineOperatingHoursValue;
-        private ObservableValue<TimeSpan> _engineOperatingHoursSinceRefill;
+        private double _rpm;
 
         private int _lastCounterValue;
         private int _totalCounterValue;
+
+        public SensorMeasurement Engine0OperatingTimeSinceRefill = new SensorMeasurement("Engine 0 operating time since refill", Duration.Zero, SensorSource.Engine, 0);
 
         private object _counterLock;
 
@@ -62,15 +61,17 @@ namespace DisplayControl
         /// Create an instance of this class.
         /// Note: Adapt polling timeout when needed
         /// </summary>
+        /// <param name="manager">Measurement manager</param>
         /// <param name="maxCounterValue">The maximum value of the counter. 9 for a BCD type counter, 15 for a binary counter</param>
-        public EngineSurveillance(int maxCounterValue)
-            : base(TimeSpan.FromSeconds(1))
+        public EngineSurveillance(MeasurementManager manager, int maxCounterValue)
+            : base(manager, TimeSpan.FromSeconds(1))
         {
             _counterLock = new object();
             _maxCounterValue = maxCounterValue;
             _lastEvents = new Queue<CounterEvent>();
             _engineOn = false;
             _lastTickForUpdate = 0;
+            _rpm = 0;
             _enginePersistenceFile = new PersistenceFile("/home/pi/projects/ShipLogs/Engine.txt");
             _engineOperatingTime = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours", TimeSpan.Zero, TimeSpan.FromMinutes(1));
             _engineOperatingTimeAtLastRefill = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours at last refill", new TimeSpan(0, 15, 33, 0), TimeSpan.Zero);
@@ -93,22 +94,19 @@ namespace DisplayControl
             _mcp23017 = new Mcp23017Ex(_device, -1, -1, InterruptPin, gpioController, false);
             _controllerUsingMcp = new GpioController(PinNumberingScheme.Logical, _mcp23017);
 
-            _engineOnValue = new ObservableValue<bool>("Motor läuft", string.Empty, false);
-            _rpm = new ObservableValue<int>("Motordrehzahl", "U/Min", 0);
-            _engineOperatingHoursValue = new ObservableValue<TimeSpan>("Motorstunden", "h");
+            Manager.AddRange(new []
+            {
+                SensorMeasurement.Engine0On, SensorMeasurement.Engine0Rpm, SensorMeasurement.Engine0OperatingTime, 
+                Engine0OperatingTimeSinceRefill,
+            });
+
             _totalCounterValue = 0;
-            _engineOperatingHoursSinceRefill = new ObservableValue<TimeSpan>("Motorstunden seit Betankung", "h", TimeSpan.Zero);
 
             // Just open all the pins
             for (int i = 0; i < _controllerUsingMcp.PinCount; i++)
             {
                 _controllerUsingMcp.OpenPin(i);
             }
-
-            SensorValueSources.Add(_engineOnValue);
-            SensorValueSources.Add(_rpm);
-            SensorValueSources.Add(_engineOperatingHoursValue);
-            SensorValueSources.Add(_engineOperatingHoursSinceRefill);
 
             _controllerUsingMcp.SetPinMode((int)PinUsage.Reset, PinMode.Output);
             Write(PinUsage.Reset, PinValue.Low);
@@ -201,10 +199,10 @@ namespace DisplayControl
             UpdateSensors();
             Check(_engineOn == true);
             Check(_engineOperatingTime.Value > TimeSpan.Zero);
-            Check(_rpm.Value > 0);
-            Check(_rpm.Value > 2500 && _rpm.Value < 7000);
+            Check(_rpm > 0);
+            Check(_rpm > 2500 && _rpm < 7000);
             _engineOn = false;
-            _rpm.Value = 0;
+            _rpm = 0;
             Check(_engineOn == false);
             _engineOperatingTime = timePrev;
         }
@@ -309,10 +307,11 @@ namespace DisplayControl
                 Console.WriteLine($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
             }
             // Final step: Send values to UI
-            _rpm.Value = (int)umin;
-            _engineOnValue.Value = _engineOn;
-            _engineOperatingHoursValue.Value = _engineOperatingTime.Value;
-            _engineOperatingHoursSinceRefill.Value = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
+            Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(umin));
+            Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn ? Ratio.FromPercent(100) : Ratio.Zero);
+            Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
+                new IQuantity[] { Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds), Duration.FromSeconds(_engineOperatingTimeAtLastRefill.Value.TotalSeconds) });
+
             var msg = new EngineData(0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100), _engineOperatingTime.Value); // Pitch unknown so far
             DataChanged?.Invoke(msg);
         }

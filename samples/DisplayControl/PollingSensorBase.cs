@@ -4,29 +4,30 @@ using System.Device.Gpio;
 using System.IO;
 using System.Text;
 using System.Threading;
+using Iot.Device.Common;
 using Iot.Device.CpuTemperature;
 
 namespace DisplayControl
 {
     public abstract class PollingSensorBase : IDisposable
     {
-        private readonly List<SensorValueSource> _sensorValueSources;
 
         private Thread _pollThread;
         private CancellationTokenSource _cancellationTokenSource;
         private TimeSpan _pollTime;
 
-        protected PollingSensorBase(TimeSpan pollTime)
+        protected PollingSensorBase(MeasurementManager manager, TimeSpan pollTime)
         {
             if (pollTime < TimeSpan.Zero)
             {
                 throw new ArgumentOutOfRangeException("Poll time must not be negative");
             }
+
+            Manager = manager;
             PollTime = pollTime;
-            _sensorValueSources = new List<SensorValueSource>();
         }
 
-        public List<SensorValueSource> SensorValueSources => _sensorValueSources;
+        public MeasurementManager Manager { get; }
 
         public TimeSpan PollTime
         {

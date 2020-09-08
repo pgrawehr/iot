@@ -8,7 +8,6 @@ using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Imu;
 using Iot.Device.Nmea0183;
-using Iot.Device.Persistence;
 using UnitsNet;
 
 namespace DisplayControl
@@ -25,20 +24,18 @@ namespace DisplayControl
         private readonly PersistentBool _correctionEnabled;
         private Ig500Sensor _imu;
         private SerialPort _serialPort;
-        private ObservableValue<double> _pitch;
-        private ObservableValue<double> _roll;
-        private ObservableValue<double> _headingUncorrected;
-        private ObservableValue<double> _heading;
-        private ObservableValue<double> _imuTemperature;
 
         private Vector3 _lastEulerAngles;
         private MagneticDeviationCorrection _deviationCorrection;
 
+        private SensorMeasurement _imuTemperature;
+
         public event Action<Vector3> OnNewOrientation;
 
-        public ImuSensor(PersistenceFile file) : base(TimeSpan.FromSeconds(1))
+        public ImuSensor(MeasurementManager manager, PersistenceFile file) : base(manager, TimeSpan.FromSeconds(1))
         {
             _lastEulerAngles = new Vector3();
+            _imuTemperature = new SensorMeasurement("IMU Temperature", Temperature.Zero, SensorSource.Compass);
             _correctionEnabled = new PersistentBool(file, "DeviationCorrectionEnabled", true);
         }
 
@@ -56,16 +53,11 @@ namespace DisplayControl
 
         public override void Init(GpioController gpioController)
         {
-            _pitch = new ObservableValue<double>(ShipPitch, "°", 0);
-            _pitch.ValueFormatter = "{0:F1}";
-            _roll = new ObservableValue<double>(ShipRoll, "°", 0);
-            _roll.ValueFormatter = "{0:F1}";
-            _heading = new ObservableValue<double>(ShipMagneticHeading, "°M", 0);
-            _heading.ValueFormatter = "{0:F1}";
-            _headingUncorrected = new ObservableValue<double>("Magnetic Compass reading", "°", 0);
-            _headingUncorrected.ValueFormatter = "{0:F1}";
-            _imuTemperature = new ObservableValue<double>("IMU Temperature", "°C", -273);
-            _imuTemperature.ValueFormatter = "{0:F1}";
+            Manager.AddRange(new[]
+            {
+                SensorMeasurement.Heading, SensorMeasurement.HeadingRaw, SensorMeasurement.Roll,
+                SensorMeasurement.Pitch, _imuTemperature
+            });
 
             _deviationCorrection = new MagneticDeviationCorrection();
             _deviationCorrection.Load(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Calibration_Cirrus.xml"));
@@ -123,12 +115,6 @@ namespace DisplayControl
             _imu = imu;
             imu.OnNewData += ImuOnNewData;
 
-            SensorValueSources.Add(_pitch);
-            SensorValueSources.Add(_roll);
-            SensorValueSources.Add(_heading);
-            SensorValueSources.Add(_headingUncorrected);
-            SensorValueSources.Add(_imuTemperature);
-
             base.Init(gpioController);
         }
 
@@ -147,14 +133,18 @@ namespace DisplayControl
 
         protected override void UpdateSensors()
         {
-            _pitch.Value = _lastEulerAngles.Z;
-            _roll.Value = _lastEulerAngles.Y;
-            Angle hdg = Angle.FromDegrees(_lastEulerAngles.X);
-            _headingUncorrected.Value = hdg.Normalize(true).Degrees;
-            
-            hdg = _deviationCorrection.ToMagneticHeading(hdg);
-            _heading.Value = hdg.Normalize(true).Degrees;
-            _imuTemperature.Value = _imu.Temperature.DegreesCelsius;
+            Angle hdgUncorrected = Angle.FromDegrees(_lastEulerAngles.X);
+            Angle hdg = _deviationCorrection.ToMagneticHeading(hdgUncorrected);
+            Manager.UpdateValues(new List<SensorMeasurement>()
+            {
+                SensorMeasurement.Pitch, SensorMeasurement.Roll, SensorMeasurement.Heading, SensorMeasurement.HeadingRaw,
+                _imuTemperature
+            },
+            new List<IQuantity>()
+            {
+                Angle.FromDegrees(_lastEulerAngles.Z), Angle.FromDegrees(_lastEulerAngles.Y), 
+                hdg, hdgUncorrected, _imu.Temperature
+            });
         }
 
         protected override void Dispose(bool disposing)
@@ -170,8 +160,16 @@ namespace DisplayControl
                     _serialPort = null;
                 }
 
+                Manager.UpdateValues(new List<SensorMeasurement>()
+                    {
+                        SensorMeasurement.Pitch, SensorMeasurement.Roll, SensorMeasurement.Heading, SensorMeasurement.HeadingRaw,
+                        _imuTemperature
+                    },
+                    new List<IQuantity>()
+                    {
+                        null, null, null, null, null
+                    });
                 _correctionEnabled.Dispose();
-                SensorValueSources.Clear();
             }
 
             base.Dispose(disposing);

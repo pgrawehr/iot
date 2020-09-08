@@ -6,6 +6,7 @@ using System.Device.Gpio;
 using System.Device.I2c;
 using System.Text;
 using System.Threading;
+using Iot.Device.Common;
 using Iot.Device.CpuTemperature;
 
 namespace DisplayControl
@@ -14,19 +15,17 @@ namespace DisplayControl
     {
         private CpuTemperature _cpuTemperature;
 
-        private ObservableValue<double> _cpuTemperatureValue;
-
-        public SystemSensors() 
-            : base(TimeSpan.FromSeconds(2))
+        public SystemSensors(MeasurementManager manager)
+            : base(manager, TimeSpan.FromSeconds(2))
         {
         }
         
         public override void Init(GpioController gpioController)
         {
-            _cpuTemperatureValue = new ObservableValue<double>("CPU temperature", "°C", double.NaN);
+            Manager.AddMeasurement(SensorMeasurement.CpuTemperature);
             // This sensor can deliver an accuracy of 0.1° at most
-            _cpuTemperatureValue.ValueFormatter = "{0:F1}";
-            SensorValueSources.Add(_cpuTemperatureValue);
+            // _cpuTemperatureValue.ValueFormatter = "{0:F1}";
+            // SensorValueSources.Add(_cpuTemperatureValue);
             
             _cpuTemperature = new CpuTemperature();
 
@@ -41,7 +40,7 @@ namespace DisplayControl
         {
             if (_cpuTemperature.IsAvailable)
             {
-                _cpuTemperatureValue.Value = _cpuTemperature.Temperature.DegreesCelsius;
+                SensorMeasurement.CpuTemperature.UpdateValue(_cpuTemperature.Temperature);
             }
         }
 

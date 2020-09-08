@@ -6,16 +6,16 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
+using Iot.Device.Common;
 
 namespace DisplayControl
 {
-    public class PressureSensor : PollingSensorBase
+    public class Bmp280Environment : PollingSensorBase
     {
         private Bmp280 _bmp280;
-        private ObservableValue<double> _outsideTemperature;
-        private ObservableValue<double> _pressure;
 
-        public PressureSensor() : base(TimeSpan.FromSeconds(5))
+        public Bmp280Environment(MeasurementManager manager) 
+            : base(manager, TimeSpan.FromSeconds(5))
         {
         }
 
@@ -25,14 +25,9 @@ namespace DisplayControl
             _bmp280.TemperatureSampling = Sampling.Standard;
             
             _bmp280.PressureSampling = Sampling.UltraHighResolution;
-            _outsideTemperature = new ObservableValue<double>("Temperature Outside", "°C", double.NaN);
-            _pressure = new ObservableValue<double>("Pressure Outside", "hPa", double.NaN);
+            Manager.AddMeasurement(SensorMeasurement.AirPressureRawOutside);
+            Manager.AddMeasurement(SensorMeasurement.AirTemperatureOutside);
             
-            _outsideTemperature.ValueFormatter = "{0:F1}";
-            _pressure.ValueFormatter = "{0:F1}";
-            SensorValueSources.Add(_outsideTemperature);
-            SensorValueSources.Add(_pressure);
-
             base.Init(gpioController);
         }
 
@@ -44,12 +39,12 @@ namespace DisplayControl
             Thread.Sleep(measurementTime);
             if (_bmp280.TryReadTemperature(out var tempValue))
             {
-                _outsideTemperature.Value = tempValue.DegreesCelsius;
+                SensorMeasurement.AirTemperatureOutside.UpdateValue(tempValue);
             }
 
             if (_bmp280.TryReadPressure(out var preValue))
             {
-                _pressure.Value = preValue.Hectopascals;
+                SensorMeasurement.AirPressureRawOutside.UpdateValue(preValue);
             }
         }
 

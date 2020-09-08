@@ -4,13 +4,14 @@ using System.ComponentModel;
 using System.Text;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Iot.Device.Common;
 using ReactiveUI;
 
 namespace DisplayControl.ViewModels
 {
     public class SensorValueViewModel : ViewModelBase
     {
-        private SensorValueSource _sensorValueSource;
+        private SensorMeasurement _sensorValueSource;
         private string _valueDescription;
         private string _valueAsString;
         private string _unit;
@@ -22,7 +23,7 @@ namespace DisplayControl.ViewModels
             _sensorValueSource = null;
         }
 
-        public SensorValueViewModel(SensorValueSource source)
+        public SensorValueViewModel(SensorMeasurement source)
             : this()
         {
             _sensorValueSource = source ?? throw new ArgumentNullException(nameof(source));
@@ -78,7 +79,7 @@ namespace DisplayControl.ViewModels
             }
         }
 
-        public SensorValueSource Source
+        public SensorMeasurement Source
         {
             get
             {
@@ -96,24 +97,24 @@ namespace DisplayControl.ViewModels
                 StatusColor = new SolidColorBrush(SystemDrawing.FromName("Gray"));
                 return;
             }
-            ValueDescription = _sensorValueSource.ValueDescription;
-            ValueAsString = _sensorValueSource.ValueAsString;
-            Unit = _sensorValueSource.Unit;
-            if (_sensorValueSource.WarningLevel == WarningLevel.None)
+            ValueDescription = _sensorValueSource.Name;
+            ValueAsString = _sensorValueSource.ToString(); // TODO: Improve a lot!
+            Unit = _sensorValueSource.Unit.ToString();
+            if (_sensorValueSource.Status.HasFlag(SensorMeasurementStatus.Warning))
             {
-                StatusColor = new SolidColorBrush(SystemDrawing.FromName("White"));
+                StatusColor = new SolidColorBrush(SystemDrawing.FromName("Yellow"));
             }
-            else if (_sensorValueSource.WarningLevel == WarningLevel.NoData)
+            else if (_sensorValueSource.Status.HasFlag(SensorMeasurementStatus.NoData))
             { 
                 StatusColor = new SolidColorBrush(SystemDrawing.FromName("Gray"));
             }
-            else if (_sensorValueSource.WarningLevel == WarningLevel.Error)
+            else if (_sensorValueSource.Status.HasFlag(SensorMeasurementStatus.SensorError))
             {
                 StatusColor = new SolidColorBrush(SystemDrawing.FromName("Red"));
             }
-            else if (_sensorValueSource.WarningLevel == WarningLevel.Warning)
+            else
             {
-                StatusColor = new SolidColorBrush(SystemDrawing.FromName("Yellow"));
+                StatusColor = new SolidColorBrush(SystemDrawing.FromName("White"));
             }
         }
 

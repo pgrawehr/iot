@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using UnitsNet;
 
 #pragma warning disable CS1591
@@ -12,17 +13,26 @@ namespace Iot.Device.Common
         private readonly List<MeasurementHistoryConfiguration> _historyConfigurations;
         private readonly object _lock;
 
+        /// <summary>
+        /// True if the callbacks are temporarily disabled to perform a consistent update over multiple values.
+        /// Must only be true while the lock is held!
+        /// </summary>
+        private bool _callbacksBlocked;
+
         public MeasurementManager()
         {
             _measurements = new List<SensorMeasurement>();
             _historyConfigurations = new List<MeasurementHistoryConfiguration>();
             _lock = new object();
+            _callbacksBlocked = false;
         }
 
         /// <summary>
         /// Triggers when any measurement changes.
+        /// Clients should preferably listen to this event rather than <see cref="SensorMeasurement.ValueChanged"/> if they
+        /// want to make sure they get consistent data (i.e. from values usually updated by the same source at once, like latitude and longitude)
         /// </summary>
-        public event Action<SensorMeasurement> AnyMeasurementChanged;
+        public event Action<IList<SensorMeasurement>> AnyMeasurementChanged;
 
         public void Dispose()
         {
@@ -39,6 +49,14 @@ namespace Iot.Device.Common
         public void AddMeasurement(SensorMeasurement measurement)
         {
             AddMeasurement(measurement, null);
+        }
+
+        public void AddRange(IEnumerable<SensorMeasurement> measurements)
+        {
+            foreach (var m in measurements)
+            {
+                TryAddMeasurement(m);
+            }
         }
 
         /// <summary>
@@ -185,7 +203,7 @@ namespace Iot.Device.Common
             }
         }
 
-        public IEnumerable<SensorMeasurement> Measurements()
+        public List<SensorMeasurement> Measurements()
         {
             return new List<SensorMeasurement>(_measurements);
         }
@@ -205,9 +223,48 @@ namespace Iot.Device.Common
                     entry.TryAddMeasurement(measurement.Value);
                     entry.RemoveOldEntries();
                 }
+
+                // Done within the lock, so if it is true, we still hold the outer lock and are therefore in
+                // the same thread.
+                if (!_callbacksBlocked)
+                {
+                    AnyMeasurementChanged?.Invoke(new[] { measurement });
+                }
+            }
+        }
+
+        public void UpdateValue(SensorMeasurement measurement, IQuantity newValue)
+        {
+            measurement.UpdateValue(newValue);
+        }
+
+        /// <summary>
+        /// Updates all the given measurements with new values before triggering an updated event
+        /// </summary>
+        /// <param name="measurements">List of measurements</param>
+        /// <param name="values">List of values (same order as measurements, may contain nulls)</param>
+        public void UpdateValues(IList<SensorMeasurement> measurements, IList<IQuantity> values)
+        {
+            if (measurements.Count != values.Count)
+            {
+                throw new ArgumentException("Must provide an equal number of measurements and values");
             }
 
-            AnyMeasurementChanged?.Invoke(measurement);
+            Monitor.Enter(_lock);
+            try
+            {
+                _callbacksBlocked = true;
+                for (int i = 0; i < measurements.Count; i++)
+                {
+                    measurements[i].UpdateValue(values[i]);
+                }
+
+                AnyMeasurementChanged?.Invoke(measurements);
+            }
+            finally
+            {
+                _callbacksBlocked = false;
+            }
         }
 
         private sealed class MeasurementHistoryConfiguration

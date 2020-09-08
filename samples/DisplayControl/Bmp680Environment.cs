@@ -13,18 +13,10 @@ namespace DisplayControl
 {
     public class Bmp680Environment : PollingSensorBase
     {
-        public const string MAIN_TEMP_SENSOR = "Temperature Inside";
-        public const string MAIN_PRESSURE_SENSOR = "Barometric Pressure";
-        public const string MAIN_HUMIDITY_SENSOR = "Relative Humidity";
         private Bme680 _bme680;
-        private ObservableValue<double> _temperature;
-        private ObservableValue<double> _pressure;
-        private ObservableValue<double> _gasValue;
-        private ObservableValue<double> _humidity;
-        private ObservableValue<double> _barometric;
-        private ObservableValue<double> _dewPoint;
 
-        public Bmp680Environment() : base(TimeSpan.FromSeconds(5))
+        public Bmp680Environment(MeasurementManager manager) 
+            : base(manager, TimeSpan.FromSeconds(5))
         {
             Altitude = Length.Zero;
         }
@@ -49,24 +41,31 @@ namespace DisplayControl
             _bme680.GasConversionIsEnabled = false;
             _bme680.HeaterIsEnabled = false;
 
-            _temperature = new ObservableValue<double>(MAIN_TEMP_SENSOR, "°C", double.NaN);
-            _pressure = new ObservableValue<double>("Raw Pressure", "hPa", double.NaN);
-            _barometric = new ObservableValue<double>(MAIN_PRESSURE_SENSOR, "hPa", double.NaN);
-            _humidity = new ObservableValue<double>(MAIN_HUMIDITY_SENSOR, "%", Double.NaN);
-            _gasValue = new ObservableValue<double>("Gas Resistance", "Ω", double.NaN);
-            _dewPoint = new ObservableValue<double>("Dew Point", "°C", double.NaN);
+            Manager.AddRange(new[]
+            {
+                SensorMeasurement.AirTemperatureInside,
+                SensorMeasurement.AirHumidityInside,
+                SensorMeasurement.AirPressureRawInside,
+            });
+
+            //_temperature = new ObservableValue<double>(MAIN_TEMP_SENSOR, "°C", double.NaN);
+            //_pressure = new ObservableValue<double>("Raw Pressure", "hPa", double.NaN);
+            //_barometric = new ObservableValue<double>(MAIN_PRESSURE_SENSOR, "hPa", double.NaN);
+            //_humidity = new ObservableValue<double>(MAIN_HUMIDITY_SENSOR, "%", Double.NaN);
+            //_gasValue = new ObservableValue<double>("Gas Resistance", "Ω", double.NaN);
+            //_dewPoint = new ObservableValue<double>("Dew Point", "°C", double.NaN);
             
-            _temperature.ValueFormatter = "{0:F1}";
-            _pressure.ValueFormatter = "{0:F1}";
-            _humidity.ValueFormatter = "{0:F1}";
-            _gasValue.ValueFormatter = "{0:F0}";
-            _dewPoint.ValueFormatter = "{0:F1}";
-            SensorValueSources.Add(_temperature);
-            SensorValueSources.Add(_pressure);
-            SensorValueSources.Add(_humidity);
-            // SensorValueSources.Add(_gasValue);
-            SensorValueSources.Add(_barometric);
-            SensorValueSources.Add(_dewPoint);
+            //_temperature.ValueFormatter = "{0:F1}";
+            //_pressure.ValueFormatter = "{0:F1}";
+            //_humidity.ValueFormatter = "{0:F1}";
+            //_gasValue.ValueFormatter = "{0:F0}";
+            //_dewPoint.ValueFormatter = "{0:F1}";
+            //SensorValueSources.Add(_temperature);
+            //SensorValueSources.Add(_pressure);
+            //SensorValueSources.Add(_humidity);
+            //// SensorValueSources.Add(_gasValue);
+            //SensorValueSources.Add(_barometric);
+            //SensorValueSources.Add(_dewPoint);
 
             base.Init(gpioController);
         }
@@ -78,21 +77,22 @@ namespace DisplayControl
             var measurementTime = _bme680.GetMeasurementDuration(_bme680.HeaterProfile);
             Thread.Sleep(measurementTime.ToTimeSpan());
             bool temp = _bme680.TryReadTemperature(out var tempValue);
+            // Todo: Set sensors to error state if reading fails repeatedly
             if (temp)
             {
-                _temperature.Value = tempValue.DegreesCelsius;
+                SensorMeasurement.AirTemperatureInside.UpdateValue(tempValue);
             }
 
             bool press = _bme680.TryReadPressure(out var preValue);
             if (press)
             {
-                _pressure.Value = preValue.Hectopascals;
+                SensorMeasurement.AirPressureRawInside.UpdateValue(preValue);
             }
 
             bool hum = _bme680.TryReadHumidity(out var humidity);
             if (hum)
             {
-                _humidity.Value = humidity.Percent;
+                SensorMeasurement.AirHumidityInside.UpdateValue(humidity);
             }
 
             ////if (_bme680.TryReadGasResistance(out var gasResistance))
@@ -100,11 +100,11 @@ namespace DisplayControl
             ////    _gasValue.Value = gasResistance;
             ////}
 
-            if (temp && press && hum)
-            {
-                _barometric.Value = WeatherHelper.CalculateBarometricPressure(preValue, tempValue, Altitude, humidity).Hectopascals;
-                _dewPoint.Value = WeatherHelper.CalculateDewPoint(tempValue, humidity).DegreesCelsius;
-            }
+            //if (temp && press && hum)
+            //{
+            //    _barometric.Value = WeatherHelper.CalculateBarometricPressure(preValue, tempValue, Altitude, humidity).Hectopascals;
+            //    _dewPoint.Value = WeatherHelper.CalculateDewPoint(tempValue, humidity).DegreesCelsius;
+            //}
         }
 
         protected override void Dispose(bool disposing)

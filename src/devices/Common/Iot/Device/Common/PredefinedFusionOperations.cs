@@ -10,25 +10,31 @@ namespace Iot.Device.Common
     {
         public static void LoadPredefinedOperations(this SensorFusionEngine engine)
         {
-            engine.RegisterFusionOperation(new List<SensorMeasurement>() { SensorMeasurement.AirPressureRawOutside, SensorMeasurement.AirTemperatureOutside, SensorMeasurement.Altitude, SensorMeasurement.AirHumidityOutside },
+            engine.RegisterFusionOperation(new List<SensorMeasurement>()
+                {
+                    SensorMeasurement.AirPressureRawInside,
+                    SensorMeasurement.AirPressureRawOutside, SensorMeasurement.AirTemperatureOutside,
+                    SensorMeasurement.AltitudeGeoid, SensorMeasurement.AirHumidityOutside,
+                },
                 (args) =>
                 {
-                    if (args[0].TryGetAs(out Pressure measuredValue) &&
-                        args[1].TryGetAs(out Temperature measuredTemperature) && args[2].TryGetAs(out Length altitude))
+                    // Take either pressure, and otherwise the outside values. Inside values are not relevant for the atmospheric constellation.
+                    if ((args[0].TryGetAs(out Pressure measuredValue) || args[1].TryGetAs(out measuredValue)) &&
+                        args[2].TryGetAs(out Temperature measuredTemperature) && args[3].TryGetAs(out Length altitude))
                     {
-                        if (args[3].TryGetAs(out Ratio humidity))
+                        if (args[4].TryGetAs(out Ratio humidity))
                         {
-                            return WeatherHelper.CalculateBarometricPressure(measuredValue, measuredTemperature,
-                                altitude, humidity);
+                            return (WeatherHelper.CalculateBarometricPressure(measuredValue, measuredTemperature,
+                                altitude, humidity), false);
                         }
                         else
                         {
-                            return WeatherHelper.CalculateBarometricPressure(measuredValue, measuredTemperature,
-                                altitude);
+                            return (WeatherHelper.CalculateBarometricPressure(measuredValue, measuredTemperature,
+                                altitude), false);
                         }
                     }
 
-                    return null; // At least one input not available - skip this operation
+                    return (null, false); // At least one input not available - skip this operation
                 }, SensorMeasurement.AirPressureBarometricOutside);
 
             engine.RegisterFusionOperation(new List<SensorMeasurement>() { SensorMeasurement.AirTemperatureOutside, SensorMeasurement.AirHumidityOutside },
@@ -37,10 +43,10 @@ namespace Iot.Device.Common
                     if (args[0].TryGetAs(out Temperature temperature) &&
                         args[1].TryGetAs(out Ratio humidity))
                     {
-                        return WeatherHelper.CalculateHeatIndex(temperature, humidity);
+                        return (WeatherHelper.CalculateHeatIndex(temperature, humidity), false);
                     }
 
-                    return null; // At least one input not available - skip this operation
+                    return (null, false); // At least one input not available - skip this operation
                 }, SensorMeasurement.HeatIndex);
 
             engine.RegisterFusionOperation(new List<SensorMeasurement>() { SensorMeasurement.AirTemperatureOutside, SensorMeasurement.AirHumidityOutside },
@@ -49,11 +55,35 @@ namespace Iot.Device.Common
                     if (args[0].TryGetAs(out Temperature temperature) &&
                         args[1].TryGetAs(out Ratio humidity))
                     {
-                        return WeatherHelper.CalculateDewPoint(temperature, humidity);
+                        return (WeatherHelper.CalculateDewPoint(temperature, humidity), false);
                     }
 
-                    return null; // At least one input not available - skip this operation
+                    return (null, false); // At least one input not available - skip this operation
                 }, SensorMeasurement.DewPointOutside);
+
+            engine.RegisterFusionOperation(new List<SensorMeasurement>()
+                {
+                    SensorMeasurement.AirTemperatureInside, SensorMeasurement.AirHumidityInside,
+                    SensorMeasurement.AirTemperatureOutside, SensorMeasurement.AirHumidityOutside
+                },
+                (args) =>
+                {
+                    // Only use this rule if no outside humidity sensor is available
+                    if (args[3].Status.HasFlag(SensorMeasurementStatus.NoData))
+                    {
+                        return (null, true);
+                    }
+
+                    if (args[0].TryGetAs(out Temperature temperature1) &&
+                        args[1].TryGetAs(out Ratio humidity) &&
+                        args[2].TryGetAs(out Temperature temperature2))
+                    {
+                        // Use the lower temperature from the two sensors - that's likely the outside temp
+                        return (WeatherHelper.CorrectRelativeHumidityFromDifferentSensor(temperature1, humidity, temperature1 < temperature2 ? temperature1 : temperature2), false);
+                    }
+
+                    return (null, false); // At least one input not available - skip this operation
+                }, SensorMeasurement.AirHumidityOutside);
         }
     }
 }

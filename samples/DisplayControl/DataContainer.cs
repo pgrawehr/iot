@@ -15,7 +15,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Iot.Device.CharacterLcd;
 using Iot.Device.Nmea0183.Sentences;
-using Iot.Device.Persistence;
+using Iot.Device.Common;
 using UnitsNet;
 
 namespace DisplayControl
@@ -26,17 +26,18 @@ namespace DisplayControl
         ICharacterLcd m_characterLcd = null;
         LcdConsole m_lcdConsole = null;
         AdcSensors _adcSensors = null;
+        private SensorFusionEngine _fusionEngine;
         private ExtendedDisplayController _extendedDisplayController;
         private bool m_lcdConsoleActive;
-        private SensorValueSource m_activeValueSourceUpper;
-        private SensorValueSource m_activeValueSourceLower;
-        private SensorValueSource m_activeValueSourceSingle;
-        private List<SensorValueSource> m_sensorsWithErrors;
+        private SensorMeasurement m_activeValueSourceUpper;
+        private SensorMeasurement m_activeValueSourceLower;
+        private SensorMeasurement m_activeValueSourceSingle;
+        private List<SensorMeasurement> m_sensorsWithErrors;
 
-        private List<SensorValueSource> m_sensorValueSources;
+        private MeasurementManager _sensorManager;
         private DhtSensors m_dhtSensors;
         private SystemSensors m_systemSensors;
-        private PressureSensor m_pressureSensor;
+        private Bmp280Environment m_pressureSensor;
         private ImuSensor _imuSensor;
         private NmeaSensor _nmeaSensor;
         private CultureInfo m_activeEncoding;
@@ -61,8 +62,9 @@ namespace DisplayControl
         {
             Controller = controller;
             _extendedDisplayController = null;
-            m_sensorValueSources = new List<SensorValueSource>();
-            m_sensorsWithErrors = new List<SensorValueSource>();
+            _sensorManager = new MeasurementManager();
+            _fusionEngine = new SensorFusionEngine(_sensorManager);
+            m_sensorsWithErrors = new List<SensorMeasurement>();
             m_activeValueSourceUpper = null;
             m_activeValueSourceLower = null;
             m_activeValueSourceSingle = null;
@@ -75,9 +77,9 @@ namespace DisplayControl
 
         public GpioController Controller { get; }
 
-        public List<SensorValueSource> SensorValueSources => m_sensorValueSources;
+        public List<SensorMeasurement> SensorValueSources => _sensorManager.Measurements();
 
-        public SensorValueSource ActiveValueSourceUpper
+        public SensorMeasurement ActiveValueSourceUpper
         {
             get
             {
@@ -90,12 +92,12 @@ namespace DisplayControl
                     m_activeValueSourceUpper = value;
                     m_activeValueSourceSingle = null;
                     // Immediately show the new value
-                    OnSensorValueChanged(value, null);
+                    OnSensorValueChanged(value);
                 }
             }
         }
 
-        public SensorValueSource ActiveValueSourceLower
+        public SensorMeasurement ActiveValueSourceLower
         {
             get
             {
@@ -108,12 +110,12 @@ namespace DisplayControl
                     m_activeValueSourceLower = value;
                     m_activeValueSourceSingle = null;
                     // Immediately show the new value
-                    OnSensorValueChanged(value, null);
+                    OnSensorValueChanged(value);
                 }
             }
         }
 
-        public SensorValueSource ActiveValueSourceSingle
+        public SensorMeasurement ActiveValueSourceSingle
         {
             get
             {
@@ -128,12 +130,12 @@ namespace DisplayControl
                     m_activeValueSourceLower = null;
                     m_timer.Restart();
                     // Immediately show the new value
-                    OnSensorValueChanged(value, null);
+                    OnSensorValueChanged(value);
                 }
             }
         }
 
-        private void NewSensorValueSource(SensorValueSource newValue)
+        private void NewSensorValueSource(SensorMeasurement newValue)
         {
             if (m_lcdConsoleActive)
             {
@@ -144,7 +146,7 @@ namespace DisplayControl
                 m_bigValueDisplay.Clear();
             }
 
-            OnSensorValueChanged(newValue, null);
+            OnSensorValueChanged(newValue);
         }
 
         private void InitializeDisplay()
@@ -170,12 +172,10 @@ namespace DisplayControl
 
         private void InitializeSensors()
         {
-            List<SensorValueSource> allSources = new List<SensorValueSource>();
             Thread.CurrentThread.Name = "Main Thread";
             WriteLineToConsoleAndDisplay("CPU...");
-            m_systemSensors = new SystemSensors();
+            m_systemSensors = new SystemSensors(_sensorManager);
             m_systemSensors.Init(Controller);
-            allSources.AddRange(m_systemSensors.SensorValueSources);
             _configFile = new PersistenceFile("/home/pi/projects/ShipLogs/NavigationConfig.txt");
 
             WriteLineToConsoleAndDisplay("Display controller...");
@@ -187,16 +187,13 @@ namespace DisplayControl
                 _extendedDisplayController = extendedDisplayController;
 
                 WriteLineToConsoleAndDisplay("ADC...");
-                _adcSensors = new AdcSensors();
-                _adcSensors.Init(extendedDisplayController);
+                _adcSensors = new AdcSensors(_sensorManager);
+                _adcSensors.Init(Controller, extendedDisplayController);
                 _adcSensors.ButtonPressed += DisplayButtonPressed;
 
-                allSources.AddRange(_adcSensors.SensorValueSources);
-
                 WriteLineToConsoleAndDisplay("Cockpit Environment...");
-                m_pressureSensor = new PressureSensor();
+                m_pressureSensor = new Bmp280Environment(_sensorManager);
                 m_pressureSensor.Init(Controller);
-                allSources.AddRange(m_pressureSensor.SensorValueSources);
                 WriteLineToConsoleAndDisplay("Remote display connected and ready");
             }
             catch (IOException x)
@@ -211,34 +208,27 @@ namespace DisplayControl
             //allSources.AddRange(m_dhtSensors.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("Wetter...");
-            _weatherSensor = new Bmp680Environment();
+            _weatherSensor = new Bmp680Environment(_sensorManager);
             _weatherSensor.Init(Controller);
-            allSources.AddRange(_weatherSensor.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("IMU...");
-            _imuSensor = new ImuSensor(_configFile);
+            _imuSensor = new ImuSensor(_sensorManager, _configFile);
             _imuSensor.Init(Controller);
             _imuSensor.OnNewOrientation += ImuSensorOnNewOrientation;
-            allSources.AddRange(_imuSensor.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("NMEA Source...");
-            _nmeaSensor = new NmeaSensor();
+            _nmeaSensor = new NmeaSensor(_sensorManager);
             _nmeaSensor.Initialize();
-            allSources.AddRange(_nmeaSensor.SensorValueSources);
 
             WriteLineToConsoleAndDisplay("Motor");
-            _engine = new EngineSurveillance(9);
+            _engine = new EngineSurveillance(_sensorManager, 9);
             _engine.Init(Controller);
             _engine.DataChanged += NewEngineData;
-            allSources.AddRange(_engine.SensorValueSources);
 
-            foreach (var sensor in allSources)
-            {
-                sensor.PropertyChanged += OnSensorValueChanged;
-                m_sensorValueSources.Add(sensor);
-            }
+            _sensorManager.AnyMeasurementChanged += OnSensorValueChanged;
+            _fusionEngine.LoadPredefinedOperations();
 
-            WriteLineToConsoleAndDisplay($"Found {allSources.Count} sensors.");
+            WriteLineToConsoleAndDisplay($"Found {_sensorManager.Measurements().Count} sensors.");
         }
 
         private void NewEngineData(EngineData data)
@@ -297,12 +287,12 @@ namespace DisplayControl
                     m_lcdConsole.Clear();
                     if (ActiveValueSourceSingle != null)
                     {
-                        OnSensorValueChanged(ActiveValueSourceSingle, null);
+                        OnSensorValueChanged(ActiveValueSourceSingle);
                     }
                     else
                     {
-                        OnSensorValueChanged(ActiveValueSourceUpper, null);
-                        OnSensorValueChanged(ActiveValueSourceLower, null);
+                        OnSensorValueChanged(ActiveValueSourceUpper);
+                        OnSensorValueChanged(ActiveValueSourceLower);
                     }
                 }
                 return;
@@ -376,35 +366,43 @@ namespace DisplayControl
             }
         }
 
-        public void OnSensorValueChanged(object sender, PropertyChangedEventArgs args)
+        private void OnSensorValueChanged(IList<SensorMeasurement> newMeasurements)
+        {
+            foreach (var m in newMeasurements)
+            {
+                OnSensorValueChanged(m);
+            }
+        }
+
+        private void OnSensorValueChanged(SensorMeasurement newMeasurement)
         {
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                Dispatcher.UIThread.InvokeAsync(() => OnSensorValueChanged(sender, args));
+                Dispatcher.UIThread.InvokeAsync(() => OnSensorValueChanged(newMeasurement));
                 return;
             }
 
-            CheckForTriggers(sender as SensorValueSource);
+            CheckForTriggers(newMeasurement);
 
             if (_menuMode)
             {
                 return;
             }
 
-            if (m_activeValueSourceUpper == sender || m_activeValueSourceLower == sender)
+            if (m_activeValueSourceUpper == newMeasurement || m_activeValueSourceLower == newMeasurement)
             {
                 SwitchToConsoleMode();
                 Display2Values(m_activeValueSourceUpper, m_activeValueSourceLower);
                 return;
             }
-            else if (m_activeValueSourceSingle == sender)
+            else if (m_activeValueSourceSingle == newMeasurement)
             {
                 SwitchToBigMode(m_activeValueSourceSingle);
                 DisplayBigValue(m_activeValueSourceSingle);
             }
         }
 
-        private void SwitchToBigMode(SensorValueSource withValue)
+        private void SwitchToBigMode(SensorMeasurement withValue)
         {
             m_activeValueSourceUpper = m_activeValueSourceLower = null;
             m_activeValueSourceSingle = withValue;
@@ -426,7 +424,7 @@ namespace DisplayControl
             }
         }
 
-        private void SwitchToConsoleMode(SensorValueSource upper, SensorValueSource lower)
+        private void SwitchToConsoleMode(SensorMeasurement upper, SensorMeasurement lower)
         {
             m_activeValueSourceSingle = null;
             m_activeValueSourceUpper = upper;
@@ -443,7 +441,7 @@ namespace DisplayControl
         /// Checks for any trigger/error conditions
         /// </summary>
         /// <param name="source">The value that has last changed</param>
-        private void CheckForTriggers(SensorValueSource source)
+        private void CheckForTriggers(SensorMeasurement source)
         {
             if (source == null)
             {
@@ -452,9 +450,9 @@ namespace DisplayControl
 
             lock (m_sensorsWithErrors)
             {
-                if (source.WarningLevel != WarningLevel.None)
+                if (source.Status.HasFlag(SensorMeasurementStatus.Warning))
                 {
-                    if (!m_sensorsWithErrors.Contains(source) && !source.SuppressWarnings)
+                    if (!m_sensorsWithErrors.Contains(source))
                     {
                         m_sensorsWithErrors.Add(source);
                         _extendedDisplayController.SoundAlarm(true);
@@ -471,41 +469,52 @@ namespace DisplayControl
                 }
             }
 
-            if (source is PositionValue pos)
+            if (source == SensorMeasurement.AltitudeGeoid)
             {
-                _weatherSensor.Altitude = Length.FromMeters(pos.Value.EllipsoidalHeight);
+                if (source.TryGetAs(out Length len))
+                {
+                    _weatherSensor.Altitude = len;
+                }
             }
 
-
-            if (source.ValueDescription == "Temperature Outside")
+            if (source == SensorMeasurement.AirTemperatureOutside)
             {
-                _nmeaSensor.SendTemperature(Temperature.FromDegreesCelsius((double)source.GenericValue));
+                if (source.TryGetAs(out Temperature temp))
+                {
+                    _nmeaSensor.SendTemperature(temp);
+                }
             }
 
-            if (source.ValueDescription == Bmp680Environment.MAIN_PRESSURE_SENSOR)
+            if (source == SensorMeasurement.AirPressureBarometricOutside)
             {
-                _nmeaSensor.SendPressure(Pressure.FromHectopascals((double)source.GenericValue));
+                if (source.TryGetAs(out Pressure p))
+                {
+                    _nmeaSensor.SendPressure(p);
+                }
             }
 
-            if (source.ValueDescription == Bmp680Environment.MAIN_HUMIDITY_SENSOR)
+            if (source == SensorMeasurement.AirHumidityInside)
             {
-                _nmeaSensor.SendHumidity(Ratio.FromPercent((double)source.GenericValue));
+                if (source.TryGetAs(out Ratio humidity))
+                {
+                    _nmeaSensor.SendHumidity(humidity);
+                }
             }
 
         }
 
-        public void DisplayBigValue(SensorValueSource valueSource)
+        public void DisplayBigValue(SensorMeasurement valueSource)
         {
             if (valueSource == null)
             {
                 m_bigValueDisplay.DisplayValue("N/A");
                 return;
             }
-            string text = valueSource.ValueAsString + " " + valueSource.Unit;
+            string text = valueSource.ToString();
             if (m_timer.Elapsed < TimeSpan.FromSeconds(3))
             {
                 // Display the value description for 3 seconds after changing
-                m_bigValueDisplay.DisplayValue(text, valueSource.ValueDescription);
+                m_bigValueDisplay.DisplayValue(text, valueSource.Name);
             }
             else
             {
@@ -513,14 +522,10 @@ namespace DisplayControl
             }
         }
 
-        public void Display2Values(SensorValueSource valueSourceUpper, SensorValueSource valueSourceLower)
+        public void Display2Values(SensorMeasurement valueSourceUpper, SensorMeasurement valueSourceLower)
         {
-            if (valueSourceUpper == null)
-            {
-                valueSourceUpper = new ObservableValue<string>(string.Empty, string.Empty, string.Empty);
-            }
-            m_lcdConsole.ReplaceLine(0, valueSourceUpper.ValueDescription);
-            string text = valueSourceUpper.ValueAsString;
+            m_lcdConsole.ReplaceLine(0, valueSourceUpper.Name ?? string.Empty);
+            string text = valueSourceUpper?.ToString() ?? string.Empty;
             if (text.Contains("\n"))
             {
                 m_lcdConsole.SetCursorPosition(0, 1);
@@ -532,8 +537,8 @@ namespace DisplayControl
                 // Only if the first entry is a 1-liner
                 if (valueSourceLower != null)
                 {
-                    m_lcdConsole.ReplaceLine(2, valueSourceLower.ValueDescription);
-                    text = valueSourceLower.ValueAsString;
+                    m_lcdConsole.ReplaceLine(2, valueSourceLower.Name);
+                    text = valueSourceLower.ToString();
                     if (text.Contains("\n"))
                     {
                         // We can't display a two liner here
@@ -567,10 +572,8 @@ namespace DisplayControl
             m_lcdConsole.BacklightOn = false;
             m_lcdConsole.DisplayOn = false;
             m_lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
-            foreach(var sensor in m_sensorValueSources)
-            {
-                sensor.PropertyChanged -= OnSensorValueChanged;
-            }
+            _sensorManager.AnyMeasurementChanged -= OnSensorValueChanged;
+
             _adcSensors.Dispose();
             _adcSensors = null;
             m_dhtSensors?.Dispose();
@@ -606,7 +609,7 @@ namespace DisplayControl
         {
             private readonly DataContainer _control;
             private readonly LcdConsole _console;
-            private readonly List<(string, SensorValueSource, Func<SensorValueSource, MenuOptionResult>)> _options;
+            private readonly List<(string, SensorMeasurement, Func<SensorMeasurement, MenuOptionResult>)> _options;
 
             private string _title;
             private int _activeItem;
@@ -619,7 +622,7 @@ namespace DisplayControl
                 _title = string.Empty;
                 _subMenuActive = false;
                 _activeItem = 0;
-                _options = new List<(string, SensorValueSource, Func<SensorValueSource, MenuOptionResult>)>();
+                _options = new List<(string, SensorMeasurement, Func<SensorMeasurement, MenuOptionResult>)>();
             }
 
             public bool ButtonPressed(DisplayButton button)
@@ -731,7 +734,7 @@ namespace DisplayControl
                     var sources = _control.SensorValueSources;
                     foreach(var source in sources)
                     {
-                        AddOption(source.ValueDescription, source, (s) =>
+                        AddOption(source.Name, source, (s) =>
                         {
                             _control.SwitchToConsoleMode(s, _control.ActiveValueSourceLower);
                             return MenuOptionResult.Exit;
@@ -745,7 +748,7 @@ namespace DisplayControl
                     var sources = _control.SensorValueSources;
                     foreach (var source in sources)
                     {
-                        AddOption(source.ValueDescription, source, (s) =>
+                        AddOption(source.Name, source, (s) =>
                         {
                             _control.SwitchToConsoleMode(_control.ActiveValueSourceUpper, s);
                             return MenuOptionResult.Exit;
@@ -763,7 +766,7 @@ namespace DisplayControl
                 var sources = _control.SensorValueSources;
                 foreach (var source in sources)
                 {
-                    AddOption(source.ValueDescription, source, (s) =>
+                    AddOption(source.Name, source, (s) =>
                     {
                         _control.SwitchToBigMode(source);
                         return MenuOptionResult.Exit;
@@ -798,7 +801,7 @@ namespace DisplayControl
                 return MenuOptionResult.TextUpdate;
             }
 
-            private void AddOption(string subMenuName, SensorValueSource source, Func<SensorValueSource, MenuOptionResult> operation)
+            private void AddOption(string subMenuName, SensorMeasurement source, Func<SensorMeasurement, MenuOptionResult> operation)
             {
                 _options.Add((subMenuName, source, operation));
             }

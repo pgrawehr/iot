@@ -17,10 +17,10 @@ namespace Iot.Device.Common
         /// <summary>
         /// Constructs an instance of this class.
         /// </summary>
-        /// <param name="englishName">Name of the source in english</param>
-        public SensorSource(string englishName)
+        /// <param name="name">Name of the source</param>
+        public SensorSource(string name)
         {
-            Name = englishName;
+            Name = name;
         }
 
         /// <summary>
@@ -54,7 +54,17 @@ namespace Iot.Device.Common
         public static readonly SensorSource Sewage = new SensorSource("Sewage");
         public static readonly SensorSource Freshwater = new SensorSource("Freshwater");
 
+        /// <summary>
+        /// Position sensor (typically any GNSS receiver)
+        /// </summary>
         public static readonly SensorSource Position = new SensorSource("Position");
+        public static readonly SensorSource Compass = new SensorSource("Compass");
+
+        /// <summary>
+        /// User input source (i.e. buttons)
+        /// </summary>
+        public static readonly SensorSource UserInput = new SensorSource("User input");
+        public static readonly SensorSource Cpu = new SensorSource("Cpu");
 
         /// <inheritdoc/>
         public override bool Equals(object obj)

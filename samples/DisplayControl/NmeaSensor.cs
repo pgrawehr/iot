@@ -17,6 +17,7 @@ namespace DisplayControl
 {
     public sealed class NmeaSensor : IDisposable
     {
+        private readonly MeasurementManager _manager;
         private const string ShipSourceName = "Ship";
         private const string HandheldSourceName = "Handheld";
         private const string OpenCpn = "OpenCpn";
@@ -51,17 +52,7 @@ namespace DisplayControl
 
         private MessageRouter _router;
 
-        private List<SensorValueSource> _values;
-        private PositionValue _position;
-        private ObservableValue<double> _speed;
-        private ObservableValue<double> _track;
-        private ObservableValue<string> _parserMsg;
-        private ObservableValue<double> _elevation;
-        private ObservableValue<double> _windSpeedRelative;
-        private ObservableValue<double> _windDirectionRelative;
-        private ObservableValue<double> _windSpeedAbsolute;
-        private ObservableValue<double> _windDirectionAbsolute;
-        private ObservableValue<double> _magneticVariationField;
+        private GeographicPosition _position;
         private Stream _streamShip;
         private SerialPort _serialPortShip;
         private Stream _streamHandheld;
@@ -71,27 +62,16 @@ namespace DisplayControl
         private GlobalPositioningSystemFixData _lastGgaMessage;
         private RecommendedMinimumNavigationInformation _lastRmcMessage;
         private TrackMadeGood _lastVtgMessage;
-        private WindSpeedAndAngle _lastMwvRelativeMessage;
-        private WindSpeedAndAngle _lastMwvTrueMessage;
         private Temperature? _lastTemperature;
         private Ratio? _lastHumidity;
         private AutopilotController _autopilot;
         private int _sequence;
-        private ObservableValue<double> _waterDepthField;
 
-        public NmeaSensor()
+        public NmeaSensor(MeasurementManager manager)
         {
-            _values = new List<SensorValueSource>();
+            _manager = manager;
             _magneticVariation = null;
             _sequence = 1;
-        }
-
-        public List<SensorValueSource> SensorValueSources
-        {
-            get
-            {
-                return _values;
-            }
         }
 
         public IList<FilterRule> ConstructRules()
@@ -258,25 +238,28 @@ namespace DisplayControl
 
         public void Initialize()
         {
-            _position = new PositionValue("Position");
-            _speed = new ObservableValue<double>("SOG", "kts", 0);
-            _track = new ObservableValue<double>("Track", "°", 0);
-            _elevation = new ObservableValue<double>("Höhe", "m", 0);
-            _parserMsg = new ObservableValue<string>("Nmea parser msg", string.Empty, "Ok");
-            _parserMsg.SuppressWarnings = true; // Too many intermittent errors
-            _windSpeedRelative = new ObservableValue<double>("Scheinbarer Wind", "kts");
-            _windSpeedRelative.ValueFormatter = "{0:F1}";
-            _windSpeedAbsolute = new ObservableValue<double>("Wahrer Wind", "kts");
-            _windSpeedAbsolute.ValueFormatter = "{0:F1}";
-            _windDirectionAbsolute = new ObservableValue<double>("Wahre Windrichtung", "°T");
-            _windDirectionRelative = new ObservableValue<double>("Scheinbare Windrichtung", "°");
-            _magneticVariationField = new ObservableValue<double>("Deklination", "°E");
-            _waterDepthField = new ObservableValue<double>("Wassertiefe", "m");
+            _position = new GeographicPosition();
+            //_speed = new ObservableValue<double>("SOG", "kts", 0);
+            //_track = new ObservableValue<double>("Track", "°", 0);
+            //_elevation = new ObservableValue<double>("Höhe", "m", 0);
+            //_parserMsg = new ObservableValue<string>("Nmea parser msg", string.Empty, "Ok");
+            //_parserMsg.SuppressWarnings = true; // Too many intermittent errors
+            //_windSpeedRelative = new ObservableValue<double>("Scheinbarer Wind", "kts");
+            //_windSpeedRelative.ValueFormatter = "{0:F1}";
+            //_windSpeedAbsolute = new ObservableValue<double>("Wahrer Wind", "kts");
+            //_windSpeedAbsolute.ValueFormatter = "{0:F1}";
+            //_windDirectionAbsolute = new ObservableValue<double>("Wahre Windrichtung", "°T");
+            //_windDirectionRelative = new ObservableValue<double>("Scheinbare Windrichtung", "°");
+            //_magneticVariationField = new ObservableValue<double>("Deklination", "°E");
+            //_waterDepthField = new ObservableValue<double>("Wassertiefe", "m");
             
-            SensorValueSources.AddRange(new SensorValueSource[]
+            _manager.AddRange(new[]
             {
-                _windSpeedRelative, _windDirectionRelative, _windSpeedAbsolute, _windDirectionAbsolute,
-                _speed, _track, _parserMsg, _elevation, _position, _waterDepthField
+                SensorMeasurement.WindSpeedAbsolute, SensorMeasurement.WindSpeedApparent, SensorMeasurement.WindSpeedTrue, 
+                SensorMeasurement.WindDirectionAbsolute, SensorMeasurement.WindDirectionApparent, SensorMeasurement.WindDirectionTrue,
+                SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, 
+                SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
+                SensorMeasurement.WaterDepth, SensorMeasurement.SpeedTroughWater
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -334,80 +317,65 @@ namespace DisplayControl
         {
             switch (sentence)
             {
-                case GlobalPositioningSystemFixData gga when gga.Valid:
+                case GlobalPositioningSystemFixData gga:
                 {
-                    if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(2))
+                    if (gga.Valid)
                     {
-                        return;
+                        if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(0.5))
+                        {
+                            return;
+                        }
+
+                        _lastGgaMessage = gga;
+                        _position = gga.Position;
+                        _manager.UpdateValues(new[] { SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid },
+                            new IQuantity[] { Angle.FromDegrees(gga.LatitudeDegrees.GetValueOrDefault(0)), Angle.FromDegrees(gga.LongitudeDegrees.GetValueOrDefault(0)),
+                                Length.FromMeters(gga.EllipsoidAltitude.GetValueOrDefault(0)), Length.FromMeters(gga.GeoidAltitude.GetValueOrDefault(0)) });
                     }
-                    _lastGgaMessage = gga;
-                    _position.Value = gga.Position;
-                    _elevation.Value = gga.GeoidAltitude.GetValueOrDefault(0);
+                    else
+                    {
+                        _manager.UpdateValues(new[] { SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid },
+                            new IQuantity[] { null, null, null, null });
+                    }
+
                     break;
                 }
-                case RecommendedMinimumNavigationInformation rmc when _lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(2):
+                case RecommendedMinimumNavigationInformation rmc when _lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(0.5):
                     return;
                 case RecommendedMinimumNavigationInformation rmc:
                 {
                     _lastRmcMessage = rmc;
-                    _speed.Value = rmc.SpeedOverGround.Knots;
-                    _track.Value = rmc.TrackMadeGoodInDegreesTrue.Degrees;
-                    _magneticVariation = rmc.MagneticVariationInDegrees;
-                    if (_magneticVariation.HasValue)
-                    {
-                        _magneticVariationField.Value = _magneticVariation.Value.Degrees;
-                    }
+                    _manager.UpdateValues(new[] { SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, SensorMeasurement.MagneticVariation }, 
+                        new IQuantity[] { rmc.SpeedOverGround, rmc.TrackMadeGoodInDegreesTrue, rmc.MagneticVariationInDegrees });
 
                     break;
                 }
-                case TrackMadeGood vtg when _lastVtgMessage != null && _lastVtgMessage.Age < TimeSpan.FromSeconds(2):
+                case TrackMadeGood vtg when _lastVtgMessage != null && _lastVtgMessage.Age < TimeSpan.FromSeconds(0.5):
                     return;
                 case TrackMadeGood vtg:
                     _lastVtgMessage = vtg;
-                    _speed.Value = vtg.Speed.Knots;
-                    _track.Value = vtg.CourseOverGroundTrue.Degrees;
+                    _manager.UpdateValues(new[] { SensorMeasurement.SpeedOverGround, SensorMeasurement.Track },
+                        new IQuantity[] { vtg.Speed, vtg.CourseOverGroundTrue });
                     break;
-                case WindSpeedAndAngle mwv when mwv.Relative:
+                case WindSpeedAndAngle mwv when mwv.Relative && mwv.Valid:
                 {
-                    if (_lastMwvRelativeMessage != null && _lastMwvRelativeMessage.Age < TimeSpan.FromSeconds(2))
-                    {
-                        return;
-                    }
-                    _lastMwvRelativeMessage = mwv;
-
-                    _windSpeedRelative.Value = mwv.Speed.Knots;
-                    _windDirectionRelative.Value = mwv.Angle.Degrees;
+                    _manager.UpdateValues(new[] { SensorMeasurement.WindSpeedApparent, SensorMeasurement.WindDirectionApparent },
+                        new IQuantity[] { mwv.Speed, mwv.Angle });
                     break;
                 }
-                case WindSpeedAndAngle mwv when _lastMwvTrueMessage != null && _lastMwvTrueMessage.Age < TimeSpan.FromSeconds(2):
-                    return;
-                case WindSpeedAndAngle mwv:
-                    _lastMwvTrueMessage = mwv;
-                    _windSpeedAbsolute.Value = mwv.Speed.Knots;
-                    _windDirectionAbsolute.Value = mwv.Angle.Degrees;
+                case WindSpeedAndAngle mwv when !mwv.Relative && mwv.Valid:
+                    _manager.UpdateValues(new[] { SensorMeasurement.WindSpeedTrue, SensorMeasurement.WindDirectionTrue },
+                        new IQuantity[] { mwv.Speed, mwv.Angle });
                     break;
 
                 case DepthBelowSurface dpt when dpt.Valid:
-                    _waterDepthField.Value = dpt.Depth.Meters;
+                    _manager.UpdateValue(SensorMeasurement.WaterDepth, dpt.Depth);
                     break;
             }
-
-            // Reset warning if we get a valid message again (TODO: Improve condition)
-            _parserMsg.WarningLevel = WarningLevel.None;
         }
 
         private void OnParserError(NmeaSinkAndSource source, string error, NmeaError errorCode)
         {
-            _parserMsg.Value = error;
-            if (string.IsNullOrWhiteSpace(error))
-            {
-                _parserMsg.WarningLevel = WarningLevel.None;
-            }
-            else
-            {
-                _parserMsg.WarningLevel = WarningLevel.Warning;
-            }
-
             Console.WriteLine($"Nmea error from {source.InterfaceName}: {error}");
         }
 
