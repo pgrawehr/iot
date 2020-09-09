@@ -264,6 +264,7 @@ namespace Iot.Device.Common
             finally
             {
                 _callbacksBlocked = false;
+                Monitor.Exit(_lock);
             }
         }
 

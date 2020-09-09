@@ -200,7 +200,7 @@ namespace DisplayControl
             Check(_engineOn == true);
             Check(_engineOperatingTime.Value > TimeSpan.Zero);
             Check(_rpm > 0);
-            Check(_rpm > 2500 && _rpm < 7000);
+            Check(_rpm > 2400 && _rpm < 7000);
             _engineOn = false;
             _rpm = 0;
             Check(_engineOn == false);
@@ -300,6 +300,7 @@ namespace DisplayControl
                 }
             }
 
+            _rpm = umin;
             _lastTickForUpdate = now;
 
             if (_engineOn)
@@ -307,7 +308,7 @@ namespace DisplayControl
                 Console.WriteLine($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
             }
             // Final step: Send values to UI
-            Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(umin));
+            Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
             Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn ? Ratio.FromPercent(100) : Ratio.Zero);
             Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
                 new IQuantity[] { Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds), Duration.FromSeconds(_engineOperatingTimeAtLastRefill.Value.TotalSeconds) });

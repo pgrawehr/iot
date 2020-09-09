@@ -176,6 +176,7 @@ namespace Iot.Device.Common
                     return null;
                 }
 
+                // The member is never null
                 return _value;
             }
         }
@@ -184,7 +185,7 @@ namespace Iot.Device.Common
         {
             get
             {
-                return Value.Unit;
+                return _value.Unit;
             }
         }
 
@@ -192,7 +193,7 @@ namespace Iot.Device.Common
         {
             get
             {
-                return Value.Type;
+                return _value.Type;
             }
         }
 

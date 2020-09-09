@@ -42,7 +42,6 @@ namespace DisplayControl
 
         internal void Init(GpioController controller, ExtendedDisplayController ledController)
         {
-            base.Init(controller);
             _ledController = ledController ?? throw new ArgumentNullException(nameof(ledController));
             var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.GND));
             m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.PowerDown);
@@ -59,6 +58,8 @@ namespace DisplayControl
             _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
 
             Manager.AddRange(new[] { _voltage3_3V, _currentSunBrightness, _button1, _button2, _button3, _button4 });
+
+            base.Init(controller);
         }
 
 

@@ -65,13 +65,11 @@ namespace DisplayControl
         private Temperature? _lastTemperature;
         private Ratio? _lastHumidity;
         private AutopilotController _autopilot;
-        private int _sequence;
 
         public NmeaSensor(MeasurementManager manager)
         {
             _manager = manager;
             _magneticVariation = null;
-            _sequence = 1;
         }
 
         public IList<FilterRule> ConstructRules()
@@ -402,30 +400,31 @@ namespace DisplayControl
                 Angle.FromDegrees(value.Z));
             _router.SendSentence(attitude);
 
-            // If the above doesn't work, try this instead (See also the engine data below, this is actually an NMEA-2000 sequence)
-            // $PCDIN,01F119,000C76CA,09,3DFF7F86FFBF00FF*5B
-            string sequenceNoText = (_sequence % 256).ToString("X2", CultureInfo.InvariantCulture);
-            _sequence++;
-            string yawText = ConvertAngle(value.X);
-            string pitchText = ConvertAngle(value.Z);
-            string rollText = ConvertAngle(value.Y);
-            string timeStampText = Environment.TickCount.ToString("X8", CultureInfo.InvariantCulture);
-            var rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
-            {
-                "01F119",
-                timeStampText,
-                "02",
-                sequenceNoText + yawText + pitchText + rollText + "FF"
-            }, DateTimeOffset.UtcNow);
-            _router.SendSentence(rs);
+            //// If the above doesn't work, try this instead (See also the engine data below, this is actually an NMEA-2000 sequence)
+            //// $PCDIN,01F119,000C76CA,09,3DFF7F86FFBF00FF*5B
+            //// TODO: This doesn't work either
+            //string sequenceNoText = (_sequence % 256).ToString("X2", CultureInfo.InvariantCulture);
+            //_sequence++;
+            //string yawText = ConvertAngle(value.X);
+            //string pitchText = ConvertAngle(value.Z);
+            //string rollText = ConvertAngle(value.Y);
+            //string timeStampText = Environment.TickCount.ToString("X8", CultureInfo.InvariantCulture);
+            //var rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
+            //{
+            //    "01F119",
+            //    timeStampText,
+            //    "02",
+            //    sequenceNoText + yawText + pitchText + rollText + "FF"
+            //}, DateTimeOffset.UtcNow);
+            //_router.SendSentence(rs);
         }
 
-        private string ConvertAngle(double angle)
-        {
-            // Degrees = X * 57.29 *.0001
-            int val = (int)Math.Round(angle / 57.29 / 0.0001);
-            return val.ToString("X4", CultureInfo.InvariantCulture);
-        }
+        //private string ConvertAngle(double angle)
+        //{
+        //    // Degrees = X * 57.29 *.0001
+        //    int val = (int)Math.Round(angle / 57.29 / 0.0001);
+        //    return val.ToString("X4", CultureInfo.InvariantCulture);
+        //}
 
         public void Dispose()
         {
