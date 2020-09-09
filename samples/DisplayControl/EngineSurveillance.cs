@@ -9,6 +9,7 @@ using System.Threading;
 using Iot.Device.Mcp23xxx;
 using Iot.Device.Common;
 using UnitsNet;
+using UnitsNet.Units;
 
 namespace DisplayControl
 {
@@ -310,8 +311,9 @@ namespace DisplayControl
             // Final step: Send values to UI
             Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
             Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn ? Ratio.FromPercent(100) : Ratio.Zero);
+            TimeSpan timeSinceRefill = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
             Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
-                new IQuantity[] { Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds), Duration.FromSeconds(_engineOperatingTimeAtLastRefill.Value.TotalSeconds) });
+                new IQuantity[] { Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds).ToUnit(DurationUnit.Hour), Duration.FromSeconds(timeSinceRefill.TotalSeconds).ToUnit(DurationUnit.Hour) });
 
             var msg = new EngineData(0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100), _engineOperatingTime.Value); // Pitch unknown so far
             DataChanged?.Invoke(msg);

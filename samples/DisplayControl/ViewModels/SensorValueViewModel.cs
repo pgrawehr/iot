@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Text;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -98,8 +99,17 @@ namespace DisplayControl.ViewModels
                 return;
             }
             ValueDescription = _sensorValueSource.Name;
-            ValueAsString = _sensorValueSource.ToString(); // TODO: Improve a lot!
-            Unit = _sensorValueSource.Unit.ToString();
+            ValueAsString = _sensorValueSource.ToString();
+            // Get the unit abbreviation string (Unit.ToString() would give the full name)
+            if (_sensorValueSource.Value != null)
+            {
+                Unit = _sensorValueSource.Value.ToString("a", CultureInfo.CurrentCulture);
+            }
+            else
+            {
+                Unit = string.Empty;
+            }
+
             if (_sensorValueSource.Status.HasFlag(SensorMeasurementStatus.Warning))
             {
                 StatusColor = new SolidColorBrush(SystemDrawing.FromName("Yellow"));

@@ -68,8 +68,10 @@ namespace Iot.Device.Common
                 },
                 (args) =>
                 {
+                    SensorMeasurement humidityOutside = args[3];
                     // Only use this rule if no outside humidity sensor is available
-                    if (args[3].Status.HasFlag(SensorMeasurementStatus.NoData))
+                    if (!humidityOutside.Status.HasFlag(SensorMeasurementStatus.NoData) &&
+                        !humidityOutside.Status.HasFlag(SensorMeasurementStatus.IndirectResult))
                     {
                         return (null, true);
                     }

@@ -143,7 +143,7 @@ namespace DisplayControl
             new List<IQuantity>()
             {
                 Angle.FromDegrees(_lastEulerAngles.Z), Angle.FromDegrees(_lastEulerAngles.Y), 
-                hdg, hdgUncorrected, _imu.Temperature
+                hdg.Normalize(true), hdgUncorrected.Normalize(true), _imu.Temperature
             });
         }
 

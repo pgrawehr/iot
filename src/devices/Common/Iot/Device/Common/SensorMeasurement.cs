@@ -39,24 +39,6 @@ namespace Iot.Device.Common
         /// The actual value of the instance is ignored until a first value is set using <see cref="UpdateValue(IQuantity)"/>, the argument
         /// is only used to define the physical quantity and the default unit for the values that will be managed.
         /// </summary>
-        /// <param name="value">The value definition (quantity, unit)</param>
-        /// <param name="source">Sensor source identification</param>
-        /// <param name="instanceNumber">Sensor instance (if there are multiple sensors of the same kind)</param>
-        public SensorMeasurement(IQuantity value, SensorSource source, int instanceNumber = 1)
-        {
-            _value = value ?? throw new ArgumentNullException(nameof(value));
-            Name = source.ToString() + " " + value.Type;
-            SensorSource = source;
-            Instance = instanceNumber;
-            _measurementStatus = SensorMeasurementStatus.NoData;
-            _observers = new List<IObserver<IQuantity>>();
-        }
-
-        /// <summary>
-        /// Creates a new instance with a given quantity.
-        /// The actual value of the instance is ignored until a first value is set using <see cref="UpdateValue(IQuantity)"/>, the argument
-        /// is only used to define the physical quantity and the default unit for the values that will be managed.
-        /// </summary>
         /// <param name="name">Name of element (english, probably needs translation outside)</param>
         /// <param name="value">The value definition (quantity, unit)</param>
         /// <param name="source">Sensor source identification</param>
@@ -68,16 +50,17 @@ namespace Iot.Device.Common
             SensorSource = source;
             Instance = instanceNumber;
             _measurementStatus = SensorMeasurementStatus.NoData;
+            _observers = new List<IObserver<IQuantity>>();
         }
 
         public static readonly SensorMeasurement CpuTemperature = new SensorMeasurement("CPU Temperature", Temperature.Zero, Common.SensorSource.Cpu);
-        public static readonly SensorMeasurement AirTemperatureOutside = new SensorMeasurement(Temperature.Zero, SensorSource.Air);
-        public static readonly SensorMeasurement AirPressureRawOutside = new SensorMeasurement(Pressure.Zero, SensorSource.Air);
-        public static readonly SensorMeasurement AirPressureBarometricOutside = new SensorMeasurement(Pressure.Zero, SensorSource.Air, 2);
-        public static readonly SensorMeasurement AirHumidityOutside = new SensorMeasurement(Ratio.Zero, SensorSource.Air);
-        public static readonly SensorMeasurement AirTemperatureInside = new SensorMeasurement(Temperature.Zero, SensorSource.Air, -1);
-        public static readonly SensorMeasurement AirPressureRawInside = new SensorMeasurement(Pressure.Zero, SensorSource.Air, -1);
-        public static readonly SensorMeasurement AirHumidityInside = new SensorMeasurement(Ratio.Zero, SensorSource.Air, -1);
+        public static readonly SensorMeasurement AirTemperatureOutside = new SensorMeasurement("Outside Air temperature", Temperature.Zero, SensorSource.Air);
+        public static readonly SensorMeasurement AirPressureRawOutside = new SensorMeasurement("Outside Raw Pressure", Pressure.Zero, SensorSource.Air);
+        public static readonly SensorMeasurement AirPressureBarometricOutside = new SensorMeasurement("Outside Barometric Pressure", Pressure.Zero, SensorSource.Air, 2);
+        public static readonly SensorMeasurement AirHumidityOutside = new SensorMeasurement("Outside Humidity", Ratio.Zero, SensorSource.Air);
+        public static readonly SensorMeasurement AirTemperatureInside = new SensorMeasurement("Inside Air Temperature", Temperature.Zero, SensorSource.Air, -1);
+        public static readonly SensorMeasurement AirPressureRawInside = new SensorMeasurement("Inside Raw Pressure", Pressure.Zero, SensorSource.Air, -1);
+        public static readonly SensorMeasurement AirHumidityInside = new SensorMeasurement("Inside Humidity", Ratio.Zero, SensorSource.Air, -1);
         public static readonly SensorMeasurement AirSpeed = new SensorMeasurement("Air Speed", Angle.Zero, SensorSource.Air);
         public static readonly SensorMeasurement WindSpeedApparent = new SensorMeasurement("Apparent Wind Speed", Speed.Zero, SensorSource.WindRelative);
         public static readonly SensorMeasurement WindDirectionApparent = new SensorMeasurement("Apparent Wind Direction", Angle.Zero, SensorSource.WindRelative);
@@ -161,6 +144,16 @@ namespace Iot.Device.Common
         public string Name
         {
             get;
+        }
+
+        /// <summary>
+        /// A format string used to format a value. Argument 0 is the <see cref="IQuantity"/> of the measurement, Argument 1 is the raw double value.
+        /// Example: "{1:F2} {0:a}" to format the value with two digits and add the unit abbreviation. "{0:F2}" results in the same.
+        /// </summary>
+        public string CustomFormat
+        {
+            get;
+            set;
         }
 
         /// <summary>
@@ -282,7 +275,12 @@ namespace Iot.Device.Common
                 return "N/A";
             }
 
-            return Name + ": " + Value.ToString("g", CultureInfo.CurrentCulture);
+            if (CustomFormat != null)
+            {
+                return string.Format(CultureInfo.CurrentCulture, CustomFormat, Value, Value.Value);
+            }
+
+            return Value.ToString("g", CultureInfo.CurrentCulture);
         }
 
         public IDisposable Subscribe(IObserver<IQuantity> observer)

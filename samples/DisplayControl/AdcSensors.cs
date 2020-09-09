@@ -224,6 +224,7 @@ namespace DisplayControl
 
         protected override void Dispose(bool disposing)
         {
+            StopThread();
             if (m_cpuAdc != null)
             {
                 m_cpuAdc.DeviceMode = DeviceMode.PowerDown;

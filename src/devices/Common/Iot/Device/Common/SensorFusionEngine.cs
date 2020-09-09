@@ -12,12 +12,14 @@ namespace Iot.Device.Common
         private readonly MeasurementManager _manager;
         private readonly List<FusionOperation> _fusionOperations;
         private readonly object _lock;
+        private bool _operationsInProgress;
 
         public SensorFusionEngine(MeasurementManager manager)
         {
             _manager = manager;
             _fusionOperations = new List<FusionOperation>();
             _lock = new object();
+            _operationsInProgress = false;
             _manager.AnyMeasurementChanged += ManagerOnAnyMeasurementChanged;
         }
 
@@ -49,6 +51,14 @@ namespace Iot.Device.Common
         {
             lock (_lock)
             {
+                // Break stack overflow error that happens if two registered operations interfere with each other
+                // TODO: Improve
+                if (_operationsInProgress)
+                {
+                    return;
+                }
+
+                _operationsInProgress = true;
                 foreach (var op in _fusionOperations)
                 {
                     foreach (var measurement in changedMeasurements)
@@ -57,10 +67,12 @@ namespace Iot.Device.Common
                         {
                             // Execute if anything matches, but only once (all values will hopefully be updated already)
                             ExecuteFusionOperation(op);
-                            return;
+                            break;
                         }
                     }
                 }
+
+                _operationsInProgress = false;
             }
         }
 
@@ -69,9 +81,10 @@ namespace Iot.Device.Common
             // We do not need to query the manager, since the SensorMeasurement instances within the operation already
             // contain the proper handle to the values we need
             var result = op.OperationToPerform(op.OnMeasurementChanges);
-            if (result.Item2)
+            if (!result.Item2)
             {
-                op.Result.UpdateValue(result.Item1);
+                // Mark all results of the fusion engine as indirect
+                op.Result.UpdateValue(result.Item1, SensorMeasurementStatus.IndirectResult);
             }
         }
 

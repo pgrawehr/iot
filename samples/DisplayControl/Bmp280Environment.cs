@@ -7,6 +7,7 @@ using System.Threading;
 using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
 using Iot.Device.Common;
+using UnitsNet.Units;
 
 namespace DisplayControl
 {
@@ -44,7 +45,7 @@ namespace DisplayControl
 
             if (_bmp280.TryReadPressure(out var preValue))
             {
-                SensorMeasurement.AirPressureRawOutside.UpdateValue(preValue);
+                SensorMeasurement.AirPressureRawOutside.UpdateValue(preValue.ToUnit(PressureUnit.Hectopascal));
             }
         }
 

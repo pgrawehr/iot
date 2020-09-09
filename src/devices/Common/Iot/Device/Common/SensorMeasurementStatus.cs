@@ -34,6 +34,12 @@ namespace Iot.Device.Common
         /// <summary>
         /// There was an error reading the data. Usually only used after several failed attempts to read a value.
         /// </summary>
-        SensorError = 8
+        SensorError = 8,
+
+        /// <summary>
+        /// The sensor value is indirectly obtained (optional, helpful to determine whether something needs to be
+        /// calculated or is available directly)
+        /// </summary>
+        IndirectResult = 16
     }
 }

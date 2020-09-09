@@ -12,6 +12,7 @@ using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
+using UnitsNet.Units;
 
 namespace DisplayControl
 {
@@ -85,8 +86,9 @@ namespace DisplayControl
             rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>(), false, false));
             // Same applies for this. For some reason, this also gets a different value for the magnetic variation
             rules.Add(new FilterRule("*", yd, new SentenceId("RMC"), new List<string>(), false, false));
-            // And this.
+            // And these.
             rules.Add(new FilterRule("*", yd, new SentenceId("GLL"), new List<string>(), false, false));
+            rules.Add(new FilterRule("*", yd, new SentenceId("VTG"), new List<string>(), false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut }, false, true));
 
@@ -358,16 +360,20 @@ namespace DisplayControl
                 case WindSpeedAndAngle mwv when mwv.Relative && mwv.Valid:
                 {
                     _manager.UpdateValues(new[] { SensorMeasurement.WindSpeedApparent, SensorMeasurement.WindDirectionApparent },
-                        new IQuantity[] { mwv.Speed, mwv.Angle });
+                        new IQuantity[] { mwv.Speed.ToUnit(SpeedUnit.Knot), mwv.Angle });
                     break;
                 }
                 case WindSpeedAndAngle mwv when !mwv.Relative && mwv.Valid:
                     _manager.UpdateValues(new[] { SensorMeasurement.WindSpeedTrue, SensorMeasurement.WindDirectionTrue },
-                        new IQuantity[] { mwv.Speed, mwv.Angle });
+                        new IQuantity[] { mwv.Speed.ToUnit(SpeedUnit.Knot), mwv.Angle });
                     break;
 
                 case DepthBelowSurface dpt when dpt.Valid:
                     _manager.UpdateValue(SensorMeasurement.WaterDepth, dpt.Depth);
+                    break;
+
+                case WaterSpeedAndAngle vhw when vhw.Valid:
+                    _manager.UpdateValue(SensorMeasurement.SpeedTroughWater, vhw.Speed);
                     break;
             }
         }

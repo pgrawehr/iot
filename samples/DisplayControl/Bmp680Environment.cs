@@ -8,6 +8,7 @@ using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
 using Iot.Device.Common;
 using UnitsNet;
+using UnitsNet.Units;
 
 namespace DisplayControl
 {
@@ -86,7 +87,7 @@ namespace DisplayControl
             bool press = _bme680.TryReadPressure(out var preValue);
             if (press)
             {
-                SensorMeasurement.AirPressureRawInside.UpdateValue(preValue);
+                SensorMeasurement.AirPressureRawInside.UpdateValue(preValue.ToUnit(PressureUnit.Hectopascal));
             }
 
             bool hum = _bme680.TryReadHumidity(out var humidity);

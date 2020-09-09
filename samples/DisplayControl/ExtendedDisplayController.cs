@@ -192,6 +192,8 @@ namespace DisplayControl
         {
             if (_mcp23017 != null)
             {
+                ClearLedDisplay(); // Switch them all off
+                SoundAlarm(false);
                 _controllerUsingMcp.Dispose();
                 _device.Dispose();
             }

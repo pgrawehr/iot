@@ -228,6 +228,11 @@ namespace DisplayControl
             _sensorManager.AnyMeasurementChanged += OnSensorValueChanged;
             _fusionEngine.LoadPredefinedOperations();
 
+            foreach (var m in _sensorManager.Measurements())
+            {
+                m.CustomFormat = "{1:N2}"; // No unit
+            }
+
             WriteLineToConsoleAndDisplay($"Found {_sensorManager.Measurements().Count} sensors.");
         }
 
@@ -350,7 +355,7 @@ namespace DisplayControl
                 // _extendedDisplayController.DecreaseBrightness(10);
             }
 
-            if (button == DisplayButton.Enter)
+            if (button == DisplayButton.Enter && m_lcdConsoleActive && m_activeValueSourceLower != null)
             {
                 SwitchToBigMode(m_activeValueSourceLower);
             }
@@ -510,7 +515,7 @@ namespace DisplayControl
                 m_bigValueDisplay.DisplayValue("N/A");
                 return;
             }
-            string text = valueSource.ToString();
+            string text = valueSource.ToString() + valueSource.Value.ToString("a", CultureInfo.CurrentCulture);
             if (m_timer.Elapsed < TimeSpan.FromSeconds(3))
             {
                 // Display the value description for 3 seconds after changing
