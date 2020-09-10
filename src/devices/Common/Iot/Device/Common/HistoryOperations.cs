@@ -49,5 +49,16 @@ namespace Iot.Device.Common
             var referenceType = dataSet.First().Value;
             return dataSet.Min(x => x.Value, referenceType.Unit);
         }
+
+        /// <summary>
+        /// Returns the average value within the sequence.
+        /// </summary>
+        /// <param name="dataSet">The data set to use</param>
+        /// <returns></returns>
+        public static IQuantity AverageValue(this List<HistoricValue> dataSet)
+        {
+            var referenceType = dataSet.First().Value;
+            return dataSet.Average(x => x.Value, referenceType.Unit);
+        }
     }
 }

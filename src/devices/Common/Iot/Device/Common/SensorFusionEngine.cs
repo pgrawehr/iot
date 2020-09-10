@@ -11,6 +11,7 @@ namespace Iot.Device.Common
     {
         private readonly MeasurementManager _manager;
         private readonly List<FusionOperation> _fusionOperations;
+        private readonly List<HistoryOperation> _historyOperations;
         private readonly object _lock;
         private bool _operationsInProgress;
 
@@ -18,6 +19,7 @@ namespace Iot.Device.Common
         {
             _manager = manager;
             _fusionOperations = new List<FusionOperation>();
+            _historyOperations = new List<HistoryOperation>();
             _lock = new object();
             _operationsInProgress = false;
             _manager.AnyMeasurementChanged += ManagerOnAnyMeasurementChanged;
@@ -47,6 +49,21 @@ namespace Iot.Device.Common
             }
         }
 
+        /// <summary>
+        /// Perform an operation on a measurement history (i.e. calculate a smoothed measurement).
+        /// History settings for the given input measurement need to be configured already.
+        /// </summary>
+        public void RegisterHistoryOperation(SensorMeasurement measurement,
+            Func<SensorMeasurement, MeasurementManager, IQuantity> operation, SensorMeasurement result)
+        {
+            _manager.TryAddMeasurement(result);
+            _manager.TryAddMeasurement(measurement);
+            lock (_lock)
+            {
+                _historyOperations.Add(new HistoryOperation(measurement, operation, result));
+            }
+        }
+
         private void ManagerOnAnyMeasurementChanged(IList<SensorMeasurement> changedMeasurements)
         {
             lock (_lock)
@@ -69,6 +86,15 @@ namespace Iot.Device.Common
                             ExecuteFusionOperation(op);
                             break;
                         }
+                    }
+                }
+
+                foreach (var op in _historyOperations)
+                {
+                    if (changedMeasurements.Contains(op.Input))
+                    {
+                        IQuantity result = op.Operation(op.Input, _manager);
+                        op.Output.UpdateValue(result);
                     }
                 }
 
@@ -108,6 +134,22 @@ namespace Iot.Device.Common
             public List<SensorMeasurement> OnMeasurementChanges { get; }
             public Func<List<SensorMeasurement>, (IQuantity, bool)> OperationToPerform { get; }
             public SensorMeasurement Result { get; }
+        }
+
+        private sealed class HistoryOperation
+        {
+            public HistoryOperation(SensorMeasurement input,
+                Func<SensorMeasurement, MeasurementManager, IQuantity> operation, SensorMeasurement output)
+            {
+                Input = input;
+                Operation = operation;
+                Output = output;
+            }
+
+            public SensorMeasurement Input { get; }
+            public Func<SensorMeasurement, MeasurementManager, IQuantity> Operation { get; }
+            public SensorMeasurement Output { get; }
+
         }
     }
 }

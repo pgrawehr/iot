@@ -66,11 +66,15 @@ namespace DisplayControl
         private Temperature? _lastTemperature;
         private Ratio? _lastHumidity;
         private AutopilotController _autopilot;
+        private SensorMeasurement _smoothedTrueWindSpeed;
+        private SensorMeasurement _maxWindGusts;
 
         public NmeaSensor(MeasurementManager manager)
         {
             _manager = manager;
             _magneticVariation = null;
+            _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.WindTrue);
+            _maxWindGusts = new SensorMeasurement("Wind Gusts", Speed.Zero, SensorSource.WindTrue);
         }
 
         public IList<FilterRule> ConstructRules()
@@ -236,22 +240,9 @@ namespace DisplayControl
             return input;
         }
 
-        public void Initialize()
+        public void Initialize(SensorFusionEngine fusionEngine)
         {
             _position = new GeographicPosition();
-            //_speed = new ObservableValue<double>("SOG", "kts", 0);
-            //_track = new ObservableValue<double>("Track", "°", 0);
-            //_elevation = new ObservableValue<double>("Höhe", "m", 0);
-            //_parserMsg = new ObservableValue<string>("Nmea parser msg", string.Empty, "Ok");
-            //_parserMsg.SuppressWarnings = true; // Too many intermittent errors
-            //_windSpeedRelative = new ObservableValue<double>("Scheinbarer Wind", "kts");
-            //_windSpeedRelative.ValueFormatter = "{0:F1}";
-            //_windSpeedAbsolute = new ObservableValue<double>("Wahrer Wind", "kts");
-            //_windSpeedAbsolute.ValueFormatter = "{0:F1}";
-            //_windDirectionAbsolute = new ObservableValue<double>("Wahre Windrichtung", "°T");
-            //_windDirectionRelative = new ObservableValue<double>("Scheinbare Windrichtung", "°");
-            //_magneticVariationField = new ObservableValue<double>("Deklination", "°E");
-            //_waterDepthField = new ObservableValue<double>("Wassertiefe", "m");
             
             _manager.AddRange(new[]
             {
@@ -259,7 +250,7 @@ namespace DisplayControl
                 SensorMeasurement.WindDirectionAbsolute, SensorMeasurement.WindDirectionApparent, SensorMeasurement.WindDirectionTrue,
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, 
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
-                SensorMeasurement.WaterDepth, SensorMeasurement.SpeedTroughWater
+                SensorMeasurement.WaterDepth, SensorMeasurement.SpeedTroughWater, _smoothedTrueWindSpeed, _maxWindGusts
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -308,6 +299,30 @@ namespace DisplayControl
             {
                 _router.AddFilterRule(rule);
             }
+
+            _manager.ConfigureHistory(SensorMeasurement.WindSpeedTrue, TimeSpan.Zero, TimeSpan.FromMinutes(5));
+
+            fusionEngine.RegisterHistoryOperation(SensorMeasurement.WindSpeedTrue,
+                (input, manager) =>
+                {
+                    var list = manager.ObtainHistory(input, TimeSpan.FromSeconds(4), TimeSpan.Zero);
+                    if (list.Count == 0)
+                    {
+                        return null;
+                    }
+                    return list.AverageValue();
+                }, _smoothedTrueWindSpeed);
+
+            fusionEngine.RegisterHistoryOperation(SensorMeasurement.WindSpeedTrue,
+                (input, manager) =>
+                {
+                    var list = manager.ObtainHistory(input, TimeSpan.FromSeconds(30), TimeSpan.Zero);
+                    if (list.Count == 0)
+                    {
+                        return null;
+                    }
+                    return list.MaxValue();
+                }, _maxWindGusts);
 
             _router.StartDecode();
             _autopilot.Start();
@@ -359,13 +374,17 @@ namespace DisplayControl
                     break;
                 case WindSpeedAndAngle mwv when mwv.Relative && mwv.Valid:
                 {
-                    _manager.UpdateValues(new[] { SensorMeasurement.WindSpeedApparent, SensorMeasurement.WindDirectionApparent },
-                        new IQuantity[] { mwv.Speed.ToUnit(SpeedUnit.Knot), mwv.Angle });
+                    _manager.UpdateValues(
+                            new[] {SensorMeasurement.WindSpeedApparent, SensorMeasurement.WindDirectionApparent},
+                            new IQuantity[] {mwv.Speed.ToUnit(SpeedUnit.Knot), mwv.Angle});
+
                     break;
                 }
                 case WindSpeedAndAngle mwv when !mwv.Relative && mwv.Valid:
-                    _manager.UpdateValues(new[] { SensorMeasurement.WindSpeedTrue, SensorMeasurement.WindDirectionTrue },
-                        new IQuantity[] { mwv.Speed.ToUnit(SpeedUnit.Knot), mwv.Angle });
+                    _manager.UpdateValues(
+                            new[] {SensorMeasurement.WindSpeedTrue, SensorMeasurement.WindDirectionTrue},
+                            new IQuantity[] {mwv.Speed.ToUnit(SpeedUnit.Knot), mwv.Angle});
+
                     break;
 
                 case DepthBelowSurface dpt when dpt.Valid:

@@ -15,7 +15,6 @@ namespace Iot.Device.Nmea0183
         public const string LoggingSinkName = "LOGGER";
         private readonly Dictionary<string, NmeaSinkAndSource> _sourcesAndSinks;
         private List<FilterRule> _filterRules;
-        private object _filterRulesLock;
         private bool _localInterfaceActive;
         private NmeaSinkAndSource _loggingSink;
 
@@ -36,7 +35,6 @@ namespace Iot.Device.Nmea0183
             }
 
             _filterRules = new List<FilterRule>();
-            _filterRulesLock = new object();
             _localInterfaceActive = true;
         }
 
@@ -65,18 +63,16 @@ namespace Iot.Device.Nmea0183
         {
             // Get name of source for this message
             string name = source.InterfaceName;
-            lock (_filterRulesLock)
-            {
-                foreach (var filter in _filterRules)
-                {
-                    if (filter.SentenceMatch(name, sentence))
-                    {
-                        SendSentenceToFilterItems(source, sentence, filter);
 
-                        if (!filter.ContinueAfterMatch)
-                        {
-                            return;
-                        }
+            foreach (var filter in _filterRules)
+            {
+                if (filter.SentenceMatch(name, sentence))
+                {
+                    SendSentenceToFilterItems(source, sentence, filter);
+
+                    if (!filter.ContinueAfterMatch)
+                    {
+                        return;
                     }
                 }
             }
@@ -134,10 +130,10 @@ namespace Iot.Device.Nmea0183
                 throw new ArgumentException($"Cannot define a rule for the unknown source {rule.SourceName}.");
             }
 
-            lock (_filterRulesLock)
-            {
-                _filterRules.Add(rule);
-            }
+            // So we can update the rule list in an atomic operation without requiring a lock
+            List<FilterRule> newRules = new List<FilterRule>(_filterRules);
+            newRules.Add(rule);
+            _filterRules = newRules;
         }
 
         public override void StartDecode()

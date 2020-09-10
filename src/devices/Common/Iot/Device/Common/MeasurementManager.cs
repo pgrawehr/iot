@@ -9,22 +9,24 @@ namespace Iot.Device.Common
 {
     public sealed class MeasurementManager : IDisposable
     {
+        private const int MaxCallbackDepth = 3;
         private readonly List<SensorMeasurement> _measurements;
         private readonly List<MeasurementHistoryConfiguration> _historyConfigurations;
         private readonly object _lock;
 
         /// <summary>
-        /// True if the callbacks are temporarily disabled to perform a consistent update over multiple values.
-        /// Must only be true while the lock is held!
+        /// Used to keep track of the callback recursion depth. Some recursive calls might be ok, but
+        /// if several fusion operations depend on output of others, circular dependencies will occur. The
+        /// most common reason for that is if one fusion operation tests whether another value is still valid;
         /// </summary>
-        private bool _callbacksBlocked;
+        private int _callbackDepth;
 
         public MeasurementManager()
         {
             _measurements = new List<SensorMeasurement>();
             _historyConfigurations = new List<MeasurementHistoryConfiguration>();
             _lock = new object();
-            _callbacksBlocked = false;
+            _callbackDepth = 0;
         }
 
         /// <summary>
@@ -226,9 +228,17 @@ namespace Iot.Device.Common
 
                 // Done within the lock, so if it is true, we still hold the outer lock and are therefore in
                 // the same thread.
-                if (!_callbacksBlocked)
+                if (_callbackDepth < MaxCallbackDepth)
                 {
-                    AnyMeasurementChanged?.Invoke(new[] { measurement });
+                    try
+                    {
+                        _callbackDepth++;
+                        AnyMeasurementChanged?.Invoke(new[] { measurement });
+                    }
+                    finally
+                    {
+                        _callbackDepth--;
+                    }
                 }
             }
         }
@@ -253,7 +263,7 @@ namespace Iot.Device.Common
             Monitor.Enter(_lock);
             try
             {
-                _callbacksBlocked = true;
+                _callbackDepth++;
                 for (int i = 0; i < measurements.Count; i++)
                 {
                     measurements[i].UpdateValue(values[i]);
@@ -263,7 +273,7 @@ namespace Iot.Device.Common
             }
             finally
             {
-                _callbacksBlocked = false;
+                _callbackDepth--;
                 Monitor.Exit(_lock);
             }
         }

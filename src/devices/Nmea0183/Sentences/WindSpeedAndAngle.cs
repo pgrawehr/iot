@@ -29,6 +29,14 @@ namespace Iot.Device.Nmea0183.Sentences
             Relative = relative;
             Angle = angle;
             Valid = true;
+            if (Speed.Unit == UnitsNet.Units.SpeedUnit.Knot)
+            {
+                SpeedUnit = "N";
+            }
+            else
+            {
+                SpeedUnit = "M";
+            }
         }
 
         /// <summary>
@@ -60,14 +68,17 @@ namespace Iot.Device.Nmea0183.Sentences
                 if (unit == "N")
                 {
                     Speed = Speed.FromKnots(speed.Value);
+                    SpeedUnit = unit;
                 }
                 else if (unit == "M")
                 {
                     Speed = Speed.FromMetersPerSecond(speed.Value);
+                    SpeedUnit = unit;
                 }
                 else
                 {
                     Speed = Speed.FromMetersPerSecond(0);
+                    SpeedUnit = "M";
                 }
 
                 if (reference == "T")
@@ -121,6 +132,16 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// Unit of speed: "M" for m/s, "N" for knots.
+        /// The same message is sometimes sent with both units, so we might want to keep the difference.
+        /// </summary>
+        public string SpeedUnit
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
         /// Presents this message as output
         /// </summary>
         public override string ToNmeaMessage()
@@ -129,7 +150,16 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 // It seems that angles should always be written 0..360.
                 var normalized = Angle.Normalize(true);
-                return FormattableString.Invariant($"{normalized.Degrees:F1},{(Relative ? "R" : "T")},{Speed.Knots:F1},N,A");
+                if (SpeedUnit == "N")
+                {
+                    return FormattableString.Invariant(
+                        $"{normalized.Degrees:F1},{(Relative ? "R" : "T")},{Speed.Knots:F1},N,A");
+                }
+                else
+                {
+                    return FormattableString.Invariant(
+                        $"{normalized.Degrees:F1},{(Relative ? "R" : "T")},{Speed.MetersPerSecond:F1},M,A");
+                }
             }
 
             return string.Empty;
@@ -140,13 +170,27 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                if (Relative)
+                if (SpeedUnit == "N")
                 {
-                    return $"Apparent wind direction: {Angle.Degrees:F1}° Speed: {Speed.Knots:F1}Kts";
+                    if (Relative)
+                    {
+                        return $"Apparent wind direction: {Angle.Degrees:F1}° Speed: {Speed.Knots:F1}kts";
+                    }
+                    else
+                    {
+                        return $"Absolute wind direction: {Angle.Degrees:F1}° Speed: {Speed.Knots:F1}kts";
+                    }
                 }
                 else
                 {
-                    return $"Absolute wind direction: {Angle.Degrees:F1}° Speed: {Speed.Knots:F1}Kts";
+                    if (Relative)
+                    {
+                        return $"Apparent wind direction: {Angle.Degrees:F1}° Speed: {Speed.MetersPerSecond:F1}m/s";
+                    }
+                    else
+                    {
+                        return $"Absolute wind direction: {Angle.Degrees:F1}° Speed: {Speed.MetersPerSecond:F1}m/s";
+                    }
                 }
             }
 

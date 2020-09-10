@@ -218,9 +218,9 @@ namespace DisplayControl
 
             WriteLineToConsoleAndDisplay("NMEA Source...");
             _nmeaSensor = new NmeaSensor(_sensorManager);
-            _nmeaSensor.Initialize();
+            _nmeaSensor.Initialize(_fusionEngine);
 
-            WriteLineToConsoleAndDisplay("Motor");
+            WriteLineToConsoleAndDisplay("Motor...");
             _engine = new EngineSurveillance(_sensorManager, 9);
             _engine.Init(Controller);
             _engine.DataChanged += NewEngineData;
@@ -529,8 +529,13 @@ namespace DisplayControl
 
         public void Display2Values(SensorMeasurement valueSourceUpper, SensorMeasurement valueSourceLower)
         {
+            if (valueSourceUpper == null)
+            {
+                valueSourceUpper = SensorMeasurement.CpuTemperature;
+            }
+
             m_lcdConsole.ReplaceLine(0, valueSourceUpper.Name ?? string.Empty);
-            string text = valueSourceUpper?.ToString() ?? string.Empty;
+            string text = valueSourceUpper.ToString();
             if (text.Contains("\n"))
             {
                 m_lcdConsole.SetCursorPosition(0, 1);
