@@ -248,6 +248,18 @@ namespace Iot.Device.Common
             measurement.UpdateValue(newValue);
         }
 
+        public void UpdateValue<T>(SensorMeasurement measurement, T newValue)
+        {
+            if (measurement is CustomData<T> casted)
+            {
+                casted.UpdateValue(newValue);
+            }
+            else
+            {
+                UpdateValue(measurement, (IQuantity)newValue);
+            }
+        }
+
         /// <summary>
         /// Updates all the given measurements with new values before triggering an updated event
         /// </summary>

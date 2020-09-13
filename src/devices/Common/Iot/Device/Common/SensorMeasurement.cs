@@ -76,9 +76,12 @@ namespace Iot.Device.Common
         /// <summary>
         /// True wind direction, fixed orientation (i.e. 0° = from north)
         /// </summary>
-        public static readonly SensorMeasurement WindDirectionAbsolute = new SensorMeasurement("Geographic Wind Direction", Speed.Zero, SensorSource.WindRelative);
+        public static readonly SensorMeasurement WindDirectionAbsolute = new SensorMeasurement("Geographic Wind Direction", Angle.Zero, SensorSource.WindRelative);
 
         public static readonly SensorMeasurement WaterDepth = new SensorMeasurement("Water depth below surface", Length.Zero, SensorSource.WaterAbsolute);
+
+        public static readonly SensorMeasurement WaterTemperature =
+            new SensorMeasurement("Water temperature", Temperature.Zero, SensorSource.WaterAbsolute);
         public static readonly SensorMeasurement SpeedTroughWater = new SensorMeasurement("Speed trough water", Speed.Zero, SensorSource.WaterRelative);
 
         // Prefer an instance of GeographicPosition, but these make things more compatible to the unit system
@@ -102,12 +105,12 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement Roll = new SensorMeasurement("Roll", Angle.FromDegrees(0), SensorSource.Compass);
 
         // Just a bool actually
-        public static readonly SensorMeasurement Engine0On = new SensorMeasurement("Engine 0 operation status", Ratio.Zero, SensorSource.Engine, 0);
+        public static readonly SensorMeasurement Engine0On = new CustomData<bool>("Engine 0 operation status", false, SensorSource.Engine);
         public static readonly SensorMeasurement Engine0Rpm = new SensorMeasurement("Engine 0 RPM", RotationalSpeed.FromRevolutionsPerMinute(0), SensorSource.Engine, 0);
         public static readonly SensorMeasurement Engine0OperatingTime = new SensorMeasurement("Engine 0 operating time", Duration.Zero, SensorSource.Engine, 0);
         public static readonly SensorMeasurement Engine0Temperature = new SensorMeasurement("Engine 0 Temperature", Temperature.Zero, Common.SensorSource.Engine, 0);
 
-        public static readonly SensorMeasurement Engine1On = new SensorMeasurement("Engine 1 operation status", Ratio.Zero, SensorSource.Engine, 1);
+        public static readonly SensorMeasurement Engine1On = new CustomData<bool>("Engine 1 operation status", false, SensorSource.Engine);
         public static readonly SensorMeasurement Engine1Rpm = new SensorMeasurement("Engine 1 RPM", RotationalSpeed.FromRevolutionsPerMinute(0), SensorSource.Engine, 1);
         public static readonly SensorMeasurement Engine1OperatingTime = new SensorMeasurement("Engine 1 operating time", Duration.Zero, SensorSource.Engine, 1);
         public static readonly SensorMeasurement Engine1Temperature = new SensorMeasurement("Engine 1 Temperature", Temperature.Zero, Common.SensorSource.Engine, 1);
@@ -160,7 +163,7 @@ namespace Iot.Device.Common
         /// Retrieves the current value. Use <see cref="UpdateValue(IQuantity)"/> to update the value.
         /// This will return null unless an initial value has been defined.
         /// </summary>
-        public IQuantity Value
+        public virtual IQuantity Value
         {
             get
             {
@@ -239,7 +242,7 @@ namespace Iot.Device.Common
 
             if (_value.Type != value.Type)
             {
-                throw new InvalidOperationException($"This {nameof(SensorMeasurement)} contains {_value.Type}, you cannot change it to {value.Type}.");
+                throw new InvalidOperationException($"The quantity of '{Name}' is {_value.Type}, you cannot change it to {value.Type}.");
             }
 
             _value = value;
@@ -272,7 +275,7 @@ namespace Iot.Device.Common
         {
             if (_measurementStatus.HasFlag(SensorMeasurementStatus.NoData))
             {
-                return "N/A";
+                return string.Empty; // Leave to the client to eventually replace with something like "N/A"
             }
 
             if (CustomFormat != null)

@@ -53,7 +53,6 @@ namespace DisplayControl
 
         private MessageRouter _router;
 
-        private GeographicPosition _position;
         private Stream _streamShip;
         private SerialPort _serialPortShip;
         private Stream _streamHandheld;
@@ -68,6 +67,7 @@ namespace DisplayControl
         private AutopilotController _autopilot;
         private SensorMeasurement _smoothedTrueWindSpeed;
         private SensorMeasurement _maxWindGusts;
+        private CustomData<GeographicPosition> _position;
 
         public NmeaSensor(MeasurementManager manager)
         {
@@ -75,6 +75,7 @@ namespace DisplayControl
             _magneticVariation = null;
             _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.WindTrue);
             _maxWindGusts = new SensorMeasurement("Wind Gusts", Speed.Zero, SensorSource.WindTrue);
+            _position = new CustomData<GeographicPosition>("Geographic Position", new GeographicPosition(), SensorSource.Position);
         }
 
         public IList<FilterRule> ConstructRules()
@@ -242,15 +243,14 @@ namespace DisplayControl
 
         public void Initialize(SensorFusionEngine fusionEngine)
         {
-            _position = new GeographicPosition();
-            
+            _position.UpdateValue(new GeographicPosition());
             _manager.AddRange(new[]
             {
                 SensorMeasurement.WindSpeedAbsolute, SensorMeasurement.WindSpeedApparent, SensorMeasurement.WindSpeedTrue, 
                 SensorMeasurement.WindDirectionAbsolute, SensorMeasurement.WindDirectionApparent, SensorMeasurement.WindDirectionTrue,
-                SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, 
+                SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
-                SensorMeasurement.WaterDepth, SensorMeasurement.SpeedTroughWater, _smoothedTrueWindSpeed, _maxWindGusts
+                SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, _smoothedTrueWindSpeed, _maxWindGusts
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -313,6 +313,28 @@ namespace DisplayControl
                     return list.AverageValue();
                 }, _smoothedTrueWindSpeed);
 
+            // This is the same value
+            fusionEngine.RegisterFusionOperation(new[] { SensorMeasurement.WindSpeedTrue },
+                (args) => (args[0].Value, false), SensorMeasurement.WindSpeedAbsolute, TimeSpan.FromSeconds(3));
+
+            // Calculate true wind direction (in geographic directions) from relative direction.
+            fusionEngine.RegisterFusionOperation(new[] { SensorMeasurement.WindDirectionTrue, SensorMeasurement.Heading },
+                (args) =>
+                {
+                    if (args[0].Status.HasFlag(SensorMeasurementStatus.NoData))
+                    {
+                        return (null, true);
+                    }
+
+                    if (args[0].TryGetAs(out Angle dir) && args[1].TryGetAs(out Angle hdg))
+                    {
+                        Angle result = (dir + hdg).Normalize(true);
+                        return (result, false);
+                    }
+
+                    return (null, false);
+                }, SensorMeasurement.WindDirectionAbsolute, TimeSpan.FromSeconds(3));
+
             fusionEngine.RegisterHistoryOperation(SensorMeasurement.WindSpeedTrue,
                 (input, manager) =>
                 {
@@ -342,7 +364,7 @@ namespace DisplayControl
                         }
 
                         _lastGgaMessage = gga;
-                        _position = gga.Position;
+                        _position.UpdateValue(gga.Position);
                         _manager.UpdateValues(new[] { SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid },
                             new IQuantity[] { Angle.FromDegrees(gga.LatitudeDegrees.GetValueOrDefault(0)), Angle.FromDegrees(gga.LongitudeDegrees.GetValueOrDefault(0)),
                                 Length.FromMeters(gga.EllipsoidAltitude.GetValueOrDefault(0)), Length.FromMeters(gga.GeoidAltitude.GetValueOrDefault(0)) });
@@ -393,6 +415,20 @@ namespace DisplayControl
 
                 case WaterSpeedAndAngle vhw when vhw.Valid:
                     _manager.UpdateValue(SensorMeasurement.SpeedTroughWater, vhw.Speed);
+                    break;
+
+                case TransducerMeasurement xdr when xdr.Valid:
+                    foreach(var ds in xdr.DataSets)
+                    {
+                        if (ds.DataName == "ENV_WATER_T")
+                        {
+                            Temperature? temp = ds.AsTemperature();
+                            if (temp.HasValue)
+                            {
+                                _manager.UpdateValue(SensorMeasurement.WaterTemperature, temp);
+                            }
+                        }
+                    }
                     break;
             }
         }

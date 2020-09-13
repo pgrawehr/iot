@@ -201,7 +201,8 @@ namespace DisplayControl
             Check(_engineOn == true);
             Check(_engineOperatingTime.Value > TimeSpan.Zero);
             Check(_rpm > 0);
-            Check(_rpm > 2400 && _rpm < 7000);
+            // When in debug mode, this may be quite small
+            Check(_rpm > 1000 && _rpm < 7000);
             _engineOn = false;
             _rpm = 0;
             Check(_engineOn == false);
@@ -310,7 +311,7 @@ namespace DisplayControl
             }
             // Final step: Send values to UI
             Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
-            Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn ? Ratio.FromPercent(100) : Ratio.Zero);
+            Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn);
             TimeSpan timeSinceRefill = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
             Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
                 new IQuantity[] { Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds).ToUnit(DurationUnit.Hour), Duration.FromSeconds(timeSinceRefill.TotalSeconds).ToUnit(DurationUnit.Hour) });

@@ -498,7 +498,7 @@ namespace DisplayControl
                 }
             }
 
-            if (source == SensorMeasurement.AirHumidityInside)
+            if (source == SensorMeasurement.AirHumidityOutside)
             {
                 if (source.TryGetAs(out Ratio humidity))
                 {
@@ -512,10 +512,20 @@ namespace DisplayControl
         {
             if (valueSource == null)
             {
-                m_bigValueDisplay.DisplayValue("N/A");
+                m_bigValueDisplay.DisplayValue("No data");
                 return;
             }
-            string text = valueSource.ToString() + valueSource.Value.ToString("a", CultureInfo.CurrentCulture);
+
+            string text = valueSource.ToString();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                text = "No data";
+            }
+            else
+            {
+                text += valueSource.Value?.ToString("a", CultureInfo.CurrentCulture);
+            }
+
             if (m_timer.Elapsed < TimeSpan.FromSeconds(3))
             {
                 // Display the value description for 3 seconds after changing
