@@ -138,7 +138,7 @@ namespace Iot.Device.Nmea0183
             byte[] buffer = _encoding.GetBytes(dataToSend);
             try
             {
-                _dataSink.Write(buffer);
+                _dataSink?.Write(buffer);
             }
             catch (ObjectDisposedException)
             {

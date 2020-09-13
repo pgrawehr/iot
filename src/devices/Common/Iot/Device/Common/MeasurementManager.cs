@@ -276,12 +276,16 @@ namespace Iot.Device.Common
             try
             {
                 _callbackDepth++;
+                bool anyValueChanged = false;
                 for (int i = 0; i < measurements.Count; i++)
                 {
-                    measurements[i].UpdateValue(values[i]);
+                    anyValueChanged |= measurements[i].UpdateValue(values[i]);
                 }
 
-                AnyMeasurementChanged?.Invoke(measurements);
+                if (anyValueChanged)
+                {
+                    AnyMeasurementChanged?.Invoke(measurements);
+                }
             }
             finally
             {

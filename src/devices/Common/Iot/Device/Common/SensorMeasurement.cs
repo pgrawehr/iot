@@ -217,9 +217,10 @@ namespace Iot.Device.Common
         /// <param name="value">The new value. Pass null to indicate that there's no valid measurement any more (i.e.
         /// the sensor doesn't work for some reason and we want to pass this information to the user instead of keeping
         /// the last good value).</param>
-        public void UpdateValue(IQuantity value)
+        /// <returns>True when the new value is different from the old</returns>
+        public bool UpdateValue(IQuantity value)
         {
-            UpdateValue(value, SensorMeasurementStatus.None);
+            return UpdateValue(value, SensorMeasurementStatus.None);
         }
 
         /// <summary>
@@ -230,14 +231,21 @@ namespace Iot.Device.Common
         /// the sensor doesn't work for some reason and we want to pass this information to the user instead of keeping
         /// the last good value).</param>
         /// <param name="status">Status of new measurement. NoData is automatically added if null is passed as <paramref name="value"/>.</param>
-        public void UpdateValue(IQuantity value, SensorMeasurementStatus status)
+        /// <returns>True if the new value is different from the old</returns>
+        public bool UpdateValue(IQuantity value, SensorMeasurementStatus status)
         {
             if (value == null)
             {
-                _measurementStatus = SensorMeasurementStatus.NoData | status;
-                OnPropertyChanged(nameof(Value));
-                ValueChanged?.Invoke(this);
-                return;
+                SensorMeasurementStatus newStatus = SensorMeasurementStatus.NoData | status;
+                if (newStatus != _measurementStatus)
+                {
+                    _measurementStatus = newStatus;
+                    OnPropertyChanged(nameof(Value));
+                    ValueChanged?.Invoke(this);
+                    return true;
+                }
+
+                return false;
             }
 
             if (_value.Type != value.Type)
@@ -245,10 +253,16 @@ namespace Iot.Device.Common
                 throw new InvalidOperationException($"The quantity of '{Name}' is {_value.Type}, you cannot change it to {value.Type}.");
             }
 
-            _value = value;
-            _measurementStatus = status;
-            OnPropertyChanged(nameof(Value));
-            ValueChanged?.Invoke(this);
+            if (!value.Equals(_value) || status != _measurementStatus)
+            {
+                _value = value;
+                _measurementStatus = status;
+                OnPropertyChanged(nameof(Value));
+                ValueChanged?.Invoke(this);
+                return true;
+            }
+
+            return false;
         }
 
         public bool TryGetAs<T>(out T convertedValue)
