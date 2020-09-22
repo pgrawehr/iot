@@ -217,10 +217,9 @@ namespace Iot.Device.Common
         /// <param name="value">The new value. Pass null to indicate that there's no valid measurement any more (i.e.
         /// the sensor doesn't work for some reason and we want to pass this information to the user instead of keeping
         /// the last good value).</param>
-        /// <returns>True when the new value is different from the old</returns>
-        public bool UpdateValue(IQuantity value)
+        public void UpdateValue(IQuantity value)
         {
-            return UpdateValue(value, SensorMeasurementStatus.None);
+            UpdateValue(value, SensorMeasurementStatus.None);
         }
 
         /// <summary>
@@ -231,8 +230,7 @@ namespace Iot.Device.Common
         /// the sensor doesn't work for some reason and we want to pass this information to the user instead of keeping
         /// the last good value).</param>
         /// <param name="status">Status of new measurement. NoData is automatically added if null is passed as <paramref name="value"/>.</param>
-        /// <returns>True if the new value is different from the old</returns>
-        public bool UpdateValue(IQuantity value, SensorMeasurementStatus status)
+        public void UpdateValue(IQuantity value, SensorMeasurementStatus status)
         {
             if (value == null)
             {
@@ -241,11 +239,12 @@ namespace Iot.Device.Common
                 {
                     _measurementStatus = newStatus;
                     OnPropertyChanged(nameof(Value));
-                    ValueChanged?.Invoke(this);
-                    return true;
                 }
 
-                return false;
+                // Note: Must not skip this callback, even if nothing changed. Some functions (i.e. keeping a history
+                // of old values) must get the callback even if the same value is measured multiple times.
+                ValueChanged?.Invoke(this);
+                return;
             }
 
             if (_value.Type != value.Type)
@@ -258,11 +257,9 @@ namespace Iot.Device.Common
                 _value = value;
                 _measurementStatus = status;
                 OnPropertyChanged(nameof(Value));
-                ValueChanged?.Invoke(this);
-                return true;
             }
 
-            return false;
+            ValueChanged?.Invoke(this);
         }
 
         public bool TryGetAs<T>(out T convertedValue)
