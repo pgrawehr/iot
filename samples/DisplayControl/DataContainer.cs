@@ -187,11 +187,9 @@ namespace DisplayControl
                 WriteLineToConsoleAndDisplay("Remote display not connected: " + x.Message);
             }
 
-            //WriteLineToConsoleAndDisplay("DHT...");
-            //m_dhtSensors = new DhtSensors();
-            //m_dhtSensors.Init(Controller);
-
-            //allSources.AddRange(m_dhtSensors.SensorValueSources);
+            WriteLineToConsoleAndDisplay("DHT...");
+            _dhtSensors = new DhtSensors(_sensorManager);
+            _dhtSensors.Init(Controller);
 
             WriteLineToConsoleAndDisplay("Wetter...");
             _weatherSensor = new Bmp680Environment(_sensorManager);
