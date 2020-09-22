@@ -316,7 +316,16 @@ namespace DisplayControl
             Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
                 new IQuantity[] { Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds).ToUnit(DurationUnit.Hour), Duration.FromSeconds(timeSinceRefill.TotalSeconds).ToUnit(DurationUnit.Hour) });
 
-            var msg = new EngineData(0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100), _engineOperatingTime.Value); // Pitch unknown so far
+            Temperature engineTemp;
+
+            if (!SensorMeasurement.Engine0Temperature.TryGetAs(out engineTemp))
+            {
+                // Obviously wrong value
+                engineTemp = Temperature.FromKelvins(0);
+            }
+
+            var msg = new EngineData(0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100),
+                _engineOperatingTime.Value, engineTemp); // Pitch unknown so far
             DataChanged?.Invoke(msg);
         }
 

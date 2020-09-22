@@ -32,12 +32,12 @@ namespace Iot.Device.DHTxx
         /// <summary>
         /// I2C device used to communicate with the device
         /// </summary>
-        protected readonly I2cDevice _i2cDevice;
+        protected I2cDevice _i2cDevice;
 
         /// <summary>
         /// <see cref="GpioController"/> related with the <see cref="_pin"/>.
         /// </summary>
-        protected readonly GpioController _controller;
+        protected GpioController _controller;
 
         // wait about 1 ms
         private readonly uint _loopCount = 10000;
@@ -93,7 +93,6 @@ namespace Iot.Device.DHTxx
             _protocol = CommunicationProtocol.OneWire;
             _shouldDispose = gpioController == null ? true : shouldDispose;
             _controller = gpioController ?? new GpioController(pinNumberingScheme);
-            _shouldDispose = true;
             _pin = pin;
 
             _controller.OpenPin(_pin);
@@ -299,10 +298,12 @@ namespace Iot.Device.DHTxx
             }
             else
             {
-                _controller.ClosePin(_pin);
+                _controller?.ClosePin(_pin);
             }
 
             _i2cDevice?.Dispose();
+            _controller = null;
+            _i2cDevice = null;
         }
     }
 }

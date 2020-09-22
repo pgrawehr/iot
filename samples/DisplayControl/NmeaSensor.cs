@@ -630,12 +630,16 @@ namespace DisplayControl
             // Status = 0 is ok, anything else seems to indicate a fault
             int status = rpm != 0 ? 0 : 1;
             string statusString = status.ToString("X4", CultureInfo.InvariantCulture);
+            int engineTempKelvin = (int)(engineData.EngineTemperature.Kelvins * 100.0);
+            string engineTempString = engineTempKelvin.ToString("X4", CultureInfo.InvariantCulture);
+            // Seems to require a little endian conversion as well
+            engineTempString = engineTempString.Substring(2, 2) + engineTempString.Substring(0, 2);
             rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
             {
                 "01F201",
                 timeStampText,
                 "02",
-                engineNoText + "0000FFFF407F00050000" + swappedString + "FFFF000000" + statusString + "00007F7F"
+                engineNoText + "0000FFFF" + engineTempString + "00050000" + swappedString + "FFFF000000" + statusString + "00007F7F"
             }, DateTimeOffset.UtcNow);
             _router.SendSentence(rs);
         }

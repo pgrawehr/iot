@@ -9,12 +9,13 @@ namespace DisplayControl
 {
     public class EngineData
     {
-        public EngineData(int engineNo, RotationalSpeed revolutions, Ratio pitch, TimeSpan operatingTime)
+        public EngineData(int engineNo, RotationalSpeed revolutions, Ratio pitch, TimeSpan operatingTime, Temperature engineTemperature)
         {
             EngineNo = engineNo;
             Revolutions = revolutions;
             Pitch = pitch;
             OperatingTime = operatingTime;
+            EngineTemperature = engineTemperature;
         }
 
         public int EngineNo
@@ -33,6 +34,11 @@ namespace DisplayControl
         }
 
         public TimeSpan OperatingTime
+        {
+            get;
+        }
+
+        public Temperature EngineTemperature
         {
             get;
         }
