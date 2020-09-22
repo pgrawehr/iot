@@ -88,21 +88,21 @@ namespace DisplayControl
             try
             {
                 // First, read all four inputs with the led off (default)
-                double b1Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0).Volts;
-                double b2Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1).Volts;
-                double b3Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2).Volts;
-                double b4Low = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3).Volts;
+                double b1Low = RetryableReadAdc(InputMultiplexer.AIN0);
+                double b2Low = RetryableReadAdc(InputMultiplexer.AIN1);
+                double b3Low = RetryableReadAdc(InputMultiplexer.AIN2);
+                double b4Low = RetryableReadAdc(InputMultiplexer.AIN3);
                 _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.High);
                 // Then read them again, now with the reflection led on
-                double b1High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN0).Volts;
-                double b2High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN1).Volts;
-                double b3High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN2).Volts;
-                double b4High = m_displayAdc.ReadVoltage(InputMultiplexer.AIN3).Volts;
+                double b1High = RetryableReadAdc(InputMultiplexer.AIN0);
+                double b2High = RetryableReadAdc(InputMultiplexer.AIN1);
+                double b3High = RetryableReadAdc(InputMultiplexer.AIN2);
+                double b4High = RetryableReadAdc(InputMultiplexer.AIN3);
                 _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
                 double averageLow = (b1Low + b2Low + b3Low + b4Low) / 4;
                 double averageHigh = (b1High + b2High + b3High + b4High) / 4;
                 bool sunIsShining = averageLow > 0.9;
-                // Todo: find out which button might be pressed (obstructed)
+                // Find out which button might be pressed (obstructed)
                 // if the low average is high the LED might not have an effect at all. 
                 // if the low average equals the high average, the led has no effect (or is broken)
                 if (!sunIsShining)
@@ -148,7 +148,9 @@ namespace DisplayControl
                     _button4.UpdateValue(ElectricPotential.FromVolts(-b4Low));
                     // Disable the green led 5, meaning the display is locked.
                     _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.Low);
-                    /* Disabled - not reliable enough (causes many random button presses)
+                    /* This intends to do the opposite from the normal behavior: If all sensors get a lot of light,
+                     the one that gets the least is probably obstructed.
+                     Disabled - not reliable enough (causes many random button presses)
                     const double lowThreshold = 0.5;
                     double bt1Delta = b1Low - (b2Low + b3Low + b4Low) / 3;
                     double bt2Delta = b2Low - (b1Low + b3Low + b4Low) / 3;
@@ -188,6 +190,28 @@ namespace DisplayControl
 
             _count++;
 
+        }
+
+        private double RetryableReadAdc(InputMultiplexer mpx)
+        {
+            int retries = 3;
+            while(true)
+            {
+                try
+                {
+                    double result = m_displayAdc.ReadVoltage(mpx).Volts;
+                    return result;
+                }
+                catch(IOException)
+                {
+                    if (retries <= 0)
+                    {
+                        throw;
+                    }
+                }
+
+                retries--;
+            }
         }
 
         private void SendButtonPressedIfOk(DisplayButton button)
