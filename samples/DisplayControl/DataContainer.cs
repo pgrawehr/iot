@@ -22,27 +22,27 @@ namespace DisplayControl
 {
     public class DataContainer
     {
-        I2cDevice m_displayDevice = null;
-        ICharacterLcd m_characterLcd = null;
-        LcdConsole m_lcdConsole = null;
+        I2cDevice _displayDevice = null;
+        ICharacterLcd _characterLcd = null;
+        LcdConsole _lcdConsole = null;
         AdcSensors _adcSensors = null;
         private SensorFusionEngine _fusionEngine;
         private ExtendedDisplayController _extendedDisplayController;
-        private bool m_lcdConsoleActive;
-        private SensorMeasurement m_activeValueSourceUpper;
-        private SensorMeasurement m_activeValueSourceLower;
-        private SensorMeasurement m_activeValueSourceSingle;
-        private List<SensorMeasurement> m_sensorsWithErrors;
+        private bool _lcdConsoleActive;
+        private SensorMeasurement _activeValueSourceUpper;
+        private SensorMeasurement _activeValueSourceLower;
+        private SensorMeasurement _activeValueSourceSingle;
+        private List<SensorMeasurement> _sensorsWithErrors;
 
         private MeasurementManager _sensorManager;
-        private DhtSensors m_dhtSensors;
-        private SystemSensors m_systemSensors;
-        private Bmp280Environment m_pressureSensor;
+        private DhtSensors _dhtSensors;
+        private SystemSensors _systemSensors;
+        private Bmp280Environment _pressureSensor;
         private ImuSensor _imuSensor;
         private NmeaSensor _nmeaSensor;
-        private CultureInfo m_activeEncoding;
-        private LcdValueUnitDisplay m_bigValueDisplay;
-        private Stopwatch m_timer;
+        private CultureInfo _activeEncoding;
+        private LcdValueUnitDisplay _bigValueDisplay;
+        private Stopwatch _timer;
         private int _numberOfImuSentencesSent = 0;
         private bool _menuMode;
         private MenuController _menuController;
@@ -64,14 +64,14 @@ namespace DisplayControl
             _extendedDisplayController = null;
             _sensorManager = new MeasurementManager();
             _fusionEngine = new SensorFusionEngine(_sensorManager);
-            m_sensorsWithErrors = new List<SensorMeasurement>();
-            m_activeValueSourceUpper = null;
-            m_activeValueSourceLower = null;
-            m_activeValueSourceSingle = null;
-            m_lcdConsoleActive = true;
-            m_bigValueDisplay = null;
-            m_timer = new Stopwatch();
-            m_activeEncoding = CultureInfo.CreateSpecificCulture("de-CH");
+            _sensorsWithErrors = new List<SensorMeasurement>();
+            _activeValueSourceUpper = null;
+            _activeValueSourceLower = null;
+            _activeValueSourceSingle = null;
+            _lcdConsoleActive = true;
+            _bigValueDisplay = null;
+            _timer = new Stopwatch();
+            _activeEncoding = CultureInfo.CreateSpecificCulture("de-CH");
             _menuMode = false;
         }
 
@@ -83,14 +83,14 @@ namespace DisplayControl
         {
             get
             {
-                return m_activeValueSourceUpper;
+                return _activeValueSourceUpper;
             }
             set
             {
-                if (value != m_activeValueSourceUpper)
+                if (value != _activeValueSourceUpper)
                 {
-                    m_activeValueSourceUpper = value;
-                    m_activeValueSourceSingle = null;
+                    _activeValueSourceUpper = value;
+                    _activeValueSourceSingle = null;
                     // Immediately show the new value
                     OnSensorValueChanged(value);
                 }
@@ -101,14 +101,14 @@ namespace DisplayControl
         {
             get
             {
-                return m_activeValueSourceLower;
+                return _activeValueSourceLower;
             }
             set
             {
-                if (value != m_activeValueSourceLower)
+                if (value != _activeValueSourceLower)
                 {
-                    m_activeValueSourceLower = value;
-                    m_activeValueSourceSingle = null;
+                    _activeValueSourceLower = value;
+                    _activeValueSourceSingle = null;
                     // Immediately show the new value
                     OnSensorValueChanged(value);
                 }
@@ -119,63 +119,49 @@ namespace DisplayControl
         {
             get
             {
-                return m_activeValueSourceSingle;
+                return _activeValueSourceSingle;
             }
             set
             {
-                if (value != m_activeValueSourceSingle)
+                if (value != _activeValueSourceSingle)
                 {
-                    m_activeValueSourceSingle = value;
-                    m_activeValueSourceUpper = null;
-                    m_activeValueSourceLower = null;
-                    m_timer.Restart();
+                    _activeValueSourceSingle = value;
+                    _activeValueSourceUpper = null;
+                    _activeValueSourceLower = null;
+                    _timer.Restart();
                     // Immediately show the new value
                     OnSensorValueChanged(value);
                 }
             }
         }
 
-        private void NewSensorValueSource(SensorMeasurement newValue)
-        {
-            if (m_lcdConsoleActive)
-            {
-                m_lcdConsole.Clear();
-            }
-            else
-            {
-                m_bigValueDisplay.Clear();
-            }
-
-            OnSensorValueChanged(newValue);
-        }
-
         private void InitializeDisplay()
         {
-            m_displayDevice = I2cDevice.Create(new I2cConnectionSettings(1, 0x27));
-            var lcdInterface = LcdInterface.CreateI2c(m_displayDevice, false);
-            m_characterLcd = new Lcd2004(lcdInterface);
+            _displayDevice = I2cDevice.Create(new I2cConnectionSettings(1, 0x27));
+            var lcdInterface = LcdInterface.CreateI2c(_displayDevice, false);
+            _characterLcd = new Lcd2004(lcdInterface);
 
-            m_characterLcd.UnderlineCursorVisible = false;
-            m_characterLcd.BacklightOn = true;
-            m_characterLcd.DisplayOn = true;
-            m_characterLcd.Clear();
-            m_lcdConsole = new LcdConsole(m_characterLcd, "A00", false);
+            _characterLcd.UnderlineCursorVisible = false;
+            _characterLcd.BacklightOn = true;
+            _characterLcd.DisplayOn = true;
+            _characterLcd.Clear();
+            _lcdConsole = new LcdConsole(_characterLcd, "A00", false);
             LoadEncoding();
-            m_lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
-            m_lcdConsole.Clear();
-            m_lcdConsole.WriteLine("== Startup ==");
-            m_lcdConsoleActive = true;
+            _lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
+            _lcdConsole.Clear();
+            _lcdConsole.WriteLine("== Startup ==");
+            _lcdConsoleActive = true;
             _menuController = new MenuController(this);
             _menuMode = false;
-            m_bigValueDisplay = new LcdValueUnitDisplay(m_characterLcd, m_activeEncoding);
+            _bigValueDisplay = new LcdValueUnitDisplay(_characterLcd, _activeEncoding);
         }
 
         private void InitializeSensors()
         {
             Thread.CurrentThread.Name = "Main Thread";
             WriteLineToConsoleAndDisplay("CPU...");
-            m_systemSensors = new SystemSensors(_sensorManager);
-            m_systemSensors.Init(Controller);
+            _systemSensors = new SystemSensors(_sensorManager);
+            _systemSensors.Init(Controller);
             _configFile = new PersistenceFile("/home/pi/projects/ShipLogs/NavigationConfig.txt");
 
             WriteLineToConsoleAndDisplay("Display controller...");
@@ -192,8 +178,8 @@ namespace DisplayControl
                 _adcSensors.ButtonPressed += DisplayButtonPressed;
 
                 WriteLineToConsoleAndDisplay("Cockpit Environment...");
-                m_pressureSensor = new Bmp280Environment(_sensorManager);
-                m_pressureSensor.Init(Controller);
+                _pressureSensor = new Bmp280Environment(_sensorManager);
+                _pressureSensor.Init(Controller);
                 WriteLineToConsoleAndDisplay("Remote display connected and ready");
             }
             catch (IOException x)
@@ -248,9 +234,9 @@ namespace DisplayControl
         private void WriteLineToConsoleAndDisplay(string text)
         {
             Console.WriteLine(text);
-            if (m_lcdConsoleActive)
+            if (_lcdConsoleActive)
             {
-                m_lcdConsole?.WriteLine(text);
+                _lcdConsole?.WriteLine(text);
             }
         }
 
@@ -289,7 +275,7 @@ namespace DisplayControl
                     _menuMode = false;
                     // Make sure the display is blank
                     SwitchToConsoleMode();
-                    m_lcdConsole.Clear();
+                    _lcdConsole.Clear();
                     if (ActiveValueSourceSingle != null)
                     {
                         OnSensorValueChanged(ActiveValueSourceSingle);
@@ -355,15 +341,15 @@ namespace DisplayControl
                 // _extendedDisplayController.DecreaseBrightness(10);
             }
 
-            if (button == DisplayButton.Enter && m_lcdConsoleActive && m_activeValueSourceLower != null)
+            if (button == DisplayButton.Enter && _lcdConsoleActive && _activeValueSourceLower != null)
             {
-                SwitchToBigMode(m_activeValueSourceLower);
+                SwitchToBigMode(_activeValueSourceLower);
             }
 
             if (ActiveValueSourceSingle != null)
             {
                 ActiveValueSourceSingle = sourceToChange;
-                m_timer.Restart();
+                _timer.Restart();
             }
             else
             {
@@ -394,51 +380,56 @@ namespace DisplayControl
                 return;
             }
 
-            if (m_activeValueSourceUpper == newMeasurement || m_activeValueSourceLower == newMeasurement)
+            if (_activeValueSourceUpper == newMeasurement || _activeValueSourceLower == newMeasurement)
             {
                 SwitchToConsoleMode();
-                Display2Values(m_activeValueSourceUpper, m_activeValueSourceLower);
+                Display2Values(_activeValueSourceUpper, _activeValueSourceLower);
                 return;
             }
-            else if (m_activeValueSourceSingle == newMeasurement)
+            else if (_activeValueSourceSingle == newMeasurement)
             {
-                SwitchToBigMode(m_activeValueSourceSingle);
-                DisplayBigValue(m_activeValueSourceSingle);
+                SwitchToBigMode(_activeValueSourceSingle);
+                DisplayBigValue(_activeValueSourceSingle);
             }
         }
 
         private void SwitchToBigMode(SensorMeasurement withValue)
         {
-            m_activeValueSourceUpper = m_activeValueSourceLower = null;
-            m_activeValueSourceSingle = withValue;
-            if (m_lcdConsoleActive)
+            _activeValueSourceUpper = _activeValueSourceLower = null;
+            if (_activeValueSourceSingle != withValue)
             {
-                m_bigValueDisplay.InitForRom("A00");
-                m_bigValueDisplay.Clear();
-                m_lcdConsoleActive = false;
+                _activeValueSourceSingle = withValue;
+                _timer.Restart();
+            }
+            
+            if (_lcdConsoleActive)
+            {
+                _bigValueDisplay.InitForRom("A00");
+                _bigValueDisplay.Clear();
+                _lcdConsoleActive = false;
             }
         }
 
         private void SwitchToConsoleMode()
         {
-            if (!m_lcdConsoleActive)
+            if (!_lcdConsoleActive)
             {
                 LoadEncoding();
-                m_lcdConsole.Clear();
-                m_lcdConsoleActive = true;
+                _lcdConsole.Clear();
+                _lcdConsoleActive = true;
             }
         }
 
         private void SwitchToConsoleMode(SensorMeasurement upper, SensorMeasurement lower)
         {
-            m_activeValueSourceSingle = null;
-            m_activeValueSourceUpper = upper;
-            m_activeValueSourceLower = lower;
-            if (!m_lcdConsoleActive)
+            _activeValueSourceSingle = null;
+            _activeValueSourceUpper = upper;
+            _activeValueSourceLower = lower;
+            if (!_lcdConsoleActive)
             {
                 LoadEncoding();
-                m_lcdConsole.Clear();
-                m_lcdConsoleActive = true;
+                _lcdConsole.Clear();
+                _lcdConsoleActive = true;
             }
         }
 
@@ -453,21 +444,21 @@ namespace DisplayControl
                 return;
             }
 
-            lock (m_sensorsWithErrors)
+            lock (_sensorsWithErrors)
             {
                 if (source.Status.HasFlag(SensorMeasurementStatus.Warning))
                 {
-                    if (!m_sensorsWithErrors.Contains(source))
+                    if (!_sensorsWithErrors.Contains(source))
                     {
-                        m_sensorsWithErrors.Add(source);
+                        _sensorsWithErrors.Add(source);
                         _extendedDisplayController.SoundAlarm(true);
                         ActiveValueSourceSingle = source;
                     }
                 }
-                else if (m_sensorsWithErrors.Contains(source))
+                else if (_sensorsWithErrors.Contains(source))
                 {
-                    m_sensorsWithErrors.RemoveAll(x => x == source);
-                    if (m_sensorsWithErrors.Count == 0)
+                    _sensorsWithErrors.RemoveAll(x => x == source);
+                    if (_sensorsWithErrors.Count == 0)
                     {
                         _extendedDisplayController.SoundAlarm(false);
                     }
@@ -512,7 +503,7 @@ namespace DisplayControl
         {
             if (valueSource == null)
             {
-                m_bigValueDisplay.DisplayValue("No data");
+                _bigValueDisplay.DisplayValue("No data");
                 return;
             }
 
@@ -526,14 +517,14 @@ namespace DisplayControl
                 text += valueSource.Value?.ToString("a", CultureInfo.CurrentCulture);
             }
 
-            if (m_timer.Elapsed < TimeSpan.FromSeconds(3))
+            if (_timer.Elapsed < TimeSpan.FromSeconds(3))
             {
                 // Display the value description for 3 seconds after changing
-                m_bigValueDisplay.DisplayValue(text, valueSource.Name);
+                _bigValueDisplay.DisplayValue(text, valueSource.Name);
             }
             else
             {
-                m_bigValueDisplay.DisplayValue(text);
+                _bigValueDisplay.DisplayValue(text);
             }
         }
 
@@ -544,20 +535,20 @@ namespace DisplayControl
                 valueSourceUpper = SensorMeasurement.CpuTemperature;
             }
 
-            m_lcdConsole.ReplaceLine(0, valueSourceUpper.Name ?? string.Empty);
+            _lcdConsole.ReplaceLine(0, valueSourceUpper.Name ?? string.Empty);
             string text = valueSourceUpper.ToString();
             if (text.Contains("\n"))
             {
-                m_lcdConsole.SetCursorPosition(0, 1);
-                m_lcdConsole.Write(text);
+                _lcdConsole.SetCursorPosition(0, 1);
+                _lcdConsole.Write(text);
             }
             else
             {
-                m_lcdConsole.ReplaceLine(1, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceUpper.Unit));
+                _lcdConsole.ReplaceLine(1, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceUpper.Unit));
                 // Only if the first entry is a 1-liner
                 if (valueSourceLower != null)
                 {
-                    m_lcdConsole.ReplaceLine(2, valueSourceLower.Name);
+                    _lcdConsole.ReplaceLine(2, valueSourceLower.Name);
                     text = valueSourceLower.ToString();
                     if (text.Contains("\n"))
                     {
@@ -565,7 +556,7 @@ namespace DisplayControl
                         text = text.Replace("\n", " ", StringComparison.OrdinalIgnoreCase);
                     }
 
-                    m_lcdConsole.ReplaceLine(3, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceLower.Unit));
+                    _lcdConsole.ReplaceLine(3, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceLower.Unit));
                 }
             }
         }
@@ -574,8 +565,8 @@ namespace DisplayControl
         {
             InitializeDisplay();
             InitializeSensors();
-            m_lcdConsole.Clear();
-            m_lcdConsole.ReplaceLine(0, "Startup successful");
+            _lcdConsole.Clear();
+            _lcdConsole.ReplaceLine(0, "Startup successful");
         }
 
         /// <summary>
@@ -583,24 +574,24 @@ namespace DisplayControl
         /// </summary>
         public void LoadEncoding()
         {
-            m_lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(m_activeEncoding, "A00"));
+            _lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(_activeEncoding, "A00"));
         }
 
         public void ShutDown()
         {
-            m_lcdConsole.Clear();
-            m_lcdConsole.BacklightOn = false;
-            m_lcdConsole.DisplayOn = false;
-            m_lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
+            _lcdConsole.Clear();
+            _lcdConsole.BacklightOn = false;
+            _lcdConsole.DisplayOn = false;
+            _lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
             _sensorManager.AnyMeasurementChanged -= OnSensorValueChanged;
 
             _adcSensors.Dispose();
             _adcSensors = null;
-            m_dhtSensors?.Dispose();
-            m_dhtSensors = null;
+            _dhtSensors?.Dispose();
+            _dhtSensors = null;
 
-            m_pressureSensor?.Dispose();
-            m_pressureSensor = null;
+            _pressureSensor?.Dispose();
+            _pressureSensor = null;
 
             _weatherSensor?.Dispose();
             _weatherSensor = null;
@@ -617,12 +608,12 @@ namespace DisplayControl
             _extendedDisplayController.Dispose();
             _extendedDisplayController = null;
 
-            m_lcdConsole.Dispose();
-            m_lcdConsole = null;
-            m_characterLcd.Dispose();
-            m_characterLcd = null;
-            m_displayDevice.Dispose();
-            m_displayDevice = null;
+            _lcdConsole.Dispose();
+            _lcdConsole = null;
+            _characterLcd.Dispose();
+            _characterLcd = null;
+            _displayDevice.Dispose();
+            _displayDevice = null;
         }
 
         private sealed class MenuController
@@ -638,7 +629,7 @@ namespace DisplayControl
             public MenuController(DataContainer control)
             {
                 _control = control;
-                _console = control.m_lcdConsole;
+                _console = control._lcdConsole;
                 _title = string.Empty;
                 _subMenuActive = false;
                 _activeItem = 0;
