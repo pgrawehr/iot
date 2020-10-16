@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>Iot.Device.Arduino.Sample</RootNamespace>
-    <EnableDefaultItems>false</EnableDefaultItems>
+	<EnableDefaultItems>false</EnableDefaultItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,14 +12,17 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Compile Include="Arduino.sample.cs" />
+    <Compile Include="CharacterDisplay.cs" />
+	<Compile Include="Arduino.Monitor.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <!--Cases used when running in VS, with the solution config either Windows-Debug or Linux-Debug (or -Release) -->
     <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
     <ProjectReference Include="..\..\Bmxx80\Bmxx80.csproj" />
+    <ProjectReference Include="..\..\CharacterLcd\CharacterLcd.csproj" />
     <ProjectReference Include="..\..\Common\Iot\Device\Common\CommonHelpers.csproj" />
+    <ProjectReference Include="..\..\CpuTemperature\CpuTemperature.csproj" />
     <ProjectReference Include="..\..\Mcp3xxx\Mcp3xxx.csproj" />
     <ProjectReference Include="..\Arduino.csproj" />
   </ItemGroup>

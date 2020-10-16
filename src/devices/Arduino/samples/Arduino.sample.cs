@@ -16,17 +16,14 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Adc;
 using Iot.Device.Arduino;
-using Iot.Device.Arduino.Sample;
 using Iot.Device.Bmxx80;
 using Iot.Device.Bmxx80.PowerMode;
-using Iot.Device.Common;
-using Iot.Device.CpuTemperature;
 using UnitsNet;
 
-namespace Ft4222.Samples
+namespace Arduino.Samples
 {
     /// <summary>
-    /// Sample application for Ft4222
+    /// Test application for Arduino/Firmata protocol
     /// </summary>
     internal class Program
     {
@@ -101,7 +98,6 @@ namespace Ft4222.Samples
             Console.WriteLine(" 9 Run SPI tests with an MCP3008 (experimental)");
             Console.WriteLine(" 0 Detect all devices on the I2C bus");
             Console.WriteLine(" H Read DHT11 Humidity sensor on GPIO 3 (experimental)");
-            Console.WriteLine(" D Use a display");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
@@ -145,10 +141,6 @@ namespace Ft4222.Samples
                 case 'x':
                 case 'X':
                     return false;
-                case 'd':
-                case 'D':
-                    TestDisplay(board);
-                    break;
             }
 
             return true;
@@ -486,220 +478,6 @@ namespace Ft4222.Samples
             }
 
             Console.ReadKey();
-        }
-
-        public static void TestDisplay(ArduinoBoard board)
-        {
-            const int Gpio2 = 2;
-            const int MaxMode = 10;
-            const double StationAltitude = 650;
-            int mode = 0;
-            var gpioController = board.CreateGpioController(PinNumberingScheme.Board);
-            gpioController.OpenPin(Gpio2);
-            gpioController.SetPinMode(Gpio2, PinMode.Input);
-            CharacterDisplay disp = new CharacterDisplay(board);
-            Console.WriteLine("Display output test");
-            Console.WriteLine("The button on GPIO 2 changes modes");
-            Console.WriteLine("Press x to exit");
-            disp.Output.ScrollUpDelay = TimeSpan.FromMilliseconds(500);
-            AutoResetEvent buttonClicked = new AutoResetEvent(false);
-
-            void ChangeMode(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
-            {
-                mode++;
-                if (mode > MaxMode)
-                {
-                    // Don't change back to 0
-                    mode = 1;
-                }
-
-                buttonClicked.Set();
-            }
-
-            gpioController.RegisterCallbackForPinValueChangedEvent(Gpio2, PinEventTypes.Falling, ChangeMode);
-            var device = board.CreateI2cDevice(new I2cConnectionSettings(0, Bmp280.DefaultI2cAddress));
-            Bmp280 bmp;
-            try
-            {
-                bmp = new Bmp280(device);
-                bmp.StandbyTime = StandbyTime.Ms250;
-                bmp.SetPowerMode(Bmx280PowerMode.Normal);
-            }
-            catch (IOException)
-            {
-                bmp = null;
-                Console.WriteLine("BMP280 not available");
-            }
-
-            OpenHardwareMonitor hardwareMonitor = new OpenHardwareMonitor();
-            hardwareMonitor.EnableDerivedSensors();
-            TimeSpan sleeptime = TimeSpan.FromMilliseconds(500);
-            string modeName = string.Empty;
-            string previousModeName = string.Empty;
-            int firstCharInText = 0;
-            while (true)
-            {
-                if (Console.KeyAvailable && Console.ReadKey(true).KeyChar == 'x')
-                {
-                    break;
-                }
-
-                // Default
-                sleeptime = TimeSpan.FromMilliseconds(500);
-
-                switch (mode)
-                {
-                    case 0:
-                        modeName = "Display ready";
-                        disp.Output.ReplaceLine(1, "Button for mode");
-                        // Just text
-                        break;
-                    case 1:
-                    {
-                        modeName = "Time";
-                        disp.Output.ReplaceLine(1, DateTime.Now.ToLongTimeString());
-                        sleeptime = TimeSpan.FromMilliseconds(200);
-                        break;
-                    }
-
-                    case 2:
-                    {
-                        modeName = "Date";
-                        disp.Output.ReplaceLine(1, DateTime.Now.ToShortDateString());
-                        break;
-                    }
-
-                    case 3:
-                        modeName = "Temperature / Barometric Pressure";
-                        if (bmp != null && bmp.TryReadTemperature(out Temperature temp) && bmp.TryReadPressure(out Pressure p2))
-                        {
-                            Pressure p3 = WeatherHelper.CalculateBarometricPressure(p2, temp, StationAltitude);
-                            disp.Output.ReplaceLine(1, string.Format(CultureInfo.CurrentCulture, "{0:s1} {1:s1}", temp, p3));
-                        }
-                        else
-                        {
-                            disp.Output.ReplaceLine(1, "N/A");
-                        }
-
-                        break;
-                    case 4:
-                        modeName = "Temperature / Humidity";
-                        if (board.TryReadDht(3, 11, out temp, out var humidity))
-                        {
-                            disp.Output.ReplaceLine(1, string.Format(CultureInfo.CurrentCulture, "{0:s1} {1:s0}", temp, humidity));
-                        }
-                        else
-                        {
-                            disp.Output.ReplaceLine(1, "N/A");
-                        }
-
-                        break;
-
-                    case 5:
-                        modeName = "Dew point";
-                        if (bmp != null && bmp.TryReadPressure(out p2) && board.TryReadDht(3, 11, out temp, out humidity))
-                        {
-                            Temperature dewPoint = WeatherHelper.CalculateDewPoint(temp, humidity.Percent);
-                            disp.Output.ReplaceLine(1, dewPoint.ToString("s1", CultureInfo.CurrentCulture));
-                        }
-                        else
-                        {
-                            disp.Output.ReplaceLine(1, "N/A");
-                        }
-
-                        break;
-                    case 6:
-                        modeName = "CPU Temperature";
-                        if (hardwareMonitor.TryGetAverageCpuTemperature(out temp))
-                        {
-                            disp.Output.ReplaceLine(1, temp.ToString("s1", CultureInfo.CurrentCulture));
-                        }
-                        else
-                        {
-                            disp.Output.ReplaceLine(1, "N/A");
-                        }
-
-                        break;
-                    case 7:
-                        modeName = "GPU Temperature";
-                        if (hardwareMonitor.TryGetAverageGpuTemperature(out temp))
-                        {
-                            disp.Output.ReplaceLine(1, temp.ToString("s1", CultureInfo.CurrentCulture));
-                        }
-                        else
-                        {
-                            disp.Output.ReplaceLine(1, "N/A");
-                        }
-
-                        break;
-                    case 8:
-                        modeName = "CPU Load";
-                        disp.Output.ReplaceLine(1, hardwareMonitor.GetCpuLoad().ToString("s1", CultureInfo.CurrentCulture));
-                        break;
-
-                    case 9:
-                        modeName = "Total power dissipation";
-                        var powerSources = hardwareMonitor.GetSensorList().Where(x => x.SensorType == SensorType.Power);
-                        Power totalPower = Power.Zero;
-                        foreach (var power in powerSources)
-                        {
-                            if (power.Name != "CPU Cores" && power.TryGetValue(out Power powerConsumption)) // included in CPU Package
-                            {
-                                totalPower = totalPower + powerConsumption;
-                            }
-                        }
-
-                        disp.Output.ReplaceLine(1, totalPower.ToString("s1", CultureInfo.CurrentCulture));
-                        break;
-
-                    case 10:
-                        modeName = "Energy consumed";
-                        var energySources = hardwareMonitor.GetSensorList().Where(x => x.SensorType == SensorType.Energy);
-                        Energy totalEnergy = Energy.FromWattHours(0); // Set up the desired output unit
-                        foreach (var e in energySources)
-                        {
-                            if (!e.Name.StartsWith("CPU Cores") && e.TryGetValue(out Energy powerConsumption)) // included in CPU Package
-                            {
-                                totalEnergy = totalEnergy + powerConsumption;
-                            }
-                        }
-
-                        disp.Output.ReplaceLine(1, totalEnergy.ToString("s1", CultureInfo.CurrentCulture));
-                        break;
-                }
-
-                int displayWidth = disp.Output.Size.Width;
-                if (modeName.Length > displayWidth)
-                {
-                    // Add one space at the end, makes it a bit easier to read
-                    if (firstCharInText < modeName.Length - displayWidth + 1)
-                    {
-                        firstCharInText++;
-                    }
-                    else
-                    {
-                        firstCharInText = 0;
-                    }
-
-                    disp.Output.ReplaceLine(0, modeName.Substring(firstCharInText));
-                }
-
-                if (modeName != previousModeName)
-                {
-                    disp.Output.ReplaceLine(0, modeName);
-
-                    previousModeName = modeName;
-                    firstCharInText = 0;
-                }
-
-                buttonClicked.WaitOne(sleeptime);
-            }
-
-            hardwareMonitor.Dispose();
-            disp.Output.Clear();
-            disp.Dispose();
-            bmp?.Dispose();
-            gpioController.Dispose();
         }
     }
 }
