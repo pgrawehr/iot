@@ -75,6 +75,18 @@ namespace Iot.Device.CpuTemperature
                 throw new PlatformNotSupportedException("This class is only supported on Windows operating systems");
             }
 
+            InitHardwareMonitor();
+
+            _derivedSensors = new List<Sensor>();
+
+            _monitorThread = null;
+            _lock = new object();
+            _monitoredElements = new List<MonitoringJob>();
+            _lastMonitorLoop = DateTimeOffset.UtcNow;
+        }
+
+        private void InitHardwareMonitor()
+        {
             try
             {
                 // This works only if OpenHardwareMonitor (https://openhardwaremonitor.org/) is currently running, but
@@ -103,13 +115,6 @@ namespace Iot.Device.CpuTemperature
                 // Nothing to do - WMI not available for this element or missing permissions.
                 // WMI enumeration may require elevated rights.
             }
-
-            _derivedSensors = new List<Sensor>();
-
-            _monitorThread = null;
-            _lock = new object();
-            _monitoredElements = new List<MonitoringJob>();
-            _lastMonitorLoop = DateTimeOffset.UtcNow;
         }
 
         public bool IsAvailable => _isAvalable;
@@ -175,6 +180,11 @@ namespace Iot.Device.CpuTemperature
 
         public IEnumerable<Sensor> GetSensorList(Hardware forHardware)
         {
+            if (forHardware == null)
+            {
+                throw new ArgumentNullException(nameof(forHardware));
+            }
+
             return GetSensorList().Where(x => x.Identifier.StartsWith(forHardware.Identifier)).OrderBy(y => y.Identifier);
         }
 
@@ -185,6 +195,17 @@ namespace Iot.Device.CpuTemperature
         /// </summary>
         public bool TryGetAverageCpuTemperature(out Temperature temperature)
         {
+            if (_cpu == null)
+            {
+                InitHardwareMonitor();
+            }
+
+            if (_cpu == null)
+            {
+                temperature = default;
+                return false;
+            }
+
             if (TryGetAverage(_cpu, out temperature))
             {
                 return true;
@@ -199,6 +220,17 @@ namespace Iot.Device.CpuTemperature
         /// <param name="temperature">The average GPU temperature</param>
         public bool TryGetAverageGpuTemperature(out Temperature temperature)
         {
+            if (_gpu == null)
+            {
+                InitHardwareMonitor();
+            }
+
+            if (_gpu == null)
+            {
+                temperature = default;
+                return false;
+            }
+
             if (TryGetAverage(_gpu, out temperature))
             {
                 return true;
