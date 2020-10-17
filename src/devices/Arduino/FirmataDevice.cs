@@ -450,6 +450,10 @@ namespace Iot.Device.Arduino
                             _dataReceived.Set();
                             break;
 
+                        case FirmataSysexCommand.SCHEDULER_DATA:
+                            _lastResponse = raw_data;
+                            _dataReceived.Set();
+                            break;
                         default:
 
                             // we pass the data forward as-is for any other type of sysex command
@@ -977,6 +981,79 @@ namespace Iot.Device.Arduino
             lock (_lastAnalogValueLock)
             {
                 return _lastAnalogValues[pinNumber];
+            }
+        }
+
+        public void SendMethodIlCode(byte methodIndex, byte[] byteCode)
+        {
+            lock (_synchronisationLock)
+            {
+                const int BYTES_PER_PACKET = 20;
+                int codeIndex = 0;
+                while (codeIndex < byteCode.Length)
+                {
+                    _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                    _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
+                    _firmataStream.WriteByte((byte)0xFF); // IL data
+                    _firmataStream.WriteByte(1);
+                    _firmataStream.WriteByte(methodIndex);
+                    _firmataStream.WriteByte((byte)byteCode.Length);
+                    _firmataStream.WriteByte((byte)codeIndex);
+                    int bytesThisPacket = Math.Min(BYTES_PER_PACKET, byteCode.Length - codeIndex);
+                    SendValuesAsTwo7bitBytes(byteCode.AsSpan(codeIndex, bytesThisPacket));
+                    codeIndex += bytesThisPacket;
+
+                    _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                    _firmataStream.Flush();
+                }
+            }
+        }
+
+        public int ExecuteIlCodeSynchronous(byte methodIndex, int[] parameters)
+        {
+            lock (_synchronisationLock)
+            {
+                _dataReceived.Reset();
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
+                _firmataStream.WriteByte((byte)0xFF); // IL data
+                _firmataStream.WriteByte(0);
+                _firmataStream.WriteByte(methodIndex);
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    byte[] param = BitConverter.GetBytes(parameters[i]);
+                    SendValuesAsTwo7bitBytes(param);
+                }
+
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
+
+                bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
+                if (result == false)
+                {
+                    throw new TimeoutException("Timeout waiting for device reply");
+                }
+
+                if (_lastResponse.Count < 7 || _lastResponse[0] != (byte)FirmataSysexCommand.SCHEDULER_DATA)
+                {
+                    throw new InvalidOperationException("Code execution returned invalid result");
+                }
+
+                if (_lastResponse[1] != 1)
+                {
+                    throw new InvalidProgramException("The code could not be executed. Check log output.");
+                }
+
+                if (_lastResponse[2] != 1)
+                {
+                    throw new NotSupportedException("Only one return value expected");
+                }
+
+                Span<byte> bytesReceived = stackalloc byte[4];
+                ReassembleByteString(_lastResponse, 3, 8, bytesReceived);
+
+                int retVal = bytesReceived[0] | bytesReceived[1] << 8 | bytesReceived[2] << 16 | bytesReceived[3] << 24;
+                return retVal;
             }
         }
 

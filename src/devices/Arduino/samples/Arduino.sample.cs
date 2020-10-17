@@ -98,6 +98,7 @@ namespace Arduino.Samples
             Console.WriteLine(" 9 Run SPI tests with an MCP3008 (experimental)");
             Console.WriteLine(" 0 Detect all devices on the I2C bus");
             Console.WriteLine(" H Read DHT11 Humidity sensor on GPIO 3 (experimental)");
+            Console.WriteLine(" C C#/IL Code execution on Arduino (VERY experimental)");
             Console.WriteLine(" X Exit");
             var key = Console.ReadKey();
             Console.WriteLine();
@@ -141,6 +142,10 @@ namespace Arduino.Samples
                 case 'x':
                 case 'X':
                     return false;
+                case 'c':
+                case 'C':
+                    TestIlInterpreter(board);
+                    break;
             }
 
             return true;
@@ -478,6 +483,22 @@ namespace Arduino.Samples
             }
 
             Console.ReadKey();
+        }
+
+        public static void TestIlInterpreter(ArduinoBoard board)
+        {
+            ArduinoCsCompiler compiler = new ArduinoCsCompiler(board);
+            compiler.LoadCode(ArduinoCompilerMethods.AddInts);
+            int result = compiler.ExecuteCode(2, 3);
+            Console.WriteLine($"2 + 3 = {result}");
+            result = compiler.ExecuteCode(255, 5);
+            Console.WriteLine($"255 + 5 = {result}");
+
+            compiler.LoadCode(ArduinoCompilerMethods.Equal);
+            result = compiler.ExecuteCode(2, 3);
+            Console.WriteLine($"Is 2 == 3? {result}");
+            result = compiler.ExecuteCode(257, 257);
+            Console.WriteLine($"Is 257 == 257? {result}");
         }
     }
 }
