@@ -12,6 +12,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Ports;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using Iot.Device.Adc;
@@ -488,17 +489,22 @@ namespace Arduino.Samples
         public static void TestIlInterpreter(ArduinoBoard board)
         {
             ArduinoCsCompiler compiler = new ArduinoCsCompiler(board);
-            compiler.LoadCode(ArduinoCompilerMethods.AddInts);
-            int result = compiler.ExecuteCode(2, 3);
+            MethodInfo method;
+            /* method = compiler.LoadCode(new Func<int, int, int>(ArduinoCompilerMethods.AddInts));
+            int result = (int)compiler.Invoke(method, 2, 3);
             Console.WriteLine($"2 + 3 = {result}");
-            result = compiler.ExecuteCode(255, 5);
+            result = (int)compiler.Invoke(method, 255, 5);
             Console.WriteLine($"255 + 5 = {result}");
 
-            compiler.LoadCode(ArduinoCompilerMethods.Equal);
-            result = compiler.ExecuteCode(2, 3);
-            Console.WriteLine($"Is 2 == 3? {result}");
-            result = compiler.ExecuteCode(257, 257);
-            Console.WriteLine($"Is 257 == 257? {result}");
+            method = compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerMethods.Equal));
+            bool trueOrFalse = (bool)compiler.Invoke(method, 2, 3);
+            Console.WriteLine($"Is 2 == 3? {trueOrFalse}");
+            trueOrFalse = (bool)compiler.Invoke(method, 257, 257);
+            Console.WriteLine($"Is 257 == 257? {trueOrFalse}");*/
+
+            compiler.LoadLowLevelInterface();
+            method = compiler.LoadCode(new Action<IArduinoHardwareLevelAccess, int, int>(ArduinoCompilerMethods.Blink));
+            compiler.Invoke(method, 0, 6, 500);
         }
     }
 }

@@ -1,0 +1,23 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Device.Gpio;
+using System.Text;
+
+#pragma warning disable CS1591
+namespace Iot.Device.Arduino
+{
+    public interface IArduinoHardwareLevelAccess
+    {
+        [ArduinoImplementation(0)]
+        void Sleep(int delay);
+
+        [ArduinoImplementation(1)]
+        void SetPinMode(int pin, PinMode mode);
+
+        [ArduinoImplementation(2)]
+        void WritePin(int pin, int value);
+
+        [ArduinoImplementation(3)]
+        int ReadPin(int pin);
+    }
+}

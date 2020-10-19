@@ -362,7 +362,17 @@ namespace Iot.Device.Arduino
                                 ReassembleByteString(raw_data, 1, stringLength * 2, bytesReceived);
 
                                 string message1 = Encoding.ASCII.GetString(bytesReceived);
-                                OnError?.Invoke(message1, null);
+                                int idxNull = message1.IndexOf('\0');
+                                if (message1.Contains("%") && idxNull > 0) // C style printf formatters
+                                {
+                                    message1 = message1.Substring(0, idxNull);
+                                    string message2 = PrintfFromByteStream(message1, bytesReceived, idxNull + 1);
+                                    OnError?.Invoke(message2, null);
+                                }
+                                else
+                                {
+                                    OnError?.Invoke(message1, null);
+                                }
                             }
 
                             break;
@@ -462,6 +472,66 @@ namespace Iot.Device.Arduino
 
                     break;
             }
+        }
+
+        /// <summary>
+        /// Simulates a printf C statement.
+        /// Note that the word size on the arduino is 16 bits, so any argument not specifying an l prefix is considered to
+        /// be 16 bits only.
+        /// </summary>
+        /// <param name="fmt">Format string (with %d, %x, etc)</param>
+        /// <param name="bytesReceived">Total bytes received</param>
+        /// <param name="startOfArguments">Start of arguments (first byte of formatting parameters)</param>
+        /// <returns>A formatted string</returns>
+        private string PrintfFromByteStream(string fmt, in Span<byte> bytesReceived, int startOfArguments)
+        {
+            string output = fmt;
+            while (output.Contains("%"))
+            {
+                int idxPercent = output.IndexOf('%');
+                string type = output[idxPercent + 1].ToString();
+                if (type == "l")
+                {
+                    type += output[idxPercent + 2];
+                }
+
+                switch (type)
+                {
+                    case "lx":
+                    {
+                        Int32 arg = BitConverter.ToInt32(bytesReceived.ToArray(), startOfArguments);
+                        output = output.Replace("%" + type, arg.ToString("x"));
+                        startOfArguments += 4;
+                        break;
+                    }
+
+                    case "x":
+                    {
+                        Int16 arg = BitConverter.ToInt16(bytesReceived.ToArray(), startOfArguments);
+                        output = output.Replace("%" + type, arg.ToString("x"));
+                        startOfArguments += 2;
+                        break;
+                    }
+
+                    case "d":
+                    {
+                        Int16 arg = BitConverter.ToInt16(bytesReceived.ToArray(), startOfArguments);
+                        output = output.Replace("%" + type, arg.ToString());
+                        startOfArguments += 2;
+                        break;
+                    }
+
+                    case "ld":
+                    {
+                        Int32 arg = BitConverter.ToInt32(bytesReceived.ToArray(), startOfArguments);
+                        output = output.Replace("%" + type, arg.ToString());
+                        startOfArguments += 4;
+                        break;
+                    }
+                }
+            }
+
+            return output;
         }
 
         private bool FillQueue()
@@ -1009,11 +1079,16 @@ namespace Iot.Device.Arduino
             }
         }
 
-        public int ExecuteIlCodeSynchronous(byte methodIndex, int[] parameters)
+        public int ExecuteIlCodeSynchronous(byte methodIndex, int[] parameters, Type returnType)
         {
             lock (_synchronisationLock)
             {
-                _dataReceived.Reset();
+                bool returnTypeIsVoid = returnType == typeof(void);
+                if (!returnTypeIsVoid)
+                {
+                    _dataReceived.Reset();
+                }
+
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
                 _firmataStream.WriteByte((byte)0xFF); // IL data
@@ -1027,6 +1102,11 @@ namespace Iot.Device.Arduino
 
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
+
+                if (returnTypeIsVoid)
+                {
+                    return 0;
+                }
 
                 bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
                 if (result == false)
@@ -1054,6 +1134,26 @@ namespace Iot.Device.Arduino
 
                 int retVal = bytesReceived[0] | bytesReceived[1] << 8 | bytesReceived[2] << 16 | bytesReceived[3] << 24;
                 return retVal;
+            }
+        }
+
+        public void SendMethodDeclaration(byte declarationIndex, int declarationToken, MethodFlags methodFlags, byte maxLocals, byte argCount)
+        {
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
+                _firmataStream.WriteByte((byte)0xFF); // IL data
+                _firmataStream.WriteByte(2); // IL_DECLARE
+                _firmataStream.WriteByte(declarationIndex);
+                _firmataStream.WriteByte((byte)methodFlags);
+                _firmataStream.WriteByte(maxLocals);
+                _firmataStream.WriteByte(argCount);
+                byte[] param = BitConverter.GetBytes(declarationToken);
+                SendValuesAsTwo7bitBytes(param);
+
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
             }
         }
 
