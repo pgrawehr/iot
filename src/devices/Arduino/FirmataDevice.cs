@@ -48,6 +48,7 @@ namespace Iot.Device.Arduino
 
         // Event used when waiting for answers (i.e. after requesting firmware version)
         private AutoResetEvent _dataReceived;
+        public event Action<byte, byte, int, IList<byte>> OnSchedulerReply;
 
         public event DigitalPinValueChanged DigitalPortValueUpdated;
 
@@ -461,9 +462,22 @@ namespace Iot.Device.Arduino
                             break;
 
                         case FirmataSysexCommand.SCHEDULER_DATA:
-                            _lastResponse = raw_data;
-                            _dataReceived.Set();
-                            break;
+                            {
+                                // Data from real-time methods
+                                if (_lastResponse.Count < 7)
+                                {
+                                    OnError?.Invoke("Code execution returned invalid result or state", null);
+                                    break;
+                                }
+
+                                int numArgs = _lastResponse[3];
+                                Span<byte> bytesReceived = stackalloc byte[numArgs * 4];
+                                ReassembleByteString(_lastResponse, 4, numArgs * 8, bytesReceived);
+
+                                OnSchedulerReply?.Invoke(_lastResponse[1], _lastResponse[2], numArgs, bytesReceived.ToArray());
+                                break;
+                            }
+
                         default:
 
                             // we pass the data forward as-is for any other type of sysex command
@@ -1079,7 +1093,7 @@ namespace Iot.Device.Arduino
             }
         }
 
-        public int ExecuteIlCodeSynchronous(byte methodIndex, int[] parameters, Type returnType)
+        public void ExecuteIlCode(byte methodIndex, int[] parameters, Type returnType)
         {
             lock (_synchronisationLock)
             {
@@ -1102,38 +1116,6 @@ namespace Iot.Device.Arduino
 
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
-
-                if (returnTypeIsVoid)
-                {
-                    return 0;
-                }
-
-                bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
-                if (result == false)
-                {
-                    throw new TimeoutException("Timeout waiting for device reply");
-                }
-
-                if (_lastResponse.Count < 7 || _lastResponse[0] != (byte)FirmataSysexCommand.SCHEDULER_DATA)
-                {
-                    throw new InvalidOperationException("Code execution returned invalid result");
-                }
-
-                if (_lastResponse[1] != 1)
-                {
-                    throw new InvalidProgramException("The code could not be executed. Check log output.");
-                }
-
-                if (_lastResponse[2] != 1)
-                {
-                    throw new NotSupportedException("Only one return value expected");
-                }
-
-                Span<byte> bytesReceived = stackalloc byte[4];
-                ReassembleByteString(_lastResponse, 3, 8, bytesReceived);
-
-                int retVal = bytesReceived[0] | bytesReceived[1] << 8 | bytesReceived[2] << 16 | bytesReceived[3] << 24;
-                return retVal;
             }
         }
 

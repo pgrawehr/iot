@@ -41,6 +41,8 @@ namespace Iot.Device.Arduino
 
         public event Action<string, Exception> LogMessages;
 
+        internal event Action<int, MethodState, object[]> CompilerCallback;
+
         public virtual void Initialize()
         {
             _firmata = new FirmataDevice();
@@ -70,6 +72,8 @@ namespace Iot.Device.Arduino
 
             // _firmata.SetSamplingInterval(TimeSpan.FromMilliseconds(100));
             _firmata.EnableDigitalReporting();
+
+            _firmata.OnSchedulerReply += FirmataOnOnSchedulerReply;
         }
 
         public Version FirmwareVersion
@@ -112,6 +116,19 @@ namespace Iot.Device.Arduino
         private void FirmataOnError(string message, Exception innerException)
         {
             LogMessages?.Invoke(message, innerException);
+        }
+
+        private void FirmataOnOnSchedulerReply(byte method, byte schedulerMethodState, int numArgs, IList<byte> bytesOfArgs)
+        {
+            object[] data = new object[numArgs];
+
+            for (int i = 0; i < numArgs * 4; i += 4)
+            {
+                int retVal = bytesOfArgs[i] | bytesOfArgs[i + 1] << 8 | bytesOfArgs[i + 2] << 16 | bytesOfArgs[i + 3] << 24;
+                data[i / 4] = retVal;
+            }
+
+            CompilerCallback?.Invoke(method, (MethodState)schedulerMethodState, data);
         }
 
         public GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme)

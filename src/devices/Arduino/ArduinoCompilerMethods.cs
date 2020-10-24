@@ -40,10 +40,15 @@ namespace Iot.Device.Arduino
             return !(a == b);
         }
 
+        public static bool Smaller(int a, int b)
+        {
+            return a < b;
+        }
+
         public static void Blink(IArduinoHardwareLevelAccess hw, int pin, int delay)
         {
             hw.SetPinMode(pin, PinMode.Output);
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; Smaller(i, 10); i++)
             {
                 hw.WritePin(pin, 1);
                 hw.Sleep(delay);

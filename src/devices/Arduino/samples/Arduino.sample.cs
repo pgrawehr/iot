@@ -40,6 +40,8 @@ namespace Arduino.Samples
                 portName = args[1];
             }
 
+            TextWriter logFile = new StringWriter();
+
             using (var port = new SerialPort(portName, 115200))
             {
                 Console.WriteLine($"Connecting to Arduino on {portName}");
@@ -53,7 +55,9 @@ namespace Arduino.Samples
                     return;
                 }
 
-                ArduinoBoard board = new ArduinoBoard(port.BaseStream);
+                DebugLogStream dls = new DebugLogStream(port.BaseStream, logFile);
+
+                ArduinoBoard board = new ArduinoBoard(dls);
                 try
                 {
                     board.LogMessages += BoardOnLogMessages;
@@ -73,6 +77,8 @@ namespace Arduino.Samples
                     board?.Dispose();
                 }
             }
+
+            Debug.Write(logFile.ToString());
         }
 
         private static void BoardOnLogMessages(string message, Exception exception)
@@ -489,9 +495,8 @@ namespace Arduino.Samples
         public static void TestIlInterpreter(ArduinoBoard board)
         {
             ArduinoCsCompiler compiler = new ArduinoCsCompiler(board);
-            MethodInfo method;
-            /* method = compiler.LoadCode(new Func<int, int, int>(ArduinoCompilerMethods.AddInts));
-            int result = (int)compiler.Invoke(method, 2, 3);
+            var method1 = compiler.LoadCode<Func<int, int, int>>(ArduinoCompilerMethods.AddInts);
+            method1.InvokeAsync(2, 3);
             Console.WriteLine($"2 + 3 = {result}");
             result = (int)compiler.Invoke(method, 255, 5);
             Console.WriteLine($"255 + 5 = {result}");
@@ -500,9 +505,10 @@ namespace Arduino.Samples
             bool trueOrFalse = (bool)compiler.Invoke(method, 2, 3);
             Console.WriteLine($"Is 2 == 3? {trueOrFalse}");
             trueOrFalse = (bool)compiler.Invoke(method, 257, 257);
-            Console.WriteLine($"Is 257 == 257? {trueOrFalse}");*/
+            Console.WriteLine($"Is 257 == 257? {trueOrFalse}");
 
             compiler.LoadLowLevelInterface();
+            compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerMethods.Smaller));
             method = compiler.LoadCode(new Action<IArduinoHardwareLevelAccess, int, int>(ArduinoCompilerMethods.Blink));
             compiler.Invoke(method, 0, 6, 500);
         }
