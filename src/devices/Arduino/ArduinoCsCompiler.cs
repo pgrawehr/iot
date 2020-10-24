@@ -8,7 +8,7 @@ using System.Text;
 namespace Iot.Device.Arduino
 {
     [Flags]
-    public enum MethodFlags
+    internal enum MethodFlags
     {
         None = 0,
         Static = 1,
@@ -17,18 +17,10 @@ namespace Iot.Device.Arduino
         Void = 8,
     }
 
-    public enum MethodState
-    {
-        Stopped = 0,
-        Aborted = 1,
-        Running = 2,
-    }
-
     public class ArduinoCsCompiler
     {
         private readonly ArduinoBoard _board;
-        private readonly Dictionary<MethodInfo, ArduinoMethodDeclaration> _methodInfos;
-        private readonly List<IArduinoTask> _activeTasks;
+        private readonly Dictionary<MethodInfo, ArduinoMethodDecl> _methodInfos;
 
         private int _numDeclaredMethods;
 
@@ -36,39 +28,7 @@ namespace Iot.Device.Arduino
         {
             _board = board;
             _numDeclaredMethods = 0;
-            _methodInfos = new Dictionary<MethodInfo, ArduinoMethodDeclaration>();
-            _board.CompilerCallback += BoardOnCompilerCallback;
-            _activeTasks = new List<IArduinoTask>();
-        }
-
-        private string GetMethodName(ArduinoMethodDeclaration decl)
-        {
-            return decl.MethodInfo.Name;
-        }
-
-        private void BoardOnCompilerCallback(int codeReference, MethodState state, object[] args)
-        {
-            var codeRef = _methodInfos.Values.FirstOrDefault(x => x.Index == codeReference);
-            if (codeRef == null)
-            {
-                _board.Log($"Invalid method state message. Not currently knowing any method with reference {codeReference}.");
-                return;
-            }
-
-            if (state == MethodState.Aborted)
-            {
-                _board.Log($"Execution of method {GetMethodName(codeRef)} caused an exception. Check previous messages.");
-                return;
-            }
-
-            var task = _activeTasks.FirstOrDefault(x => x.MethodInfo == codeRef);
-            if (task == null)
-            {
-                _board.Log($"Invalid method state update. {codeRef.Index} has no active task.");
-                return;
-            }
-
-            task.AddData(state, args);
+            _methodInfos = new Dictionary<MethodInfo, ArduinoMethodDecl>();
         }
 
         private byte[] GetIlCode(MethodInfo methodInstance)
@@ -78,10 +38,15 @@ namespace Iot.Device.Arduino
             return bytes;
         }
 
+        public MethodInfo LoadCode(Delegate method)
+        {
+            return LoadCode(method.Method);
+        }
+
         public ArduinoTask<T> LoadCode<T>(T method)
             where T : Delegate
         {
-            return LoadCode(method, method.Method);
+            return LoadCode(method.Method);
         }
 
         public void LoadLowLevelInterface()
@@ -92,33 +57,32 @@ namespace Iot.Device.Arduino
                 if (!_methodInfos.ContainsKey(method))
                 {
                     var attr = (ArduinoImplementationAttribute)method.GetCustomAttributes(typeof(ArduinoImplementationAttribute)).First();
-                    ArduinoMethodDeclaration decl = new ArduinoMethodDeclaration(_numDeclaredMethods++, method.MetadataToken, method, MethodFlags.SpecialMethod, attr.MethodNumber);
+                    ArduinoMethodDecl decl = new ArduinoMethodDecl(_numDeclaredMethods++, method.MetadataToken, method, MethodFlags.SpecialMethod, attr.MethodNumber);
                     _methodInfos.Add(method, decl);
                     LoadMethodDeclaration(decl);
                 }
             }
         }
 
-        private void LoadMethodDeclaration(ArduinoMethodDeclaration declaration)
+        private void LoadMethodDeclaration(ArduinoMethodDecl declaration)
         {
             _board.Firmata.SendMethodDeclaration((byte)declaration.Index, declaration.Token, declaration.Flags, (byte)Math.Max(declaration.MaxLocals, declaration.MaxStack), (byte)declaration.ArgumentCount);
         }
 
-        private ArduinoTask<T> LoadCode<T>(T method, MethodInfo methodInfo)
-            where T : Delegate
+        private MethodInfo LoadCode(MethodInfo method)
         {
-            byte[] ilBytes = GetIlCode(methodInfo);
+            byte[] ilBytes = GetIlCode(method);
             if (ilBytes.Length > 255)
             {
                 throw new InvalidProgramException($"Max IL size of real time method is 255. Actual size is {ilBytes.Length}.");
             }
 
-            VerifyMethodCanBeLoaded(methodInfo);
+            VerifyMethodCanBeLoaded(method);
 
-            if (_methodInfos.ContainsKey(methodInfo))
+            if (_methodInfos.ContainsKey(method))
             {
                 // Nothing to do, already loaded
-                return new ArduinoTask<T>(method, this, _methodInfos[methodInfo]);
+                return method;
             }
 
             if (_numDeclaredMethods >= 255)
@@ -127,29 +91,47 @@ namespace Iot.Device.Arduino
                 throw new NotSupportedException("To many methods declared. Only 255 supported.");
             }
 
-            var newInfo = new ArduinoMethodDeclaration(_numDeclaredMethods++, methodInfo);
-            _methodInfos.Add(methodInfo, newInfo);
+            var newInfo = new ArduinoMethodDecl(_numDeclaredMethods++, method);
+            _methodInfos.Add(method, newInfo);
 
             LoadMethodDeclaration(newInfo);
             _board.Firmata.SendMethodIlCode((byte)newInfo.Index, ilBytes);
 
-            return new ArduinoTask<T>(method, this, newInfo);
+            return method;
         }
 
         /// <summary>
-        /// Executes the given method with the provided arguments asynchronously
+        /// Executes the given method with the provided arguments.
+        /// If the method being called has return type void, the execution is started asynchronously, otherwise,
+        /// the result is waited for.
         /// </summary>
         /// <remarks>Argument count/type not checked yet</remarks>
         /// <param name="method">Handle to method to invoke.</param>
         /// <param name="arguments">Argument list</param>
-        internal void Invoke(MethodInfo method, params int[] arguments)
+        /// <returns>The return value of the indicated method, null for void methods.</returns>
+        public object Invoke(MethodInfo method, params int[] arguments)
         {
             if (!_methodInfos.TryGetValue(method, out var decl))
             {
                 throw new InvalidOperationException("Method must be loaded first.");
             }
 
-            _board.Firmata.ExecuteIlCode((byte)decl.Index, arguments, method.ReturnType);
+            int returned = _board.Firmata.ExecuteIlCodeSynchronous((byte)decl.Index, arguments, method.ReturnType);
+            if (method.ReturnType == typeof(void))
+            {
+                return null;
+            }
+            else if (method.ReturnType == typeof(int))
+            {
+                return returned;
+            }
+            else if (method.ReturnType == typeof(bool))
+            {
+                return (returned != 0);
+            }
+
+            // TODO: Extend
+            return returned;
         }
 
         private void VerifyMethodCanBeLoaded(MethodInfo methodInstance)
@@ -171,6 +153,83 @@ namespace Iot.Device.Arduino
 
             // Check argument count, Check parameter types,
             // etc., etc.
+        }
+
+        private sealed class ArduinoMethodDecl
+        {
+            public ArduinoMethodDecl(int index, MethodInfo methodInfo)
+            {
+                Index = index;
+                MethodInfo = methodInfo;
+                Flags = MethodFlags.None;
+                var body = methodInfo.GetMethodBody();
+                Token = methodInfo.MetadataToken;
+                MaxLocals = body.LocalVariables.Count;
+                MaxStack = body.MaxStackSize;
+                ArgumentCount = methodInfo.GetParameters().Length;
+                if (methodInfo.CallingConvention.HasFlag(CallingConventions.HasThis))
+                {
+                    ArgumentCount += 1;
+                }
+
+                if (methodInfo.IsStatic)
+                {
+                    Flags |= MethodFlags.Static;
+                }
+
+                if (methodInfo.IsVirtual)
+                {
+                    Flags |= MethodFlags.Virtual;
+                }
+
+                if (methodInfo.ReturnParameter == null)
+                {
+                    Flags |= MethodFlags.Void;
+                }
+            }
+
+            public ArduinoMethodDecl(int index, int token, MethodInfo methodInfo, MethodFlags flags, int maxStack)
+            {
+                Index = index;
+                Token = token;
+                MethodInfo = methodInfo;
+                Flags = flags;
+                MaxLocals = MaxStack = maxStack;
+                ArgumentCount = methodInfo.GetParameters().Length;
+                if (methodInfo.CallingConvention.HasFlag(CallingConventions.HasThis))
+                {
+                    ArgumentCount += 1;
+                }
+
+                if (methodInfo.ReturnParameter.ParameterType == typeof(void))
+                {
+                    Flags |= MethodFlags.Void;
+                }
+            }
+
+            public int Index { get; }
+            public int Token { get; }
+            public MethodInfo MethodInfo { get; }
+
+            public MethodFlags Flags
+            {
+                get;
+            }
+
+            public int MaxLocals
+            {
+                get;
+            }
+
+            public int MaxStack
+            {
+                get;
+            }
+
+            public int ArgumentCount
+            {
+                get;
+            }
         }
     }
 }
