@@ -48,7 +48,7 @@ namespace Iot.Device.Arduino
 
         // Event used when waiting for answers (i.e. after requesting firmware version)
         private AutoResetEvent _dataReceived;
-        public event Action<byte, byte, int, IList<byte>> OnSchedulerReply;
+        public event Action<byte, MethodState, int, IList<byte>> OnSchedulerReply;
 
         public event DigitalPinValueChanged DigitalPortValueUpdated;
 
@@ -464,17 +464,17 @@ namespace Iot.Device.Arduino
                         case FirmataSysexCommand.SCHEDULER_DATA:
                             {
                                 // Data from real-time methods
-                                if (_lastResponse.Count < 7)
+                                if (raw_data.Length < 7)
                                 {
                                     OnError?.Invoke("Code execution returned invalid result or state", null);
                                     break;
                                 }
 
-                                int numArgs = _lastResponse[3];
+                                int numArgs = raw_data[3];
                                 Span<byte> bytesReceived = stackalloc byte[numArgs * 4];
-                                ReassembleByteString(_lastResponse, 4, numArgs * 8, bytesReceived);
+                                ReassembleByteString(raw_data, 4, numArgs * 8, bytesReceived);
 
-                                OnSchedulerReply?.Invoke(_lastResponse[1], _lastResponse[2], numArgs, bytesReceived.ToArray());
+                                OnSchedulerReply?.Invoke(raw_data[1], (MethodState)raw_data[2], numArgs, bytesReceived.ToArray());
                                 break;
                             }
 

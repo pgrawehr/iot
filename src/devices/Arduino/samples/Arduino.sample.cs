@@ -497,20 +497,41 @@ namespace Arduino.Samples
             ArduinoCsCompiler compiler = new ArduinoCsCompiler(board);
             var method1 = compiler.LoadCode<Func<int, int, int>>(ArduinoCompilerMethods.AddInts);
             method1.InvokeAsync(2, 3);
+            int result;
+            method1.WaitForResult();
+            method1.GetMethodResults(out object[] data, out MethodState state);
+            if (state != MethodState.Stopped)
+            {
+                Console.WriteLine("Method returned result but did not end?!?");
+            }
+
+            result = (int)data[0];
             Console.WriteLine($"2 + 3 = {result}");
-            result = (int)compiler.Invoke(method, 255, 5);
+            method1.InvokeAsync(255, 5);
+            method1.WaitForResult();
+            method1.GetMethodResults(out data, out state);
+            result = (int)data[0];
             Console.WriteLine($"255 + 5 = {result}");
 
-            method = compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerMethods.Equal));
-            bool trueOrFalse = (bool)compiler.Invoke(method, 2, 3);
+            var method2 = compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerMethods.Equal));
+            method2.InvokeAsync(2, 3);
+            method2.WaitForResult();
+            method2.GetMethodResults(out data, out state);
+            bool trueOrFalse = (bool)data[0];
             Console.WriteLine($"Is 2 == 3? {trueOrFalse}");
-            trueOrFalse = (bool)compiler.Invoke(method, 257, 257);
+            method2.InvokeAsync(257, 257);
+            method2.WaitForResult();
+            method2.GetMethodResults(out data, out state);
+            trueOrFalse = (bool)data[0];
             Console.WriteLine($"Is 257 == 257? {trueOrFalse}");
 
             compiler.LoadLowLevelInterface();
             compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerMethods.Smaller));
-            method = compiler.LoadCode(new Action<IArduinoHardwareLevelAccess, int, int>(ArduinoCompilerMethods.Blink));
-            compiler.Invoke(method, 0, 6, 500);
+            var method3 = compiler.LoadCode(new Action<IArduinoHardwareLevelAccess, int, int>(ArduinoCompilerMethods.Blink));
+            method3.InvokeAsync(0, 6, 500);
+            method3.WaitForResult();
+
+            compiler.Dispose();
         }
     }
 }

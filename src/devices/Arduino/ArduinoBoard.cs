@@ -30,6 +30,9 @@ namespace Iot.Device.Arduino
         private string _firmwareName;
         private List<SupportedPinConfiguration> _supportedPinConfigurations;
 
+        // Only a delegate, not an event, because one board can only have one compiler attached at a time
+        private Action<int, MethodState, object[]> _compilerCallback;
+
         // Counts how many spi devices are attached, to make sure we enable/disable the bus only when no devices are attached
         private int _spiEnabled;
 
@@ -40,8 +43,6 @@ namespace Iot.Device.Arduino
         }
 
         public event Action<string, Exception> LogMessages;
-
-        internal event Action<int, MethodState, object[]> CompilerCallback;
 
         public virtual void Initialize()
         {
@@ -118,7 +119,7 @@ namespace Iot.Device.Arduino
             LogMessages?.Invoke(message, innerException);
         }
 
-        private void FirmataOnOnSchedulerReply(byte method, byte schedulerMethodState, int numArgs, IList<byte> bytesOfArgs)
+        private void FirmataOnOnSchedulerReply(byte method, MethodState schedulerMethodState, int numArgs, IList<byte> bytesOfArgs)
         {
             object[] data = new object[numArgs];
 
@@ -128,7 +129,7 @@ namespace Iot.Device.Arduino
                 data[i / 4] = retVal;
             }
 
-            CompilerCallback?.Invoke(method, (MethodState)schedulerMethodState, data);
+            _compilerCallback?.Invoke(method, schedulerMethodState, data);
         }
 
         public GpioController CreateGpioController(PinNumberingScheme pinNumberingScheme)
@@ -233,6 +234,22 @@ namespace Iot.Device.Arduino
             {
                 _firmata.DisableSpi();
             }
+        }
+
+        public void SetCompilerCallback(Action<int, MethodState, object[]> onCompilerCallback)
+        {
+            if (onCompilerCallback == null)
+            {
+                _compilerCallback = null;
+                return;
+            }
+
+            if (_compilerCallback != null)
+            {
+                throw new InvalidOperationException("Only one compiler can be active for a single board");
+            }
+
+            _compilerCallback = onCompilerCallback;
         }
     }
 }

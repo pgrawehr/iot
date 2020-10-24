@@ -20,6 +20,7 @@ namespace Iot.Device.Arduino
         where T : Delegate
     {
         private ConcurrentQueue<(MethodState, object[])> _collectedValues;
+        private AutoResetEvent _dataAdded;
         internal ArduinoTask(T function, ArduinoCsCompiler compiler, ArduinoMethodDeclaration methodInfo)
         {
             Function = function;
@@ -27,6 +28,7 @@ namespace Iot.Device.Arduino
             MethodInfo = methodInfo;
             State = MethodState.Stopped;
             _collectedValues = new ConcurrentQueue<(MethodState, object[])>();
+            _dataAdded = new AutoResetEvent(false);
         }
 
         public T Function { get; }
@@ -44,8 +46,9 @@ namespace Iot.Device.Arduino
 
         public void AddData(MethodState state, object[] args)
         {
-            State = state;
             _collectedValues.Enqueue((state, args));
+            State = state;
+            _dataAdded.Set();
         }
 
         public void InvokeAsync(params int[] arguments)
@@ -84,7 +87,55 @@ namespace Iot.Device.Arduino
 
         public void Dispose()
         {
-            // Compiler.Delete(...)
+            Compiler.TaskDone(this);
+            _collectedValues.Clear();
+            _dataAdded?.Dispose();
+            _dataAdded = null;
+        }
+
+        /// <summary>
+        /// Await at least one result data set (or the end of the method)
+        /// </summary>
+        /// <returns>True if there is at least one data set, false otherwise</returns>
+        public async Task<bool> WaitForResult(CancellationToken token)
+        {
+            if (_dataAdded == null)
+            {
+                throw new ObjectDisposedException(nameof(ArduinoTask<T>));
+            }
+
+            if (State != MethodState.Running)
+            {
+                return false;
+            }
+
+            var task = Task.Factory.StartNew(() =>
+            {
+                while (_collectedValues.IsEmpty && State == MethodState.Running)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        return false;
+                    }
+
+                    WaitHandle.WaitAny(new WaitHandle[]
+                    {
+                        token.WaitHandle, _dataAdded
+                    });
+                }
+
+                return !_collectedValues.IsEmpty;
+            });
+
+            await task;
+            return task.Result;
+        }
+
+        public bool WaitForResult()
+        {
+            var task = WaitForResult(CancellationToken.None);
+            task.Wait();
+            return task.Result;
         }
     }
 }
