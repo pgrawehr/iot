@@ -74,7 +74,7 @@ namespace Iot.Device.Arduino
             // _firmata.SetSamplingInterval(TimeSpan.FromMilliseconds(100));
             _firmata.EnableDigitalReporting();
 
-            _firmata.OnSchedulerReply += FirmataOnOnSchedulerReply;
+            _firmata.OnSchedulerReply += FirmataOnSchedulerReply;
         }
 
         public Version FirmwareVersion
@@ -119,7 +119,7 @@ namespace Iot.Device.Arduino
             LogMessages?.Invoke(message, innerException);
         }
 
-        private void FirmataOnOnSchedulerReply(byte method, MethodState schedulerMethodState, int numArgs, IList<byte> bytesOfArgs)
+        private void FirmataOnSchedulerReply(byte method, MethodState schedulerMethodState, int numArgs, IList<byte> bytesOfArgs)
         {
             object[] data = new object[numArgs];
 

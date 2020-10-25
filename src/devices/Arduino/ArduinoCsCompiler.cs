@@ -60,16 +60,19 @@ namespace Iot.Device.Arduino
                 return;
             }
 
-            if (state == MethodState.Aborted)
-            {
-                _board.Log($"Execution of method {GetMethodName(codeRef)} caused an exception. Check previous messages.");
-                return;
-            }
-
             var task = _activeTasks.FirstOrDefault(x => x.MethodInfo == codeRef);
+
             if (task == null)
             {
                 _board.Log($"Invalid method state update. {codeRef.Index} has no active task.");
+                return;
+            }
+
+            if (state == MethodState.Aborted)
+            {
+                _board.Log($"Execution of method {GetMethodName(codeRef)} caused an exception. Check previous messages.");
+                // Still update the task state, this will prevent a deadlock if somebody is waiting for this task to end
+                task.AddData(state, new object[0]);
                 return;
             }
 

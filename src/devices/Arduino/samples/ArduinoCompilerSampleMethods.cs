@@ -6,7 +6,10 @@ using System.Text;
 #pragma warning disable CS1591
 namespace Iot.Device.Arduino
 {
-    public class ArduinoCompilerMethods
+    /// <summary>
+    /// These are simple methods to test the IL execution engine on the Arduino
+    /// </summary>
+    public class ArduinoCompilerSampleMethods
     {
         public static int AddInts(int a, int b)
         {

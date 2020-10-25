@@ -495,7 +495,7 @@ namespace Arduino.Samples
         public static void TestIlInterpreter(ArduinoBoard board)
         {
             ArduinoCsCompiler compiler = new ArduinoCsCompiler(board);
-            var method1 = compiler.LoadCode<Func<int, int, int>>(ArduinoCompilerMethods.AddInts);
+            var method1 = compiler.LoadCode<Func<int, int, int>>(ArduinoCompilerSampleMethods.AddInts);
             method1.InvokeAsync(2, 3);
             int result;
             method1.WaitForResult();
@@ -513,7 +513,7 @@ namespace Arduino.Samples
             result = (int)data[0];
             Console.WriteLine($"255 + 5 = {result}");
 
-            var method2 = compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerMethods.Equal));
+            var method2 = compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerSampleMethods.Equal));
             method2.InvokeAsync(2, 3);
             method2.WaitForResult();
             method2.GetMethodResults(out data, out state);
@@ -526,9 +526,23 @@ namespace Arduino.Samples
             Console.WriteLine($"Is 257 == 257? {trueOrFalse}");
 
             compiler.LoadLowLevelInterface();
-            compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerMethods.Smaller));
-            var method3 = compiler.LoadCode(new Action<IArduinoHardwareLevelAccess, int, int>(ArduinoCompilerMethods.Blink));
-            method3.InvokeAsync(0, 6, 500);
+            compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerSampleMethods.Smaller));
+            var method3 = compiler.LoadCode(new Action<IArduinoHardwareLevelAccess, int, int>(ArduinoCompilerSampleMethods.Blink));
+            method3.InvokeAsync(0, 10, 500);
+
+            // While the above method executes (and blinks the led), we query the analog input
+            var analogController = board.CreateAnalogController(0);
+            int analogPin = 15;
+
+            analogController.OpenPin(analogPin);
+
+            while (method3.State == MethodState.Running)
+            {
+                double value = analogController.ReadVoltage(analogPin);
+                Console.WriteLine($"Read analog value as {value:F2}");
+            }
+
+            analogController.ClosePin(analogPin);
             method3.WaitForResult();
 
             compiler.Dispose();
