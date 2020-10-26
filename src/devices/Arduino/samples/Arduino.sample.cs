@@ -531,7 +531,7 @@ namespace Arduino.Samples
             method3.InvokeAsync(0, 10, 500);
 
             // While the above method executes (and blinks the led), we query the analog input
-            var analogController = board.CreateAnalogController(0);
+            /*var analogController = board.CreateAnalogController(0);
             int analogPin = 15;
 
             analogController.OpenPin(analogPin);
@@ -540,9 +540,10 @@ namespace Arduino.Samples
             {
                 double value = analogController.ReadVoltage(analogPin);
                 Console.WriteLine($"Read analog value as {value:F2}");
+                Thread.Sleep(100);
             }
 
-            analogController.ClosePin(analogPin);
+            analogController.ClosePin(analogPin);*/
             method3.WaitForResult();
 
             compiler.Dispose();

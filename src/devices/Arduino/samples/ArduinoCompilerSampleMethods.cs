@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Text;
+using Iot.Device.Arduino;
 
 #pragma warning disable CS1591
-namespace Iot.Device.Arduino
+namespace Arduino.Samples
 {
     /// <summary>
     /// These are simple methods to test the IL execution engine on the Arduino
@@ -54,9 +55,9 @@ namespace Iot.Device.Arduino
             for (int i = 0; Smaller(i, 10); i++)
             {
                 hw.WritePin(pin, 1);
-                hw.Sleep(delay);
+                ArduinoRuntimeCore.Sleep(hw, delay);
                 hw.WritePin(pin, 0);
-                hw.Sleep(delay);
+                ArduinoRuntimeCore.Sleep(hw, delay);
             }
 
             hw.SetPinMode(pin, PinMode.Input);

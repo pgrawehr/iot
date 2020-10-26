@@ -489,6 +489,17 @@ namespace Iot.Device.Arduino
         }
 
         /// <summary>
+        /// Replaces the first occurrence of search in input with replace.
+        /// </summary>
+        private static string ReplaceFirst(String input, string search, string replace)
+        {
+            int idx = input.IndexOf(search, StringComparison.InvariantCulture);
+            string output = input.Remove(idx, search.Length);
+            output = output.Insert(idx, replace);
+            return output;
+        }
+
+        /// <summary>
         /// Simulates a printf C statement.
         /// Note that the word size on the arduino is 16 bits, so any argument not specifying an l prefix is considered to
         /// be 16 bits only.
@@ -514,7 +525,7 @@ namespace Iot.Device.Arduino
                     case "lx":
                     {
                         Int32 arg = BitConverter.ToInt32(bytesReceived.ToArray(), startOfArguments);
-                        output = output.Replace("%" + type, arg.ToString("x"));
+                        output = ReplaceFirst(output, "%" + type, arg.ToString("x"));
                         startOfArguments += 4;
                         break;
                     }
@@ -522,7 +533,7 @@ namespace Iot.Device.Arduino
                     case "x":
                     {
                         Int16 arg = BitConverter.ToInt16(bytesReceived.ToArray(), startOfArguments);
-                        output = output.Replace("%" + type, arg.ToString("x"));
+                        output = ReplaceFirst(output, "%" + type, arg.ToString("x"));
                         startOfArguments += 2;
                         break;
                     }
@@ -530,7 +541,7 @@ namespace Iot.Device.Arduino
                     case "d":
                     {
                         Int16 arg = BitConverter.ToInt16(bytesReceived.ToArray(), startOfArguments);
-                        output = output.Replace("%" + type, arg.ToString());
+                        output = ReplaceFirst(output, "%" + type, arg.ToString());
                         startOfArguments += 2;
                         break;
                     }
@@ -538,7 +549,7 @@ namespace Iot.Device.Arduino
                     case "ld":
                     {
                         Int32 arg = BitConverter.ToInt32(bytesReceived.ToArray(), startOfArguments);
-                        output = output.Replace("%" + type, arg.ToString());
+                        output = ReplaceFirst(output, "%" + type, arg.ToString());
                         startOfArguments += 4;
                         break;
                     }
@@ -1093,7 +1104,7 @@ namespace Iot.Device.Arduino
             }
         }
 
-        public void ExecuteIlCode(byte methodIndex, int[] parameters, Type returnType)
+        public void ExecuteIlCode(byte codeReference, int[] parameters, Type returnType)
         {
             lock (_synchronisationLock)
             {
@@ -1107,7 +1118,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
                 _firmataStream.WriteByte((byte)0xFF); // IL data
                 _firmataStream.WriteByte(0);
-                _firmataStream.WriteByte(methodIndex);
+                _firmataStream.WriteByte(codeReference);
                 for (int i = 0; i < parameters.Length; i++)
                 {
                     byte[] param = BitConverter.GetBytes(parameters[i]);
@@ -1119,7 +1130,7 @@ namespace Iot.Device.Arduino
             }
         }
 
-        public void SendMethodDeclaration(byte declarationIndex, int declarationToken, MethodFlags methodFlags, byte maxLocals, byte argCount)
+        public void SendMethodDeclaration(byte codeReference, int declarationToken, MethodFlags methodFlags, byte maxLocals, byte argCount)
         {
             lock (_synchronisationLock)
             {
@@ -1127,12 +1138,32 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
                 _firmataStream.WriteByte((byte)0xFF); // IL data
                 _firmataStream.WriteByte(2); // IL_DECLARE
-                _firmataStream.WriteByte(declarationIndex);
+                _firmataStream.WriteByte(codeReference);
                 _firmataStream.WriteByte((byte)methodFlags);
                 _firmataStream.WriteByte(maxLocals);
                 _firmataStream.WriteByte(argCount);
                 byte[] param = BitConverter.GetBytes(declarationToken);
                 SendValuesAsTwo7bitBytes(param);
+
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
+            }
+        }
+
+        public void SendTokenMap(byte codeReference, int[] data)
+        {
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
+                _firmataStream.WriteByte((byte)0xFF); // IL data
+                _firmataStream.WriteByte(3); // IL_TOKEN_MAP
+                _firmataStream.WriteByte(codeReference);
+                for (int i = 0; i < data.Length; i++)
+                {
+                    byte[] param = BitConverter.GetBytes(data[i]);
+                    SendValuesAsTwo7bitBytes(param);
+                }
 
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();

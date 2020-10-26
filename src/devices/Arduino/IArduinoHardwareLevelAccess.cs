@@ -8,8 +8,8 @@ namespace Iot.Device.Arduino
 {
     public interface IArduinoHardwareLevelAccess
     {
-        [ArduinoImplementation(0)]
-        void Sleep(int delay);
+        [ArduinoImplementation(4)]
+        Int32 GetTickCount();
 
         [ArduinoImplementation(1)]
         void SetPinMode(int pin, PinMode mode);

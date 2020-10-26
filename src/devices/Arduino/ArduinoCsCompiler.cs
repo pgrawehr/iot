@@ -115,6 +115,32 @@ namespace Iot.Device.Arduino
             return LoadCode(method, method.Method);
         }
 
+        private MemberInfo ResolveMember(MethodInfo method, int metadataToken)
+        {
+            Type type = method.DeclaringType;
+            Type[] typeArgs = null, methodArgs = null;
+
+            if (type.IsGenericType || type.IsGenericTypeDefinition)
+            {
+                typeArgs = type.GetGenericArguments();
+            }
+
+            if (method.IsGenericMethod || method.IsGenericMethodDefinition)
+            {
+                methodArgs = method.GetGenericArguments();
+            }
+
+            try
+            {
+                return type.Module.ResolveMember(metadataToken, typeArgs, methodArgs);
+            }
+            catch (ArgumentException)
+            {
+                // Due to our simplistic parsing below, we might find matching metadata tokens that aren't really tokens
+                return null;
+            }
+        }
+
         public void LoadLowLevelInterface()
         {
             Type lowLevelInterface = typeof(IArduinoHardwareLevelAccess);
@@ -123,11 +149,16 @@ namespace Iot.Device.Arduino
                 if (!_methodInfos.ContainsKey(method))
                 {
                     var attr = (ArduinoImplementationAttribute)method.GetCustomAttributes(typeof(ArduinoImplementationAttribute)).First();
+                    MemberInfo info = ResolveMember(method, 0x0A000072);
+
                     ArduinoMethodDeclaration decl = new ArduinoMethodDeclaration(_numDeclaredMethods++, method.MetadataToken, method, MethodFlags.SpecialMethod, attr.MethodNumber);
                     _methodInfos.Add(method, decl);
                     LoadMethodDeclaration(decl);
                 }
             }
+
+            // Also load the core methods
+            LoadCode(new Action<IArduinoHardwareLevelAccess, int>(ArduinoRuntimeCore.Sleep));
         }
 
         private void LoadMethodDeclaration(ArduinoMethodDeclaration declaration)
@@ -139,12 +170,13 @@ namespace Iot.Device.Arduino
             where T : Delegate
         {
             byte[] ilBytes = GetIlCode(methodInfo);
+            List<int> foreignMethodTokensRequired = new List<int>();
+            // Maps methodDef to memberRef tokens (for methods declared outside the assembly of the executing code)
+            Dictionary<int, int> tokenMap = new Dictionary<int, int>();
             if (ilBytes.Length > 255)
             {
                 throw new InvalidProgramException($"Max IL size of real time method is 255. Actual size is {ilBytes.Length}.");
             }
-
-            VerifyMethodCanBeLoaded(methodInfo);
 
             if (_methodInfos.ContainsKey(methodInfo))
             {
@@ -152,6 +184,19 @@ namespace Iot.Device.Arduino
                 var tsk = new ArduinoTask<T>(method, this, _methodInfos[methodInfo]);
                 _activeTasks.Add(tsk);
                 return tsk;
+            }
+
+            VerifyMethodCanBeLoaded(methodInfo, foreignMethodTokensRequired);
+
+            foreach (int token in foreignMethodTokensRequired.Distinct())
+            {
+                var resolved = ResolveMember(methodInfo, token);
+                if (resolved == null)
+                {
+                    continue;
+                }
+
+                tokenMap.Add(resolved.MetadataToken, token);
             }
 
             if (_numDeclaredMethods >= 255)
@@ -163,12 +208,33 @@ namespace Iot.Device.Arduino
             var newInfo = new ArduinoMethodDeclaration(_numDeclaredMethods++, methodInfo);
             _methodInfos.Add(methodInfo, newInfo);
 
+            _board.Log($"Method Index {newInfo.Index} is named {methodInfo.Name}.");
             LoadMethodDeclaration(newInfo);
+            LoadTokenMap((byte)newInfo.Index, tokenMap);
             _board.Firmata.SendMethodIlCode((byte)newInfo.Index, ilBytes);
 
             var ret = new ArduinoTask<T>(method, this, newInfo);
             _activeTasks.Add(ret);
             return ret;
+        }
+
+        private void LoadTokenMap(byte codeReference, Dictionary<int, int> tokenMap)
+        {
+            if (tokenMap.Count == 0)
+            {
+                return;
+            }
+
+            int[] data = new int[tokenMap.Count * 2];
+            int idx = 0;
+            foreach (var entry in tokenMap)
+            {
+                data[idx] = entry.Key;
+                data[idx + 1] = entry.Value;
+                idx += 2;
+            }
+
+            _board.Firmata.SendTokenMap(codeReference, data);
         }
 
         /// <summary>
@@ -187,7 +253,7 @@ namespace Iot.Device.Arduino
             _board.Firmata.ExecuteIlCode((byte)decl.Index, arguments, method.ReturnType);
         }
 
-        private void VerifyMethodCanBeLoaded(MethodInfo methodInstance)
+        private void VerifyMethodCanBeLoaded(MethodInfo methodInstance, List<int> foreignMethodTokensRequired)
         {
             if (methodInstance.ContainsGenericParameters)
             {
@@ -199,13 +265,33 @@ namespace Iot.Device.Arduino
                 throw new InvalidProgramException("Only static methods supported");
             }
 
-            if (methodInstance.GetMethodBody().ExceptionHandlingClauses.Count > 0)
+            MethodBody body = methodInstance.GetMethodBody();
+            if (body == null)
+            {
+                throw new InvalidProgramException($"Method {methodInstance.Name} has no implementation.");
+            }
+
+            if (body.ExceptionHandlingClauses.Count > 0)
             {
                 throw new InvalidProgramException("Methods with exception handling are not supported");
             }
 
-            // Check argument count, Check parameter types,
-            // etc., etc.
+            // TODO: Check argument count, Check parameter types, etc., etc.
+            byte[] byteCode = body.GetILAsByteArray();
+            // TODO: This is very simplistic so we do not need another parser. But this might have false positives
+            int idx = 0;
+            while (idx < byteCode.Length - 5)
+            {
+                // Decode token first (number is little endian!)
+                int token = byteCode[idx + 1] | byteCode[idx + 2] << 8 | byteCode[idx + 3] << 16 | byteCode[idx + 4] << 24;
+                if ((byteCode[idx] == 0x6F || byteCode[idx] == 0x28) && (token >> 24 == 0x0A))
+                {
+                    // The tokens we're interested in have the form 0x0A XX XX XX preceded by a call or callvirt instruction
+                    foreignMethodTokensRequired.Add(token);
+                }
+
+                idx++;
+            }
         }
 
         public void Dispose()

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Arduino
@@ -30,7 +31,7 @@ namespace Iot.Device.Arduino
                 Flags |= MethodFlags.Virtual;
             }
 
-            if (methodInfo.ReturnParameter == null)
+            if (methodInfo.ReturnParameter == null || methodInfo.ReturnParameter.ParameterType == typeof(void))
             {
                 Flags |= MethodFlags.Void;
             }
