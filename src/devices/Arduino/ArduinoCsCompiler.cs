@@ -32,12 +32,17 @@ namespace Iot.Device.Arduino
 
         private int _numDeclaredMethods;
 
-        public ArduinoCsCompiler(ArduinoBoard board)
+        public ArduinoCsCompiler(ArduinoBoard board, bool resetExistingCode = true)
         {
             _board = board;
             _numDeclaredMethods = 0;
             _methodInfos = new Dictionary<MethodInfo, ArduinoMethodDeclaration>();
             _board.SetCompilerCallback(BoardOnCompilerCallback);
+            if (resetExistingCode)
+            {
+                ClearAllData(true);
+            }
+
             _activeTasks = new List<IArduinoTask>();
         }
 
@@ -292,6 +297,15 @@ namespace Iot.Device.Arduino
 
                 idx++;
             }
+        }
+
+        /// <summary>
+        /// Clears all execution data from the arduino, so that the memory is freed again.
+        /// </summary>
+        /// <param name="force">True to also kill the current task. If false and code is being executed, nothing happens.</param>
+        public void ClearAllData(bool force)
+        {
+            _board.Firmata.SendIlResetCommand(force);
         }
 
         public void Dispose()
