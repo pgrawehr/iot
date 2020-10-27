@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using UnitsNet;
 
 #pragma warning disable CS1591
@@ -46,6 +47,8 @@ namespace Iot.Device.Arduino
         private object _synchronisationLock;
         private Queue<byte> _dataQueue;
 
+        private byte _lastIlExecutionError;
+
         // Event used when waiting for answers (i.e. after requesting firmware version)
         private AutoResetEvent _dataReceived;
         public event Action<byte, MethodState, int, IList<byte>> OnSchedulerReply;
@@ -71,6 +74,7 @@ namespace Iot.Device.Arduino
             _lastAnalogValueLock = new object();
             _dataQueue = new Queue<byte>();
             _lastRequestId = 1;
+            _lastIlExecutionError = 0;
         }
 
         internal List<SupportedPinConfiguration> PinConfigurations
@@ -463,9 +467,18 @@ namespace Iot.Device.Arduino
 
                         case FirmataSysexCommand.SCHEDULER_DATA:
                             {
-                                if (raw_data.Length == 3 && raw_data[1] == 0x7f)
+                                if (raw_data.Length == 4 && raw_data[1] == (byte)ExecutorCommand.Ack)
                                 {
                                     // Just an ack for a programming command.
+                                    _lastIlExecutionError = 0;
+                                    _dataReceived.Set();
+                                    return;
+                                }
+
+                                if (raw_data.Length == 4 && raw_data[1] == (byte)ExecutorCommand.Nack)
+                                {
+                                    // This is a Nack
+                                    _lastIlExecutionError = raw_data[3];
                                     _dataReceived.Set();
                                     return;
                                 }
@@ -1086,6 +1099,20 @@ namespace Iot.Device.Arduino
             }
         }
 
+        private void WaitAndHandleIlCommandReply()
+        {
+            bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
+            if (result == false)
+            {
+                throw new TimeoutException("Arduino failed to accept code sequence.");
+            }
+
+            if (_lastIlExecutionError != 0)
+            {
+                throw new TaskSchedulerException($"Task scheduler method returned state {_lastIlExecutionError}.");
+            }
+        }
+
         public void SendMethodIlCode(byte methodIndex, byte[] byteCode)
         {
             lock (_synchronisationLock)
@@ -1098,7 +1125,7 @@ namespace Iot.Device.Arduino
                     _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                     _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
                     _firmataStream.WriteByte((byte)0xFF); // IL data
-                    _firmataStream.WriteByte(1);
+                    _firmataStream.WriteByte((byte)ExecutorCommand.LoadIl);
                     _firmataStream.WriteByte(methodIndex);
                     _firmataStream.WriteByte((byte)byteCode.Length);
                     _firmataStream.WriteByte((byte)codeIndex);
@@ -1109,11 +1136,7 @@ namespace Iot.Device.Arduino
                     _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                     _firmataStream.Flush();
 
-                    bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
-                    if (result == false)
-                    {
-                        throw new TimeoutException("Arduino failed to accept code sequence.");
-                    }
+                    WaitAndHandleIlCommandReply();
                 }
             }
         }
@@ -1126,7 +1149,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
                 _firmataStream.WriteByte((byte)0xFF); // IL data
-                _firmataStream.WriteByte(0);
+                _firmataStream.WriteByte((byte)ExecutorCommand.StartTask);
                 _firmataStream.WriteByte(codeReference);
                 for (int i = 0; i < parameters.Length; i++)
                 {
@@ -1136,11 +1159,7 @@ namespace Iot.Device.Arduino
 
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
-                bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
-                if (result == false)
-                {
-                    throw new TimeoutException("Arduino failed to acknowledge code start.");
-                }
+                WaitAndHandleIlCommandReply();
             }
         }
 
@@ -1152,7 +1171,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
                 _firmataStream.WriteByte((byte)0xFF); // IL data
-                _firmataStream.WriteByte(2); // IL_DECLARE
+                _firmataStream.WriteByte((byte)ExecutorCommand.DeclareMethod);
                 _firmataStream.WriteByte(codeReference);
                 _firmataStream.WriteByte((byte)methodFlags);
                 _firmataStream.WriteByte(maxLocals);
@@ -1163,11 +1182,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
 
-                bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
-                if (result == false)
-                {
-                    throw new TimeoutException("Arduino failed to accept method declaration.");
-                }
+                WaitAndHandleIlCommandReply();
             }
         }
 
@@ -1179,7 +1194,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
                 _firmataStream.WriteByte((byte)0xFF); // IL data
-                _firmataStream.WriteByte(3); // IL_TOKEN_MAP
+                _firmataStream.WriteByte((byte)ExecutorCommand.SetMethodTokens);
                 _firmataStream.WriteByte(codeReference);
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -1189,11 +1204,7 @@ namespace Iot.Device.Arduino
 
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
-                bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
-                if (result == false)
-                {
-                    throw new TimeoutException("Arduino failed to accept token map.");
-                }
+                WaitAndHandleIlCommandReply();
             }
         }
 
@@ -1204,10 +1215,11 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
                 _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
                 _firmataStream.WriteByte((byte)0xFF); // IL data
-                _firmataStream.WriteByte(4); // IL_RESET
+                _firmataStream.WriteByte((byte)ExecutorCommand.ResetExecutor);
                 _firmataStream.WriteByte((byte)(force ? 1 : 0));
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
+                Thread.Sleep(100);
             }
         }
 

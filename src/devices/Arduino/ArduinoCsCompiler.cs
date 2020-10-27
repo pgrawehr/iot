@@ -7,6 +7,20 @@ using System.Text;
 #pragma warning disable CS1591
 namespace Iot.Device.Arduino
 {
+    internal enum ExecutorCommand : byte
+    {
+        None = 0,
+        DeclareMethod = 1,
+        SetMethodTokens = 2,
+        LoadIl = 3,
+        StartTask = 4,
+        ResetExecutor = 5,
+        KillTask = 6,
+
+        Nack = 0x7e,
+        Ack = 0x7f,
+    }
+
     [Flags]
     public enum MethodFlags
     {
