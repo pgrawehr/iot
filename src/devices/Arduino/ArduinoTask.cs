@@ -62,6 +62,19 @@ namespace Iot.Device.Arduino
             Compiler.Invoke(MethodInfo.MethodInfo, arguments);
         }
 
+        public bool Invoke(CancellationToken cancellationToken, params int[] arguments)
+        {
+            InvokeAsync(arguments);
+            Task<bool> task = WaitForResult(cancellationToken);
+            task.Wait(cancellationToken);
+            return task.Result;
+        }
+
+        public void Terminate()
+        {
+            Compiler.KillTask(MethodInfo.MethodInfo);
+        }
+
         /// <summary>
         /// Returns a data set obtained from the realtime method.
         /// If this returns false, no data is available.

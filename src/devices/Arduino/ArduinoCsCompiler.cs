@@ -36,6 +36,7 @@ namespace Iot.Device.Arduino
         Stopped = 0,
         Aborted = 1,
         Running = 2,
+        Killed = 3,
     }
 
     public sealed class ArduinoCsCompiler : IDisposable
@@ -52,12 +53,13 @@ namespace Iot.Device.Arduino
             _numDeclaredMethods = 0;
             _methodInfos = new Dictionary<MethodInfo, ArduinoMethodDeclaration>();
             _board.SetCompilerCallback(BoardOnCompilerCallback);
+
+            _activeTasks = new List<IArduinoTask>();
+
             if (resetExistingCode)
             {
                 ClearAllData(true);
             }
-
-            _activeTasks = new List<IArduinoTask>();
         }
 
         private string GetMethodName(ArduinoMethodDeclaration decl)
@@ -79,7 +81,7 @@ namespace Iot.Device.Arduino
                 return;
             }
 
-            var task = _activeTasks.FirstOrDefault(x => x.MethodInfo == codeRef);
+            var task = _activeTasks.FirstOrDefault(x => x.MethodInfo == codeRef && x.State == MethodState.Running);
 
             if (task == null)
             {
@@ -90,6 +92,14 @@ namespace Iot.Device.Arduino
             if (state == MethodState.Aborted)
             {
                 _board.Log($"Execution of method {GetMethodName(codeRef)} caused an exception. Check previous messages.");
+                // Still update the task state, this will prevent a deadlock if somebody is waiting for this task to end
+                task.AddData(state, new object[0]);
+                return;
+            }
+
+            if (state == MethodState.Killed)
+            {
+                _board.Log($"Execution of method {GetMethodName(codeRef)} was forcibly terminated.");
                 // Still update the task state, this will prevent a deadlock if somebody is waiting for this task to end
                 task.AddData(state, new object[0]);
                 return;
@@ -272,6 +282,16 @@ namespace Iot.Device.Arduino
             _board.Firmata.ExecuteIlCode((byte)decl.Index, arguments, method.ReturnType);
         }
 
+        public void KillTask(MethodInfo methodInfo)
+        {
+            if (!_methodInfos.TryGetValue(methodInfo, out var decl))
+            {
+                throw new InvalidOperationException("No such method known.");
+            }
+
+            _board.Firmata.SendKillTask((byte)decl.Index);
+        }
+
         private void VerifyMethodCanBeLoaded(MethodInfo methodInstance, List<int> foreignMethodTokensRequired)
         {
             if (methodInstance.ContainsGenericParameters)
@@ -320,6 +340,9 @@ namespace Iot.Device.Arduino
         public void ClearAllData(bool force)
         {
             _board.Firmata.SendIlResetCommand(force);
+            _numDeclaredMethods = 0;
+            _activeTasks.Clear();
+            _methodInfos.Clear();
         }
 
         public void Dispose()

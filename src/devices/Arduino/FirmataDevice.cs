@@ -1223,6 +1223,21 @@ namespace Iot.Device.Arduino
             }
         }
 
+        public void SendKillTask(byte codeReference)
+        {
+            lock (_synchronisationLock)
+            {
+                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
+                _firmataStream.WriteByte((byte)0xFF); // IL data
+                _firmataStream.WriteByte((byte)ExecutorCommand.KillTask);
+                _firmataStream.WriteByte(codeReference);
+                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                _firmataStream.Flush();
+                Thread.Sleep(100);
+            }
+        }
+
         private void SendValuesAsTwo7bitBytes(ReadOnlySpan<byte> values)
         {
             for (int i = 0; i < values.Length; i++)

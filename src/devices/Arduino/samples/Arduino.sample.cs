@@ -546,6 +546,21 @@ namespace Arduino.Samples
             analogController.ClosePin(analogPin);
             method3.WaitForResult();
 
+            compiler.ClearAllData(true);
+
+            // Start task again and terminate it immediately
+            compiler.LoadLowLevelInterface();
+            compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerSampleMethods.Smaller));
+            method3 = compiler.LoadCode(new Action<IArduinoHardwareLevelAccess, int, int>(ArduinoCompilerSampleMethods.Blink));
+            method3.InvokeAsync(0, 10, 500);
+            method3.Terminate();
+            if (method3.State != MethodState.Killed)
+            {
+                Console.WriteLine("Unable to terminate task");
+            }
+
+            method3.Dispose();
+            compiler.ClearAllData(true);
             compiler.Dispose();
         }
     }
