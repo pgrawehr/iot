@@ -495,36 +495,52 @@ namespace Arduino.Samples
         public static void TestIlInterpreter(ArduinoBoard board)
         {
             ArduinoCsCompiler compiler = new ArduinoCsCompiler(board);
-            var method1 = compiler.LoadCode<Func<int, int, int>>(ArduinoCompilerSampleMethods.AddInts);
-            method1.InvokeAsync(2, 3);
-            int result;
-            method1.WaitForResult();
-            method1.GetMethodResults(out object[] data, out MethodState state);
-            if (state != MethodState.Stopped)
+            BasicCalculationTest(compiler);
+
+            OperatorTest(compiler);
+
+            //// AsyncExecutionTest(board, compiler);
+
+            ReadDht11Test(compiler);
+
+            compiler.Dispose();
+        }
+
+        private static void ReadDht11Test(ArduinoCsCompiler compiler)
+        {
+            object[] data;
+            MethodState state;
+
+            compiler.LoadLowLevelInterface();
+            var dht = compiler.LoadCode(new Func<IArduinoHardwareLevelAccess, int, UInt32>(ArduinoCompilerSampleMethods.ReadDht11));
+            dht.InvokeAsync(0, 3);
+
+            CancellationTokenSource ts = new CancellationTokenSource(10000);
+            bool result = dht.WaitForResult(ts.Token).Result;
+
+            if (!result)
             {
-                Console.WriteLine("Method returned result but did not end?!?");
+                Console.WriteLine("Method execution timed out.");
+            }
+            else if (dht.GetMethodResults(out data, out state) && state == MethodState.Stopped)
+            {
+                UInt32 raw = (UInt32)data[0] >> 16;
+                double temperature = raw * 0.1;
+                raw = (UInt32)data[0] & 0xFFFF;
+                double humidity = raw * 0.1;
+
+                Console.WriteLine($"DHT 11 Temperature: {temperature}°C, Humidity {humidity}%");
+            }
+            else
+            {
+                Console.WriteLine($"Unable to read DHT temperature: {state}.");
             }
 
-            result = (int)data[0];
-            Console.WriteLine($"2 + 3 = {result}");
-            method1.InvokeAsync(255, 5);
-            method1.WaitForResult();
-            method1.GetMethodResults(out data, out state);
-            result = (int)data[0];
-            Console.WriteLine($"255 + 5 = {result}");
+            dht.Terminate();
+        }
 
-            var method2 = compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerSampleMethods.Equal));
-            method2.InvokeAsync(2, 3);
-            method2.WaitForResult();
-            method2.GetMethodResults(out data, out state);
-            bool trueOrFalse = (bool)data[0];
-            Console.WriteLine($"Is 2 == 3? {trueOrFalse}");
-            method2.InvokeAsync(257, 257);
-            method2.WaitForResult();
-            method2.GetMethodResults(out data, out state);
-            trueOrFalse = (bool)data[0];
-            Console.WriteLine($"Is 257 == 257? {trueOrFalse}");
-
+        private static void AsyncExecutionTest(ArduinoBoard board, ArduinoCsCompiler compiler)
+        {
             compiler.LoadLowLevelInterface();
             compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerSampleMethods.Smaller));
             var method3 = compiler.LoadCode(new Action<IArduinoHardwareLevelAccess, int, int>(ArduinoCompilerSampleMethods.Blink));
@@ -561,7 +577,78 @@ namespace Arduino.Samples
 
             method3.Dispose();
             compiler.ClearAllData(true);
-            compiler.Dispose();
+        }
+
+        // Note: Input values shall be 1 and 2.
+        // It is only used to prevent the compiler from optimizing away anything
+        private static bool PerformOperatorTest(int inputValue1, int inputValue2)
+        {
+            if (inputValue2 >= 20)
+            {
+                return false;
+            }
+
+            if (inputValue1 > inputValue2)
+            {
+                return false;
+            }
+
+            if (inputValue2 != 2)
+            {
+                return false;
+            }
+
+            if (inputValue1 <= 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void OperatorTest(ArduinoCsCompiler compiler)
+        {
+            var method1 = compiler.LoadCode<Func<int, int, bool>>(PerformOperatorTest);
+            bool result = method1.Invoke(CancellationToken.None, 0, 1, 2);
+            if (!result)
+            {
+                Console.WriteLine("Test failed");
+            }
+
+            compiler.ClearAllData(true);
+        }
+
+        private static void BasicCalculationTest(ArduinoCsCompiler compiler)
+        {
+            var method1 = compiler.LoadCode<Func<int, int, int>>(ArduinoCompilerSampleMethods.AddInts);
+            method1.InvokeAsync(2, 3);
+            int result;
+            method1.WaitForResult();
+            method1.GetMethodResults(out object[] data, out MethodState state);
+            if (state != MethodState.Stopped)
+            {
+                Console.WriteLine("Method returned result but did not end?!?");
+            }
+
+            result = (int)data[0];
+            Console.WriteLine($"2 + 3 = {result}");
+            method1.InvokeAsync(255, 5);
+            method1.WaitForResult();
+            method1.GetMethodResults(out data, out state);
+            result = (int)data[0];
+            Console.WriteLine($"255 + 5 = {result}");
+
+            var method2 = compiler.LoadCode(new Func<int, int, bool>(ArduinoCompilerSampleMethods.Equal));
+            method2.InvokeAsync(2, 3);
+            method2.WaitForResult();
+            method2.GetMethodResults(out data, out state);
+            bool trueOrFalse = (bool)data[0];
+            Console.WriteLine($"Is 2 == 3? {trueOrFalse}");
+            method2.InvokeAsync(257, 257);
+            method2.WaitForResult();
+            method2.GetMethodResults(out data, out state);
+            trueOrFalse = (bool)data[0];
+            Console.WriteLine($"Is 257 == 257? {trueOrFalse}");
         }
     }
 }

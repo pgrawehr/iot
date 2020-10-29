@@ -47,7 +47,7 @@ namespace Iot.Device.Arduino
         private object _synchronisationLock;
         private Queue<byte> _dataQueue;
 
-        private byte _lastIlExecutionError;
+        private ExecutionError _lastIlExecutionError;
 
         // Event used when waiting for answers (i.e. after requesting firmware version)
         private AutoResetEvent _dataReceived;
@@ -478,7 +478,7 @@ namespace Iot.Device.Arduino
                                 if (raw_data.Length == 4 && raw_data[1] == (byte)ExecutorCommand.Nack)
                                 {
                                     // This is a Nack
-                                    _lastIlExecutionError = raw_data[3];
+                                    _lastIlExecutionError = (ExecutionError)raw_data[3];
                                     _dataReceived.Set();
                                     return;
                                 }
@@ -1101,7 +1101,7 @@ namespace Iot.Device.Arduino
 
         private void WaitAndHandleIlCommandReply()
         {
-            bool result = _dataReceived.WaitOne(DefaultReplyTimeout);
+            bool result = _dataReceived.WaitOne(DefaultReplyTimeout * 2);
             if (result == false)
             {
                 throw new TimeoutException("Arduino failed to accept code sequence.");
@@ -1127,8 +1127,12 @@ namespace Iot.Device.Arduino
                     _firmataStream.WriteByte((byte)0xFF); // IL data
                     _firmataStream.WriteByte((byte)ExecutorCommand.LoadIl);
                     _firmataStream.WriteByte(methodIndex);
-                    _firmataStream.WriteByte((byte)byteCode.Length);
-                    _firmataStream.WriteByte((byte)codeIndex);
+                    ushort len = (ushort)byteCode.Length;
+                    // Transmit 14 bit values
+                    _firmataStream.WriteByte((byte)(len & 0x7f));
+                    _firmataStream.WriteByte((byte)(len >> 7));
+                    _firmataStream.WriteByte((byte)(codeIndex & 0x7f));
+                    _firmataStream.WriteByte((byte)(codeIndex >> 7));
                     int bytesThisPacket = Math.Min(BYTES_PER_PACKET, byteCode.Length - codeIndex);
                     SendValuesAsTwo7bitBytes(byteCode.AsSpan(codeIndex, bytesThisPacket));
                     codeIndex += bytesThisPacket;
@@ -1190,21 +1194,39 @@ namespace Iot.Device.Arduino
         {
             lock (_synchronisationLock)
             {
-                _dataReceived.Reset();
-                _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
-                _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
-                _firmataStream.WriteByte((byte)0xFF); // IL data
-                _firmataStream.WriteByte((byte)ExecutorCommand.SetMethodTokens);
-                _firmataStream.WriteByte(codeReference);
-                for (int i = 0; i < data.Length; i++)
+                // Send four (two pairs) at a time, otherwise the maximum length of the message may be exceeded
+                for (int token = 0; token < data.Length;)
                 {
-                    byte[] param = BitConverter.GetBytes(data[i]);
-                    SendValuesAsTwo7bitBytes(param);
-                }
+                    _dataReceived.Reset();
+                    _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
+                    _firmataStream.WriteByte((byte)FirmataSysexCommand.SCHEDULER_DATA);
+                    _firmataStream.WriteByte((byte)0xFF); // IL data
+                    _firmataStream.WriteByte((byte)ExecutorCommand.SetMethodTokens);
+                    _firmataStream.WriteByte(codeReference);
+                    int remaining = data.Length - token;
+                    if (remaining > 4)
+                    {
+                        remaining = 4;
+                    }
 
-                _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
-                _firmataStream.Flush();
-                WaitAndHandleIlCommandReply();
+                    ushort len = (ushort)data.Length;
+                    // Transmit 14 bit values
+                    _firmataStream.WriteByte((byte)(len & 0x7f));
+                    _firmataStream.WriteByte((byte)(len >> 7));
+                    _firmataStream.WriteByte((byte)(token & 0x7f));
+                    _firmataStream.WriteByte((byte)(token >> 7));
+
+                    for (int i = token; i < token + remaining; i++)
+                    {
+                        byte[] param = BitConverter.GetBytes(data[i]);
+                        SendValuesAsTwo7bitBytes(param);
+                    }
+
+                    _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                    _firmataStream.Flush();
+                    WaitAndHandleIlCommandReply();
+                    token = token + remaining;
+                }
             }
         }
 

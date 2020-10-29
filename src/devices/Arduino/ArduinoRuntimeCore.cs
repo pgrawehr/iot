@@ -12,8 +12,10 @@ namespace Iot.Device.Arduino
     {
         public static void Sleep(IArduinoHardwareLevelAccess hardwareLevelAccess, int delayMs)
         {
+            hardwareLevelAccess.DebugValue(delayMs);
             if (delayMs <= 0)
             {
+                hardwareLevelAccess.DebugValue(0xAA);
                 return;
             }
 

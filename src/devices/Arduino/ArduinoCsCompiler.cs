@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using UnitsNet;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Arduino
@@ -37,6 +38,14 @@ namespace Iot.Device.Arduino
         Aborted = 1,
         Running = 2,
         Killed = 3,
+    }
+
+    internal enum ExecutionError
+    {
+        None = 0,
+        EngineBusy = 1,
+        InvalidArguments = 2,
+        OutOfMemory = 3
     }
 
     public sealed class ArduinoCsCompiler : IDisposable
@@ -178,7 +187,6 @@ namespace Iot.Device.Arduino
                 if (!_methodInfos.ContainsKey(method))
                 {
                     var attr = (ArduinoImplementationAttribute)method.GetCustomAttributes(typeof(ArduinoImplementationAttribute)).First();
-                    MemberInfo info = ResolveMember(method, 0x0A000072);
 
                     ArduinoMethodDeclaration decl = new ArduinoMethodDeclaration(_numDeclaredMethods++, method.MetadataToken, method, MethodFlags.SpecialMethod, attr.MethodNumber);
                     _methodInfos.Add(method, decl);
@@ -202,9 +210,9 @@ namespace Iot.Device.Arduino
             List<int> foreignMethodTokensRequired = new List<int>();
             // Maps methodDef to memberRef tokens (for methods declared outside the assembly of the executing code)
             Dictionary<int, int> tokenMap = new Dictionary<int, int>();
-            if (ilBytes.Length > 255)
+            if (ilBytes.Length > Math.Pow(2, 14) - 1)
             {
-                throw new InvalidProgramException($"Max IL size of real time method is 255. Actual size is {ilBytes.Length}.");
+                throw new InvalidProgramException($"Max IL size of real time method is 2^14 Bytes. Actual size is {ilBytes.Length}.");
             }
 
             if (_methodInfos.ContainsKey(methodInfo))

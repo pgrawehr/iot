@@ -19,5 +19,14 @@ namespace Iot.Device.Arduino
 
         [ArduinoImplementation(3)]
         int ReadPin(int pin);
+
+        [ArduinoImplementation(5)]
+        void SleepMicroseconds(int microseconds);
+
+        [ArduinoImplementation(6)]
+        UInt32 GetMicroseconds();
+
+        [ArduinoImplementation(7)]
+        void DebugValue(int data);
     }
 }
