@@ -78,7 +78,8 @@ namespace Arduino.Samples
                 }
             }
 
-            Debug.Write(logFile.ToString());
+            Console.WriteLine();
+            Console.Write(logFile.ToString());
         }
 
         private static void BoardOnLogMessages(string message, Exception exception)

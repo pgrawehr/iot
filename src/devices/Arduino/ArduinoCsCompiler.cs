@@ -119,15 +119,20 @@ namespace Iot.Device.Arduino
                 object retVal;
                 int inVal = (int)args[0]; // initially, the list contains only ints
                 // The method ended, therefore we know that the only element or args is the return value and can derive its correct type
-                if (codeRef.MethodInfo.ReturnType == typeof(void))
+                Type returnType = codeRef.MethodInfo.ReturnType;
+                if (returnType == typeof(void))
                 {
                     args = new object[0]; // Empty return set
                     task.AddData(state, args);
                     return;
                 }
-                else if (codeRef.MethodInfo.ReturnType == typeof(bool))
+                else if (returnType == typeof(bool))
                 {
                     retVal = inVal != 0;
+                }
+                else if (returnType == typeof(UInt32))
+                {
+                    retVal = (uint)inVal;
                 }
                 else
                 {
@@ -325,6 +330,12 @@ namespace Iot.Device.Arduino
 
             // TODO: Check argument count, Check parameter types, etc., etc.
             byte[] byteCode = body.GetILAsByteArray();
+            if (byteCode.Length >= ushort.MaxValue - 1)
+            {
+                // If you hit this limit, some refactoring should be considered...
+                throw new InvalidProgramException("Maximum method size is 64kb");
+            }
+
             // TODO: This is very simplistic so we do not need another parser. But this might have false positives
             int idx = 0;
             while (idx < byteCode.Length - 5)

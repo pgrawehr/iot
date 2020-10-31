@@ -1099,12 +1099,12 @@ namespace Iot.Device.Arduino
             }
         }
 
-        private void WaitAndHandleIlCommandReply()
+        private void WaitAndHandleIlCommandReply(ExecutorCommand command)
         {
             bool result = _dataReceived.WaitOne(DefaultReplyTimeout * 2);
             if (result == false)
             {
-                throw new TimeoutException("Arduino failed to accept code sequence.");
+                throw new TimeoutException($"Arduino failed to accept IL command {command}.");
             }
 
             if (_lastIlExecutionError != 0)
@@ -1140,7 +1140,7 @@ namespace Iot.Device.Arduino
                     _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                     _firmataStream.Flush();
 
-                    WaitAndHandleIlCommandReply();
+                    WaitAndHandleIlCommandReply(ExecutorCommand.LoadIl);
                 }
             }
         }
@@ -1163,7 +1163,7 @@ namespace Iot.Device.Arduino
 
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
-                WaitAndHandleIlCommandReply();
+                WaitAndHandleIlCommandReply(ExecutorCommand.StartTask);
             }
         }
 
@@ -1186,7 +1186,7 @@ namespace Iot.Device.Arduino
                 _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                 _firmataStream.Flush();
 
-                WaitAndHandleIlCommandReply();
+                WaitAndHandleIlCommandReply(ExecutorCommand.DeclareMethod);
             }
         }
 
@@ -1224,7 +1224,7 @@ namespace Iot.Device.Arduino
 
                     _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
                     _firmataStream.Flush();
-                    WaitAndHandleIlCommandReply();
+                    WaitAndHandleIlCommandReply(ExecutorCommand.SetMethodTokens);
                     token = token + remaining;
                 }
             }

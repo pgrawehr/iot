@@ -69,11 +69,14 @@ namespace Arduino.Samples
             uint resultLow = 0;
             uint result = 0;
             uint checksum = 0;
+            int debugPin = 10; // Using a scope to measure performance on this pin
 
-            uint loopCount = 1000;
+            uint loopCount = 2000;
             // keep data line HIGH
             controller.SetPinMode(pin, PinMode.Output);
             controller.WritePin(pin, 1);
+            controller.SetPinMode(debugPin, PinMode.Output);
+            controller.WritePin(debugPin, 0);
             ArduinoRuntimeCore.Sleep(controller, 20);
 
             // send trigger signal
@@ -83,18 +86,20 @@ namespace Arduino.Samples
             ArduinoRuntimeCore.Sleep(controller, 20);
 
             // pull up data line
-            controller.WritePin(pin, 1);
+            // TODO: This causes the signal to be disturbed for about 5ms. Do we need to always write a 0 before setting the mode to InputPullUp?
+            // controller.WritePin(pin, 1);
             // wait 20 - 40 microseconds
-            controller.SleepMicroseconds(20);
-
+            // controller.SleepMicroseconds(20);
             controller.SetPinMode(pin, PinMode.InputPullUp);
 
+            // controller.SleepMicroseconds(55);
             // DHT corresponding signal - LOW - about 80 microseconds
             count = loopCount;
             while (controller.ReadPin(pin) == 0)
             {
                 if (count-- == 0)
                 {
+                    controller.DebugValue(0xAAAA);
                     return 0;
                 }
             }
@@ -105,10 +110,13 @@ namespace Arduino.Samples
             {
                 if (count-- == 0)
                 {
+                    controller.WritePin(debugPin, 1);
+                    controller.DebugValue(0xBBBB);
                     return 0;
                 }
             }
 
+            controller.WritePin(debugPin, 1);
             // the read data contains 40 bits
             for (int i = 0; i < 40; i++)
             {
@@ -118,8 +126,10 @@ namespace Arduino.Samples
                 {
                     if (count-- == 0)
                     {
+                        controller.DebugValue(i);
                         return 0;
                     }
+
                 }
 
                 // 26 - 28 microseconds represent 0
@@ -130,6 +140,7 @@ namespace Arduino.Samples
                 {
                     if (count-- == 0)
                     {
+                        controller.DebugValue(i);
                         return 0;
                     }
                 }
