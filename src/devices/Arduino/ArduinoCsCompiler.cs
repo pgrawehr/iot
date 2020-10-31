@@ -150,7 +150,7 @@ namespace Iot.Device.Arduino
         public ArduinoTask<T> LoadCode<T>(T method)
             where T : Delegate
         {
-            return LoadCode(method, method.Method);
+            return LoadCode<T>(method.Method);
         }
 
         private MemberInfo ResolveMember(MethodInfo method, int metadataToken)
@@ -203,7 +203,7 @@ namespace Iot.Device.Arduino
             _board.Firmata.SendMethodDeclaration((byte)declaration.Index, declaration.Token, declaration.Flags, (byte)Math.Max(declaration.MaxLocals, declaration.MaxStack), (byte)declaration.ArgumentCount);
         }
 
-        private ArduinoTask<T> LoadCode<T>(T method, MethodInfo methodInfo)
+        public ArduinoTask<T> LoadCode<T>(MethodInfo methodInfo)
             where T : Delegate
         {
             byte[] ilBytes = GetIlCode(methodInfo);
@@ -218,7 +218,7 @@ namespace Iot.Device.Arduino
             if (_methodInfos.ContainsKey(methodInfo))
             {
                 // Nothing to do, already loaded
-                var tsk = new ArduinoTask<T>(method, this, _methodInfos[methodInfo]);
+                var tsk = new ArduinoTask<T>(this, _methodInfos[methodInfo]);
                 _activeTasks.Add(tsk);
                 return tsk;
             }
@@ -250,7 +250,7 @@ namespace Iot.Device.Arduino
             LoadTokenMap((byte)newInfo.Index, tokenMap);
             _board.Firmata.SendMethodIlCode((byte)newInfo.Index, ilBytes);
 
-            var ret = new ArduinoTask<T>(method, this, newInfo);
+            var ret = new ArduinoTask<T>(this, newInfo);
             _activeTasks.Add(ret);
             return ret;
         }

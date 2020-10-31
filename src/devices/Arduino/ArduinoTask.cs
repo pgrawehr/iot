@@ -21,9 +21,8 @@ namespace Iot.Device.Arduino
     {
         private ConcurrentQueue<(MethodState, object[])> _collectedValues;
         private AutoResetEvent _dataAdded;
-        internal ArduinoTask(T function, ArduinoCsCompiler compiler, ArduinoMethodDeclaration methodInfo)
+        internal ArduinoTask(ArduinoCsCompiler compiler, ArduinoMethodDeclaration methodInfo)
         {
-            Function = function;
             Compiler = compiler;
             MethodInfo = methodInfo;
             State = MethodState.Stopped;
@@ -31,7 +30,6 @@ namespace Iot.Device.Arduino
             _dataAdded = new AutoResetEvent(false);
         }
 
-        public T Function { get; }
         public ArduinoCsCompiler Compiler { get; }
         public ArduinoMethodDeclaration MethodInfo { get; }
 
