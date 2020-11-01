@@ -350,16 +350,12 @@ namespace System.Device.Gpio.Drivers
             }
         }
 
-        /// <summary>
-        /// Sets the given alternate pin mode (0 = Alt0, 1 = Alt1... anything else = Back to Gpio)
-        /// </summary>
-        /// <param name="pinNumber">Pin to set</param>
-        /// <param name="altMode">Mode to set</param>
-        internal void SetAlternatePinMode(int pinNumber, int altMode)
+        /// <inheritdoc />
+        protected internal override void SetAlternatePinMode(int pinNumber, AlternatePinMode altMode)
         {
             Initialize();
             /*
-             * There are 6 registers(4-byte ints) that control the mode for all pins. Each
+             * There are 6 registers (4-byte ints) that control the mode for all pins. Each
              * register controls the mode for 10 pins. Each pin uses 3 bits in the register
              * containing the mode.
              */
@@ -374,38 +370,22 @@ namespace System.Device.Gpio.Drivers
             // Set the 3 bits to the desired mode for that pin.
             uint modeBits = 0; // Default: Gpio input
 
-            switch (altMode)
+            if (altMode == AlternatePinMode.Gpio)
             {
-                case 0:
-                    modeBits = 0b100;
-                    break;
-                case 1:
-                    modeBits = 0b101;
-                    break;
-                case 2:
-                    modeBits = 0b110;
-                    break;
-                case 3:
-                    modeBits = 0b111;
-                    break;
-                case 4:
-                    modeBits = 0b011;
-                    break;
-                case 5:
-                    modeBits = 0b010;
-                    break;
+                // When setting back to Gpio, set to input, as this is the default
+                modeBits = 0;
+            }
+            else
+            {
+                modeBits = altMode.ModeValue;
             }
 
             register |= (modeBits) << shift;
             *registerPointer = register;
         }
 
-        /// <summary>
-        /// Returns the currently set pin mode by directly reading the hardware
-        /// </summary>
-        /// <param name="pinNumber">Pin number</param>
-        /// <returns>(Alternate) Pin mode. 0 = Alt0, 1= Alt1... -1 Gpio Input, -2 Gpio Output</returns>
-        internal int GetAlternatePinMode(int pinNumber)
+        /// <inheritdoc />
+        protected internal override AlternatePinMode GetAlternatePinMode(int pinNumber)
         {
             Initialize();
             /*
@@ -426,24 +406,25 @@ namespace System.Device.Gpio.Drivers
             {
                 case 0b000:
                     // Input
-                    return -1;
+                    return AlternatePinMode.Gpio;
                 case 0b001:
-                    return -2;
+                    return AlternatePinMode.Gpio;
                 case 0b100:
-                    return 0;
+                    return AlternatePinMode.Alt0;
                 case 0b101:
-                    return 1;
+                    return AlternatePinMode.Alt1;
                 case 0b110:
-                    return 2;
+                    return AlternatePinMode.Alt2;
                 case 0b111:
-                    return 3;
+                    return AlternatePinMode.Alt3;
                 case 0b011:
-                    return 4;
+                    return AlternatePinMode.Alt4;
                 case 0b010:
-                    return 5;
+                    return AlternatePinMode.Alt5;
             }
 
-            return -1;
+            // This cannot happen.
+            throw new InvalidOperationException("Invalid register value");
         }
 
         /// <summary>

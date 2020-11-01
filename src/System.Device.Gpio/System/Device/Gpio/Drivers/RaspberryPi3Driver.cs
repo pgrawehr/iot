@@ -13,7 +13,7 @@ namespace System.Device.Gpio.Drivers
     public class RaspberryPi3Driver : GpioDriver
     {
         private GpioDriver _internalDriver;
-        
+
         /* private delegates for register Properties */
         private delegate void Set_Register(ulong value);
         private delegate ulong Get_Register();
@@ -136,34 +136,16 @@ namespace System.Device.Gpio.Drivers
         /// <inheritdoc/>
         protected internal override void Write(int pinNumber, PinValue value) => _internalDriver.Write(pinNumber, value);
 
-        /// <summary>
-        /// Returns the currently set pin mode by directly reading the hardware
-        /// </summary>
-        /// <param name="pinNumber">Pin number</param>
-        /// <returns>(Alternate) Pin mode. 0 = Alt0, 1= Alt1... -1 Gpio Input, -2 Gpio Output</returns>
-        protected internal int GetAlternatePinMode(int pinNumber)
+        /// <inheritdoc />
+        protected internal override AlternatePinMode GetAlternatePinMode(int pinNumber)
         {
-            if (_linuxRegisterDriver == null)
-            {
-                throw new NotSupportedException("Getting alternate pin mode not supported");
-            }
-
-            return _linuxRegisterDriver.GetAlternatePinMode(pinNumber);
+            return _internalDriver.GetAlternatePinMode(pinNumber);
         }
 
-        /// <summary>
-        /// Sets the given alternate pin mode (0 = Alt0, 1 = Alt1... anything else = Back to Gpio)
-        /// </summary>
-        /// <param name="pinNumber">Pin to set</param>
-        /// <param name="altMode">Mode to set</param>
-        protected internal void SetAlternatePinMode(int pinNumber, int altMode)
+        /// <inheritdoc />
+        protected internal override void SetAlternatePinMode(int pinNumber, AlternatePinMode altMode)
         {
-            if (_linuxRegisterDriver == null)
-            {
-                throw new NotSupportedException("Setting alternate pin mode not supported");
-            }
-
-            _linuxRegisterDriver.SetAlternatePinMode(pinNumber, altMode);
+            _internalDriver.SetAlternatePinMode(pinNumber, altMode);
         }
 
         /// <summary>

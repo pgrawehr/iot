@@ -237,6 +237,35 @@ namespace System.Device.Gpio
         }
 
         /// <summary>
+        /// Returns the currently set pin mode by directly reading the hardware
+        /// </summary>
+        /// <param name="pinNumber">Pin number</param>
+        /// <returns>(Alternate) Pin mode. 0 = Alt0, 1= Alt1... -1 Gpio Input, -2 Gpio Output</returns>
+        public virtual AlternatePinMode GetAlternatePinMode(int pinNumber)
+        {
+            int logicalPinNumber = GetLogicalPinNumber(pinNumber, NumberingScheme);
+            return _driver.GetAlternatePinMode(logicalPinNumber);
+        }
+
+        /// <summary>
+        /// Sets the alternate pin mode for drivers that support this.
+        /// </summary>
+        /// <param name="pinNumber">The pin number to use</param>
+        /// <param name="altMode">Alternate mode to set</param>
+        /// <exception cref="InvalidOperationException">The pin is open.</exception>
+        /// <exception cref="NotSupportedException">This mode is not supported on this pin.</exception>
+        public virtual void SetAlternatePinMode(int pinNumber, AlternatePinMode altMode)
+        {
+            int logicalPinNumber = GetLogicalPinNumber(pinNumber, NumberingScheme);
+            if (_openPins.Contains(logicalPinNumber))
+            {
+                throw new InvalidOperationException("Cannot switch to an alternate mode while the pin is open");
+            }
+
+            _driver.SetAlternatePinMode(logicalPinNumber, altMode);
+        }
+
+        /// <summary>
         /// Blocks execution until an event of type eventType is received or a period of time has expired.
         /// </summary>
         /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
