@@ -243,7 +243,7 @@ namespace System.Device.Gpio
         /// <returns>(Alternate) Pin mode. 0 = Alt0, 1= Alt1... -1 Gpio Input, -2 Gpio Output</returns>
         public virtual AlternatePinMode GetAlternatePinMode(int pinNumber)
         {
-            int logicalPinNumber = GetLogicalPinNumber(pinNumber, NumberingScheme);
+            int logicalPinNumber = GetLogicalPinNumber(pinNumber);
             return _driver.GetAlternatePinMode(logicalPinNumber);
         }
 
@@ -256,7 +256,7 @@ namespace System.Device.Gpio
         /// <exception cref="NotSupportedException">This mode is not supported on this pin.</exception>
         public virtual void SetAlternatePinMode(int pinNumber, AlternatePinMode altMode)
         {
-            int logicalPinNumber = GetLogicalPinNumber(pinNumber, NumberingScheme);
+            int logicalPinNumber = GetLogicalPinNumber(pinNumber);
             if (_openPins.Contains(logicalPinNumber))
             {
                 throw new InvalidOperationException("Cannot switch to an alternate mode while the pin is open");
