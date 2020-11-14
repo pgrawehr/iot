@@ -21,6 +21,19 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
+        public void CreateDeviationTable2()
+        {
+            MagneticDeviationCorrection dev = new MagneticDeviationCorrection();
+            dev.CreateCorrectionTable(new string[]
+            {
+                "..\\..\\..\\Nmea-2020-09-23-07-31.txt",
+                "..\\..\\..\\Nmea-2020-09-23-07-53.txt"
+            });
+
+            dev.Save("..\\..\\..\\Calibration_Cirrus_v2_deltas.xml", "Cirrus", "HBY5127", "269110660");
+        }
+
+        [Fact]
         public void ReadAndUseDeviationTable()
         {
             MagneticDeviationCorrection dev = new MagneticDeviationCorrection();
