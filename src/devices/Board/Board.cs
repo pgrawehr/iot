@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.Win32;
 
+#pragma warning disable CS1591
 namespace Iot.Device.Board
 {
     public abstract class Board : MarshalByRefObject, IDisposable
@@ -94,7 +95,7 @@ namespace Iot.Device.Board
             {
                 if (!UsageCanSharePins(usage))
                 {
-                    if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation> reservations))
+                    if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation>? reservations))
                     {
                         PinReservation reservation = reservations.First();
                         throw new InvalidOperationException($"Pin {pinNumber} has already been reserved for {reservation.Usage} by class {reservation.Owner}.");
@@ -105,7 +106,7 @@ namespace Iot.Device.Board
                 }
                 else
                 {
-                    if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation> reservations))
+                    if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation>? reservations))
                     {
                         PinReservation reservation = reservations.First();
                         if (reservation.Usage != usage)
@@ -138,7 +139,7 @@ namespace Iot.Device.Board
 
             lock (_pinReservationsLock)
             {
-                if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation> reservations))
+                if (_pinReservations.TryGetValue(logicalPin, out List<PinReservation>? reservations))
                 {
                     if (!UsageCanSharePins(usage))
                     {
@@ -152,7 +153,7 @@ namespace Iot.Device.Board
                     }
                     else
                     {
-                        PinReservation reservation = reservations.FirstOrDefault(x => x.Owner == owner);
+                        PinReservation? reservation = reservations.FirstOrDefault(x => x.Owner == owner);
                         if (reservation == null)
                         {
                             throw new InvalidOperationException($"Cannot release Pin {pinNumber}, because you are not a valid owner.");
@@ -319,7 +320,7 @@ namespace Iot.Device.Board
         /// </remarks>
         private static GpioDriver GetBestDriverForBoardOnWindows()
         {
-            string? baseBoardProduct = Registry.LocalMachine.GetValue(BaseBoardProductRegistryValue, string.Empty)!.ToString();
+            string baseBoardProduct = Registry.LocalMachine.GetValue(BaseBoardProductRegistryValue, string.Empty)!.ToString();
 
             if (baseBoardProduct == RaspberryPi3Product || baseBoardProduct.StartsWith($"{RaspberryPi3Product} ") ||
                 baseBoardProduct == RaspberryPi2Product || baseBoardProduct.StartsWith($"{RaspberryPi2Product} "))
