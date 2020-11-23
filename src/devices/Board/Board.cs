@@ -463,9 +463,13 @@ namespace Iot.Device.Board
             }
         }
 
-        //// Todo separately
-        //// public abstract AnalogController CreateAnalogController(int chip);
-
+        /// <summary>
+        /// Create an instance of the best possible board abstraction.
+        /// </summary>
+        /// <param name="defaultNumberingScheme">The default pin numbering scheme the board should use</param>
+        /// <returns>A board instance, to be used across the application</returns>
+        /// <exception cref="PlatformNotSupportedException">The board could not be identified</exception>
+        /// <remarks>The detection concept should be refined, but this requires a public detection api</remarks>
         public static Board Create(PinNumberingScheme defaultNumberingScheme = PinNumberingScheme.Logical)
         {
             Board? board = null;
