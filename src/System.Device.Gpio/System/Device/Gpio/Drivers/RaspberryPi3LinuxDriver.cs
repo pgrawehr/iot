@@ -375,9 +375,13 @@ namespace System.Device.Gpio.Drivers
                 // When setting back to Gpio, set to input, as this is the default
                 modeBits = 0;
             }
-            else
+            else if (altMode.ModeValue < 8)
             {
                 modeBits = altMode.ModeValue;
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unknown Alternate pin mode value: {altMode.ModeValue}");
             }
 
             register |= (modeBits) << shift;
