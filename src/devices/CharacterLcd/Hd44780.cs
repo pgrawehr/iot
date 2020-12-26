@@ -56,6 +56,8 @@ namespace Iot.Device.CharacterLcd
         /// </summary>
         protected readonly LcdInterface _lcdInterface;
 
+        private bool _disposed;
+
         /// <summary>
         /// Initializes a new HD44780 LCD controller.
         /// </summary>
@@ -63,6 +65,7 @@ namespace Iot.Device.CharacterLcd
         /// <param name="lcdInterface">The interface to use with the LCD.</param>
         public Hd44780(Size size, LcdInterface lcdInterface)
         {
+            _disposed = false;
             Size = size;
             _lcdInterface = lcdInterface;
             AutoShift = false;
@@ -408,6 +411,23 @@ namespace Iot.Device.CharacterLcd
         /// Releases unmanaged resources used by Hd44780
         /// and optionally release managed resources
         /// </summary>
-        public virtual void Dispose() => _lcdInterface?.Dispose();
+        /// <param name="disposing"><see langword="true" /> to release both managed and unmanaged resources; <see langword="false" /> to release only unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _lcdInterface?.Dispose();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                Dispose(true);
+                _disposed = true;
+            }
+        }
     }
 }
