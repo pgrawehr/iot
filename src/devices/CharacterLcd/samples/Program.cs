@@ -2,8 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.IO.Ports;
+using Iot.Device.Arduino;
 using Iot.Device.Mcp23xxx;
 using Iot.Device.CharacterLcd;
 using Iot.Device.CharacterLcd.Samples;
@@ -13,7 +16,8 @@ using SixLabors.ImageSharp;
 // UsingGpioPins();
 // UsingMcp();
 // UsingGroveRgbDisplay();
-UsingHd44780OverI2C();
+// UsingHd44780OverI2C();
+UsingArduino();
 
 void UsingGpioPins()
 {
@@ -62,4 +66,29 @@ void UsingGroveRgbDisplay()
         lcd.Write("Hello World!");
         lcd.SetBacklightColor(Color.Azure);
     }
+}
+
+void UsingArduino()
+{
+    using var arduino = ArduinoBoard.FindBoard(SerialPort.GetPortNames(), new List<int>()
+    {
+        115200
+    });
+
+    if (arduino == null)
+    {
+        throw new NotSupportedException("No board found");
+    }
+
+    using I2cDevice i2cDevice = arduino.CreateI2cDevice(new I2cConnectionSettings(0, 0x27));
+    using LcdInterface lcdInterface = LcdInterface.CreateI2c(i2cDevice, false);
+    using Hd44780 hd44780 = new Lcd2004(lcdInterface);
+    hd44780.UnderlineCursorVisible = false;
+    hd44780.BacklightOn = true;
+    hd44780.DisplayOn = true;
+    hd44780.Clear();
+    Console.WriteLine("Display initialized. Press Enter to start tests.");
+    Console.ReadLine();
+    LcdConsoleSamples.WriteTest(hd44780);
+    ExtendedSample.Test(hd44780);
 }

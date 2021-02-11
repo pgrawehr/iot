@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
+    <ProjectReference Include="..\Arduino\Arduino.csproj" />
     <None Include="README.md" />
   </ItemGroup>
 

@@ -403,7 +403,7 @@ namespace Iot.Device.CharacterLcd
             };
 
             List<byte[]> extraCharacters = new();
-            bool supported = AssignLettersForCurrentCulture(newMap, culture, romName, extraCharacters, maxNumberOfCustomCharacters);
+            bool supported = AssignLettersForCurrentCulture(newMap, culture, romName, extraCharacters, maxNumberOfCustomCharacters, unknownLetter);
 
             if (!newMap.ContainsKey(unknownLetter))
             {
@@ -411,19 +411,24 @@ namespace Iot.Device.CharacterLcd
             }
 
             var encoding = new LcdCharacterEncoding(culture.Name, romName, newMap, unknownLetter, extraCharacters);
-            encoding.AllCharactersSupported = !supported;
+            encoding.AllCharactersSupported = supported;
             return encoding;
         }
 
         /// <summary>
         /// Tries to generate letters important in that culture but missing from the current rom set
         /// </summary>
-        private bool AssignLettersForCurrentCulture(Dictionary<char, byte> characterMapping, CultureInfo culture, string romName, List<byte[]> extraCharacters, int maxNumberOfCustomCharacters)
+        private bool AssignLettersForCurrentCulture(Dictionary<char, byte> characterMapping, CultureInfo culture, string romName,
+            List<byte[]> extraCharacters, int maxNumberOfCustomCharacters, char unknownLetter)
         {
+            // Ascii chars, without the tilde at 0x7F, since that one is often not present in ROMs, and not frequently used
+            string defaultLetters = @" !""#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}";
             string specialLetters = SpecialLettersForCulture(culture, characterMapping); // Special letters this language group uses, in order of importance
+            string allLetters = defaultLetters + specialLetters;
 
             byte charPos = 0;
-            foreach (var c in specialLetters)
+            // Test all letters, including the default ones, for displays that have no fixed font, but a large ram.
+            foreach (var c in allLetters)
             {
                 if (!characterMapping.ContainsKey(c))
                 {
@@ -431,6 +436,11 @@ namespace Iot.Device.CharacterLcd
                     if (charPos < maxNumberOfCustomCharacters)
                     {
                         var pixelMap = CreateLetter(c, romName);
+                        if (pixelMap == null)
+                        {
+                            pixelMap = CreateLetter(unknownLetter, romName);
+                        }
+
                         if (pixelMap is object)
                         {
                             extraCharacters.Add(pixelMap);
@@ -482,7 +492,7 @@ namespace Iot.Device.CharacterLcd
                     specialLetters = "イロハニホヘトチリヌルヲワカヨタレソツネナラムウヰノオクヤマケフコエテアサキユメミシヱヒモセス";
                     break;
                 case "de":
-                    specialLetters = "äöüß€ÄÖÜ£ë";
+                    specialLetters = "äöüß€ÄÖÜ£ëé";
                     break;
                 case "fr":
                     specialLetters = "èéêà€çôù";
@@ -530,362 +540,34 @@ namespace Iot.Device.CharacterLcd
         };
 
         /// <summary>
-        /// Creates the given letter from a pixel map for Rom Type A00 (7-pixel high letters, bottom row empty)
+        /// Creates the given letter from a pixel map for Rom Type A00 (8 pixel high letters, but bottom row empty)
         /// </summary>
         /// <param name="character">Character to create</param>
         /// <returns>An 8-Byte array of the pixel map for the created letter.</returns>
-        /// <remarks>
-        /// Currently requires the characters to be hardcoded here. Would be nice if we could generate the pixel maps from an existing font, such as Consolas
-        /// </remarks>
-        protected virtual byte[]? CreateLetterA00(char character) => character switch
+        protected virtual byte[]? CreateLetterA00(char character)
         {
-            '€' => CreateCustomCharacter(
-                    0b_00111,
-                    0b_01000,
-                    0b_11111,
-                    0b_01000,
-                    0b_11111,
-                    0b_01000,
-                    0b_00111,
-                    0b_00000),
-            '£' => CreateCustomCharacter(
-                    0b_00110,
-                    0b_01001,
-                    0b_01000,
-                    0b_11111,
-                    0b_01000,
-                    0b_01000,
-                    0b_11111,
-                    0b_00000),
-            'Ä' => CreateCustomCharacter(
-                    0b_01010,
-                    0b_00000,
-                    0b_00100,
-                    0b_01010,
-                    0b_11111,
-                    0b_10001,
-                    0b_10001,
-                    0b_00000),
-            'Ö' => CreateCustomCharacter(
-                    0b_01010,
-                    0b_01110,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_01110,
-                    0b_00000),
-            'Ü' => CreateCustomCharacter(
-                    0b_01010,
-                    0b_00000,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_01110,
-                    0b_00000),
-            'ß' => CreateCustomCharacter(
-                    0b_00000,
-                    0b_00110,
-                    0b_01001,
-                    0b_01110,
-                    0b_01001,
-                    0b_01001,
-                    0b_10110,
-                    0b_00000),
-            'Å' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01010,
-                    0b_00100,
-                    0b_01010,
-                    0b_11111,
-                    0b_10001,
-                    0b_10001,
-                    0b_00000),
-            // Same as above, cannot really distinguish them in the 7-pixel font (but they would not normally be used by the same languages)
-            'Â' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01010,
-                    0b_00100,
-                    0b_01010,
-                    0b_11111,
-                    0b_10001,
-                    0b_10001,
-                    0b_00000),
-            'æ' => CreateCustomCharacter(
-                    0b_00000,
-                    0b_00000,
-                    0b_11010,
-                    0b_00101,
-                    0b_01111,
-                    0b_10100,
-                    0b_01011,
-                    0b_00000),
-            'Æ' => CreateCustomCharacter(
-                    0b_00111,
-                    0b_00100,
-                    0b_01100,
-                    0b_10111,
-                    0b_11100,
-                    0b_10100,
-                    0b_10111,
-                    0b_00000),
-            'ø' => CreateCustomCharacter(
-                    0b_00000,
-                    0b_00000,
-                    0b_01110,
-                    0b_10011,
-                    0b_10101,
-                    0b_11001,
-                    0b_01110,
-                    0b_00000),
-            'Ø' => CreateCustomCharacter(
-                    0b_01110,
-                    0b_10011,
-                    0b_10011,
-                    0b_10101,
-                    0b_10101,
-                    0b_11001,
-                    0b_01110,
-                    0b_00000),
-            'à' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_00010,
-                    0b_01110,
-                    0b_00001,
-                    0b_01111,
-                    0b_10001,
-                    0b_01111,
-                    0b_00000),
-            'á' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01000,
-                    0b_01110,
-                    0b_00001,
-                    0b_01111,
-                    0b_10001,
-                    0b_01111,
-                    0b_00000),
-            'â' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01010,
-                    0b_01110,
-                    0b_00001,
-                    0b_01111,
-                    0b_10001,
-                    0b_01111,
-                    0b_00000),
-            'ä' => CreateCustomCharacter(
-                     0b_01010,
-                     0b_00000,
-                     0b_01110,
-                     0b_00001,
-                     0b_01111,
-                     0b_10001,
-                     0b_01111,
-                     0b_00000),
-            'å' => CreateCustomCharacter(
-                     0b_00100,
-                     0b_01010,
-                     0b_01110,
-                     0b_00001,
-                     0b_01111,
-                     0b_10001,
-                     0b_01111,
-                     0b_00000),
-            'ç' => CreateCustomCharacter(
-                     0b_00000,
-                     0b_00000,
-                     0b_01110,
-                     0b_10000,
-                     0b_10000,
-                     0b_01111,
-                     0b_00010,
-                     0b_00110),
-            'é' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01000,
-                    0b_01110,
-                    0b_10001,
-                    0b_11111,
-                    0b_10000,
-                    0b_01111,
-                    0b_00000),
-            'è' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_00010,
-                    0b_01110,
-                    0b_10001,
-                    0b_11111,
-                    0b_10000,
-                    0b_01111,
-                    0b_00000),
-            'ê' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01010,
-                    0b_01110,
-                    0b_10001,
-                    0b_11111,
-                    0b_10000,
-                    0b_01111,
-                    0b_00000),
-            'ë' => CreateCustomCharacter(
-                    0b_01010,
-                    0b_00000,
-                    0b_01110,
-                    0b_10001,
-                    0b_11111,
-                    0b_10000,
-                    0b_01111,
-                    0b_00000),
-            'ï' => CreateCustomCharacter(
-                    0b_01010,
-                    0b_00000,
-                    0b_01100,
-                    0b_00100,
-                    0b_00100,
-                    0b_00100,
-                    0b_01110,
-                    0b_00000),
-            'ì' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_00010,
-                    0b_01100,
-                    0b_00100,
-                    0b_00100,
-                    0b_00100,
-                    0b_01110,
-                    0b_00000),
-            'í' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01000,
-                    0b_01100,
-                    0b_00100,
-                    0b_00100,
-                    0b_00100,
-                    0b_01110,
-                    0b_00000),
-            'î' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01010,
-                    0b_01100,
-                    0b_00100,
-                    0b_00100,
-                    0b_00100,
-                    0b_01110,
-                    0b_00000),
-            'ñ' => CreateCustomCharacter(
-                    0b_01010,
-                    0b_00101,
-                    0b_10000,
-                    0b_11110,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_00000),
-            'ö' => CreateCustomCharacter(
-                    0b_01010,
-                    0b_00000,
-                    0b_01110,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_01110,
-                    0b_00000),
-            'ô' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01010,
-                    0b_01110,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_01110,
-                    0b_00000),
-            'ò' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_00010,
-                    0b_01110,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_01110,
-                    0b_00000),
-            'ó' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01000,
-                    0b_01110,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_01110,
-                    0b_00000),
-            'ú' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01000,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_10011,
-                    0b_01101,
-                    0b_00000),
-            'ù' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_00010,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_10011,
-                    0b_01101,
-                    0b_00000),
-            'û' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_01010,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_10011,
-                    0b_01101,
-                    0b_00000),
-            'ü' => CreateCustomCharacter(
-                    0b_01010,
-                    0b_00000,
-                    0b_10001,
-                    0b_10001,
-                    0b_10001,
-                    0b_10011,
-                    0b_01101,
-                    0b_00000),
-            '¡' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_00000,
-                    0b_00100,
-                    0b_00100,
-                    0b_00100,
-                    0b_00100,
-                    0b_00100,
-                    0b_00000),
-            '¿' => CreateCustomCharacter(
-                    0b_00100,
-                    0b_00000,
-                    0b_00100,
-                    0b_01000,
-                    0b_10000,
-                    0b_10001,
-                    0b_01110,
-                    0b_00000),
-            _ => throw new NotSupportedException("Character not supported"),
-        };
+            if (Font5x8.Characters.TryGetValue(character, out var value))
+            {
+                return value;
+            }
+
+            return null;
+        }
 
         /// <summary>
-        /// Creates the given letter from a pixel map for Rom Type A02 (7 or 8 Pixel high letters, bottom row filled)
+        /// Creates the given letter from a pixel map for Rom Type A02 (8 Pixel high letters, bottom row filled)
         /// </summary>
         /// <param name="character">Character to create</param>
         /// <returns>An 8-Byte array of the pixel map for the created letter.</returns>
-        /// <remarks>
-        /// Currently requires the characters to be hardcoded here. Would be nice if we could generate the pixel maps from an existing font, such as Consolas
-        /// </remarks>
-        // TODO: Create letters for A02 map, but that one is a lot better equipped for european languages, so nothing to do for the currently supported languages
-        protected virtual byte[]? CreateLetterA02(char character) => throw new NotSupportedException("Character not supported");
+        protected virtual byte[]? CreateLetterA02(char character)
+        {
+            if (Font5x8.Characters.TryGetValue(character, out var value))
+            {
+                return value;
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// Combines a set of bytes into a pixel map

@@ -43,9 +43,9 @@ namespace Iot.Device.CharacterLcd.Samples
 
             console.LineFeedMode = LineWrapMode.Wrap;
             console.WriteLine("Same again, this time with full wrapping.");
-            for (int i = 0; i < 20; i++)
+            for (int i = 0; i < 10; i++)
             {
-                console.Write($"This is string {i + 1}/{20} longer than the screen");
+                console.Write($"This is string {i + 1}/{10} longer than the screen");
                 Thread.Sleep(10);
             }
 
@@ -106,9 +106,16 @@ namespace Iot.Device.CharacterLcd.Samples
             Console.ReadKey();
             Console.WriteLine("Culture Info Test");
             LcdCharacterEncoding encoding = LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("de-CH"), "A00", '?', 8);
-            console.LoadEncoding(encoding);
+            if (!console.LoadEncoding(encoding))
+            {
+                Console.WriteLine("Error: Unable to fully load encoding");
+            }
+
             console.Clear();
-            console.ScrollUpDelay = TimeSpan.FromSeconds(1);
+            console.WriteLine("AexÄüÖeéè");
+            Console.ReadKey();
+            console.Clear();
+            console.ScrollUpDelay = TimeSpan.FromMilliseconds(700);
             console.LineFeedMode = LineWrapMode.WordWrap;
             console.WriteLine(@"Die Ratten im Gemäuer, englischer Originaltitel ""The Rats in the Walls"" " +
                 "ist eine phantastische Kurzgeschichte des amerikanischen Schriftstellers H. P. Lovecraft. Das etwa " +
@@ -130,7 +137,11 @@ namespace Iot.Device.CharacterLcd.Samples
             console.WriteLine("Äußerst ölige, überflüssige Ölfässer im Großhandel von Ützhausen.");
             console.WriteLine("Currency: ¥€£$");
             encoding = LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("fr-fr"), "A00", '?', 8);
-            console.LoadEncoding(encoding);
+            if (!console.LoadEncoding(encoding))
+            {
+                Console.WriteLine("Error: Unable to fully load encoding");
+            }
+
             console.Clear();
             console.WriteLine("Le français est une langue indo-européenne de la famille des langues romanes. " +
                 "Le français s'est formé en France. Le français est déclaré langue officielle en France en 1539. " +
@@ -139,7 +150,11 @@ namespace Iot.Device.CharacterLcd.Samples
                 "il demeure une langue importante de la diplomatie internationale aux côtés de l'anglais. ");
 
             encoding = LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("da-da"), "A00", '?', 8);
-            console.LoadEncoding(encoding);
+            if (!console.LoadEncoding(encoding))
+            {
+                Console.WriteLine("Error: Unable to fully load encoding");
+            }
+
             console.Clear();
             console.WriteLine("Dansk er et nordgermansk sprog af den østnordiske (kontinentale) gruppe, " +
                 "der tales af ca. seks millioner mennesker. Det er stærkt påvirket af plattysk. Dansk tales " +
@@ -148,7 +163,11 @@ namespace Iot.Device.CharacterLcd.Samples
             Console.ReadLine();
             Console.WriteLine("Japanese test");
             encoding = LcdConsole.CreateEncoding(CultureInfo.CreateSpecificCulture("ja-ja"), "A00", '?', 8);
-            console.LoadEncoding(encoding);
+            if (!console.LoadEncoding(encoding))
+            {
+                Console.WriteLine("Error: Unable to fully load encoding");
+            }
+
             console.WriteLine("What about some japanese?");
             console.WriteLine("イロハニホヘト");
             console.WriteLine("チリヌルヲ");
