@@ -1,10 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using SixLabors.ImageSharp;
 
 namespace Iot.Device.CharacterLcd
 {
@@ -36,7 +34,7 @@ namespace Iot.Device.CharacterLcd
         /// <summary>
         /// Returns the size of the display.
         /// </summary>
-        System.Drawing.Size Size { get; }
+        Size Size { get; }
 
         /// <summary>
         /// Returns the number of custom characters for this display.
@@ -90,7 +88,7 @@ namespace Iot.Device.CharacterLcd
         /// </remarks>
         /// <param name="location">Should be between 0 and <see cref="NumberOfCustomCharactersSupported"/>.</param>
         /// <param name="characterMap">Provide an array of 8 bytes containing the pattern</param>
-        void CreateCustomCharacter(byte location, ReadOnlySpan<byte> characterMap);
+        void CreateCustomCharacter(int location, ReadOnlySpan<byte> characterMap);
 
         /// <summary>
         /// Moves the cursor to an explicit column and row position.
@@ -117,6 +115,6 @@ namespace Iot.Device.CharacterLcd
         /// Used if character translation already took place.
         /// </summary>
         /// <param name="text">Text to print</param>
-        void Write(ReadOnlySpan<byte> text);
+        void Write(ReadOnlySpan<char> text);
     }
 }

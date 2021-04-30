@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +13,23 @@ namespace Iot.Device.GrovePiDevice.Sensors
     /// </summary>
     public class DigitalOutput
     {
+        /// <summary>
+        /// Only Digital ports including the analogic sensors (A0 = D14, A1 = D15, A2 = D16)
+        /// </summary>
+        public static List<GrovePort> SupportedPorts => new List<GrovePort>()
+        {
+            GrovePort.DigitalPin2,
+            GrovePort.DigitalPin3,
+            GrovePort.DigitalPin4,
+            GrovePort.DigitalPin5,
+            GrovePort.DigitalPin6,
+            GrovePort.DigitalPin7,
+            GrovePort.DigitalPin8,
+            GrovePort.DigitalPin14,
+            GrovePort.DigitalPin15,
+            GrovePort.DigitalPin16
+        };
+
         internal GrovePi _grovePi;
         internal PinValue _value;
 
@@ -31,7 +47,7 @@ namespace Iot.Device.GrovePiDevice.Sensors
         {
             if (!SupportedPorts.Contains(port))
             {
-                throw new ArgumentException($"Grove port {port} not supported.", nameof(port));
+                throw new ArgumentException(nameof(port), "Grove port not supported.");
             }
 
             _grovePi = grovePi;
@@ -67,22 +83,5 @@ namespace Iot.Device.GrovePiDevice.Sensors
         /// Get the name Digital Output
         /// </summary>
         public string SensorName => "Digital Output";
-
-        /// <summary>
-        /// Only Digital ports including the analogic sensors (A0 = D14, A1 = D15, A2 = D16)
-        /// </summary>
-        public static List<GrovePort> SupportedPorts => new List<GrovePort>()
-        {
-            GrovePort.DigitalPin2,
-            GrovePort.DigitalPin3,
-            GrovePort.DigitalPin4,
-            GrovePort.DigitalPin5,
-            GrovePort.DigitalPin6,
-            GrovePort.DigitalPin7,
-            GrovePort.DigitalPin8,
-            GrovePort.DigitalPin14,
-            GrovePort.DigitalPin15,
-            GrovePort.DigitalPin16
-        };
     }
 }

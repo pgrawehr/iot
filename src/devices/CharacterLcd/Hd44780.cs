@@ -1,10 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Buffers;
-using System.Drawing;
+using SixLabors.ImageSharp;
 
 namespace Iot.Device.CharacterLcd
 {
@@ -23,8 +22,6 @@ namespace Iot.Device.CharacterLcd
     /// </remarks>
     public class Hd44780 : ICharacterLcd, IDisposable
     {
-        private bool _disposed;
-
         /// <summary>
         /// Command which can be used to clear the display
         /// </summary>
@@ -106,18 +103,13 @@ namespace Iot.Device.CharacterLcd
             _displayControl |= DisplayControl.DisplayOn;
             _displayMode |= DisplayEntryMode.Increment;
 
-            ReadOnlySpan<byte> commands = stackalloc byte[]
-            {
-                // Function must be set first to ensure that we always have the basic
-                // instruction set selected. (See PCF2119x datasheet Function_set note
-                // for one documented example of where this is necessary.)
-                (byte)_displayFunction,
-                (byte)_displayControl,
-                (byte)_displayMode,
-                ClearDisplayCommand
-            };
-
-            SendCommands(commands);
+            // Function must be set first to ensure that we always have the basic
+            // instruction set selected. (See PCF2119x datasheet Function_set note
+            // for one documented example of where this is necessary.)
+            SendCommandAndWait((byte)_displayFunction);
+            SendCommandAndWait((byte)_displayControl);
+            SendCommandAndWait((byte)_displayMode);
+            SendCommandAndWait(ClearDisplayCommand);
         }
 
         /// <summary>
@@ -142,10 +134,24 @@ namespace Iot.Device.CharacterLcd
         protected void SendCommand(byte command) => _lcdInterface.SendCommand(command);
 
         /// <summary>
+        /// The initialization sequence and some other complex commands should be sent with delays, or the display may
+        /// behave unexpectedly. It may show random, blinking characters
+        /// or display text very faintly only.
+        /// </summary>
+        /// <param name="command">The command to send</param>
+        protected void SendCommandAndWait(byte command) => _lcdInterface.SendCommandAndWait(command);
+
+        /// <summary>
         /// Sends data to the device
         /// </summary>
         /// <param name="values">Data to be send to the device</param>
         protected void SendData(ReadOnlySpan<byte> values) => _lcdInterface.SendData(values);
+
+        /// <summary>
+        /// Sends data to the device
+        /// </summary>
+        /// <param name="values">Data to be send to the device</param>
+        protected void SendData(ReadOnlySpan<char> values) => _lcdInterface.SendData(values);
 
         /// <summary>
         /// Send commands to the device
@@ -165,55 +171,38 @@ namespace Iot.Device.CharacterLcd
         /// </summary>
         /// <param name="rows">Rows to be initialized</param>
         /// <returns>Array of offsets</returns>
-        protected virtual byte[] InitializeRowOffsets(int rows)
+        // In one-line mode DDRAM addresses go from 0 - 79 [0x00 - 0x4F]
+        //
+        // In two-line mode DDRAM addresses are laid out as follows:
+        //
+        //   First row:  0 - 39   [0x00 - 0x27]
+        //   Second row: 64 - 103 [0x40 - 0x67]
+        //
+        // (The address gap presumably is to allow all second row addresses to be
+        // identifiable with one bit? Not sure what the value of that is.)
+        //
+        // The chipset doesn't natively support more than two rows. For tested
+        // four row displays the two rows are split as follows:
+        //
+        //   First row:  0 - 19   [0x00 - 0x13]
+        //   Second row: 64 - 83  [0x40 - 0x53]
+        //   Third row:  20 - 39  [0x14 - 0x27]  (Continues first row)
+        //   Fourth row: 84 - 103 [0x54 - 0x67]  (Continues second row)
+        protected virtual byte[] InitializeRowOffsets(int rows) => rows switch
         {
-            // In one-line mode DDRAM addresses go from 0 - 79 [0x00 - 0x4F]
-            //
-            // In two-line mode DDRAM addresses are laid out as follows:
-            //
-            //   First row:  0 - 39   [0x00 - 0x27]
-            //   Second row: 64 - 103 [0x40 - 0x67]
-            //
-            // (The address gap presumably is to allow all second row addresses to be
-            // identifiable with one bit? Not sure what the value of that is.)
-            //
-            // The chipset doesn't natively support more than two rows. For tested
-            // four row displays the two rows are split as follows:
-            //
-            //   First row:  0 - 19   [0x00 - 0x13]
-            //   Second row: 64 - 83  [0x40 - 0x53]
-            //   Third row:  20 - 39  [0x14 - 0x27]  (Continues first row)
-            //   Fourth row: 84 - 103 [0x54 - 0x67]  (Continues second row)
-            byte[] rowOffsets;
-
-            switch (rows)
-            {
-                case 1:
-                    rowOffsets = new byte[1];
-                    break;
-                case 2:
-                    rowOffsets = new byte[] { 0, 64 };
-                    break;
-                case 4:
-                    rowOffsets = new byte[] { 0, 64, 20, 84 };
-                    break;
-                default:
-                    // We don't support other rows, users can derive for odd cases.
-                    // (Three row LCDs exist, but aren't common.)
-                    throw new ArgumentOutOfRangeException(nameof(rows));
-            }
-
-            return rowOffsets;
-        }
+            1 => new byte[1],
+            2 => new byte[] { 0, 64 },
+            4 => new byte[] { 0, 64, 20, 84 },
+            // We don't support other rows, users can derive for odd cases.
+            // (Three row LCDs exist, but aren't common.)
+            _ => throw new ArgumentOutOfRangeException(nameof(rows)),
+        };
 
         /// <summary>
         /// Wait for the device to not be busy.
         /// </summary>
         /// <param name="microseconds">Time to wait if checking busy state isn't possible/practical.</param>
-        protected void WaitForNotBusy(int microseconds)
-        {
-            _lcdInterface.WaitForNotBusy(microseconds);
-        }
+        protected void WaitForNotBusy(int microseconds) => _lcdInterface.WaitForNotBusy(microseconds);
 
         /// <summary>
         /// Clears the LCD, returning the cursor to home and unshifting if shifted.
@@ -273,7 +262,7 @@ namespace Iot.Device.CharacterLcd
         public bool DisplayOn
         {
             get => (_displayControl & DisplayControl.DisplayOn) > 0;
-            set => SendCommand((byte)(value ? _displayControl |= DisplayControl.DisplayOn
+            set => SendCommandAndWait((byte)(value ? _displayControl |= DisplayControl.DisplayOn
                 : _displayControl &= ~DisplayControl.DisplayOn));
         }
 
@@ -283,7 +272,7 @@ namespace Iot.Device.CharacterLcd
         public bool UnderlineCursorVisible
         {
             get => (_displayControl & DisplayControl.CursorOn) > 0;
-            set => SendCommand((byte)(value ? _displayControl |= DisplayControl.CursorOn
+            set => SendCommandAndWait((byte)(value ? _displayControl |= DisplayControl.CursorOn
                 : _displayControl &= ~DisplayControl.CursorOn));
         }
 
@@ -293,7 +282,7 @@ namespace Iot.Device.CharacterLcd
         public bool BlinkingCursorVisible
         {
             get => (_displayControl & DisplayControl.BlinkOn) > 0;
-            set => SendCommand((byte)(value ? _displayControl |= DisplayControl.BlinkOn
+            set => SendCommandAndWait((byte)(value ? _displayControl |= DisplayControl.BlinkOn
                 : _displayControl &= ~DisplayControl.BlinkOn));
         }
 
@@ -303,7 +292,7 @@ namespace Iot.Device.CharacterLcd
         public bool AutoShift
         {
             get => (_displayMode & DisplayEntryMode.DisplayShift) > 0;
-            set => SendCommand((byte)(value ? _displayMode |= DisplayEntryMode.DisplayShift
+            set => SendCommandAndWait((byte)(value ? _displayMode |= DisplayEntryMode.DisplayShift
                 : _displayMode &= ~DisplayEntryMode.DisplayShift));
         }
 
@@ -313,7 +302,7 @@ namespace Iot.Device.CharacterLcd
         public bool Increment
         {
             get => (_displayMode & DisplayEntryMode.Increment) > 0;
-            set => SendCommand((byte)(value ? _displayMode |= DisplayEntryMode.Increment
+            set => SendCommandAndWait((byte)(value ? _displayMode |= DisplayEntryMode.Increment
                 : _displayMode &= ~DisplayEntryMode.Increment));
         }
 
@@ -378,7 +367,7 @@ namespace Iot.Device.CharacterLcd
         /// </remarks>
         /// <param name="location">Should be between 0 and 7</param>
         /// <param name="characterMap">Provide an array of 8 bytes containing the pattern</param>
-        public void CreateCustomCharacter(byte location, ReadOnlySpan<byte> characterMap)
+        public void CreateCustomCharacter(int location, ReadOnlySpan<byte> characterMap)
         {
             if (location >= NumberOfCustomCharactersSupported)
             {
@@ -407,14 +396,13 @@ namespace Iot.Device.CharacterLcd
         /// </remarks>
         public void Write(string text)
         {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(text.Length);
+            Span<byte> buffer = stackalloc byte[text.Length];
             for (int i = 0; i < text.Length; ++i)
             {
                 buffer[i] = (byte)text[i];
             }
 
-            SendData(new ReadOnlySpan<byte>(buffer, 0, text.Length));
-            ArrayPool<byte>.Shared.Return(buffer);
+            SendData(buffer);
         }
 
         /// <summary>
@@ -422,32 +410,12 @@ namespace Iot.Device.CharacterLcd
         /// Used if character translation already took place
         /// </summary>
         /// <param name="text">Text to print</param>
-        public void Write(ReadOnlySpan<byte> text)
-        {
-           SendData(text);
-        }
+        public void Write(ReadOnlySpan<char> text) => SendData(text);
 
         /// <summary>
         /// Releases unmanaged resources used by Hd44780
         /// and optionally release managed resources
         /// </summary>
-        /// <param name="disposing"><see langword="true" /> to release both managed and unmanaged resources; <see langword="false" /> to release only unmanaged resources.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _lcdInterface?.Dispose();
-            }
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            if (!_disposed)
-            {
-                Dispose(true);
-                _disposed = true;
-            }
-        }
+        public virtual void Dispose() => _lcdInterface?.Dispose();
     }
 }

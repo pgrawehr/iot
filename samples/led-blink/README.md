@@ -1,70 +1,54 @@
-# Blink an LED with .NET Core on a Raspberry Pi
+# Blink an LED with .NET on a Raspberry Pi
 
-This [sample](Program.cs) demonstrates blinking an LED at a given interval. It repeatedly toggles a GPIO pin on and off, which powers the LED. This sample also demonstrates the most basic usage of the [.NET Core GPIO library](https://dotnet.myget.org/feed/dotnet-core/package/nuget/System.Device.Gpio).
+This [sample](Program.cs) demonstrates blinking an LED. The sample also demonstrates the most basic usage of the [.NET Core GPIO library](https://www.nuget.org/packages/System.Device.Gpio). The [Blink multiple LEDs](../led-blink-multiple/README.md) sample demonstrates how to add more LEDS.
 
-## Run the sample
-
-This sample can be built and run with .NET Core 2.1. Use the following commands from the root of the repo:
-
-```console
-cd samples
-cd led-blink
-dotnet build -c release -o out
-sudo dotnet out/led-blink.dll
-```
-
-## Run the sample with Docker
-
-This sample can be built and run with Docker. Use the following commands from the root of the repo:
-
-```console
-cd samples
-cd led-blink
-docker build -t led-blink .
-docker run --rm -it -v /sys:/sys led-blink
-```
-
-## Code
-
-The following code provides write access to a GPIO pin (GPIO 17 in this case):
+The following code toggles a GPIO pin on and off, which powers the LED.
 
 ```csharp
-int pin = 17;
-GpioController controller = new GpioController();
+int pin = 18;
+int lightTime = 1000;
+int dimTime = 200;
+
+using GpioController controller = new();
 controller.OpenPin(pin, PinMode.Output);
-```
 
-The following code blinks the LED on a schedule for an indefinite duration (forever):
-
-```csharp
-
-int lightTimeInMilliseconds = 1000;
-int dimTimeInMilliseconds = 200;
-            
 while (true)
 {
-    Console.WriteLine($"Light for {lightTimeInMilliseconds}ms");
     controller.Write(pin, PinValue.High);
-    Thread.Sleep(lightTimeInMilliseconds);
-    Console.WriteLine($"Dim for {dimTimeInMilliseconds}ms");
+    Thread.Sleep(lightTime);
     controller.Write(pin, PinValue.Low);
-    Thread.Sleep(dimTimeInMilliseconds); 
+    Thread.Sleep(dimTime);
 }
 ```
 
-## Breadboard layout
-
-The following [fritzing diagram](rpi-led.fzz) demonstrates how you should wire your device in order to run the [program](Program.cs). It uses the GND and GPIO 17 pins on the Raspberry Pi.
+The following [fritzing diagram](rpi-led.fzz) demonstrates how you should configure your breadboard to match the code above.
 
 ![Raspberry Pi Breadboard diagram](rpi-led_bb.png)
 
-## Hardware elements
+## Running in containers
 
-The following elements are used in this sample:
+You can run .NET GPIO apps in containers. This sample app includes a [Dockerfile](Dockerfile) that you can build and run with the following commands:
 
-* [Diffused LEDs](https://www.adafruit.com/product/297)
+```console
+$ pwd
+/home/pi/iot/samples/led-blink
+$ docker build -t led-blink .
+Sending build context to Docker daemon  13.31kB
+Step 1/10 : FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build
+// snip ...
+$ docker run --rm --device /dev/gpiomem led-blink
+```
+
+Alternatively, you can run the container by mounting sysfs as a privileged container, but that's less secure and is a slower way to interact with GPIO pins.
+
+```console
+$ docker run --rm -v /sys:/sys --privileged led-blink
+```
 
 ## Resources
 
-* [Using .NET Core for IoT Scenarios](../README.md)
+* [.NET IoT Docs](https://docs.microsoft.com/dotnet/iot/)
+* [Diffused LEDs](https://www.adafruit.com/product/4203)
 * [All about LEDs](https://learn.adafruit.com/all-about-leds)
+- [Blinking an LED with Arduino](https://learn.adafruit.com/adafruit-arduino-lesson-2-leds/blinking-the-led)
+- [Blinking an LED with Python](https://learn.adafruit.com/blinking-an-led-with-beaglebone-black/writing-a-program)

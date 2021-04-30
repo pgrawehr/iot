@@ -1,16 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Device.I2c;
 using System.Diagnostics;
-using System.Drawing;
 using System.Text;
 using System.Threading;
 using System.Timers;
 using System.Globalization;
 using Iot.Device.Mcp23xxx;
+using SixLabors.ImageSharp;
 
 namespace Iot.Device.CharacterLcd.Samples
 {
@@ -190,8 +189,7 @@ namespace Iot.Device.CharacterLcd.Samples
 
         private static void SetBacklightColorTest(Hd44780 lcd)
         {
-            var colorLcd = lcd as LcdRgb;
-            if (colorLcd == null)
+            if (lcd is not LcdRgb colorLcd)
             {
                 Console.WriteLine("Color backlight not supported");
                 return;
@@ -206,7 +204,7 @@ namespace Iot.Device.CharacterLcd.Samples
             foreach (var color in colors)
             {
                 lcd.Clear();
-                lcd.Write(color.Name);
+                lcd.Write(color.ToHex());
 
                 colorLcd.SetBacklightColor(color);
                 System.Threading.Thread.Sleep(1000);

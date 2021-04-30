@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFrameworks>net5.0;netcoreapp2.1</TargetFrameworks>
+    <LangVersion>9</LangVersion>
+    <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableDefaultItems>false</EnableDefaultItems>
     <IsPackable>true</IsPackable>
@@ -9,15 +11,16 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage)</TargetsForTfmSpecificContentInPackage>
-    <LangVersion>8</LangVersion>
     <!--Disabling default items so samples source won't get build by the main library-->
   </PropertyGroup>
-
+  
+  <!-- The following ItemGroup is in charge of getting the source files we will compile on each TFM -->
   <ItemGroup>
-    <_ExcludeFromCompile Include="$(DeviceRoot)**/samples/**/*.cs" />
-    <_ExcludeFromCompile Include="$(DeviceRoot)**/tests/**/*.cs" />
-    <_ExcludeFromCompile Include="$(DeviceRoot)**/obj/**/*.cs" />
-    <Compile Include="$(DeviceRoot)**/*.cs" Exclude="@(_ExcludeFromCompile)" />
+    <!-- Excluding samples and test projects when getting source files -->
+    <_ExcludeProjectReferences Include="$(DeviceRoot)**/samples/**/*.csproj" />
+    <_ExcludeProjectReferences Include="$(DeviceRoot)**/tests/**/*.csproj" />
+
+    <ProjectReference Include="$(DeviceRoot)**/*.csproj" Exclude="@(_ExcludeProjectReferences)" ReferenceOutputAssembly="false" BuildReference="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,6 +32,31 @@
     <PackageReference Include="System.IO.Ports" Version="$(SystemIOPortsPackageVersion)" />
     <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
     <PackageReference Include="UnitsNet" Version="$(UnitsNetPackageVersion)" />
+    <PackageReference Include="System.Management" Version="$(SystemManagementPackageVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractionsPackageVersion)" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="$(SixLaborsImageSharpPackageVersion)" />
   </ItemGroup>
+
+  <!-- This target will call into each device binding project to get out the source files for the framework we are building
+  and then it will add the results to the Compile item group. -->
+  <Target Name="GetCompileItemsFromProjects"
+          BeforeTargets="BeforeBuild"
+          DependsOnTargets="PrepareProjectReferences"
+          Condition="'$(TargetFramework)' != ''">
+    <ItemGroup>
+      <_projectsToGetCompileItemsFrom Include="@(_MSBuildProjectReferenceExistent)" Exclude="$(MainLibraryPath)System.Device.Gpio.csproj" />
+    </ItemGroup>
+
+    <MSBuild Projects="%(_projectsToGetCompileItemsFrom.Identity)"
+             Targets="GetCompileItemsForTargetFramework"
+             Properties="TargetFramework=%(_projectsToGetCompileItemsFrom.NearestTargetFramework)"
+             BuildInParallel="true">
+      <Output ItemName="_CompileItemsFromProjects" TaskParameter="TargetOutputs" />
+    </MSBuild>
+
+    <ItemGroup>
+      <Compile Include="%(_CompileItemsFromProjects.Identity)" />
+    </ItemGroup>
+  </Target>
 
 </Project>

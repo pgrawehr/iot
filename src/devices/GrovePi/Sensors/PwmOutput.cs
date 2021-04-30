@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +13,16 @@ namespace Iot.Device.GrovePiDevice.Sensors
     /// </summary>
     public class PwmOutput
     {
+        /// <summary>
+        /// Only Digital PWM are supported
+        /// </summary>
+        public static List<GrovePort> SupportedPorts => new List<GrovePort>()
+        {
+            GrovePort.DigitalPin3,
+            GrovePort.DigitalPin5,
+            GrovePort.DigitalPin6
+        };
+
         internal GrovePi _grovePi;
         internal byte _duty;
 
@@ -31,7 +40,7 @@ namespace Iot.Device.GrovePiDevice.Sensors
         {
             if (!SupportedPorts.Contains(port))
             {
-                throw new ArgumentException($"Grove port {port} not supported.", nameof(port));
+                throw new ArgumentException(nameof(port), "Grove port not supported.");
             }
 
             _grovePi = grovePi;
@@ -107,15 +116,5 @@ namespace Iot.Device.GrovePiDevice.Sensors
         /// Get the name PWM Output
         /// </summary>
         public string SensorName => "PWM Output";
-
-        /// <summary>
-        /// Only Digital PWM are supported
-        /// </summary>
-        public static List<GrovePort> SupportedPorts => new List<GrovePort>()
-        {
-            GrovePort.DigitalPin3,
-            GrovePort.DigitalPin5,
-            GrovePort.DigitalPin6
-        };
     }
 }

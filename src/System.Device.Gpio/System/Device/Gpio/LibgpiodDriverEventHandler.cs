@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information
 
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,19 +11,15 @@ namespace System.Device.Gpio.Drivers
 {
     internal sealed class LibGpiodDriverEventHandler : IDisposable
     {
-        public event PinChangeEventHandler ValueRising;
+        private static string s_consumerName = Process.GetCurrentProcess().ProcessName;
 
-        public event PinChangeEventHandler ValueFalling;
+        public event PinChangeEventHandler? ValueRising;
+        public event PinChangeEventHandler? ValueFalling;
 
         private int _pinNumber;
-
         public CancellationTokenSource CancellationTokenSource;
-
         private Task _task;
-
         private bool _disposing = false;
-
-        private static string s_consumerName = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 
         public LibGpiodDriverEventHandler(int pinNumber, SafeLineHandle safeLineHandle)
         {

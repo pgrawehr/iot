@@ -1,10 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Device.I2c;
-using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.CharacterLcd
 {
@@ -82,9 +82,10 @@ namespace Iot.Device.CharacterLcd
         /// <param name="color">The color to set.</param>
         private void ForceSetBacklightColor(Color color)
         {
-            SetRgbRegister(RgbRegisters.REG_RED, color.R);
-            SetRgbRegister(RgbRegisters.REG_GREEN, color.G);
-            SetRgbRegister(RgbRegisters.REG_BLUE, color.B);
+            var col = color.ToPixel<Rgba32>();
+            SetRgbRegister(RgbRegisters.REG_RED, col.R);
+            SetRgbRegister(RgbRegisters.REG_GREEN, col.G);
+            SetRgbRegister(RgbRegisters.REG_BLUE, col.B);
         }
 
         /// <summary>
@@ -122,10 +123,10 @@ namespace Iot.Device.CharacterLcd
         }
 
         /// <inheritdoc/>
-        protected override void Dispose(bool disposing)
+        public override void Dispose()
         {
             _rgbDevice?.Dispose();
-            base.Dispose(disposing);
+            base.Dispose();
         }
     }
 }

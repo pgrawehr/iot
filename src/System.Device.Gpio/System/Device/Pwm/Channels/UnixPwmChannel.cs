@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.IO;
 using System.Text;
@@ -105,6 +104,11 @@ namespace System.Device.Pwm.Channels
             return (int)((1.0 / frequency) * 1_000_000_000);
         }
 
+        private static int GetDutyCycleOnTimeNs(int pwmPeriodNs, double dutyCycle)
+        {
+            return (int)(pwmPeriodNs * dutyCycle);
+        }
+
         private void SetFrequency(int frequency, double newDutyCycle, int? dutyCycleOnTimeNs = null)
         {
             if (frequency < 0)
@@ -161,11 +165,6 @@ namespace System.Device.Pwm.Channels
             _dutyCycleWriter.Write(dutyCycleInNanoseconds);
             _dutyCycleWriter.Flush();
             _dutyCycle = dutyCycle;
-        }
-
-        private static int GetDutyCycleOnTimeNs(int pwmPeriodNs, double dutyCycle)
-        {
-            return (int)(pwmPeriodNs * dutyCycle);
         }
 
         /// <summary>
@@ -235,9 +234,9 @@ namespace System.Device.Pwm.Channels
         protected override void Dispose(bool disposing)
         {
             _dutyCycleWriter?.Dispose();
-            _dutyCycleWriter = null;
+            _dutyCycleWriter = null!;
             _frequencyWriter?.Dispose();
-            _frequencyWriter = null;
+            _frequencyWriter = null!;
             Close();
             base.Dispose(disposing);
         }

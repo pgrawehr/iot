@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Device.Spi;
@@ -24,15 +23,21 @@ namespace Iot.Device.Adc
         }
 
         /// <summary>
+        /// Convert a signed value with a sign bit at a particular location to an int.
+        /// </summary>
+        /// <param name="signedValue">Signed value with a sign bit at a particular location</param>
+        /// <param name="signingBit">Bit number that contains the sign bit</param>
+        /// <returns>A value corresponding to the signed value sign extended into an int</returns>
+        // if the sign bit is set then extend the signing bit to create a signed integer
+        public static int SignExtend(int signedValue, int signingBit) => (signedValue >> signingBit) == 0 ? signedValue : signedValue - (2 << signingBit);
+
+        /// <summary>
         /// Reads a  value from the device using pseudo-differential inputs
         /// </summary>
         /// <param name="valueChannel">Channel which represents the signal (valid values: 0 to channelcount - 1).</param>
         /// <param name="referenceChannel">Channel which represents the signal ground (valid values: 0 to channelcount - 1).</param>
         /// <returns>A value corresponding to relative voltage level on specified device channels</returns>
-        public override int ReadPseudoDifferential(int valueChannel, int referenceChannel)
-        {
-            throw new NotSupportedException($"Mcp33xx device does not support {nameof(ReadPseudoDifferential)}.");
-        }
+        public override int ReadPseudoDifferential(int valueChannel, int referenceChannel) => throw new NotSupportedException($"Mcp33xx device does not support {nameof(ReadPseudoDifferential)}.");
 
         /// <summary>
         /// Reads a 13 bit signed value from the device using differential inputs
@@ -54,7 +59,7 @@ namespace Iot.Device.Adc
 
             if (valueChannel == referenceChannel)
             {
-                throw new ArgumentException($"ADC differential channels must be different.", nameof(valueChannel) + " " + nameof(referenceChannel));
+                throw new ArgumentException(nameof(valueChannel), $"ADC differential channels must be different. {nameof(valueChannel)}: {valueChannel}; {nameof(referenceChannel)}: {referenceChannel}.");
             }
 
             // check if it is possible to use hardware differential because both input channels are in the same differential channel pairing
@@ -73,18 +78,6 @@ namespace Iot.Device.Adc
             }
 
             return retval;
-        }
-
-        /// <summary>
-        /// Convert a signed value with a sign bit at a particular location to an int.
-        /// </summary>
-        /// <param name="signedValue">Signed value with a sign bit at a particular location</param>
-        /// <param name="signingBit">Bit number that contains the sign bit</param>
-        /// <returns>A value corresponding to the signed value sign extended into an int</returns>
-        public static int SignExtend(int signedValue, int signingBit)
-        {
-            // if the sign bit is set then extend the signing bit to create a signed integer
-            return (signedValue >> signingBit) == 0 ? signedValue : signedValue - (2 << signingBit);
         }
     }
 }
