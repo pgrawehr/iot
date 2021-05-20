@@ -133,7 +133,7 @@ namespace Iot.Device.Media
         /// <param name="size">Image size in the RGB data.</param>
         /// <param name="colors">RGB data.</param>
         /// <returns>Bitmap</returns>
-        public static Image RgbToBitmap<TPixel>((uint Width, uint Height) size, Color[] colors)
+        public static Image<TPixel> RgbToBitmap<TPixel>((uint Width, uint Height) size, Color[] colors)
         where TPixel : unmanaged, IPixel<TPixel>
         {
             int width = (int)size.Width, height = (int)size.Height;
