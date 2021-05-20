@@ -9,7 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
     <ProjectReference Include="..\Common\CommonHelpers.csproj" />
-    <PackageReference Include="System.Drawing.Common" Version="$(SystemDrawingCommonPackageVersion)" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="$(SixLaborsImageSharpPackageVersion)" />
   </ItemGroup>
 
   <ItemGroup>

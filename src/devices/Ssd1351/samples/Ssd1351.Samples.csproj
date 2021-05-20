@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
-    <PackageReference Include="System.Drawing.Common" Version="$(SystemDrawingCommonPackageVersion)" />    
+    <PackageReference Include="SixLabors.ImageSharp" Version="$(SixLaborsImageSharpPackageVersion)" />
   </ItemGroup>
 
   <ItemGroup>
