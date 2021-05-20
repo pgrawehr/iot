@@ -6,7 +6,6 @@ using System.Globalization;
 using System.Xml;
 using System.Xml.Linq;
 using System.Net;
-using System.Drawing;
 using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -15,6 +14,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.LEDMatrix;
 using Iot.Device.Graphics;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using Color = System.Drawing.Color;
 
 bool play = false;
 int scenario = 2;
@@ -323,8 +325,8 @@ unsafe void Demo4(RGBLedMatrix matrix)
     BdfFont font = BdfFont.Load(@"fonts/6x12.bdf");
     BdfFont font1 = BdfFont.Load(@"fonts/5x7.bdf");
 
-    Bitmap? weatherIcon = null;
-    Bitmap defaultIcon = new Bitmap("bitmaps/01d.bmp");
+    Image<Rgb24>? weatherIcon = null;
+    var defaultIcon = Image.Load<Rgb24>("bitmaps/01d.bmp");
     string? lastIcon = null;
     string description = string.Empty;
 
@@ -347,7 +349,7 @@ unsafe void Demo4(RGBLedMatrix matrix)
 
             if (lastIcon != icon)
             {
-                weatherIcon = new Bitmap("bitmaps/" + icon ?? defaultIcon + ".bmp");
+                weatherIcon = Image.Load<Rgb24>("bitmaps/" + icon ?? defaultIcon + ".bmp");
             }
 
             matrix.DrawBitmap(20, 2, weatherIcon ?? defaultIcon, 255, 255, 255, 0, 0, blue);
@@ -398,10 +400,10 @@ unsafe void Demo6(RGBLedMatrix matrix)
     {
         matrix.Fill(0, 0, 0);
 
-        Bitmap[] bitmaps = new Bitmap[]
+        Image<Rgb24>[] bitmaps = new Image<Rgb24>[]
         {
-            new Bitmap(@"bitmaps/dotnet-bot-branded-32x32.bmp"),
-            new Bitmap(@"bitmaps/i-love-dotnet.bmp")
+            Image.Load<Rgb24>(@"bitmaps/dotnet-bot-branded-32x32.bmp"),
+            Image.Load<Rgb24>(@"bitmaps/i-love-dotnet.bmp")
         };
 
         int x = matrix.Width - 1;
