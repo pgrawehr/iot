@@ -2,9 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using Color = System.Drawing.Color;
+using Point = System.Drawing.Point;
 
 namespace Iot.Device.Ssd1351
 {
@@ -14,7 +18,7 @@ namespace Iot.Device.Ssd1351
         /// Send a bitmap to the ssd1351 display specifying the starting position and destination clipping rectangle.
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
-        public void SendBitmap(Bitmap bm)
+        public void SendBitmap(Image<Rgba32> bm)
         {
             SendBitmap(bm, new Point(0, 0), new Rectangle(0, 0, ScreenWidthPx, ScreenWidthPx));
         }
@@ -24,7 +28,7 @@ namespace Iot.Device.Ssd1351
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="updateRect">A rectangle that defines where in the display the bitmap is written. Note that no scaling is done.</param>
-        public void SendBitmap(Bitmap bm, Rectangle updateRect)
+        public void SendBitmap(Image<Rgba32> bm, Rectangle updateRect)
         {
             SendBitmap(bm, new Point(updateRect.X, updateRect.Y), updateRect);
         }
@@ -35,16 +39,16 @@ namespace Iot.Device.Ssd1351
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="sourcePoint">A coordinate point in the source bitmap where copying starts from.</param>
         /// <param name="destinationRect">A rectangle that defines where in the display the bitmap is written. Note that no scaling is done.</param>
-        public void SendBitmap(Bitmap bm, Point sourcePoint, Rectangle destinationRect)
+        public void SendBitmap(Image<Rgba32> bm, Point sourcePoint, Rectangle destinationRect)
         {
             if (bm is null)
             {
                 throw new ArgumentNullException(nameof(bm));
             }
 
-            if (bm.PixelFormat != PixelFormat.Format32bppArgb)
+            if (bm.PixelType.BitsPerPixel != 32)
             {
-                throw new ArgumentException(nameof(bm), $"Pixel format {bm.PixelFormat.ToString()} not supported.");
+                throw new ArgumentException(nameof(bm), $"Pixel format {bm.PixelType} not supported.");
             }
 
             // get the pixel data and send it to the display
@@ -57,10 +61,8 @@ namespace Iot.Device.Ssd1351
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="sourceRect">A rectangle that defines where in the bitmap data is to be converted from.</param>
-        public Span<byte> GetBitmapPixelData(Bitmap bm, Rectangle sourceRect)
+        public Span<byte> GetBitmapPixelData(Image<Rgba32> bm, Rectangle sourceRect)
         {
-            BitmapData bmd;
-            byte[] bitmapData; // array that takes the raw bytes of the bitmap
             byte[] outputBuffer; // array used to form the data to be written out to the SPI interface
 
             if (bm is null)
@@ -68,24 +70,27 @@ namespace Iot.Device.Ssd1351
                 throw new ArgumentNullException(nameof(bm));
             }
 
-            if (bm.PixelFormat != PixelFormat.Format32bppArgb)
+            if (bm.PixelType.BitsPerPixel != 32)
             {
-                throw new ArgumentException(nameof(bm), $"Pixel format {bm.PixelFormat.ToString()} not supported.");
+                throw new ArgumentException(nameof(bm), $"Pixel format {bm.PixelType} not supported.");
             }
 
             // allocate the working arrays.
-            bitmapData = new byte[sourceRect.Width * sourceRect.Height * 4];
             outputBuffer = new byte[sourceRect.Width * sourceRect.Height * (_colorDepth == ColorDepth.ColourDepth65K ? 2 : 3)];
 
+            var copy = bm.Clone();
+            copy.Mutate(x => x.Crop(sourceRect));
+
             // get the raw pixel data for the bitmap
-            bmd = bm.LockBits(sourceRect, ImageLockMode.ReadOnly, bm.PixelFormat);
+            if (!bm.TryGetSinglePixelSpan(out Span<Rgba32> rgbaSpan))
+            {
+                // This should actually always work, since Rgba32 images do not have odd scanline lengths
+                throw new ArgumentException("Image is not convertible to span");
+            }
 
-            Marshal.Copy(bmd.Scan0, bitmapData, 0, bitmapData.Length);
-
-            bm.UnlockBits(bmd);
-
+            Span<byte> bitmapData = MemoryMarshal.Cast<Rgba32, byte>(rgbaSpan);
             // iterate over the source bitmap converting each pixle in the raw data
-            // to a format suitablle for sending to the display
+            // to a format suitable for sending to the display
             for (int i = 0; i < bitmapData.Length; i += 4)
             {
                 if (_colorDepth == ColorDepth.ColourDepth65K)
@@ -99,6 +104,8 @@ namespace Iot.Device.Ssd1351
                     outputBuffer[i / 4 * 3 + 2] = (byte)(bitmapData[i + (_colorSequence == ColorSequence.BGR ? 2 : 0)] >> 2);
                 }
             }
+
+            copy.Dispose();
 
             return (outputBuffer);
         }
