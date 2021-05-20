@@ -2,8 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Media
 {
@@ -131,19 +132,20 @@ namespace Iot.Device.Media
         /// </summary>
         /// <param name="size">Image size in the RGB data.</param>
         /// <param name="colors">RGB data.</param>
-        /// <param name="format">Bitmap pixel format</param>
         /// <returns>Bitmap</returns>
-        public static Bitmap RgbToBitmap((uint Width, uint Height) size, Color[] colors, System.Drawing.Imaging.PixelFormat format = System.Drawing.Imaging.PixelFormat.Format24bppRgb)
+        public static Image RgbToBitmap<TPixel>((uint Width, uint Height) size, Color[] colors)
+        where TPixel : unmanaged, IPixel<TPixel>
         {
             int width = (int)size.Width, height = (int)size.Height;
 
-            Bitmap pic = new Bitmap(width, height, format);
+            Image<TPixel> pic = new Image<TPixel>(width, height);
 
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
                 {
-                    pic.SetPixel(x, y, colors[y * width + x]);
+                    Color c = colors[y * width + x];
+                    pic[x, y] = c.ToPixel<TPixel>();
                 }
             }
 
@@ -163,7 +165,7 @@ namespace Iot.Device.Media
             byte g = (byte)(y - 0.3455 * (u - 128) - (0.7169 * (v - 128)));
             byte b = (byte)(y + 1.7790 * (u - 128));
 
-            return Color.FromArgb(r, g, b);
+            return Color.FromRgb(r, g, b);
         }
     }
 }

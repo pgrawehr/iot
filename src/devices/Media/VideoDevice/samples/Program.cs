@@ -2,9 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Drawing;
 using System.IO;
 using Iot.Device.Media;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 VideoConnectionSettings settings = new(0, (2560, 1920), PixelFormat.JPEG);
 using VideoDevice device = VideoDevice.Create(settings);
@@ -39,5 +40,5 @@ device.Settings.PixelFormat = PixelFormat.YUV420;
 
 // Convert pixel format
 Color[] colors = VideoDevice.Yv12ToRgb(device.Capture(), settings.CaptureSize);
-Bitmap bitmap = VideoDevice.RgbToBitmap(settings.CaptureSize, colors);
-bitmap.Save($"{path}/yuyv_to_jpg.jpg", System.Drawing.Imaging.ImageFormat.Jpeg);
+var bitmap = VideoDevice.RgbToBitmap<Rgb24>(settings.CaptureSize, colors);
+bitmap.SaveAsJpeg($"{path}/yuyv_to_jpg.jpg");

@@ -3,11 +3,16 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Drawing;
 using System.Drawing.Imaging;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using Iot.Device.Media;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.Drawing.Processing.Processors.Text;
+using SixLabors.ImageSharp.Processing;
 
 namespace CameraIoT
 {
@@ -96,12 +101,15 @@ namespace CameraIoT
                 try
                 {
                     video = Device.CaptureContinuous();
-                    Bitmap myBitmap = new Bitmap(video);
-                    Graphics g = Graphics.FromImage(myBitmap);
-                    g.DrawString(DateTime.Now.AddHours(Timezone).ToString("yyyy-MM-dd HH:mm:ss"), new Font("Tahoma", 20), Brushes.White, new PointF(0, 0));
+                    var myBitmap = Image.Load(video);
+                    string text = DateTime.Now.AddHours(Timezone).ToString("yyyy-MM-dd HH:mm:ss");
+                    FontCollection fontCollection = new FontCollection();
+                    Font regularFont = fontCollection.CreateFont("Courier", CultureInfo.CurrentCulture,  20);
+
+                    myBitmap.Mutate(x => x.DrawText(text, regularFont, Color.White, new PointF(0, 0)));
                     using (var ms = new MemoryStream())
                     {
-                        myBitmap.Save(ms, ImageFormat.Jpeg);
+                        myBitmap.SaveAsJpeg(ms);
                         LastImage = ms.ToArray();
                     }
 
