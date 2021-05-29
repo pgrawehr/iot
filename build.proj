@@ -35,7 +35,9 @@
 
   <Target Name="BuildTools">
     <ItemGroup>
-      <_BuildToolProjects Include="$(MSBuildThisFileDirectory)tools\**\*.csproj" />
+      <!-- <_ExcludeBuildToolProjects Include="$(MSBuildThisFileDirectory)\tools\templates\**\*.csproj" />
+      <_BuildToolProjects Include="$(MSBuildThisFileDirectory)tools\**\*.csproj" Exclude="@(_ExcludeBuildToolProjects);" />-->
+      <_BuildToolProjects Include="$(MSBuildThisFileDirectory)tools\device-listing\**\*.csproj;$(MSBuildThisFileDirectory)tools\DevicesApiTester\**\*.csproj;" />
     </ItemGroup>
 
     <MSBuild Projects="@(_BuildToolProjects)" />
