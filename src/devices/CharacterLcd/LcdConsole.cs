@@ -22,7 +22,6 @@ namespace Iot.Device.CharacterLcd
     {
         private readonly object _lock;
         private readonly bool _shouldDispose;
-
         private ICharacterLcd _lcd;
 
         /// <summary>
@@ -231,10 +230,10 @@ namespace Iot.Device.CharacterLcd
                 string line = lines[i];
                 string currentLine = line;
 
-                lock (_lock)
+                int remainingChars = Math.Min(currentLine.Length, Size.Width - CursorLeft);
+                if (remainingChars > 0)
                 {
-                    int remainingChars = Math.Min(currentLine.Length, Size.Width - CursorLeft);
-                    if (remainingChars > 0)
+                    lock (_lock)
                     {
                         WriteCurrentLine(currentLine.Substring(0, remainingChars));
                     }
@@ -318,7 +317,6 @@ namespace Iot.Device.CharacterLcd
                         // Insert the remaining part as new entry to the list, continue iteration there
                         string remainingPart = remaining.Substring(roomOnLine).TrimStart(' ');
                         lines.Insert(i + 1, remainingPart);
-
                     }
 
                     roomOnLine = Size.Width; // From now on, we have the full width available
@@ -444,26 +442,11 @@ namespace Iot.Device.CharacterLcd
         private void WriteCurrentLine(string line)
         {
             // Replace the existing chars at the given position with the new text
-<<<<<<< HEAD
-            try
-            {
-                _currentData[CursorTop].Remove(CursorLeft, line.Length);
-                _currentData[CursorTop].Insert(CursorLeft, line);
-                byte[] buffer = MapChars(line);
-                _lcd.Write(buffer);
-                CursorLeft += line.Length;
-            }
-            catch (Exception x)
-            {
-                Console.WriteLine($"this mus tnot happen: {x}   ");
-            }
-=======
             _currentData[CursorTop].Remove(CursorLeft, line.Length);
             _currentData[CursorTop].Insert(CursorLeft, line);
             char[] buffer = MapChars(line);
             _lcd.Write(buffer);
             CursorLeft += line.Length;
->>>>>>> remotes/dotnet/main
         }
 
         /// <summary>

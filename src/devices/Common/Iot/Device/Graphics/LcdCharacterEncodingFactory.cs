@@ -368,7 +368,7 @@ namespace Iot.Device.Graphics
                 if (c != ' ')
                 {
                     DefaultSplC780Map.Add(c, startIndex);
-        }
+                }
 
                 startIndex++;
             }
@@ -524,7 +524,7 @@ namespace Iot.Device.Graphics
         {
             "A00" => CreateLetterA00(character),
             "A02" => CreateLetterA02(character),
-                // The font looks identical, so we can use the same lookup table
+            // The font looks identical, so we can use the same lookup table
             "SplC780" => CreateLetterA00(character),
             _ => null,
         };
@@ -884,7 +884,7 @@ namespace Iot.Device.Graphics
         /// <remarks>
         /// Currently requires the characters to be hardcoded here. Would be nice if we could generate the pixel maps from an existing font, such as Consolas
         /// </remarks>
-            // TODO: Create letters for A02 map, but that one is a lot better equipped for european languages, so nothing to do for the currently supported languages
+        // TODO: Create letters for A02 map, but that one is a lot better equipped for european languages, so nothing to do for the currently supported languages
         protected virtual byte[]? CreateLetterA02(char character) => throw new NotSupportedException("Character not supported");
 
         /// <summary>
@@ -918,7 +918,7 @@ namespace Iot.Device.Graphics
             if (font8.Length != 8)
             {
                 throw new ArgumentException("Font size must be 8 bytes");
-        }
+            }
 
             byte[] font5 = new byte[5];
             for (int i = 0; i < 5; i++)
@@ -927,7 +927,7 @@ namespace Iot.Device.Graphics
                 for (int j = 0; j < 8; j++)
                 {
                     font |= (byte)(((font8[j] >> (4 - i)) & 0x01) << j);
-    }
+                }
 
                 font5[i] = font;
             }

@@ -3,8 +3,6 @@
   <PropertyGroup>
     <TargetFrameworks>$(DefaultBindingTfms)</TargetFrameworks>
     <EnableDefaultItems>false</EnableDefaultItems>
-    <AssemblyName>IG500A</AssemblyName>
-    <RootNamespace>Iot.Device.Imu</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +11,5 @@
   
   <ItemGroup>
     <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
-    <PackageReference Include="System.Memory" Version="4.5.3" />
   </ItemGroup>
 </Project>
