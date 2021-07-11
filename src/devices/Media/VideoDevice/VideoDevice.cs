@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -43,6 +42,22 @@ namespace Iot.Device.Media
         public abstract Stream Capture();
 
         /// <summary>
+        /// Start continuous capture
+        /// </summary>
+        public abstract void StartCaptureContinuous();
+
+        /// <summary>
+        /// The continuous capture stream
+        /// </summary>
+        /// <returns></returns>
+        public abstract Stream CaptureContinuous();
+
+        /// <summary>
+        /// Stop the continuous capture
+        /// </summary>
+        public abstract void StopCaptureContinuous();
+
+        /// <summary>
         /// Query controls value from the video device.
         /// </summary>
         /// <param name="type">The type of a video device's control.</param>
@@ -60,7 +75,7 @@ namespace Iot.Device.Media
         /// </summary>
         /// <param name="format">Pixel format.</param>
         /// <returns>Supported resolution.</returns>
-        public abstract IEnumerable<(uint Width, uint Height)> GetPixelFormatResolutions(PixelFormat format);
+        public abstract IEnumerable<Resolution> GetPixelFormatResolutions(PixelFormat format);
 
         /// <inheritdoc/>
         public void Dispose()

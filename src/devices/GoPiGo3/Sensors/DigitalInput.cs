@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -13,6 +12,11 @@ namespace Iot.Device.GoPiGo3.Sensors
     /// </summary>
     public class DigitalInput : ISensor
     {
+        /// <summary>
+        /// List the supported Grove ports for the sensor
+        /// </summary>
+        public static List<GrovePort> SupportedPorts => new List<GrovePort>() { GrovePort.Grove1, GrovePort.Grove2 };
+
         internal readonly GrovePort _mode;
         internal GoPiGo _goPiGo;
 
@@ -25,7 +29,7 @@ namespace Iot.Device.GoPiGo3.Sensors
         {
             if (!SupportedPorts.Contains(port))
             {
-                throw new ArgumentException($"Error: Grove Port not supported");
+                throw new ArgumentException(nameof(port), "Grove port not supported");
             }
 
             _goPiGo = goPiGo;
@@ -54,10 +58,5 @@ namespace Iot.Device.GoPiGo3.Sensors
         /// Grove port
         /// </summary>
         public GrovePort Port { get; internal set; }
-
-        /// <summary>
-        /// List the supported Grove ports for the sensor
-        /// </summary>
-        public static List<GrovePort> SupportedPorts => new List<GrovePort>() { GrovePort.Grove1, GrovePort.Grove2 };
     }
 }

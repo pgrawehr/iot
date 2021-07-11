@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.Threading;
 using System.Threading.Tasks;
@@ -90,6 +89,9 @@ namespace System.Device.Gpio.Drivers
         protected internal override void SetPinMode(int pinNumber, PinMode mode) => _internalDriver.SetPinMode(pinNumber, mode);
 
         /// <inheritdoc/>
+        protected internal override void SetPinMode(int pinNumber, PinMode mode, PinValue initialValue) => _internalDriver.SetPinMode(pinNumber, mode, initialValue);
+
+        /// <inheritdoc/>
         protected internal override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes, CancellationToken cancellationToken) => _internalDriver.WaitForEvent(pinNumber, eventTypes, cancellationToken);
 
         /// <inheritdoc/>
@@ -102,7 +104,7 @@ namespace System.Device.Gpio.Drivers
         protected override void Dispose(bool disposing)
         {
             _internalDriver?.Dispose();
-            _internalDriver = null;
+            _internalDriver = null!;
             base.Dispose(disposing);
         }
     }

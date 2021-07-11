@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Device.I2c;
@@ -32,12 +31,12 @@ namespace Iot.Device.CharacterLcd
             private const byte LCD_ENTRYLEFT = 0x02;
             private const byte LCD_4BITMODE = 0x00;
 
-            private readonly I2cDevice _device;
+            private readonly I2cDevice _i2cDevice;
             private bool _backlightOn;
 
-            public I2c4Bit(I2cDevice device)
+            public I2c4Bit(I2cDevice i2cDevice)
             {
-                _device = device;
+                _i2cDevice = i2cDevice ?? throw new ArgumentNullException(nameof(i2cDevice));
                 _backlightOn = true;
                 InitDisplay();
             }
@@ -50,15 +49,12 @@ namespace Iot.Device.CharacterLcd
             /// </summary>
             public override bool BacklightOn
             {
-                get
-                {
-                    return _backlightOn;
-                }
+                get => _backlightOn;
                 set
                 {
                     _backlightOn = value;
                     // Need to send a command to make this happen immediately.
-                    SendCommand(0);
+                    SendCommandAndWait(0);
                 }
             }
 
@@ -91,7 +87,7 @@ namespace Iot.Device.CharacterLcd
                 SendCommandAndWait(LCD_ENTRYMODESET | LCD_ENTRYLEFT);
             }
 
-            private void SendCommandAndWait(byte command)
+            public override void SendCommandAndWait(byte command)
             {
                 // Must not run the init sequence to fast or undefined behavior may occur
                 SendCommand(command);
@@ -106,8 +102,8 @@ namespace Iot.Device.CharacterLcd
 
             private void Write4Bits(byte command)
             {
-                _device.WriteByte((byte)(command | ENABLE | BacklightFlag));
-                _device.WriteByte((byte)((command & ~ENABLE) | BacklightFlag));
+                _i2cDevice.WriteByte((byte)(command | ENABLE | BacklightFlag));
+                _i2cDevice.WriteByte((byte)((command & ~ENABLE) | BacklightFlag));
             }
 
             public override void SendCommands(ReadOnlySpan<byte> commands)
@@ -125,6 +121,15 @@ namespace Iot.Device.CharacterLcd
             }
 
             public override void SendData(ReadOnlySpan<byte> values)
+            {
+                foreach (var c in values)
+                {
+                    Write4Bits((byte)(REGISTERSELECT | (c & 0xF0)));
+                    Write4Bits((byte)(REGISTERSELECT | ((c << 4) & 0xF0)));
+                }
+            }
+
+            public override void SendData(ReadOnlySpan<char> values)
             {
                 foreach (var c in values)
                 {

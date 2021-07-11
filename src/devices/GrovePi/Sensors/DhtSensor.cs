@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +13,23 @@ namespace Iot.Device.GrovePiDevice.Sensors
     /// </summary>
     public class DhtSensor
     {
+        /// <summary>
+        /// Only Digital ports including the analogic sensors (A0 = D14, A1 = D15, A2 = D16)
+        /// </summary>
+        public static List<GrovePort> SupportedPorts => new List<GrovePort>()
+        {
+            GrovePort.DigitalPin2,
+            GrovePort.DigitalPin3,
+            GrovePort.DigitalPin4,
+            GrovePort.DigitalPin5,
+            GrovePort.DigitalPin6,
+            GrovePort.DigitalPin7,
+            GrovePort.DigitalPin8,
+            GrovePort.DigitalPin14,
+            GrovePort.DigitalPin15,
+            GrovePort.DigitalPin16
+        };
+
         private readonly double[] _lastTemHum = new double[2] { double.NaN, double.NaN };
         private GrovePi _grovePi;
 
@@ -32,7 +48,7 @@ namespace Iot.Device.GrovePiDevice.Sensors
         {
             if (!SupportedPorts.Contains(port))
             {
-                throw new ArgumentException($"Grove port {port} not supported.", nameof(port));
+                throw new ArgumentException(nameof(port), "Grove port not supported");
             }
 
             _grovePi = grovePi;
@@ -78,8 +94,8 @@ namespace Iot.Device.GrovePiDevice.Sensors
             // This is needed for firmware 1.4.0 and also working for previous versions
             Thread.Sleep(300);
             var retArray = _grovePi.ReadCommand(GrovePiCommand.DhtTemp, _port);
-            _lastTemHum[0] = BitConverter.ToSingle(retArray.AsSpan(1, 4));
-            _lastTemHum[1] = BitConverter.ToSingle(retArray.AsSpan(5, 4));
+            _lastTemHum[0] = BitConverter.ToSingle(retArray!, 1);
+            _lastTemHum[1] = BitConverter.ToSingle(retArray!, 5);
         }
 
         /// <summary>
@@ -107,22 +123,5 @@ namespace Iot.Device.GrovePiDevice.Sensors
         /// Get the name of the DHT sensor
         /// </summary>
         public string SensorName => $"{DhtType} Temperature and Humidity Sensor";
-
-        /// <summary>
-        /// Only Digital ports including the analogic sensors (A0 = D14, A1 = D15, A2 = D16)
-        /// </summary>
-        public static List<GrovePort> SupportedPorts => new List<GrovePort>()
-        {
-            GrovePort.DigitalPin2,
-            GrovePort.DigitalPin3,
-            GrovePort.DigitalPin4,
-            GrovePort.DigitalPin5,
-            GrovePort.DigitalPin6,
-            GrovePort.DigitalPin7,
-            GrovePort.DigitalPin8,
-            GrovePort.DigitalPin14,
-            GrovePort.DigitalPin15,
-            GrovePort.DigitalPin16
-        };
     }
 }

@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -30,9 +29,9 @@ namespace Iot.Device.GoPiGo3.Movements
     public class Motor
     {
         // represent the Brick
-        private GoPiGo _goPiGo = null;
+        private GoPiGo _goPiGo;
         private int _tacho;
-        private Timer _timer = null;
+        private Timer _timer;
         private int _periodRefresh;
 
         /// <summary>
@@ -55,7 +54,7 @@ namespace Iot.Device.GoPiGo3.Movements
         {
             if (port == MotorPort.Both)
             {
-                throw new ArgumentException($"Motor class can only have 1 motor");
+                throw new ArgumentException(nameof(port), "Motor class can only have 1 motor");
             }
 
             _goPiGo = brick;
@@ -70,7 +69,7 @@ namespace Iot.Device.GoPiGo3.Movements
         /// <param name="speed">speed is between -255 and +255</param>
         public void SetSpeed(int speed)
         {
-            speed = Math.Clamp(speed, -255, 255);
+            speed = MathExtensions.Clamp(speed, -255, 255);
             _goPiGo.SetMotorPower(Port, speed);
         }
 
@@ -205,7 +204,7 @@ namespace Iot.Device.GoPiGo3.Movements
         /// <summary>
         /// Update the sensor and this will raised an event on the interface
         /// </summary>
-        public void UpdateSensor(object state)
+        public void UpdateSensor(object? state)
         {
             TachoCount = GetTachoCount();
         }
@@ -225,11 +224,8 @@ namespace Iot.Device.GoPiGo3.Movements
 
         private void StopTimerInternal()
         {
-            if (_timer != null)
-            {
-                _timer.Dispose();
-                _timer = null;
-            }
+            _timer?.Dispose();
+            _timer = null!;
         }
     }
 }

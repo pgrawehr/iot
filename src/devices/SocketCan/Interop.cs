@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 // Disable these StyleCop rules for this file, as we are using native names here.
 #pragma warning disable SA1300 // Element should begin with upper-case letter
@@ -52,42 +51,34 @@ namespace Iot.Device.SocketCan
         [DllImport("libc", EntryPoint = "setsockopt", CallingConvention = CallingConvention.Cdecl)]
         private static unsafe extern int SetSocketOpt(int fd, int level, int optName, byte* optVal, int optlen);
 
-        public static unsafe void Write(SafeHandle handle, ReadOnlySpan<byte> buffer)
+        public static unsafe void Write(SafeHandle handle, byte* buffer, int length)
         {
-            fixed (byte* b = buffer)
+            int totalBytesWritten = 0;
+            while (totalBytesWritten < length)
             {
-                int totalBytesWritten = 0;
-                while (totalBytesWritten < buffer.Length)
+                int bytesWritten = Interop.SocketWrite((int)handle.DangerousGetHandle(), buffer, length);
+                if (bytesWritten < 0)
                 {
-                    int bytesWritten = Interop.SocketWrite((int)handle.DangerousGetHandle(), b, buffer.Length);
-                    if (bytesWritten < 0)
-                    {
-                        throw new IOException("`write` operation failed");
-                    }
-
-                    totalBytesWritten += bytesWritten;
+                    throw new IOException("`write` operation failed");
                 }
+
+                totalBytesWritten += bytesWritten;
             }
         }
 
-        public static unsafe int Read(SafeHandle handle, Span<byte> buffer)
+        public static unsafe int Read(SafeHandle handle, byte* buffer, int length)
         {
-            fixed (byte* b = buffer)
+            int bytesRead = Interop.SocketRead((int)handle.DangerousGetHandle(), buffer, length);
+            if (bytesRead < 0)
             {
-                int bytesRead = Interop.SocketRead((int)handle.DangerousGetHandle(), b, buffer.Length);
-                if (bytesRead < 0)
-                {
-                    throw new IOException("`read` operation failed");
-                }
-
-                return bytesRead;
+                throw new IOException("`read` operation failed");
             }
+
+            return bytesRead;
         }
 
-        public static void CloseSocket(IntPtr fd)
-        {
+        public static void CloseSocket(IntPtr fd) =>
             CloseSocket((int)fd);
-        }
 
         public static IntPtr CreateCanRawSocket(string networkInterface)
         {
@@ -105,10 +96,8 @@ namespace Iot.Device.SocketCan
         }
 
         public static bool SetCanRawSocketOption<T>(SafeHandle handle, CanSocketOption optName, ReadOnlySpan<T> data)
-            where T : struct
-        {
-            return SetSocketOption(handle, SOL_CAN_RAW, optName, data);
-        }
+            where T : struct =>
+            SetSocketOption(handle, SOL_CAN_RAW, optName, data);
 
         private static unsafe bool SetSocketOption<T>(SafeHandle handle, int level, CanSocketOption optName, ReadOnlySpan<T> data)
             where T : struct
@@ -141,7 +130,7 @@ namespace Iot.Device.SocketCan
 
             if (name.Length >= MaxLen)
             {
-                throw new ArgumentException($"`{name}` exceeds maximum allowed length of {MaxLen} size", nameof(name));
+                throw new ArgumentException(nameof(name), $"Value exceeds maximum allowed length of {MaxLen} size.");
             }
 
             ifreq ifr = new ifreq();

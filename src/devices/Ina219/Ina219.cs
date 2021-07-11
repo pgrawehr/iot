@@ -1,18 +1,19 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Device;
 using System.Device.I2c;
+using System.Device.Model;
+using System.Diagnostics.CodeAnalysis;
 using UnitsNet;
 
 namespace Iot.Device.Adc
 {
     /// <summary>
-    /// Binding that exposes an INA219 Bidirectional Current/Power monitor.
+    /// INA219 Bidirectional Current/Power monitor.
     ///
     /// The INA219 is a high-side current shunt and power monitor with an I2C interface.
     /// The INA219 monitors both shunt drop and supply voltage, with programmable conversion
@@ -20,18 +21,12 @@ namespace Iot.Device.Adc
     /// enables direct readouts in amperes. An additional multiplying register calculates power in watts.
     /// <see href="http://www.ti.com/lit/ds/symlink/ina219.pdf"/>
     /// </summary>
+    [Interface("INA219 Bidirectional Current/Power monitor")]
     public class Ina219 : IDisposable
     {
-        private I2cDevice _i2cDevice;
-        private bool _disposeI2cDevice = false;
-        private ushort _calibrationValue;
-        private Ina219AdcResolutionOrSamples _busAdcResSamp;
-        private Ina219AdcResolutionOrSamples _shuntAdcResSamp;
-        private float _currentLsb;
-
         // These values are the datasheet defined delays in micro seconds between requesting a Current or Power value from the INA219 and the ADC sampling having completed
         // along with any conversions.
-        private static readonly Dictionary<Ina219AdcResolutionOrSamples, int> s_readDelays = new Dictionary<Ina219AdcResolutionOrSamples, int>()
+        private static readonly Dictionary<Ina219AdcResolutionOrSamples, int> s_readDelays = new()
         {
             { Ina219AdcResolutionOrSamples.Adc9Bit, 84 },
             { Ina219AdcResolutionOrSamples.Adc10Bit, 148 },
@@ -46,15 +41,12 @@ namespace Iot.Device.Adc
             { Ina219AdcResolutionOrSamples.Adc128Sample, 68100 }
         };
 
-        /// <summary>
-        /// Method to initialize values during device construction
-        /// </summary>
-        /// <param name="i2cDevice">Interface to I2C device access</param>
-        private void Initialize(I2cDevice i2cDevice)
-        {
-            _currentLsb = 1F;
-            _i2cDevice = i2cDevice;
-        }
+        private I2cDevice _i2cDevice;
+        private bool _disposeI2cDevice = false;
+        private ushort _calibrationValue;
+        private Ina219AdcResolutionOrSamples _busAdcResSamp;
+        private Ina219AdcResolutionOrSamples _shuntAdcResSamp;
+        private float _currentLsb;
 
         /// <summary>
         /// Construct an Ina219 device using an I2cDevice
@@ -65,12 +57,8 @@ namespace Iot.Device.Adc
         /// <param name="i2cDevice">The I2cDevice initialized to communicate with the INA219.</param>
         public Ina219(I2cDevice i2cDevice)
         {
-            if (i2cDevice == null)
-            {
-                throw new System.ArgumentNullException(nameof(i2cDevice));
-            }
-
-            Initialize(i2cDevice);
+            _i2cDevice = i2cDevice ?? throw new ArgumentNullException(nameof(i2cDevice));
+            _currentLsb = 1F;
         }
 
         /// <summary>
@@ -79,22 +67,14 @@ namespace Iot.Device.Adc
         /// <remarks>
         /// This binding creates an I2cDevice ufor communication with the INA219. The I2cDevice is disposed when then INA219 is disposed.
         /// </remarks>
-        /// <param name="settings">The I2cConnectionSettings object initialized with the appropiate settings to communicate with the INA219.</param>
+        /// <param name="settings">The I2cConnectionSettings object initialized with the appropriate settings to communicate with the INA219.</param>
         public Ina219(I2cConnectionSettings settings)
-        {
-            if (settings == null)
-            {
-                throw new System.ArgumentNullException(nameof(settings));
-            }
-
-            Initialize(I2cDevice.Create(settings));
-
-            _disposeI2cDevice = true;
-        }
+            : this(I2cDevice.Create(settings)) => _disposeI2cDevice = true;
 
         /// <summary>
         /// Reset the INA219 to default values;
         /// </summary>
+        [Command]
         public void Reset()
         {
             // Reset the device by sending a value to the configuration register with the reset but set.
@@ -114,10 +94,10 @@ namespace Iot.Device.Adc
         /// <remarks>
         /// This allows the user to selects continuous, triggered, or power-down mode of operation along with which of the shunt and bus voltage measurements are made.
         /// </remarks>
+        [Property]
         public Ina219OperatingMode OperatingMode
         {
             get => (Ina219OperatingMode)(ReadRegister(Ina219Register.Configuration) & (ushort)Ina219ConfigurationFlags.ModeMask);
-
             set
             {
                 ushort regValue = ReadRegister(Ina219Register.Configuration);
@@ -136,10 +116,10 @@ namespace Iot.Device.Adc
         /// This allows the user to selects eiter a 16V range or a 32V range for the ADC reading the bus voltage.
         /// In general the lowest range compatible with the application parameters should be selected.
         /// </remarks>
+        [Property]
         public Ina219BusVoltageRange BusVoltageRange
         {
             get => (Ina219BusVoltageRange)(ReadRegister(Ina219Register.Configuration) & (ushort)Ina219ConfigurationFlags.BrngMask);
-
             set
             {
                 ushort regValue = ReadRegister(Ina219Register.Configuration);
@@ -158,10 +138,10 @@ namespace Iot.Device.Adc
         /// This allows the user to selects a gain for the amplifier reading the shunt voltage before it is applied to the ADC. It can be one of +/-40mV, +/-80mV, +/-160mV or +/-320mV.
         /// In general the lowest range compatible with the application parameters should be selected.
         /// </remarks>
+        [Property]
         public Ina219PgaSensitivity PgaSensitivity
         {
             get => (Ina219PgaSensitivity)(ReadRegister(Ina219Register.Configuration) & (ushort)Ina219ConfigurationFlags.PgaMask);
-
             set
             {
                 ushort regValue = ReadRegister(Ina219Register.Configuration);
@@ -179,10 +159,10 @@ namespace Iot.Device.Adc
         /// <remarks>
         /// This can either by the number of bits used for the ADC conversion (9-12 bits) or the number of samples at 12 bits to be averaged for the result.
         /// </remarks>
+        [Property]
         public Ina219AdcResolutionOrSamples BusAdcResolutionOrSamples
         {
             get => (Ina219AdcResolutionOrSamples)((ReadRegister(Ina219Register.Configuration) & (ushort)Ina219ConfigurationFlags.BadcMask) >> 4);
-
             set
             {
                 ushort regValue = ReadRegister(Ina219Register.Configuration);
@@ -202,10 +182,10 @@ namespace Iot.Device.Adc
         /// <remarks>
         /// This can either by the number of bits used for the ADC conversion (9-12 bits) or the number of samples at 12 bits to be averaged for the result.
         /// </remarks>
+        [Property]
         public Ina219AdcResolutionOrSamples ShuntAdcResolutionOrSamples
         {
             get => (Ina219AdcResolutionOrSamples)(ReadRegister(Ina219Register.Configuration) & (ushort)Ina219ConfigurationFlags.SadcMask);
-
             set
             {
                 ushort regValue = ReadRegister(Ina219Register.Configuration);
@@ -232,6 +212,7 @@ namespace Iot.Device.Adc
         /// </remarks>
         /// <param name="calibrationValue">The number of Amperes represented by the LSB of the INA219 current register.</param>
         /// <param name="currentLsb">The current value in Amperes of the least significan bit of the calibration register. Defaults to unity so that the register can be read directly.</param>
+        [Command]
         public void SetCalibration(ushort calibrationValue, float currentLsb = 1.0F)
         {
             // cache the values for later use
@@ -245,41 +226,30 @@ namespace Iot.Device.Adc
         /// <summary>
         /// Dispose instance
         /// </summary>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposeI2cDevice & disposing)
-            {
-                _i2cDevice?.Dispose();
-            }
-        }
-
-        /// <summary>
-        /// Dispose of managed assets.
-        /// </summary>
         public void Dispose()
         {
-            Dispose(true);
+            if (_disposeI2cDevice)
+            {
+                _i2cDevice?.Dispose();
+                _i2cDevice = null!;
+            }
         }
 
         /// <summary>
         /// Read the measured shunt voltage.
         /// </summary>
         /// <returns>The shunt potential difference</returns>
-        public ElectricPotential ReadShuntVoltage()
-        {
-            // read the shunt voltage. LSB = 10uV then convert to Volts
-            return ElectricPotential.FromVolts(ReadRegister(Ina219Register.ShuntVoltage, s_readDelays[(Ina219AdcResolutionOrSamples)_shuntAdcResSamp]) * 10.0 / 1000000.0);
-        }
+        // read the shunt voltage. LSB = 10uV then convert to Volts
+        [Telemetry("ShuntVoltage")]
+        public ElectricPotential ReadShuntVoltage() => ElectricPotential.FromVolts(ReadRegister(Ina219Register.ShuntVoltage, s_readDelays[(Ina219AdcResolutionOrSamples)_shuntAdcResSamp]) * 10.0 / 1000000.0);
 
         /// <summary>
         /// Read the measured Bus voltage.
         /// </summary>
         /// <returns>The Bus potential (voltage)</returns>
-        public ElectricPotential ReadBusVoltage()
-        {
-            // read the bus voltage. LSB = 4mV then convert to Volts
-            return ElectricPotential.FromVolts(((short)ReadRegister(Ina219Register.BusVoltage, s_readDelays[_busAdcResSamp]) >> 3) * 4 / 1000.0);
-        }
+        // read the bus voltage. LSB = 4mV then convert to Volts
+        [Telemetry("BusVoltage")]
+        public ElectricPotential ReadBusVoltage() => ElectricPotential.FromVolts(((short)ReadRegister(Ina219Register.BusVoltage, s_readDelays[_busAdcResSamp]) >> 3) * 4 / 1000.0);
 
         /// <summary>
         /// Read the calculated current through the INA219.
@@ -288,6 +258,7 @@ namespace Iot.Device.Adc
         /// This value is determined by an internal calculation using the calibration register and the read shunt voltage and then scaled.
         /// </remarks>
         /// <returns>The calculated current</returns>
+        [Telemetry("Current")]
         public ElectricCurrent ReadCurrent()
         {
             // According to Adafruit then large changes in load will reset the cal register
@@ -306,6 +277,7 @@ namespace Iot.Device.Adc
         /// This value is determined by an internal calculation using the calulated current and the read bus voltage and then scaled.
         /// </remarks>
         /// <returns>The calculated electric power</returns>
+        [Telemetry("Power")]
         public Power ReadPower()
         {
             // According to Adafruit then large changes in load will reset the cal register

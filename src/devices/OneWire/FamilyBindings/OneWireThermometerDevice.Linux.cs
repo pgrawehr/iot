@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -11,18 +10,6 @@ namespace Iot.Device.OneWire
 {
     public partial class OneWireThermometerDevice : OneWireDevice
     {
-        private async Task<Temperature> ReadTemperatureInternalAsync()
-        {
-            var data = await File.ReadAllTextAsync(Path.Combine(OneWireBus.SysfsDevicesPath, BusId, DeviceId, "w1_slave"));
-            return ParseTemperature(data);
-        }
-
-        private Temperature ReadTemperatureInternal()
-        {
-            var data = File.ReadAllText(Path.Combine(OneWireBus.SysfsDevicesPath, BusId, DeviceId, "w1_slave"));
-            return ParseTemperature(data);
-        }
-
         private static Temperature ParseTemperature(string data)
         {
             // Expected data format:
@@ -34,12 +21,26 @@ namespace Iot.Device.OneWire
             }
 
             var tempIdx = data.LastIndexOf("t=");
-            if (tempIdx == -1 || tempIdx + 2 >= data.Length || !int.TryParse(data.AsSpan(tempIdx + 2), out var temp))
+            if (tempIdx == -1 || tempIdx + 2 >= data.Length || !int.TryParse(data.Substring(tempIdx + 2), out var temp))
             {
                 throw new InvalidOperationException("Invalid sensor data format.");
             }
 
             return Temperature.FromDegreesCelsius(temp * 0.001);
+        }
+
+#if !NETSTANDARD2_0
+        private async Task<Temperature> ReadTemperatureInternalAsync()
+        {
+            var data = await File.ReadAllTextAsync(Path.Combine(OneWireBus.SysfsDevicesPath, BusId, DeviceId, "w1_slave"));
+            return ParseTemperature(data);
+        }
+#endif
+
+        private Temperature ReadTemperatureInternal()
+        {
+            var data = File.ReadAllText(Path.Combine(OneWireBus.SysfsDevicesPath, BusId, DeviceId, "w1_slave"));
+            return ParseTemperature(data);
         }
     }
 }

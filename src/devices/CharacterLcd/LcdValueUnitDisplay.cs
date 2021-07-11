@@ -11,6 +11,10 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+<<<<<<< HEAD
+=======
+using Iot.Device.Graphics;
+>>>>>>> remotes/dotnet/main
 
 namespace Iot.Device.CharacterLcd
 {
@@ -26,7 +30,11 @@ namespace Iot.Device.CharacterLcd
         private readonly CultureInfo _culture;
         private readonly Dictionary<char, byte[]> _font;
         private char _currentSeparationChar;
+<<<<<<< HEAD
         private LcdCharacterEncoding _encoding;
+=======
+        private LcdCharacterEncoding? _encoding;
+>>>>>>> remotes/dotnet/main
 
         /// <summary>
         /// Creates an instance of <see cref="LcdValueUnitDisplay"/>
@@ -67,7 +75,11 @@ namespace Iot.Device.CharacterLcd
         /// </summary>
         /// <param name="romName">Name of the character Rom, required to properly print culture-specific characters in the small text display</param>
         /// <param name="factory">Encoding factory or null</param>
+<<<<<<< HEAD
         public void InitForRom(string romName, LcdCharacterEncodingFactory factory = null)
+=======
+        public void InitForRom(string romName, LcdCharacterEncodingFactory? factory = null)
+>>>>>>> remotes/dotnet/main
         {
             if (factory == null)
             {
@@ -120,7 +132,11 @@ namespace Iot.Device.CharacterLcd
             string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith("BigFontMap.txt"));
 
             string mapFile;
+<<<<<<< HEAD
             using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+=======
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName)!)
+>>>>>>> remotes/dotnet/main
             {
                 using (StreamReader reader = new StreamReader(stream))
                 {
@@ -133,12 +149,20 @@ namespace Iot.Device.CharacterLcd
             // 1.. 3 next line
             int characterStep = -1;
             char currentChar = ' ';
+<<<<<<< HEAD
             byte[] currentCharMap = null;
+=======
+            byte[] currentCharMap = new byte[0];
+>>>>>>> remotes/dotnet/main
             int currentCharMapPos = 0;
             // Parse the character map file (syntax see there)
             using (StringReader r = new StringReader(mapFile))
             {
+<<<<<<< HEAD
                 string line;
+=======
+                string? line;
+>>>>>>> remotes/dotnet/main
                 int lineNo = 0;
                 while ((line = r.ReadLine()) != null)
                 {
@@ -161,7 +185,11 @@ namespace Iot.Device.CharacterLcd
                         continue;
                     }
 
+<<<<<<< HEAD
                     string[] splits = line.Split(',', StringSplitOptions.None);
+=======
+                    string[] splits = line.Split(new char[] { ',' }, StringSplitOptions.None);
+>>>>>>> remotes/dotnet/main
                     if (characterStep == 0)
                     {
                         currentCharMap = new byte[splits.Length * 4];
@@ -324,7 +352,11 @@ namespace Iot.Device.CharacterLcd
 
             foreach (var c in bigText)
             {
+<<<<<<< HEAD
                 if (_font.TryGetValue(c, out byte[] value))
+=======
+                if (_font.TryGetValue(c, out byte[]? value))
+>>>>>>> remotes/dotnet/main
                 {
                     Insert(value.Length / 4, value);
                 }

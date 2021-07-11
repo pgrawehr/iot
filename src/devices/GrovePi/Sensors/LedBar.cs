@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -25,6 +24,21 @@ namespace Iot.Device.GrovePiDevice.Sensors
     /// </summary>
     public class LedBar
     {
+        /// <summary>
+        /// Only Digital ports only but you can't create more than 4 bars as each bar is using 2 Pins
+        /// So you have to have at least 1 Grove Port empty between 2 bars
+        /// </summary>
+        public static List<GrovePort> SupportedPorts => new List<GrovePort>()
+        {
+            GrovePort.DigitalPin2,
+            GrovePort.DigitalPin3,
+            GrovePort.DigitalPin4,
+            GrovePort.DigitalPin5,
+            GrovePort.DigitalPin6,
+            GrovePort.DigitalPin7,
+            GrovePort.DigitalPin8,
+        };
+
         private GrovePi _grovePi;
         private byte _level;
         private LedBarOrientation _orientation;
@@ -54,7 +68,7 @@ namespace Iot.Device.GrovePiDevice.Sensors
         {
             if (!SupportedPorts.Contains(port))
             {
-                throw new ArgumentException($"Grove port {port} not supported.", nameof(port));
+                throw new ArgumentException(nameof(port), "Grove port not supported.");
             }
 
             _grovePi = grovePi;
@@ -98,7 +112,7 @@ namespace Iot.Device.GrovePiDevice.Sensors
             {
                 if (value > 10)
                 {
-                    throw new ArgumentException($"Only 10 leds can be controlled");
+                    throw new ArgumentException(nameof(Value), "Only 10 leds can be controlled, 1-10.");
                 }
 
                 _grovePi.WriteCommand(GrovePiCommand.LedBarLevel, _port, _level, 0);
@@ -114,7 +128,7 @@ namespace Iot.Device.GrovePiDevice.Sensors
         {
             if (led > 10)
             {
-                throw new ArgumentException($"{nameof(led)} can only be from 0 to 10");
+                throw new ArgumentException(nameof(led), "Only 10 leds can be controlled, 1-10.");
             }
 
             _grovePi.WriteCommand(GrovePiCommand.LedBarSetOneLed, _port, led, status ? (byte)1 : (byte)0);
@@ -139,7 +153,12 @@ namespace Iot.Device.GrovePiDevice.Sensors
         {
             _grovePi.WriteCommand(GrovePiCommand.LetBarGet, _port, 0, 0);
             var ret = _grovePi.ReadCommand(GrovePiCommand.LetBarGet, _port);
-            return ret[1] + (ret[2] >> 8);
+            if (ret is object)
+            {
+                return ret[1] + (ret[2] >> 8);
+            }
+
+            throw new Exception("Cannot find all LEDs");
         }
 
         /// <summary>
@@ -148,7 +167,7 @@ namespace Iot.Device.GrovePiDevice.Sensors
         /// <param name="led">The led from 0 to 10</param>
         public void ToggleLeds(byte led)
         {
-            led = Math.Clamp(led, (byte)0, (byte)10);
+            led = MathExtensions.Clamp(led, (byte)0, (byte)10);
             _grovePi.WriteCommand(GrovePiCommand.LedBarToggleOneLed, _port, led, 0);
         }
 
@@ -162,20 +181,5 @@ namespace Iot.Device.GrovePiDevice.Sensors
         /// Get the name Led Bar
         /// </summary>
         public string SensorName => "Led Bar";
-
-        /// <summary>
-        /// Only Digital ports only but you can't create more than 4 bars as each bar is using 2 Pins
-        /// So you have to have at least 1 Grove Port empty between 2 bars
-        /// </summary>
-        public static List<GrovePort> SupportedPorts => new List<GrovePort>()
-        {
-            GrovePort.DigitalPin2,
-            GrovePort.DigitalPin3,
-            GrovePort.DigitalPin4,
-            GrovePort.DigitalPin5,
-            GrovePort.DigitalPin6,
-            GrovePort.DigitalPin7,
-            GrovePort.DigitalPin8,
-        };
     }
 }

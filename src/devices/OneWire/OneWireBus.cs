@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -16,10 +15,7 @@ namespace Iot.Device.OneWire
         /// Initializes a new instance of the <see cref="OneWireBus"/> class
         /// </summary>
         /// <param name="busId">The platform id of the 1-wire bus.</param>
-        public OneWireBus(string busId)
-        {
-            BusId = busId;
-        }
+        public OneWireBus(string busId) => BusId = busId;
 
         /// <summary>
         /// The 1-wire device id.
@@ -30,14 +26,11 @@ namespace Iot.Device.OneWire
         /// Enumerate names of all 1-wire busses in the system.
         /// </summary>
         /// <returns>A list of discovered bus ids.</returns>
-        public static IEnumerable<string> EnumerateBusIds()
-        {
-            return EnumerateBusIdsInternal();
-        }
+        public static IEnumerable<string> EnumerateBusIds() => EnumerateBusIdsInternal();
 
         /// <summary>
         /// Enumerates all devices currently detected on this bus. Platform can update device list
-        /// periodically. To manually trigger an update call <see cref="ScanForDeviceChangesAsync" />.
+        /// periodically. To manually trigger an update call <see cref="ScanForDeviceChanges" />.
         /// </summary>
         /// <param name="family">Family id used to filter enumerated devices.</param>
         /// <returns>A list of discovered devices.</returns>
@@ -49,25 +42,21 @@ namespace Iot.Device.OneWire
             }
         }
 
+#if !NETSTANDARD2_0
         /// <summary>
         /// Start a new scan for device changes on the bus.
         /// </summary>
         /// <param name="numDevices">Max number of devices to scan for before finishing. Use -1 for platform default.</param>
         /// <param name="numScans">Number of scans to do to find numDevices devices. Use -1 for platform default.</param>
         /// <returns>Task representing the async work.</returns>
-        public Task ScanForDeviceChangesAsync(int numDevices = -1, int numScans = -1)
-        {
-            return ScanForDeviceChangesInternalAsync(this, numDevices, numScans);
-        }
+        public Task ScanForDeviceChangesAsync(int numDevices = -1, int numScans = -1) => ScanForDeviceChangesInternalAsync(this, numDevices, numScans);
+#endif
 
         /// <summary>
         /// Start a new scan for device changes on the bus.
         /// </summary>
         /// <param name="numDevices">Max number of devices to scan for before finishing. Use -1 for platform default.</param>
         /// <param name="numScans">Number of scans to do to find numDevices devices. Use -1 for platform default.</param>
-        public void ScanForDeviceChanges(int numDevices = -1, int numScans = -1)
-        {
-            ScanForDeviceChangesInternal(this, numDevices, numScans);
-        }
+        public void ScanForDeviceChanges(int numDevices = -1, int numScans = -1) => ScanForDeviceChangesInternal(this, numDevices, numScans);
     }
 }

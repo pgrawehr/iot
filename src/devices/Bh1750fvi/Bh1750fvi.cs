@@ -1,10 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Buffers.Binary;
 using System.Device.I2c;
+using System.Device.Model;
 using UnitsNet;
 
 namespace Iot.Device.Bh1750fvi
@@ -12,6 +12,7 @@ namespace Iot.Device.Bh1750fvi
     /// <summary>
     /// Ambient Light Sensor BH1750FVI
     /// </summary>
+    [Interface("Ambient Light Sensor BH1750FVI")]
     public class Bh1750fvi : IDisposable
     {
         private const byte DefaultLightTransmittance = 0b_0100_0101;
@@ -23,6 +24,7 @@ namespace Iot.Device.Bh1750fvi
         /// <summary>
         /// BH1750FVI Light Transmittance, from 27.20% to 222.50%
         /// </summary>
+        [Property]
         public double LightTransmittance
         {
             get => _lightTransmittance;
@@ -36,11 +38,13 @@ namespace Iot.Device.Bh1750fvi
         /// <summary>
         /// BH1750FVI Measuring Mode
         /// </summary>
+        [Property]
         public MeasuringMode MeasuringMode { get; set; }
 
         /// <summary>
         /// BH1750FVI Illuminance (Lux)
         /// </summary>
+        [Telemetry]
         public Illuminance Illuminance => GetIlluminance();
 
         /// <summary>
@@ -51,22 +55,13 @@ namespace Iot.Device.Bh1750fvi
         /// <param name="lightTransmittance">BH1750FVI Light Transmittance, from 27.20% to 222.50%</param>
         public Bh1750fvi(I2cDevice i2cDevice, MeasuringMode measuringMode = MeasuringMode.ContinuouslyHighResolutionMode, double lightTransmittance = 1)
         {
-            _i2cDevice = i2cDevice;
+            _i2cDevice = i2cDevice ?? throw new ArgumentNullException(nameof(i2cDevice));
 
             _i2cDevice.WriteByte((byte)Command.PowerOn);
             _i2cDevice.WriteByte((byte)Command.Reset);
 
             LightTransmittance = lightTransmittance;
             MeasuringMode = measuringMode;
-        }
-
-        /// <summary>
-        /// Cleanup
-        /// </summary>
-        public void Dispose()
-        {
-            _i2cDevice?.Dispose();
-            _i2cDevice = null;
         }
 
         /// <summary>
@@ -112,6 +107,15 @@ namespace Iot.Device.Bh1750fvi
             }
 
             return Illuminance.FromLux(result);
+        }
+
+        /// <summary>
+        /// Cleanup
+        /// </summary>
+        public void Dispose()
+        {
+            _i2cDevice?.Dispose();
+            _i2cDevice = null!;
         }
     }
 }

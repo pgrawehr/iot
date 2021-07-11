@@ -1,6 +1,6 @@
 # Mifare card - RFID Card
 
-This class supports Mifare cards. they are RFID cards responding to ISO 14443 type A. You need a specific card reader like PN532 or MFRC522 to read, write those kind of cards.
+This class supports Mifare cards. They are RFID cards responding to ISO 14443 type A. You need a specific card reader like PN532, PN5180 to read, write those kind of cards.
 
 ## Creating a card and reading it
 
@@ -11,18 +11,18 @@ byte[] retData = null;
 while (!Console.KeyAvailable)
 {
     retData = pn532.ListPassiveTarget(MaxTarget.One, TargetBaudRate.B106kbpsTypeA);
-    if (retData != null)
+    if (retData is object)
         break;
     // Give time to PN532 to process
     Thread.Sleep(200);
 }
-if (retData == null)
+if (retData is null)
     return;
 var decrypted = pn532.Decode106kbpsTypeA(retData.AsSpan().Slice(1));
-if (decrypted != null)
+if (decrypted is object)
 {
     Console.WriteLine($"Tg: {decrypted.TargetNumber}, ATQA: {decrypted.Atqa} SAK: {decrypted.Sak}, NFCID: {BitConverter.ToString(decrypted.NfcId)}");
-    if (decrypted.Ats != null)
+    if (decrypted.Ats is object)
         Console.WriteLine($", ATS: {BitConverter.ToString(decrypted.Ats)}");
     MifareCard mifareCard = new MifareCard(pn532, decrypted.TargetNumber) { BlockNumber = 0, Command = MifareCardCommand.AuthenticationA };
     mifareCard.SetCapacity(decrypted.Atqa, decrypted.Sak);

@@ -1,36 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Dependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.20427.5">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.21330.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>f2b7fe854a0b1f78c04dfc065164d6d61040f5b8</Sha>
+      <Sha>26345756f99087811b1fe4d02ff213eb172ec506</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Helix.Sdk" Version="5.0.0-beta.20427.5">
+    <Dependency Name="Microsoft.DotNet.Helix.Sdk" Version="6.0.0-beta.21330.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>f2b7fe854a0b1f78c04dfc065164d6d61040f5b8</Sha>
+      <Sha>26345756f99087811b1fe4d02ff213eb172ec506</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.GenAPI" Version="5.0.0-beta.20427.5">
+    <Dependency Name="Microsoft.DotNet.GenAPI" Version="6.0.0-beta.21330.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>f2b7fe854a0b1f78c04dfc065164d6d61040f5b8</Sha>
+      <Sha>26345756f99087811b1fe4d02ff213eb172ec506</Sha>
     </Dependency>
   </ToolsetDependencies>
   <!-- ProductDependencies -->
   <ProductDependencies>
-    <Dependency Name="System.Drawing.Common" Version="4.6.0">
-      <Uri>https://github.com/dotnet/corefx</Uri>
-      <Sha>4ac4c0367003fe3973a3648eb0715ddb0e3bbcea</Sha>
+    <Dependency Name="Microsoft.Extensions.Logging" Version="5.0.0">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>bfc49945c0bedeffe01bb5d6f3c217dad207d0d8</Sha>
     </Dependency>
-    <Dependency Name="System.IO.Ports" Version="4.6.0">
-      <Uri>https://github.com/dotnet/corefx</Uri>
-      <Sha>4ac4c0367003fe3973a3648eb0715ddb0e3bbcea</Sha>
+    <Dependency Name="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>bfc49945c0bedeffe01bb5d6f3c217dad207d0d8</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Win32.Registry" Version="4.6.0">
-      <Uri>https://github.com/dotnet/corefx</Uri>
-      <Sha>4ac4c0367003fe3973a3648eb0715ddb0e3bbcea</Sha>
+    <Dependency Name="System.Drawing.Common" Version="5.0.2">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>5111aa12cdeb8e8703d475193f78c1848f58f6c6</Sha>
+    </Dependency>
+    <Dependency Name="System.IO.Ports" Version="5.0.1">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>5111aa12cdeb8e8703d475193f78c1848f58f6c6</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Win32.Registry" Version="5.0.0">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>bfc49945c0bedeffe01bb5d6f3c217dad207d0d8</Sha>
     </Dependency>
     <Dependency Name="System.Runtime.WindowsRuntime" Version="4.6.0">
       <Uri>https://github.com/dotnet/corefx</Uri>
       <Sha>4ac4c0367003fe3973a3648eb0715ddb0e3bbcea</Sha>
+    </Dependency>
+    <Dependency Name="System.Management" Version="5.0.0">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>bfc49945c0bedeffe01bb5d6f3c217dad207d0d8</Sha>
     </Dependency>
   </ProductDependencies>
 </Dependencies>

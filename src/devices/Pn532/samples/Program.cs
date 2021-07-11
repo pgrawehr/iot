@@ -1,290 +1,555 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
+using System.Device.Gpio;
+using System.Device.I2c;
+using System.Device.Spi;
 using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Iot.Device.Card;
 using Iot.Device.Card.CreditCardProcessing;
 using Iot.Device.Card.Mifare;
+using Iot.Device.Card.Ultralight;
+using Iot.Device.Common;
+using Iot.Device.Ndef;
 using Iot.Device.Pn532;
 using Iot.Device.Pn532.ListPassive;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
-namespace Pn532Demo
+Pn532 pn532;
+
+Console.WriteLine("Welcome to Pn532 example.");
+Console.WriteLine("Which interface do you want to use with your Pn532?");
+Console.WriteLine("1. HSU: Hight Speed UART (high speed serial port)");
+Console.WriteLine("2. I2C");
+Console.WriteLine("3. SPI");
+var choiceInterface = Console.ReadKey();
+Console.WriteLine();
+if (choiceInterface is not { KeyChar: '1' or '2' or '3' })
 {
-    internal class Program
+    Console.WriteLine($"You can only select 1, 2 or 3");
+    return;
+}
+
+Console.WriteLine("Do you want log level to Debug? Y/N");
+var debugLevelConsole = Console.ReadKey();
+Console.WriteLine();
+LogLevel debugLevel = debugLevelConsole is { KeyChar: 'Y' or 'y' } ? LogLevel.Debug : LogLevel.Information;
+
+var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.AddFilter(x => x >= debugLevel);
+    builder.AddConsole();
+});
+
+// Statically register our factory. Note that this must be done before instantiation of any class that wants to use logging.
+LogDispatcher.LoggerFactory = loggerFactory;
+
+if (choiceInterface is { KeyChar: '3' })
+{
+    Console.WriteLine("Which pin number do you want as Chip Select?");
+    var pinSelectConsole = Console.ReadLine();
+    int pinSelect;
+    try
     {
-        public static void Main(string[] args)
+        pinSelect = Convert.ToInt32(pinSelectConsole);
+    }
+    catch (Exception ex) when (ex is FormatException || ex is OverflowException)
+    {
+        Console.WriteLine("Impossible to convert the pin number.");
+        return;
+    }
+
+    pn532 = new Pn532(SpiDevice.Create(new SpiConnectionSettings(0) { DataFlow = DataFlow.LsbFirst, Mode = SpiMode.Mode0 }), pinSelect);
+}
+else if (choiceInterface is { KeyChar: '2' })
+{
+    pn532 = new Pn532(I2cDevice.Create(new I2cConnectionSettings(1, Pn532.I2cDefaultAddress)));
+}
+else
+{
+    Console.WriteLine("Please enter the serial port to use. ex: COM3 on Windows or /dev/ttyS0 on Linux");
+
+    var device = Console.ReadLine();
+    pn532 = new Pn532(device!);
+}
+
+if (pn532.FirmwareVersion is FirmwareVersion version)
+{
+    Console.WriteLine(
+        $"Is it a PN532!: {version.IsPn532}, Version: {version.Version}, Version supported: {version.VersionSupported}");
+    // To adjust the baud rate, uncomment the next line
+    // pn532.SetSerialBaudRate(BaudRate.B0921600);
+
+    // To dump all the registers, uncomment the next line
+    // DumpAllRegisters(pn532);
+
+    // To run tests, uncomment the next line
+    // RunTests(pn532);
+    ProcessUltralight(pn532);
+    // ReadMiFare(pn532);
+    // TestGPIO(pn532);
+
+    // To read Credit Cards, uncomment the next line
+    // ReadCreditCard(pn532);
+}
+else
+{
+    Console.WriteLine($"Error");
+}
+
+pn532?.Dispose();
+
+void DumpAllRegisters(Pn532 pn532)
+{
+    const int MaxRead = 16;
+    Span<byte> span = stackalloc byte[MaxRead];
+    for (int i = 0; i < 0xFFFF; i += MaxRead)
+    {
+        ushort[] reg = new ushort[MaxRead];
+        for (int j = 0; j < MaxRead; j++)
         {
-            string device = "/dev/ttyS0";
-            using (var pn532 = new Pn532(device))
+            reg[j] = (ushort)(i + j);
+        }
+
+        var ret = pn532.ReadRegister(reg, span);
+        if (ret)
+        {
+            Console.Write($"Reg: {(i).ToString("X4")} ");
+            for (int j = 0; j < MaxRead; j++)
             {
-                if (args.Length > 0)
+                Console.Write($"{span[j].ToString("X2")} ");
+            }
+
+            Console.WriteLine();
+        }
+    }
+}
+
+void ReadMiFare(Pn532 pn532)
+{
+    byte[]? retData = null;
+    while ((!Console.KeyAvailable))
+    {
+        retData = pn532.ListPassiveTarget(MaxTarget.One, TargetBaudRate.B106kbpsTypeA);
+        if (retData is object)
+        {
+            break;
+        }
+
+        // Give time to PN532 to process
+        Thread.Sleep(200);
+    }
+
+    if (retData is null)
+    {
+        return;
+    }
+
+    for (int i = 0; i < retData.Length; i++)
+    {
+        Console.Write($"{retData[i]:X} ");
+    }
+
+    Console.WriteLine();
+
+    var decrypted = pn532.TryDecode106kbpsTypeA(retData.AsSpan().Slice(1));
+    if (decrypted is object)
+    {
+        Console.WriteLine(
+            $"Tg: {decrypted.TargetNumber}, ATQA: {decrypted.Atqa} SAK: {decrypted.Sak}, NFCID: {BitConverter.ToString(decrypted.NfcId)}");
+        if (decrypted.Ats is object)
+        {
+            Console.WriteLine($", ATS: {BitConverter.ToString(decrypted.Ats)}");
+        }
+
+        MifareCard mifareCard = new(pn532, decrypted.TargetNumber)
+        {
+            BlockNumber = 0,
+            Command = MifareCardCommand.AuthenticationA
+        };
+
+        mifareCard.SetCapacity(decrypted.Atqa, decrypted.Sak);
+        mifareCard.SerialNumber = decrypted.NfcId;
+        mifareCard.KeyA = new byte[6] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        mifareCard.KeyB = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+        for (byte block = 0; block < 64; block++)
+        {
+            mifareCard.BlockNumber = block;
+            mifareCard.Command = MifareCardCommand.AuthenticationB;
+            var ret = mifareCard.RunMifareCardCommand();
+            // This will reselect the card in case of issue
+            mifareCard.ReselectCard();
+            if (ret < 0)
+            {
+                // Try another one
+                mifareCard.Command = MifareCardCommand.AuthenticationA;
+                ret = mifareCard.RunMifareCardCommand();
+            }
+
+            if (ret >= 0)
+            {
+                mifareCard.BlockNumber = block;
+                mifareCard.Command = MifareCardCommand.Read16Bytes;
+                ret = mifareCard.RunMifareCardCommand();
+                if (ret >= 0 && mifareCard.Data is object)
                 {
-                    pn532.LogLevel = LogLevel.Debug;
+                    Console.WriteLine($"Bloc: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
                 }
                 else
                 {
-                    pn532.LogLevel = LogLevel.None;
+                    Console.WriteLine($"Error reading bloc: {block}");
                 }
 
-                var version = pn532.FirmwareVersion;
-                if (version != null)
+                if (block % 4 == 3 && mifareCard.Data is object)
                 {
-                    Console.WriteLine(
-                        $"Is it a PN532!: {version.IsPn532}, Version: {version.Version}, Version supported: {version.VersionSupported}");
-                    // To adjust the baud rate, uncomment the next line
-                    // pn532.SetSerialBaudRate(BaudRate.B0921600);
-
-                    // To dump all the registers, uncomment the next line
-                    // DumpAllRegisters(pn532);
-
-                    // To run tests, uncomment the next line
-                    // RunTests(pn532);
-                    ReadMiFare(pn532);
-
-                    // To read Credit Cards, uncomment the next line
-                    // ReadCreditCard(pn532);
-                }
-                else
-                {
-                    Console.WriteLine($"Error");
-                }
-            }
-        }
-
-        private static void DumpAllRegisters(Pn532 pn532)
-        {
-            const int MaxRead = 16;
-            Span<byte> span = stackalloc byte[MaxRead];
-            for (int i = 0; i < 0xFFFF; i += MaxRead)
-            {
-                ushort[] reg = new ushort[MaxRead];
-                for (int j = 0; j < MaxRead; j++)
-                {
-                    reg[j] = (ushort)(i + j);
-                }
-
-                var ret = pn532.ReadRegister(reg, span);
-                if (ret)
-                {
-                    Console.Write($"Reg: {(i).ToString("X4")} ");
-                    for (int j = 0; j < MaxRead; j++)
+                    // Check what are the permissions
+                    for (byte j = 3; j > 0; j--)
                     {
-                        Console.Write($"{span[j].ToString("X2")} ");
+                        var access = mifareCard.BlockAccess((byte)(block - j), mifareCard.Data);
+                        Console.WriteLine($"Bloc: {block - j}, Access: {access}");
                     }
 
-                    Console.WriteLine();
+                    var sector = mifareCard.SectorTailerAccess(block, mifareCard.Data);
+                    Console.WriteLine($"Bloc: {block}, Access: {sector}");
                 }
             }
+            else
+            {
+                Console.WriteLine($"Authentication error");
+            }
         }
+    }
+}
 
-        private static void ReadMiFare(Pn532 pn532)
+void TestGPIO(Pn532 pn532)
+{
+    Console.WriteLine("Turning Off Port 7!");
+    var ret = pn532.WriteGpio((Port7)0);
+
+    // Access GPIO
+    ret = pn532.ReadGpio(out Port3 p3, out Port7 p7, out OperatingMode l0L1);
+    Console.WriteLine($"P7: {p7}");
+    Console.WriteLine($"P3: {p3}");
+    Console.WriteLine($"L0L1: {l0L1} ");
+
+    var on = true;
+    for (var i = 0; i < 10; i++)
+    {
+        if (on)
         {
-            byte[] retData = null;
-            while ((!Console.KeyAvailable))
-            {
-                retData = pn532.ListPassiveTarget(MaxTarget.One, TargetBaudRate.B106kbpsTypeA);
-                if (retData != null)
-                {
-                    break;
-                }
-
-                // Give time to PN532 to process
-                Thread.Sleep(200);
-            }
-
-            if (retData == null)
-            {
-                return;
-            }
-
-            var decrypted = pn532.TryDecode106kbpsTypeA(retData.AsSpan().Slice(1));
-            if (decrypted != null)
-            {
-                Console.WriteLine(
-                    $"Tg: {decrypted.TargetNumber}, ATQA: {decrypted.Atqa} SAK: {decrypted.Sak}, NFCID: {BitConverter.ToString(decrypted.NfcId)}");
-                if (decrypted.Ats != null)
-                {
-                    Console.WriteLine($", ATS: {BitConverter.ToString(decrypted.Ats)}");
-                }
-
-                MifareCard mifareCard = new MifareCard(pn532, decrypted.TargetNumber)
-                {
-                    BlockNumber = 0, Command = MifareCardCommand.AuthenticationA
-                };
-                mifareCard.SetCapacity(decrypted.Atqa, decrypted.Sak);
-                mifareCard.SerialNumber = decrypted.NfcId;
-                mifareCard.KeyA = new byte[6] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-                mifareCard.KeyB = new byte[6] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-                for (byte block = 0; block < 64; block++)
-                {
-                    mifareCard.BlockNumber = block;
-                    mifareCard.Command = MifareCardCommand.AuthenticationB;
-                    var ret = mifareCard.RunMifiCardCommand();
-                    if (ret < 0)
-                    {
-                        // Try another one
-                        mifareCard.Command = MifareCardCommand.AuthenticationA;
-                        ret = mifareCard.RunMifiCardCommand();
-                    }
-
-                    if (ret >= 0)
-                    {
-                        mifareCard.BlockNumber = block;
-                        mifareCard.Command = MifareCardCommand.Read16Bytes;
-                        ret = mifareCard.RunMifiCardCommand();
-                        if (ret >= 0)
-                        {
-                            Console.WriteLine($"Bloc: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
-                        }
-                        else
-                        {
-                            Console.WriteLine(
-                                $"Error reading bloc: {block}, Data: {BitConverter.ToString(mifareCard.Data)}");
-                        }
-
-                        if (block % 4 == 3)
-                        {
-                            // Check what are the permissions
-                            for (byte j = 3; j > 0; j--)
-                            {
-                                var access = mifareCard.BlockAccess((byte)(block - j), mifareCard.Data);
-                                Console.WriteLine($"Bloc: {block - j}, Access: {access}");
-                            }
-
-                            var sector = mifareCard.SectorTailerAccess(block, mifareCard.Data);
-                            Console.WriteLine($"Bloc: {block}, Access: {sector}");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Autentication error");
-                    }
-                }
-            }
+            p7 = Port7.P71;
         }
-
-        private static void RunTests(Pn532 pn532)
+        else
         {
-            Console.WriteLine(
-                $"{DiagnoseMode.CommunicationLineTest}: {pn532.RunSelfTest(DiagnoseMode.CommunicationLineTest)}");
-            Console.WriteLine($"{DiagnoseMode.ROMTest}: {pn532.RunSelfTest(DiagnoseMode.ROMTest)}");
-            Console.WriteLine($"{DiagnoseMode.RAMTest}: {pn532.RunSelfTest(DiagnoseMode.RAMTest)}");
-            // Check couple of SFR registers
-            SfrRegister[] regs = new SfrRegister[]
-            {
-                SfrRegister.HSU_CNT, SfrRegister.HSU_CTR, SfrRegister.HSU_PRE, SfrRegister.HSU_STA
-            };
-            Span<byte> redSfrs = stackalloc byte[regs.Length];
-            var ret = pn532.ReadRegisterSfr(regs, redSfrs);
-            for (int i = 0; i < regs.Length; i++)
-            {
-                Console.WriteLine(
-                    $"Readregisters: {regs[i]}, value: {BitConverter.ToString(redSfrs.ToArray(), i, 1)} ");
-            }
-
-            // This should give the same result as
-            ushort[] regus = new ushort[] { 0xFFAE, 0xFFAC, 0xFFAD, 0xFFAB };
-            Span<byte> redSfrus = stackalloc byte[regus.Length];
-            ret = pn532.ReadRegister(regus, redSfrus);
-            for (int i = 0; i < regus.Length; i++)
-            {
-                Console.WriteLine(
-                    $"Readregisters: {regus[i]}, value: {BitConverter.ToString(redSfrus.ToArray(), i, 1)} ");
-            }
-
-            Console.WriteLine($"Are results same: {redSfrus.SequenceEqual(redSfrs)}");
-            // Access GPIO
-            ret = pn532.ReadGpio(out Port7 p7, out Port3 p3, out OperatingMode l0L1);
-            Console.WriteLine($"P7: {p7}");
-            Console.WriteLine($"P3: {p3}");
-            Console.WriteLine($"L0L1: {l0L1} ");
+            p7 = 0;
         }
 
-        private static void ReadCreditCard(Pn532 pn532)
+        ret = pn532.WriteGpio(p7);
+        Task.Delay(150).Wait();
+        on = !on;
+    }
+}
+
+void RunTests(Pn532 pn532)
+{
+    Console.WriteLine(
+        $"{DiagnoseMode.CommunicationLineTest}: {pn532.RunSelfTest(DiagnoseMode.CommunicationLineTest)}");
+    Console.WriteLine($"{DiagnoseMode.ROMTest}: {pn532.RunSelfTest(DiagnoseMode.ROMTest)}");
+    Console.WriteLine($"{DiagnoseMode.RAMTest}: {pn532.RunSelfTest(DiagnoseMode.RAMTest)}");
+    // Check couple of SFR registers
+    SfrRegister[] regs = new SfrRegister[]
+    {
+        SfrRegister.HSU_CNT, SfrRegister.HSU_CTR, SfrRegister.HSU_PRE, SfrRegister.HSU_STA
+    };
+    Span<byte> redSfrs = stackalloc byte[regs.Length];
+    var ret = pn532.ReadRegisterSfr(regs, redSfrs);
+    for (int i = 0; i < regs.Length; i++)
+    {
+        Console.WriteLine(
+            $"Readregisters: {regs[i]}, value: {BitConverter.ToString(redSfrs.ToArray(), i, 1)} ");
+    }
+
+    // This should give the same result as
+    ushort[] regus = new ushort[] { 0xFFAE, 0xFFAC, 0xFFAD, 0xFFAB };
+    Span<byte> redSfrus = stackalloc byte[regus.Length];
+    ret = pn532.ReadRegister(regus, redSfrus);
+    for (int i = 0; i < regus.Length; i++)
+    {
+        Console.WriteLine(
+            $"Readregisters: {regus[i]}, value: {BitConverter.ToString(redSfrus.ToArray(), i, 1)} ");
+    }
+
+    Console.WriteLine($"Are results same: {redSfrus.SequenceEqual(redSfrs)}");
+    // Access GPIO
+    ret = pn532.ReadGpio(out Port3 p3, out Port7 p7, out OperatingMode l0L1);
+    Console.WriteLine($"P7: {p7}");
+    Console.WriteLine($"P3: {p3}");
+    Console.WriteLine($"L0L1: {l0L1} ");
+}
+
+void ReadCreditCard(Pn532 pn532)
+{
+    byte[]? retData = null;
+    while ((!Console.KeyAvailable))
+    {
+        retData = pn532.AutoPoll(5, 300, new PollingType[] { PollingType.Passive106kbpsISO144443_4B });
+        if (retData is object)
         {
-            byte[] retData = null;
-            while ((!Console.KeyAvailable))
+            if (retData.Length >= 3)
             {
-                retData = pn532.AutoPoll(5, 300, new PollingType[] { PollingType.Passive106kbpsISO144443_4B });
-                if (retData != null)
-                {
-                    if (retData.Length >= 3)
-                    {
-                        break;
-                    }
-                }
-
-                // Give time to PN532 to process
-                Thread.Sleep(200);
-            }
-
-            if (retData == null)
-            {
-                return;
-            }
-
-            // Check how many tags and the type
-            Console.WriteLine($"Num tags: {retData[0]}, Type: {(PollingType)retData[1]}");
-            var decrypted = pn532.TryDecodeData106kbpsTypeB(retData.AsSpan().Slice(3));
-            if (decrypted != null)
-            {
-                Console.WriteLine(
-                    $"{decrypted.TargetNumber}, Serial: {BitConverter.ToString(decrypted.NfcId)}, App Data: {BitConverter.ToString(decrypted.ApplicationData)}, " +
-                    $"{decrypted.ApplicationType}, Bit Rates: {decrypted.BitRates}, CID {decrypted.CidSupported}, Command: {decrypted.Command}, FWT: {decrypted.FrameWaitingTime}, " +
-                    $"ISO144443 compliance: {decrypted.ISO14443_4Compliance}, Max Frame size: {decrypted.MaxFrameSize}, NAD: {decrypted.NadSupported}");
-
-                CreditCard creditCard = new CreditCard(pn532, decrypted.TargetNumber);
-                creditCard.ReadCreditCardInformation();
-
-                Console.WriteLine("All Tags for the Credit Card:");
-                DisplayTags(creditCard.Tags, 0);
+                break;
             }
         }
 
-        private static string AddSpace(int level)
+        // Give time to PN532 to process
+        Thread.Sleep(200);
+    }
+
+    if (retData is null)
+    {
+        return;
+    }
+
+    // Check how many tags and the type
+    Console.WriteLine($"Num tags: {retData[0]}, Type: {(PollingType)retData[1]}");
+    var decrypted = pn532.TryDecodeData106kbpsTypeB(retData.AsSpan().Slice(3));
+    if (decrypted is object)
+    {
+        Console.WriteLine(
+            $"{decrypted.TargetNumber}, Serial: {BitConverter.ToString(decrypted.NfcId)}, App Data: {BitConverter.ToString(decrypted.ApplicationData)}, " +
+            $"{decrypted.ApplicationType}, Bit Rates: {decrypted.BitRates}, CID {decrypted.CidSupported}, Command: {decrypted.Command}, FWT: {decrypted.FrameWaitingTime}, " +
+            $"ISO144443 compliance: {decrypted.ISO14443_4Compliance}, Max Frame size: {decrypted.MaxFrameSize}, NAD: {decrypted.NadSupported}");
+
+        CreditCard creditCard = new CreditCard(pn532, decrypted.TargetNumber);
+        creditCard.ReadCreditCardInformation();
+
+        Console.WriteLine("All Tags for the Credit Card:");
+        DisplayTags(creditCard.Tags, 0);
+    }
+}
+
+string AddSpace(int level)
+{
+    string space = string.Empty;
+    for (int i = 0; i < level; i++)
+    {
+        space += "  ";
+    }
+
+    return space;
+}
+
+void DisplayTags(List<Tag> tagToDisplay, int levels)
+{
+    foreach (var tagparent in tagToDisplay)
+    {
+        Console.Write(AddSpace(levels) +
+                        $"{tagparent.TagNumber.ToString("X4")}-{TagList.Tags.Where(m => m.TagNumber == tagparent.TagNumber).FirstOrDefault()?.Description}");
+        var isTemplate = TagList.Tags.Where(m => m.TagNumber == tagparent.TagNumber).FirstOrDefault();
+        if ((isTemplate?.IsTemplate == true) || (isTemplate?.IsConstructed == true))
         {
-            string space = string.Empty;
-            for (int i = 0; i < level; i++)
-            {
-                space += "  ";
-            }
-
-            return space;
+            Console.WriteLine();
+            DisplayTags(tagparent.Tags, levels + 1);
         }
-
-        private static void DisplayTags(List<Tag> tagToDisplay, int levels)
+        else if (isTemplate?.IsDol == true)
         {
-            foreach (var tagparent in tagToDisplay)
+            // In this case, all the data inside are 1 byte only
+            Console.WriteLine(", Data Object Length elements:");
+            foreach (var dt in tagparent.Tags)
             {
-                Console.Write(AddSpace(levels) +
-                              $"{tagparent.TagNumber.ToString("X4")}-{TagList.Tags.Where(m => m.TagNumber == tagparent.TagNumber).FirstOrDefault()?.Description}");
-                var isTemplate = TagList.Tags.Where(m => m.TagNumber == tagparent.TagNumber).FirstOrDefault();
-                if ((isTemplate?.IsTemplate == true) || (isTemplate?.IsConstructed == true))
-                {
-                    Console.WriteLine();
-                    DisplayTags(tagparent.Tags, levels + 1);
-                }
-                else if (isTemplate?.IsDol == true)
-                {
-                    // In this case, all the data inside are 1 byte only
-                    Console.WriteLine(", Data Object Length elements:");
-                    foreach (var dt in tagparent.Tags)
-                    {
-                        Console.Write(AddSpace(levels + 1) +
-                                      $"{dt.TagNumber.ToString("X4")}-{TagList.Tags.Where(m => m.TagNumber == dt.TagNumber).FirstOrDefault()?.Description}");
-                        Console.WriteLine($", data length: {dt.Data[0]}");
-                    }
-                }
-                else
-                {
-                    TagDetails tg = new TagDetails(tagparent);
-                    Console.WriteLine($": {tg.ToString()}");
-                }
+                Console.Write(AddSpace(levels + 1) +
+                                $"{dt.TagNumber.ToString("X4")}-{TagList.Tags.Where(m => m.TagNumber == dt.TagNumber).FirstOrDefault()?.Description}");
+                Console.WriteLine($", data length: {dt.Data[0]}");
             }
         }
+        else
+        {
+            TagDetails tg = new TagDetails(tagparent);
+            Console.WriteLine($": {tg.ToString()}");
+        }
+    }
+}
+
+void ProcessUltralight(Pn532 pn532)
+{
+    byte[]? retData = null;
+    while ((!Console.KeyAvailable))
+    {
+        retData = pn532.ListPassiveTarget(MaxTarget.One, TargetBaudRate.B106kbpsTypeA);
+        if (retData is object)
+        {
+            break;
+        }
+
+        // Give time to PN532 to process
+        Thread.Sleep(200);
+    }
+
+    if (retData is null)
+    {
+        return;
+    }
+
+    for (int i = 0; i < retData.Length; i++)
+    {
+        Console.Write($"{retData[i]:X2} ");
+    }
+
+    Console.WriteLine();
+
+    var card = pn532.TryDecode106kbpsTypeA(retData.AsSpan().Slice(1));
+    if (card is not object)
+    {
+        Console.WriteLine("Not a valid card, please try again.");
+        return;
+    }
+
+    var ultralight = new UltralightCard(pn532!, card.TargetNumber);
+    ultralight.SerialNumber = card.NfcId;
+    Console.WriteLine($"Type: {ultralight.UltralightCardType}, Ndef capacity: {ultralight.NdefCapacity}");
+
+    var version = ultralight.GetVersion();
+    if ((version != null) && (version.Length > 0))
+    {
+        Console.WriteLine("Get Version details: ");
+        for (int i = 0; i < version.Length; i++)
+        {
+            Console.Write($"{version[i]:X2} ");
+        }
+
+        Console.WriteLine();
+    }
+    else
+    {
+        Console.WriteLine("Can't read the version.");
+    }
+
+    var sign = ultralight.GetSignature();
+    if (sign != null)
+    {
+        Console.WriteLine("Signature: ");
+        for (int i = 0; i < sign.Length; i++)
+        {
+            Console.Write($"{sign[i]:X2} ");
+        }
+
+        Console.WriteLine();
+    }
+
+    // The ReadFast feature can be used as well, note that the PN532 has a limited buffer out of 262 bytes
+    // So maximum 64 pages can be read as once.
+    Console.WriteLine("Fast read example:");
+    var buff = ultralight.ReadFast(0, (byte)(ultralight.NumberBlocks > 64 ? 64 : ultralight.NumberBlocks - 1));
+    if (buff != null)
+    {
+        for (int i = 0; i < buff.Length / 4; i++)
+        {
+            Console.WriteLine($"  Block {i} - {buff[i * 4]:X2} {buff[i * 4 + 1]:X2} {buff[i * 4 + 2]:X2} {buff[i * 4 + 3]:X2}");
+        }
+    }
+
+    Console.WriteLine("Dump of all the card:");
+    for (int block = 0; block < ultralight.NumberBlocks; block++)
+    {
+        ultralight.BlockNumber = (byte)block; // Safe cast, can't be more than 255
+        ultralight.Command = UltralightCommand.Read16Bytes;
+        var ret = ultralight.RunUltralightCommand();
+        if (ret > 0)
+        {
+            Console.Write($"  Block: {ultralight.BlockNumber:X2} - ");
+            for (int i = 0; i < 4; i++)
+            {
+                Console.Write($"{ultralight.Data[i]:X2} ");
+            }
+
+            var isReadOnly = ultralight.IsPageReadOnly(ultralight.BlockNumber);
+            Console.Write($"- Read only: {isReadOnly} ");
+
+            Console.WriteLine();
+        }
+        else
+        {
+            Console.WriteLine("Can't read card");
+            break;
+        }
+    }
+
+    Console.WriteLine("Configuration of the card");
+    // Get the Configuration
+    var res = ultralight.TryGetConfiguration(out Configuration configuration);
+    if (res)
+    {
+        Console.WriteLine("  Mirror:");
+        Console.WriteLine($"    {configuration.Mirror.MirrorType}, page: {configuration.Mirror.Page}, position: {configuration.Mirror.Position}");
+        Console.WriteLine("  Authentication:");
+        Console.WriteLine($"    Page req auth: {configuration.Authentication.AuthenticationPageRequirement}, Is auth req for read and write: {configuration.Authentication.IsReadWriteAuthenticationRequired}");
+        Console.WriteLine($"    Is write lock: {configuration.Authentication.IsWritingLocked}, Max num tries: {configuration.Authentication.MaximumNumberOfPossibleTries}");
+        Console.WriteLine("  NFC Counter:");
+        Console.WriteLine($"    Enabled: {configuration.NfcCounter.IsEnabled}, Password protected: {configuration.NfcCounter.IsPasswordProtected}");
+        Console.WriteLine($"  Is strong modulation: {configuration.IsStrongModulation}");
+    }
+    else
+    {
+        Console.WriteLine("Error getting the configuration");
+    }
+
+    NdefMessage message;
+    res = ultralight.TryReadNdefMessage(out message);
+    if (res && message.Length != 0)
+    {
+        foreach (var record in message.Records)
+        {
+            Console.WriteLine($"Record length: {record.Length}");
+            if (TextRecord.IsTextRecord(record))
+            {
+                var text = new TextRecord(record);
+                Console.WriteLine(text.Text);
+            }
+        }
+    }
+    else
+    {
+        Console.WriteLine("No NDEF message in this ");
+    }
+
+    res = ultralight.IsFormattedNdef();
+    if (!res)
+    {
+        Console.WriteLine("Card is not NDEF formated, we will try to format it");
+        res = ultralight.FormatNdef();
+        if (!res)
+        {
+            Console.WriteLine("Impossible to format in NDEF, we will still try to write NDEF content.");
+        }
+        else
+        {
+            res = ultralight.IsFormattedNdef();
+            if (res)
+            {
+                Console.WriteLine("Formating successful");
+            }
+            else
+            {
+                Console.WriteLine("Card is not NDEF formated.");
+            }
+        }
+    }
+
+    NdefMessage newMessage = new NdefMessage();
+    newMessage.Records.Add(new TextRecord("I ❤ .NET IoT", "en", Encoding.UTF8));
+    res = ultralight.WriteNdefMessage(newMessage);
+    if (res)
+    {
+        Console.WriteLine("NDEF data successfully written on the card.");
+    }
+    else
+    {
+        Console.WriteLine("Error writing NDEF data on card");
     }
 }
