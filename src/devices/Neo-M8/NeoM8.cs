@@ -35,7 +35,7 @@ namespace Iot.Device.Gps
         /// Reads NMEA0183 sentence
         /// </summary>
         /// <returns>TalkerSentence instance</returns>
-        public TalkerSentence Read()
+        public TalkerSentence? Read()
         {
             string sentence = _sp.ReadLine();
             return TalkerSentence.FromSentenceString(sentence, out _);
@@ -45,7 +45,7 @@ namespace Iot.Device.Gps
         public void Dispose()
         {
             _sp?.Dispose();
-            _sp = null;
+            _sp = null!;
         }
     }
 }

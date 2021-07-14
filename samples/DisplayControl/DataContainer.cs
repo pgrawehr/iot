@@ -489,7 +489,7 @@ namespace DisplayControl
 
             if (source == SensorMeasurement.AirHumidityOutside)
             {
-                if (source.TryGetAs(out Ratio humidity))
+                if (source.TryGetAs(out RelativeHumidity humidity))
                 {
                     _nmeaSensor.SendHumidity(humidity);
                 }

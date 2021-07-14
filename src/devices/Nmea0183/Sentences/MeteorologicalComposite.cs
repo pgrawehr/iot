@@ -30,7 +30,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <param name="relativeHumidity">Relative humidity, percent</param>
         /// <param name="dewPoint">Dew point</param>
         public MeteorologicalComposite(Pressure? pressure, Temperature? airTemperature, Temperature? waterTemperature,
-            Ratio? relativeHumidity, Temperature? dewPoint)
+            RelativeHumidity? relativeHumidity, Temperature? dewPoint)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             BarometricPressure = pressure;
@@ -91,7 +91,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (relHumidity.HasValue)
             {
-                RelativeHumidity = Ratio.FromPercent(relHumidity.Value);
+                RelativeHumidity = UnitsNet.RelativeHumidity.FromPercent(relHumidity.Value);
             }
 
             if (dewPoint.HasValue && referenceDewPoint == "C")
@@ -121,7 +121,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Relative humidity
         /// </summary>
-        public Ratio? RelativeHumidity { get; }
+        public RelativeHumidity? RelativeHumidity { get; }
 
         /// <summary>
         /// Dew point

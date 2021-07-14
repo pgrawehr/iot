@@ -10,7 +10,7 @@ namespace Iot.Device.Common.Tests
     public sealed class PersistenceTest : IDisposable
     {
         private string _pfName;
-        private PersistenceFile _pf;
+        private PersistenceFile? _pf;
 
         public PersistenceTest()
         {
@@ -27,13 +27,13 @@ namespace Iot.Device.Common.Tests
         [Fact]
         public void PersistenceOfDoublesWorks()
         {
-            PersistentDouble dbl = new PersistentDouble(_pf, "MyDouble", 1.0, TimeSpan.Zero);
+            PersistentDouble dbl = new PersistentDouble(_pf!, "MyDouble", 1.0, TimeSpan.Zero);
             Assert.Equal(1.0, dbl.Value);
             dbl.Value = 2.0;
             Assert.Equal(2.0, dbl.Value);
-            PersistentDouble dbl2 = new PersistentDouble(_pf, "MyDouble", 1.0, TimeSpan.Zero);
+            PersistentDouble dbl2 = new PersistentDouble(_pf!, "MyDouble", 1.0, TimeSpan.Zero);
             Assert.Equal(2.0, dbl2.Value);
-            dbl2 = new PersistentDouble(_pf, "MyDouble2", 4.0, TimeSpan.Zero);
+            dbl2 = new PersistentDouble(_pf!, "MyDouble2", 4.0, TimeSpan.Zero);
             Assert.Equal(4.0, dbl2.Value);
         }
 
@@ -51,11 +51,11 @@ namespace Iot.Device.Common.Tests
         [Fact]
         public void PersistenceOfBoolWorks()
         {
-            var p1 = new PersistentBool(_pf, "bool", true);
+            var p1 = new PersistentBool(_pf!, "bool", true);
             Assert.True(p1.Value);
             p1.Value = true;
             Assert.True(p1.Value);
-            var p2 = new PersistentBool(_pf, "bool", false);
+            var p2 = new PersistentBool(_pf!, "bool", false);
             Assert.True(p2.Value);
         }
     }

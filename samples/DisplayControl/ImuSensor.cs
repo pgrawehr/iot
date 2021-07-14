@@ -107,13 +107,13 @@ namespace DisplayControl
                 }
             }
 
-            if (!success)
+            if (!success || imu == null)
             {
                 throw new IOException($"Error initializing IMU {errorMessage}");
             }
 
             _imu = imu;
-            imu.OnNewData += ImuOnNewData;
+            _imu.OnNewData += ImuOnNewData;
 
             base.Init(gpioController);
         }

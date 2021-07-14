@@ -16,7 +16,7 @@ namespace Iot.Device.Common
     {
         private readonly Serializer<T> _serializer;
         private readonly Deserializer<T> _deserializer;
-        private PersistenceFile _file;
+        private PersistenceFile? _file;
         private int _lastSave;
         private T _value;
         private TimeSpan _saveInterval;
@@ -30,7 +30,7 @@ namespace Iot.Device.Common
         /// <param name="saveInterval">Interval for persisting the value.</param>
         /// <param name="serializer">Serializer callback (usually something like <see cref="Object.ToString()"/> with a matching format)</param>
         /// <param name="deserializer">Deserializer callback (usually a type.TryParse() call)</param>
-        public PersistentValue(PersistenceFile file, string name, T initialValue, TimeSpan saveInterval, Serializer<T> serializer, Deserializer<T> deserializer)
+        public PersistentValue(PersistenceFile? file, string name, T initialValue, TimeSpan saveInterval, Serializer<T> serializer, Deserializer<T> deserializer)
         {
             _file = file;
             Name = name;

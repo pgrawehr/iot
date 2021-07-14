@@ -63,7 +63,7 @@ namespace DisplayControl
         private RecommendedMinimumNavigationInformation _lastRmcMessage;
         private TrackMadeGood _lastVtgMessage;
         private Temperature? _lastTemperature;
-        private Ratio? _lastHumidity;
+        private RelativeHumidity? _lastHumidity;
         private AutopilotController _autopilot;
         private SensorMeasurement _smoothedTrueWindSpeed;
         private SensorMeasurement _maxWindGusts;
@@ -553,7 +553,7 @@ namespace DisplayControl
             }
         }
 
-        public void SendHumidity(Ratio value)
+        public void SendHumidity(RelativeHumidity value)
         {
             TransducerDataSet ds = new TransducerDataSet("H", value.Percent, "P", "ENV_INSIDE_H");
             var msg = new TransducerMeasurement(new[] { ds });

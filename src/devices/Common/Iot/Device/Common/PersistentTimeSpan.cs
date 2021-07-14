@@ -7,7 +7,7 @@ namespace Iot.Device.Common
 {
     public class PersistentTimeSpan : PersistentValue<TimeSpan>
     {
-        public PersistentTimeSpan(PersistenceFile file, string name, TimeSpan initialValue, TimeSpan saveInterval)
+        public PersistentTimeSpan(PersistenceFile? file, string name, TimeSpan initialValue, TimeSpan saveInterval)
             : base(file, name, initialValue, saveInterval, Serializer, Deserializer)
         {
         }

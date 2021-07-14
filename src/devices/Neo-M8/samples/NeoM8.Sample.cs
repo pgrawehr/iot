@@ -25,9 +25,15 @@ namespace Iot.Device.Gps.NeoM8Samples
                 bool gotRmc = false;
                 while (!gotRmc)
                 {
-                    TalkerSentence sentence = neoM8.Read();
+                    TalkerSentence? sentence = neoM8.Read();
 
-                    object typed = sentence.TryGetTypedValue();
+                    if (sentence == null)
+                    {
+                        Console.WriteLine("End of stream or no valid data found");
+                        break;
+                    }
+
+                    object? typed = sentence.TryGetTypedValue();
                     if (typed == null)
                     {
                         Console.WriteLine($"Sentence identifier `{sentence.Id}` is not known.");

@@ -72,7 +72,7 @@ namespace Iot.Device.Common
         /// History settings for the given input measurement need to be configured already.
         /// </summary>
         public void RegisterHistoryOperation(SensorMeasurement measurement,
-            Func<SensorMeasurement, MeasurementManager, IQuantity> operation, SensorMeasurement result)
+            Func<SensorMeasurement, MeasurementManager, IQuantity?> operation, SensorMeasurement result)
         {
             _manager.TryAddMeasurement(result);
             _manager.TryAddMeasurement(measurement);
@@ -111,7 +111,7 @@ namespace Iot.Device.Common
                 {
                     if (changedMeasurements.Contains(op.Input))
                     {
-                        IQuantity result = op.Operation(op.Input, _manager);
+                        IQuantity? result = op.Operation(op.Input, _manager);
                         op.Output.UpdateValue(result);
                     }
                 }
@@ -175,7 +175,7 @@ namespace Iot.Device.Common
         private sealed class HistoryOperation
         {
             public HistoryOperation(SensorMeasurement input,
-                Func<SensorMeasurement, MeasurementManager, IQuantity> operation, SensorMeasurement output)
+                Func<SensorMeasurement, MeasurementManager, IQuantity?> operation, SensorMeasurement output)
             {
                 Input = input;
                 Operation = operation;
@@ -183,7 +183,7 @@ namespace Iot.Device.Common
             }
 
             public SensorMeasurement Input { get; }
-            public Func<SensorMeasurement, MeasurementManager, IQuantity> Operation { get; }
+            public Func<SensorMeasurement, MeasurementManager, IQuantity?> Operation { get; }
             public SensorMeasurement Output { get; }
 
         }

@@ -291,7 +291,7 @@ namespace DisplayControl
             if (firstEventInTimeFrame != null && lastEventInTimeFrame != firstEventInTimeFrame)
             {
                 // This cannot be null here (because if first is not null, last can't be)
-                deltaTime = lastEventInTimeFrame.TickCount - firstEventInTimeFrame.TickCount;
+                deltaTime = lastEventInTimeFrame!.TickCount - firstEventInTimeFrame.TickCount;
                 revolutions = lastEventInTimeFrame.TotalCounter - firstEventInTimeFrame.TotalCounter;
                 if (deltaTime > 0)
                 {

@@ -12,11 +12,11 @@ namespace DisplayControl
         public IControl Build(object data)
         {
             var type = data.GetType();
-            var viewName = type.FullName.Replace("ViewModel", "View");
+            var viewName = type.FullName!.Replace("ViewModel", "View");
             var viewType = Type.GetType(viewName);
 
             // Should actually place that in a folder named "Controls", but the designer seems to have problems with that
-            var ns = type.Namespace.Replace("ViewModel", "View");
+            var ns = type.Namespace!.Replace("ViewModel", "View");
             var controlName = ns + "." + type.Name.Replace("ViewModel", "Control");
             var controlType = Type.GetType(controlName);
 

@@ -4,6 +4,9 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>DisplayControl</RootNamespace>
+    <Nullable>warnings</Nullable>
+    <!--We don't want package references, but individual project references-->
+    <PreferPackageReference>true</PreferPackageReference>
   </PropertyGroup>
 <ItemGroup>
     <Folder Include="Models\" />
@@ -30,7 +33,15 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
+    <ProjectReference Include="..\..\src\devices\Ads1115\Ads1115.csproj" />
+    <ProjectReference Include="..\..\src\devices\Bmxx80\Bmxx80.csproj" />
+    <ProjectReference Include="..\..\src\devices\Common\CommonHelpers.csproj" />
+    <ProjectReference Include="..\..\src\devices\CpuTemperature\CpuTemperature.csproj" />
+    <ProjectReference Include="..\..\src\devices\Dhtxx\Dhtxx.csproj" />
+    <ProjectReference Include="..\..\src\devices\IG-500A\IG-500A.csproj" />
+    <ProjectReference Include="..\..\src\devices\Nmea0183\Nmea0183.csproj" />
+    <ProjectReference Include="..\..\src\devices\CharacterLcd\CharacterLcd.csproj" />
+    <ProjectReference Include="..\..\src\devices\Mcp23xxx\Mcp23xxx.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Calibration_Cirrus.xml">

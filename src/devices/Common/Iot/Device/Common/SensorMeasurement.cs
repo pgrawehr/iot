@@ -218,7 +218,7 @@ namespace Iot.Device.Common
         /// <param name="value">The new value. Pass null to indicate that there's no valid measurement any more (i.e.
         /// the sensor doesn't work for some reason and we want to pass this information to the user instead of keeping
         /// the last good value).</param>
-        public void UpdateValue(IQuantity value)
+        public void UpdateValue(IQuantity? value)
         {
             UpdateValue(value, SensorMeasurementStatus.None);
         }
