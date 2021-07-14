@@ -22,7 +22,7 @@ namespace Iot.Device.Common
                     if ((args[0].TryGetAs(out Pressure measuredValue) || args[1].TryGetAs(out measuredValue)) &&
                         args[2].TryGetAs(out Temperature measuredTemperature) && args[3].TryGetAs(out Length altitude))
                     {
-                        if (args[4].TryGetAs(out Ratio humidity))
+                        if (args[4].TryGetAs(out RelativeHumidity humidity))
                         {
                             return (WeatherHelper.CalculateBarometricPressure(measuredValue, measuredTemperature,
                                 altitude, humidity), false);
@@ -41,7 +41,7 @@ namespace Iot.Device.Common
                 (args) =>
                 {
                     if (args[0].TryGetAs(out Temperature temperature) &&
-                        args[1].TryGetAs(out Ratio humidity))
+                        args[1].TryGetAs(out RelativeHumidity humidity))
                     {
                         return (WeatherHelper.CalculateHeatIndex(temperature, humidity), false);
                     }
@@ -53,7 +53,7 @@ namespace Iot.Device.Common
                 (args) =>
                 {
                     if (args[0].TryGetAs(out Temperature temperature) &&
-                        args[1].TryGetAs(out Ratio humidity))
+                        args[1].TryGetAs(out RelativeHumidity humidity))
                     {
                         return (WeatherHelper.CalculateDewPoint(temperature, humidity), false);
                     }
@@ -77,11 +77,11 @@ namespace Iot.Device.Common
                     }
 
                     if (args[0].TryGetAs(out Temperature temperature1) &&
-                        args[1].TryGetAs(out Ratio humidity) &&
+                        args[1].TryGetAs(out RelativeHumidity humidity) &&
                         args[2].TryGetAs(out Temperature temperature2))
                     {
                         // Use the lower temperature from the two sensors - that's likely the outside temp
-                        return (WeatherHelper.CorrectRelativeHumidityFromDifferentSensor(temperature1, humidity, temperature1 < temperature2 ? temperature1 : temperature2), false);
+                        return (WeatherHelper.GetRelativeHumidityFromActualAirTemperature(temperature1, humidity, temperature1 < temperature2 ? temperature1 : temperature2), false);
                     }
 
                     return (null, false); // At least one input not available - skip this operation

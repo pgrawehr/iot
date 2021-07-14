@@ -25,20 +25,20 @@ namespace Iot.Device.Nmea0183
         public override void StartDecode()
         {
             using StreamReader sr = File.OpenText(_fileToRead);
-            string line = sr.ReadLine();
+            string? line = sr.ReadLine();
             MemoryStream ms = new MemoryStream();
             Encoding raw = new Raw8BitEncoding();
             while (line != null)
             {
-                if (line.Contains('|'))
+                if (line.Contains("|"))
                 {
-                    var splits = line.Split('|', StringSplitOptions.None);
+                    var splits = line.Split(new char[] { '|' }, StringSplitOptions.None);
                     line = splits[2]; // Raw message
                 }
 
                 // Pack data into memory stream, from which the parser will get it again
                 byte[] bytes = raw.GetBytes(line + "\r\n");
-                ms.Write(bytes);
+                ms.Write(bytes, 0, bytes.Length);
                 line = sr.ReadLine();
             }
 

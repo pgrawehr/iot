@@ -84,7 +84,7 @@ namespace Iot.Device.Nmea0183
         public override string ToString()
         {
             string mainPart = string.Format(CultureInfo.InvariantCulture, "{0}{1},{2}", TalkerId, Id, string.Join(",", Fields));
-            byte checksum = CalculateChecksum(mainPart);
+            byte checksum = CalculateChecksum(mainPart.AsSpan());
             if (TalkerId == TalkerId.Ais)
             {
                 return string.Format(CultureInfo.InvariantCulture, "!{0}*{1:X2}", mainPart, checksum);
@@ -120,7 +120,7 @@ namespace Iot.Device.Nmea0183
                 throw new InvalidOperationException("Input sentence not valid or cannot be encoded");
             }
 
-            _fields = content.Split(',', StringSplitOptions.None);
+            _fields = content.Split(new char[] { ',' }, StringSplitOptions.None);
         }
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace Iot.Device.Nmea0183
 
             if (checksum.HasValue)
             {
-                byte realChecksum = CalculateChecksumFromSentenceString(sentence);
+                byte realChecksum = CalculateChecksumFromSentenceString(sentence.AsSpan());
 
                 if (realChecksum != checksum.Value)
                 {

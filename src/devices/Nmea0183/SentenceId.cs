@@ -46,7 +46,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is SentenceId other)
             {
@@ -58,7 +58,7 @@ namespace Iot.Device.Nmea0183
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Id1, Id2, Id3);
+            return Id1 << 16 ^ Id2 << 8 ^ Id3;
         }
 
         public bool Equals(SentenceId other)

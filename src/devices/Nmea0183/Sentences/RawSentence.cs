@@ -28,13 +28,13 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public override string ToNmeaMessage()
         {
-            return string.Join(',', _fields);
+            return string.Join(",", _fields);
         }
 
         /// <inheritdoc />
         public override string ToReadableContent()
         {
-            return $"${TalkerId}{SentenceId},{string.Join(',', _fields)}"; // Cannot do much else here
+            return $"${TalkerId}{SentenceId},{string.Join(",", _fields)}"; // Cannot do much else here
         }
     }
 }

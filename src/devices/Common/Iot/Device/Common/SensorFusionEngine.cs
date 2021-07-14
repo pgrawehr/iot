@@ -37,7 +37,7 @@ namespace Iot.Device.Common
         /// <param name="minWaitBetweenUpdates">Waits at least this amount between calls to the fusion operation.
         /// Used to throttle updates</param>
         public void RegisterFusionOperation(IList<SensorMeasurement> arguments,
-            Func<IList<SensorMeasurement>, (IQuantity Value, bool useValue)> operation, SensorMeasurement result,
+            Func<IList<SensorMeasurement>, (IQuantity? Value, bool UseValue)> operation, SensorMeasurement result,
             TimeSpan minWaitBetweenUpdates)
         {
             _manager.TryAddMeasurement(result); // Must be there, otherwise the result will be sent to the void usually
@@ -62,7 +62,7 @@ namespace Iot.Device.Common
         /// is only set to true if another operation/sensor might have set a valid value and no update is necessary</param>
         /// <param name="result">The measurement that is updated</param>
         public void RegisterFusionOperation(IList<SensorMeasurement> arguments,
-            Func<IList<SensorMeasurement>, (IQuantity Value, bool useValue)> operation, SensorMeasurement result)
+            Func<IList<SensorMeasurement>, (IQuantity? Value, bool UseValue)> operation, SensorMeasurement result)
         {
             RegisterFusionOperation(arguments, operation, result, TimeSpan.Zero);
         }
@@ -132,10 +132,10 @@ namespace Iot.Device.Common
             // We do not need to query the manager, since the SensorMeasurement instances within the operation already
             // contain the proper handle to the values we need
             var result = op.OperationToPerform(op.OnMeasurementChanges);
-            if (!result.Item2)
+            if (!result.UseValue)
             {
                 // Mark all results of the fusion engine as indirect
-                op.Result.UpdateValue(result.Item1, SensorMeasurementStatus.IndirectResult);
+                op.Result.UpdateValue(result.Value, SensorMeasurementStatus.IndirectResult);
             }
         }
 
@@ -150,7 +150,7 @@ namespace Iot.Device.Common
         private sealed class FusionOperation
         {
             public FusionOperation(IList<SensorMeasurement> onMeasurementChanges,
-                Func<IList<SensorMeasurement>, (IQuantity, bool)> operationToPerform, SensorMeasurement result,
+                Func<IList<SensorMeasurement>, (IQuantity? Value, bool UseValue)> operationToPerform, SensorMeasurement result,
                 TimeSpan minWaitBetweenUpdates)
             {
                 OnMeasurementChanges = onMeasurementChanges;
@@ -161,7 +161,7 @@ namespace Iot.Device.Common
             }
 
             public IList<SensorMeasurement> OnMeasurementChanges { get; }
-            public Func<IList<SensorMeasurement>, (IQuantity, bool)> OperationToPerform { get; }
+            public Func<IList<SensorMeasurement>, (IQuantity? Value, bool UseValue)> OperationToPerform { get; }
             public SensorMeasurement Result { get; }
             public TimeSpan MinWaitBetweenUpdates { get; }
 

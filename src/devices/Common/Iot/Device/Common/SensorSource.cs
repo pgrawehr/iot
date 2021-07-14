@@ -67,7 +67,7 @@ namespace Iot.Device.Common
         public static readonly SensorSource Cpu = new SensorSource("Cpu");
 
         /// <inheritdoc/>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (!(obj is SensorSource))
             {
@@ -84,7 +84,7 @@ namespace Iot.Device.Common
             return Name.GetHashCode();
         }
 
-        public bool Equals(SensorSource other)
+        public bool Equals(SensorSource? other)
         {
             if (ReferenceEquals(null, other))
             {

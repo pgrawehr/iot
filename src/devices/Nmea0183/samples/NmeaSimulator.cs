@@ -17,10 +17,10 @@ namespace Nmea.Simulator
     internal class Simulator
     {
         private static readonly TimeSpan UpdateRate = TimeSpan.FromMilliseconds(500);
-        private Thread _simulatorThread;
+        private Thread? _simulatorThread;
         private bool _terminate;
         private SimulatorData _activeData;
-        private NmeaServer _server;
+        private NmeaServer? _server;
 
         public Simulator()
         {
@@ -111,8 +111,11 @@ namespace Nmea.Simulator
 
         private void SendSentence(NmeaSentence sentence)
         {
-            Console.WriteLine($"Sending {sentence.ToReadableContent()}");
-            _server.SendSentence(sentence);
+            if (_server != null)
+            {
+                Console.WriteLine($"Sending {sentence.ToReadableContent()}");
+                _server.SendSentence(sentence);
+            }
         }
 
         private void MainSimulator()

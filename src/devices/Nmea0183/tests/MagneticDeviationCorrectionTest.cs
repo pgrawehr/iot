@@ -40,7 +40,7 @@ namespace Iot.Device.Nmea0183.Tests
             dev.Load("..\\..\\..\\Calibration_Cirrus.xml");
 
             Assert.True(dev.Identification != null);
-            Assert.Equal("Cirrus", dev.Identification.ShipName);
+            Assert.Equal("Cirrus", dev.Identification!.ShipName);
             Assert.Equal(316.743820953369, dev.ToMagneticHeading(Angle.FromDegrees(303.3)).Degrees, 3);
             Assert.Equal(301.097492027283, dev.FromMagneticHeading(Angle.FromDegrees(316.743820953369)).Degrees, 3);
 

@@ -41,10 +41,10 @@ namespace Iot.Device.Common
                 T lastValue = initialValue;
                 using (StreamReader r = new StreamReader(_fileName, true))
                 {
-                    string line = r.ReadLine();
+                    string? line = r.ReadLine();
                     while (line != null)
                     {
-                        string[] splits = line.Split('|', StringSplitOptions.None);
+                        string[] splits = line.Split(new char[] { '|' }, StringSplitOptions.None);
                         if (splits.Length == 4 && line.IndexOf('$') > 0)
                         {
                             string valueName = splits[1];

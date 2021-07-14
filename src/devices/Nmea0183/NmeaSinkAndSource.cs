@@ -53,7 +53,7 @@ namespace Iot.Device.Nmea0183
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void DispatchSentenceEvents(NmeaSentence typedSequence)
+        protected virtual void DispatchSentenceEvents(NmeaSentence? typedSequence)
         {
             if (typedSequence != null)
             {

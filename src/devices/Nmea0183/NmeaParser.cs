@@ -106,7 +106,7 @@ namespace Iot.Device.Nmea0183
                 }
 
                 // Console.WriteLine(currentLine);
-                TalkerSentence sentence = TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out var error);
+                TalkerSentence? sentence = TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out var error);
                 if (sentence == null)
                 {
                     // If error is none, but the return value is null, we just ignored that message.
@@ -118,7 +118,7 @@ namespace Iot.Device.Nmea0183
                     continue;
                 }
 
-                NmeaSentence typed = sentence.TryGetTypedValue();
+                NmeaSentence? typed = sentence.TryGetTypedValue();
                 DispatchSentenceEvents(typed);
 
                 if (!(typed is RawSentence))
@@ -138,7 +138,7 @@ namespace Iot.Device.Nmea0183
             byte[] buffer = _encoding.GetBytes(dataToSend);
             try
             {
-                _dataSink?.Write(buffer);
+                _dataSink?.Write(buffer, 0, buffer.Length);
             }
             catch (ObjectDisposedException)
             {

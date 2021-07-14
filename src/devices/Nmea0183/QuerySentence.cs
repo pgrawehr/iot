@@ -19,8 +19,6 @@ namespace Iot.Device.Nmea0183
         public TalkerId DeviceId { get; private set; }
         public SentenceId RequestedSentence { get; private set; }
 
-        public override string ToString() => $"${RequesterId}{DeviceId}Q,{RequestedSentence}";
-
         /// <summary>
         /// Reads NMEA0183 query sentence from provided string
         /// </summary>
@@ -79,5 +77,7 @@ namespace Iot.Device.Nmea0183
             DeviceId = deviceId;
             RequestedSentence = requestedSentence;
         }
+
+        public override string ToString() => $"${RequesterId}{DeviceId}Q,{RequestedSentence}";
     }
 }

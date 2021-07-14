@@ -262,7 +262,7 @@ namespace Iot.Device.Nmea0183
 
             using (StreamReader tw = new StreamReader(file))
             {
-                topLevel = (CompassCalibration)ser.Deserialize(tw);
+                topLevel = (CompassCalibration)ser.Deserialize(tw)!;
                 tw.Close();
                 tw.Dispose();
             }

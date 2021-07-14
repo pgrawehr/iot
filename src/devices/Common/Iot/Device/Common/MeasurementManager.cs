@@ -34,7 +34,7 @@ namespace Iot.Device.Common
         /// Clients should preferably listen to this event rather than <see cref="SensorMeasurement.ValueChanged"/> if they
         /// want to make sure they get consistent data (i.e. from values usually updated by the same source at once, like latitude and longitude)
         /// </summary>
-        public event Action<IList<SensorMeasurement>> AnyMeasurementChanged;
+        public event Action<IList<SensorMeasurement>>? AnyMeasurementChanged;
 
         public void Dispose()
         {
@@ -82,7 +82,7 @@ namespace Iot.Device.Common
         {
             lock (_lock)
             {
-                MeasurementHistoryConfiguration existingConfig =
+                MeasurementHistoryConfiguration? existingConfig =
                     _historyConfigurations.FirstOrDefault(x => x.Measurement == measurement);
                 if (existingConfig != null)
                 {
@@ -103,7 +103,10 @@ namespace Iot.Device.Common
             lock (_lock)
             {
                 var entry = _historyConfigurations.FirstOrDefault(x => x.Measurement == measurement);
-                _historyConfigurations.Remove(entry);
+                if (entry != null)
+                {
+                    _historyConfigurations.Remove(entry);
+                }
             }
         }
 
@@ -153,7 +156,7 @@ namespace Iot.Device.Common
             }
         }
 
-        private void AddMeasurement(SensorMeasurement measurement, MeasurementHistoryConfiguration historyConfiguration)
+        private void AddMeasurement(SensorMeasurement measurement, MeasurementHistoryConfiguration? historyConfiguration)
         {
             lock (_lock)
             {
@@ -220,7 +223,7 @@ namespace Iot.Device.Common
             lock (_lock)
             {
                 var entry = _historyConfigurations.FirstOrDefault(x => x.Measurement == measurement);
-                if (entry != null)
+                if (entry != null && measurement.Value != null)
                 {
                     entry.TryAddMeasurement(measurement.Value);
                     entry.RemoveOldEntries();
@@ -249,6 +252,7 @@ namespace Iot.Device.Common
         }
 
         public void UpdateValue<T>(SensorMeasurement measurement, T newValue)
+        where T : struct
         {
             if (measurement is CustomData<T> casted)
             {

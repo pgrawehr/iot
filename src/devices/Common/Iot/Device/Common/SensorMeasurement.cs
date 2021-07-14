@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -47,7 +48,7 @@ namespace Iot.Device.Common
         {
             _value = value ?? throw new ArgumentNullException(nameof(value));
             Name = name;
-            SensorSource = source;
+            _sensorSource = source;
             Instance = instanceNumber;
             _measurementStatus = SensorMeasurementStatus.NoData;
             _observers = new List<IObserver<IQuantity>>();
@@ -153,7 +154,7 @@ namespace Iot.Device.Common
         /// A format string used to format a value. Argument 0 is the <see cref="IQuantity"/> of the measurement, Argument 1 is the raw double value.
         /// Example: "{1:F2} {0:a}" to format the value with two digits and add the unit abbreviation. "{0:F2}" results in the same.
         /// </summary>
-        public string CustomFormat
+        public string? CustomFormat
         {
             get;
             set;
@@ -163,7 +164,7 @@ namespace Iot.Device.Common
         /// Retrieves the current value. Use <see cref="UpdateValue(IQuantity)"/> to update the value.
         /// This will return null unless an initial value has been defined.
         /// </summary>
-        public virtual IQuantity Value
+        public virtual IQuantity? Value
         {
             get
             {
@@ -201,11 +202,11 @@ namespace Iot.Device.Common
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        public event Action<SensorMeasurement> ValueChanged;
+        public event Action<SensorMeasurement>? ValueChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
@@ -230,7 +231,7 @@ namespace Iot.Device.Common
         /// the sensor doesn't work for some reason and we want to pass this information to the user instead of keeping
         /// the last good value).</param>
         /// <param name="status">Status of new measurement. NoData is automatically added if null is passed as <paramref name="value"/>.</param>
-        public void UpdateValue(IQuantity value, SensorMeasurementStatus status)
+        public void UpdateValue(IQuantity? value, SensorMeasurementStatus status)
         {
             if (value == null)
             {
@@ -262,11 +263,15 @@ namespace Iot.Device.Common
             ValueChanged?.Invoke(this);
         }
 
-        public bool TryGetAs<T>(out T convertedValue)
+        public bool TryGetAs<T>(
+#if NET5_0_OR_GREATER
+            [NotNullWhen(true)]
+#endif
+            out T convertedValue)
         {
             if (_measurementStatus.HasFlag(SensorMeasurementStatus.NoData))
             {
-                convertedValue = default(T);
+                convertedValue = default(T)!;
                 return false;
             }
 
@@ -277,7 +282,7 @@ namespace Iot.Device.Common
             }
             else
             {
-                convertedValue = default(T);
+                convertedValue = default(T)!;
                 return false;
             }
         }
@@ -287,6 +292,11 @@ namespace Iot.Device.Common
             if (_measurementStatus.HasFlag(SensorMeasurementStatus.NoData))
             {
                 return string.Empty; // Leave to the client to eventually replace with something like "N/A"
+            }
+
+            if (Value == null)
+            {
+                return String.Empty;
             }
 
             if (CustomFormat != null)

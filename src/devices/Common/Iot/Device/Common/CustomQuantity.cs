@@ -14,13 +14,13 @@ namespace Iot.Device.Common
 
     /// <summary>
     /// An object that can store an arbitrary type as IQuantity.
-    /// Many properties will not deliver meaningful, but the class is written to always return something and avoid exceptions, so
+    /// Many properties will not deliver something meaningful, but the class is written to always return something and avoid exceptions, so
     /// it can be used in data binding.
     /// </summary>
     /// <typeparam name="T">Any data type</typeparam>
     public class CustomQuantity<T> : IQuantity
     {
-        public static CustomQuantity<T> Zero = new CustomQuantity<T>(default(T));
+        public static CustomQuantity<T> Zero = new CustomQuantity<T>(default(T)!);
 
         private T _value;
 
@@ -81,12 +81,22 @@ namespace Iot.Device.Common
             }
         }
 
-        public string ToString(string format, IFormatProvider formatProvider)
+        public string ToString(string? format, IFormatProvider? formatProvider)
         {
+            if (format == null)
+            {
+                throw new ArgumentNullException(nameof(format));
+            }
+
             // This has no unit, so ignore the request to format as unit abbreviation
             if (format.StartsWith("a", StringComparison.InvariantCultureIgnoreCase))
             {
                 return string.Empty;
+            }
+
+            if (_value == null)
+            {
+                return String.Empty;
             }
 
             if (_value is IFormattable fmt)
@@ -95,7 +105,7 @@ namespace Iot.Device.Common
             }
             else
             {
-                return _value.ToString();
+                return _value.ToString()!;
             }
         }
 
@@ -123,24 +133,29 @@ namespace Iot.Device.Common
         /// <summary>
         /// These are obsolete, anyway
         /// </summary>
-        public string ToString(IFormatProvider provider)
+        public string ToString(IFormatProvider? provider)
         {
             return ToString();
         }
 
-        public string ToString(IFormatProvider provider, int significantDigitsAfterRadix)
+        public string ToString(IFormatProvider? provider, int significantDigitsAfterRadix)
         {
             return ToString();
         }
 
-        public string ToString(IFormatProvider provider, string format, params object[] args)
+        public string ToString(IFormatProvider? provider, string format, params object[] args)
         {
             return String.Format(provider, format, args);
         }
 
         public override string ToString()
         {
-            return _value.ToString();
+            if (_value == null)
+            {
+                return string.Empty;
+            }
+
+            return _value.ToString()!;
         }
     }
 }

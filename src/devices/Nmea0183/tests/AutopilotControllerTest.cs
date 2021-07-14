@@ -163,10 +163,10 @@ namespace Iot.Device.Nmea0183.Tests
         {
             foreach (var seq in inputSequences)
             {
-                var decoded = TalkerSentence.FromSentenceString(seq, out var error);
+                var decoded = TalkerSentence.FromSentenceString(seq, out var error)!;
                 Assert.Equal(NmeaError.None, error);
                 Assert.NotNull(decoded);
-                var s = decoded.TryGetTypedValue();
+                var s = decoded.TryGetTypedValue()!;
                 _autopilot.SentenceCache.Add(s);
             }
         }

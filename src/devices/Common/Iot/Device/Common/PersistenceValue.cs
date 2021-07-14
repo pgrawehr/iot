@@ -106,7 +106,7 @@ namespace Iot.Device.Common
                 Save();
             }
 
-            _file = null;
+            _file = null!;
         }
 
         public void Dispose()

@@ -220,7 +220,7 @@ namespace Iot.Device.Nmea0183
             /// This sorts the route by waypoint names. But we're actually not interested in that, we're only
             /// trying to make sure the names are unique, so this throws if the comparison returns 0
             /// </summary>
-            public int Compare(RoutePoint x, RoutePoint y)
+            public int Compare(RoutePoint? x, RoutePoint? y)
             {
                 if (x == null)
                 {

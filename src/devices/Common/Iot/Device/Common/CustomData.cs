@@ -28,7 +28,12 @@ namespace Iot.Device.Common
         /// <inheritdoc />
         public override string ToString()
         {
-            return Value.ToString();
+            if (Value == null)
+            {
+                return string.Empty;
+            }
+
+            return Value.ToString()!;
         }
     }
 }

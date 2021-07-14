@@ -90,7 +90,7 @@ namespace Iot.Device.Nmea0183
             while (!_terminated)
             {
                 _serverControlEvent.WaitOne();
-                if (_serverTasks.TryDequeue(out Task task))
+                if (_serverTasks.TryDequeue(out Task? task))
                 {
                     // Just wait for this to terminate
                     task.Wait();
@@ -162,7 +162,7 @@ namespace Iot.Device.Nmea0183
                 _serverControlThread.Join();
             }
 
-            while (_serverTasks.TryDequeue(out Task task))
+            while (_serverTasks.TryDequeue(out Task? task))
             {
                 // Just wait for this to terminate
                 task.Wait();
