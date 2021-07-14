@@ -11,7 +11,7 @@ namespace Iot.Device.Nmea0183
     public sealed class Route
     {
         private List<RoutePoint> _routePoints;
-        private RoutePoint _nextPoint;
+        private RoutePoint? _nextPoint;
 
         /// <summary>
         /// Starts with an empty route
@@ -36,7 +36,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="route">The new route</param>
         /// <param name="nextPoint">The next point on the route (optional, defaults to the first point)</param>
         /// <exception cref="ArgumentException">Different semantic errors with the definition of the route.</exception>
-        public Route(string name, List<RoutePoint> route, RoutePoint nextPoint = null)
+        public Route(string name, List<RoutePoint> route, RoutePoint? nextPoint = null)
         : this(name)
         {
             if (route == null || route.Count == 0)
@@ -122,7 +122,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// The next point on the route
         /// </summary>
-        public RoutePoint NextPoint
+        public RoutePoint? NextPoint
         {
             get
             {

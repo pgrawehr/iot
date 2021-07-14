@@ -18,19 +18,19 @@ namespace Iot.Device.Nmea0183
         private readonly TimeSpan _loopTime = TimeSpan.FromMilliseconds(200);
         private readonly SentenceCache _cache;
         private bool _threadRunning;
-        private Thread _updateThread;
+        private Thread? _updateThread;
 
         /// <summary>
         /// Last "origin" position. Used if the current route does not specify one.
         /// Assumed to be the position the user last hit "Goto" on the GPS, without explicitly defining a route.
         /// </summary>
-        private RoutePoint _currentOrigin;
+        private RoutePoint? _currentOrigin;
 
-        private RoutePoint _knownNextWaypoint;
+        private RoutePoint? _knownNextWaypoint;
         private bool _selfNavMode;
-        private RoutePoint _manualNextWaypoint;
+        private RoutePoint? _manualNextWaypoint;
 
-        private Route _activeRoute;
+        private Route? _activeRoute;
 
         public AutopilotController(NmeaSinkAndSource input, NmeaSinkAndSource output)
         {
@@ -71,7 +71,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        public RoutePoint NextWaypoint
+        public RoutePoint? NextWaypoint
         {
             get;
             private set;
@@ -150,12 +150,11 @@ namespace Iot.Device.Nmea0183
         public void CalculateNewStatus(int loops, DateTimeOffset now)
         {
             bool passedWp = false;
-            if (_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination currentLeg)
-                && currentLeg != null
-                && currentLeg.Valid
-                && currentLeg.NextWayPoint != null)
+            RecommendedMinimumNavToDestination? currentLeg = null;
+            if (_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination currentLeg1)
+                && currentLeg1.Valid)
             {
-                passedWp = currentLeg.Arrived;
+                passedWp = currentLeg1.Arrived;
                 if (_selfNavMode)
                 {
                     // Reset navigation
@@ -164,6 +163,7 @@ namespace Iot.Device.Nmea0183
                 }
 
                 OperationState = AutopilotErrorState.OperatingAsSlave;
+                currentLeg = currentLeg1;
             }
             else
             {
@@ -187,7 +187,7 @@ namespace Iot.Device.Nmea0183
                 deviation = new HeadingAndDeviation(Angle.Zero, Angle.Zero, rmc.MagneticVariationInDegrees);
             }
 
-            if (_cache.TryGetCurrentPosition(out var position, out Angle track, out Speed sog, out Angle? heading))
+            if (_cache.TryGetCurrentPosition(out var position, out Angle track, out Speed sog, out Angle? heading) && position != null)
             {
                 string previousWayPoint = string.Empty;
                 string nextWayPoint = string.Empty;
@@ -198,13 +198,13 @@ namespace Iot.Device.Nmea0183
                     nextWayPoint = currentLeg.NextWayPointName;
                 }
 
-                List<RoutePoint> currentRoute = null;
+                List<RoutePoint>? currentRoute = null;
                 if (_activeRoute != null)
                 {
                     currentRoute = _activeRoute.Points;
                 }
 
-                RoutePoint next;
+                RoutePoint? next;
                 // This returns RoutePresent if at least one valid waypoint is in the list
                 if (currentRoute == null && _cache.TryGetCurrentRoute(out currentRoute) != AutopilotErrorState.RoutePresent)
                 {
@@ -257,7 +257,7 @@ namespace Iot.Device.Nmea0183
                     _currentOrigin = null;
                 }
 
-                RoutePoint previous = null;
+                RoutePoint? previous = null;
                 if (currentRoute != null)
                 {
                     previous = currentRoute.Find(x => x.WaypointName == previousWayPoint);
@@ -272,7 +272,7 @@ namespace Iot.Device.Nmea0183
                     else
                     {
                         // Assume the current position is the origin
-                        GreatCircle.DistAndDir(position, next.Position, out Length distance, out Angle direction);
+                        GreatCircle.DistAndDir(position, next.Position!, out Length distance, out Angle direction);
                         _currentOrigin = new RoutePoint("Goto", 1, 1, "Origin", position, direction,
                             distance);
                         previous = _currentOrigin;
@@ -299,7 +299,7 @@ namespace Iot.Device.Nmea0183
                 Length distancePreviousToNext = Length.Zero;
                 Angle bearingCurrentToDestination = Angle.Zero;
                 Angle bearingOriginToDestination = Angle.Zero;
-                GeographicPosition nextPosition = null;
+                GeographicPosition nextPosition = new GeographicPosition();
                 Speed approachSpeedToWayPoint = Speed.Zero;
 
                 if (next.Position != null)
@@ -324,13 +324,15 @@ namespace Iot.Device.Nmea0183
 
                 CrossTrackError xte = new CrossTrackError(crossTrackError);
 
-                TrackMadeGood vtg = new TrackMadeGood(track, AngleExtensions.TrueToMagnetic(track, deviation.Variation.Value), sog);
+                Angle variation = deviation.Variation.GetValueOrDefault(Angle.Zero);
+
+                TrackMadeGood vtg = new TrackMadeGood(track, AngleExtensions.TrueToMagnetic(track, variation), sog);
 
                 BearingAndDistanceToWayPoint bwc = new BearingAndDistanceToWayPoint(now, nextWayPoint, nextPosition, distanceToNext,
-                    bearingCurrentToDestination, AngleExtensions.TrueToMagnetic(bearingCurrentToDestination, deviation.Variation.Value));
+                    bearingCurrentToDestination, AngleExtensions.TrueToMagnetic(bearingCurrentToDestination, variation));
 
                 BearingOriginToDestination bod = new BearingOriginToDestination(bearingOriginToDestination, AngleExtensions.TrueToMagnetic(
-                    bearingOriginToDestination, deviation.Variation.Value), previousWayPoint, nextWayPoint);
+                    bearingOriginToDestination, variation), previousWayPoint, nextWayPoint);
 
                 sentencesToSend.AddRange(new NmeaSentence[] { rmb, xte, vtg, bwc, bod });
 
@@ -366,11 +368,22 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        private bool HasPassedWaypoint(GeographicPosition position, Angle courseOverGround, ref RoutePoint nextWaypoint, List<RoutePoint> currentRoute)
+        private bool HasPassedWaypoint(GeographicPosition position, Angle courseOverGround, ref RoutePoint? nextWaypoint, List<RoutePoint> currentRoute)
         {
-            RoutePoint previousWayPoint = null;
-            RoutePoint wayPointAfterNext = null;
-            int idx = currentRoute.IndexOf(nextWaypoint);
+            RoutePoint? previousWayPoint = null;
+            RoutePoint? wayPointAfterNext = null;
+            int idx = 0;
+
+            if (nextWaypoint != null)
+            {
+                idx = currentRoute.IndexOf(nextWaypoint);
+            }
+            else
+            {
+                // Can't have passed a null waypoint
+                return false;
+            }
+
             if (idx < 0)
             {
                 // This is weird

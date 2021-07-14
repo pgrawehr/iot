@@ -4,13 +4,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29409.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisplayControl", "DisplayControl.csproj", "{62733748-E938-4E40-B761-6AF6E61040CE}"
-	ProjectSection(ProjectDependencies) = postProject
-		{09724973-4015-4689-A2B6-98167B2A756C} = {09724973-4015-4689-A2B6-98167B2A756C}
-	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.Device.Gpio", "..\..\src\System.Device.Gpio\System.Device.Gpio.csproj", "{F2410F4C-A544-41D2-A75C-638C2C9DF4EB}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Iot.Device.Bindings", "..\..\src\Iot.Device.Bindings\Iot.Device.Bindings.csproj", "{09724973-4015-4689-A2B6-98167B2A756C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,10 +21,6 @@ Global
 		{F2410F4C-A544-41D2-A75C-638C2C9DF4EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2410F4C-A544-41D2-A75C-638C2C9DF4EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2410F4C-A544-41D2-A75C-638C2C9DF4EB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{09724973-4015-4689-A2B6-98167B2A756C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{09724973-4015-4689-A2B6-98167B2A756C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{09724973-4015-4689-A2B6-98167B2A756C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{09724973-4015-4689-A2B6-98167B2A756C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

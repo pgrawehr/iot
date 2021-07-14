@@ -46,6 +46,8 @@ namespace Iot.Device.Nmea0183.Sentences
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
+            OriginName = string.Empty;
+            DestinationName = string.Empty;
 
             double? bearingTrue = ReadValue(field);
             string referenceTrue = ReadString(field);

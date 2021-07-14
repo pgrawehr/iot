@@ -71,6 +71,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             DateTimeOffset dateTime;
             dateTime = ParseDateTime(time, timeString);
+            Position = new GeographicPosition();
 
             DateTime = dateTime;
             if (gpsStatus == "A")
@@ -91,7 +92,6 @@ namespace Iot.Device.Nmea0183.Sentences
                 {
                     // No improvement over RMC if these are not all valid
                     Valid = false;
-                    Position = new GeographicPosition(); // Invalid, but not null
                 }
             }
         }
@@ -105,17 +105,18 @@ namespace Iot.Device.Nmea0183.Sentences
             position = position.NormalizeAngleTo180();
             (_latitude, _latitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Latitude, true);
             (_longitude, _longitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Longitude, false);
+            Position = position;
             Valid = true;
         }
 
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
-            string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : null;
-            string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : null;
-            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : null;
-            string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : null;
-            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : null;
+            string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : String.Empty;
+            string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : String.Empty;
+            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : String.Empty;
+            string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : String.Empty;
+            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : String.Empty;
 
             return FormattableString.Invariant($"{lat},{latTurn},{lon},{lonTurn},{time},A,D");
         }

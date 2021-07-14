@@ -53,6 +53,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
+            RouteName = string.Empty;
             int? numberOfSequences = ReadInt(field);
             int? numberOfSequence = ReadInt(field);
 

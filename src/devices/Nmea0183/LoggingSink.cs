@@ -13,11 +13,11 @@ namespace Iot.Device.Nmea0183
     public sealed class LoggingSink : NmeaSinkAndSource
     {
         private object _lock;
-        private FileStream _logFile;
-        private TextWriter _textWriter;
+        private FileStream? _logFile;
+        private TextWriter? _textWriter;
         private NmeaSentence _lastSentence;
 
-        public LoggingSink(string name, LoggingConfiguration configuration)
+        public LoggingSink(string name, LoggingConfiguration? configuration)
         : base(name)
         {
             _logFile = null;
@@ -60,7 +60,7 @@ namespace Iot.Device.Nmea0183
                 fileName = Path.Combine(path, "Nmea-" + file + ".txt");
             }
 
-            if (_logFile != null)
+            if (_logFile != null && _textWriter != null)
             {
                 _textWriter.Flush();
                 _textWriter.Close();
@@ -80,7 +80,7 @@ namespace Iot.Device.Nmea0183
         {
             lock (_lock)
             {
-                if (_textWriter != null)
+                if (_textWriter != null && _logFile != null)
                 {
                     // If talker and ID are the same, assume it's the same message
                     if (_lastSentence.SentenceId != sentence.SentenceId && _lastSentence.TalkerId != sentence.TalkerId)
@@ -104,7 +104,7 @@ namespace Iot.Device.Nmea0183
         {
             lock (_lock)
             {
-                if (_logFile != null)
+                if (_logFile != null && _textWriter != null)
                 {
                     _textWriter.Flush();
                     _logFile.Close();

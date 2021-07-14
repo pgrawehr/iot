@@ -90,7 +90,7 @@ namespace Iot.Device.Nmea0183.Sentences
             b.Append($"{speed},");
             string track = TrackMadeGoodInDegreesTrue.Value.ToString("0.000", CultureInfo.InvariantCulture);
             b.Append($"{track},");
-            string date = DateTime.HasValue ? DateTime.Value.ToString("ddMMyy", CultureInfo.InvariantCulture) : null;
+            string date = DateTime.HasValue ? DateTime.Value.ToString("ddMMyy", CultureInfo.InvariantCulture) : string.Empty;
             b.Append($"{date},");
             if (MagneticVariationInDegrees.HasValue)
             {
@@ -127,6 +127,7 @@ namespace Iot.Device.Nmea0183.Sentences
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
+            Position = new GeographicPosition();
 
             string newTime = ReadString(field);
             NavigationStatus? status = (NavigationStatus?)ReadChar(field);
@@ -245,7 +246,7 @@ namespace Iot.Device.Nmea0183.Sentences
             return "Position unknown";
         }
 
-        internal static (double? degreesMinutes, CardinalDirection? direction) DegreesToNmea0183(double? degrees, bool isLatitude)
+        internal static (double? DegreesMinutes, CardinalDirection? Direction) DegreesToNmea0183(double? degrees, bool isLatitude)
         {
             if (!degrees.HasValue)
             {

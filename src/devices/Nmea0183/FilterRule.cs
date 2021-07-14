@@ -83,7 +83,7 @@ namespace Iot.Device.Nmea0183
         /// indicated sink.
         /// Note that the input message shall not be modified, clone it if necessary.
         /// </summary>
-        public Func<NmeaSinkAndSource, NmeaSinkAndSource, NmeaSentence, NmeaSentence> ForwardingAction { get; }
+        public Func<NmeaSinkAndSource, NmeaSinkAndSource, NmeaSentence, NmeaSentence>? ForwardingAction { get; }
 
         /// <summary>
         /// If this is true, filter testing is continued even after a match.

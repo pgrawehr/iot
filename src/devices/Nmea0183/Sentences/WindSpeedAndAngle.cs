@@ -100,6 +100,7 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 Angle = Angle.Zero;
                 Speed = Speed.Zero;
+                SpeedUnit = string.Empty;
                 Valid = false;
             }
         }

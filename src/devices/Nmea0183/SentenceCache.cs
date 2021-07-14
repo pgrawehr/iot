@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Iot.Device.Nmea0183.Sentences;
@@ -66,14 +67,14 @@ namespace Iot.Device.Nmea0183
         /// <param name="sog">Speed over ground</param>
         /// <param name="heading">Heading of bow (optional)</param>
         /// <returns></returns>
-        public bool TryGetCurrentPosition(out GeographicPosition position, out Angle track, out Speed sog, out Angle? heading)
+        public bool TryGetCurrentPosition(out GeographicPosition? position, out Angle track, out Speed sog, out Angle? heading)
         {
             // Try to get any of the position messages
-            var gll = (PositionFastUpdate)GetLastSentence(PositionFastUpdate.Id);
-            var gga = (GlobalPositioningSystemFixData)GetLastSentence(GlobalPositioningSystemFixData.Id);
-            var rmc = (RecommendedMinimumNavigationInformation)GetLastSentence(RecommendedMinimumNavigationInformation.Id);
-            var vtg = (TrackMadeGood)GetLastSentence(TrackMadeGood.Id);
-            var hdt = (HeadingTrue)GetLastSentence(HeadingTrue.Id);
+            var gll = (PositionFastUpdate?)GetLastSentence(PositionFastUpdate.Id);
+            var gga = (GlobalPositioningSystemFixData?)GetLastSentence(GlobalPositioningSystemFixData.Id);
+            var rmc = (RecommendedMinimumNavigationInformation?)GetLastSentence(RecommendedMinimumNavigationInformation.Id);
+            var vtg = (TrackMadeGood?)GetLastSentence(TrackMadeGood.Id);
+            var hdt = (HeadingTrue?)GetLastSentence(HeadingTrue.Id);
 
             List<(GeographicPosition, TimeSpan)> orderablePositions = new List<(GeographicPosition, TimeSpan)>();
             if (gll != null && gll.Position != null)
@@ -145,7 +146,7 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="id">Sentence Id to query</param>
         /// <returns>The last sentence of that type, or null.</returns>
-        public NmeaSentence GetLastSentence(SentenceId id)
+        public NmeaSentence? GetLastSentence(SentenceId id)
         {
             lock (_lock)
             {
@@ -158,7 +159,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        public bool TryGetLastSentence<T>(SentenceId id, out T sentence)
+        public bool TryGetLastSentence<T>(SentenceId id,
+#if NET5_0_OR_GREATER
+            [NotNullWhen(true)]
+#endif
+            out T sentence)
         where T : NmeaSentence
         {
             var s = GetLastSentence(id);
@@ -168,7 +173,7 @@ namespace Iot.Device.Nmea0183
                 return true;
             }
 
-            sentence = null;
+            sentence = null!;
             return false;
         }
 
@@ -179,7 +184,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="id">Sentence Id to query</param>
         /// <param name="maxAge">Maximum age of the sentence</param>
         /// <returns>The last sentence of that type, or null if none was received within the given timespan.</returns>
-        public NmeaSentence GetLastSentence(SentenceId id, TimeSpan maxAge)
+        public NmeaSentence? GetLastSentence(SentenceId id, TimeSpan maxAge)
         {
             lock (_lock)
             {
@@ -198,7 +203,7 @@ namespace Iot.Device.Nmea0183
         public AutopilotErrorState TryGetCurrentRoute(out List<RoutePoint> routeList)
         {
             routeList = new List<RoutePoint>();
-            List<RoutePart> segments = FindLatestCompleteRoute(out string routeName);
+            List<RoutePart>? segments = FindLatestCompleteRoute(out string routeName);
             if (segments == null)
             {
                 return AutopilotErrorState.NoRoute;
@@ -224,7 +229,7 @@ namespace Iot.Device.Nmea0183
             for (var index = 0; index < wpNames.Count; index++)
             {
                 var name = wpNames[index];
-                GeographicPosition position = null;
+                GeographicPosition? position = null;
                 if (_wayPoints.TryGetValue(name, out var pt))
                 {
                     position = pt.Position;
@@ -242,7 +247,7 @@ namespace Iot.Device.Nmea0183
             return AutopilotErrorState.RoutePresent;
         }
 
-        private List<RoutePart> FindLatestCompleteRoute(out string routeName)
+        private List<RoutePart>? FindLatestCompleteRoute(out string routeName)
         {
             List<RoutePart> routeSentences;
             lock (_lock)
@@ -259,7 +264,7 @@ namespace Iot.Device.Nmea0183
             }
 
             routeName = string.Empty;
-            RoutePart[] elements = null;
+            RoutePart[]? elements = null;
 
             // This is initially never 0 here
             while (routeSentences.Count > 0)
@@ -309,16 +314,19 @@ namespace Iot.Device.Nmea0183
             }
 
             List<RoutePart> ret = new List<RoutePart>();
-            for (var index = 1; index < elements.Length; index++)
+            if (elements != null)
             {
-                var elem = elements[index];
-                ret.Add(elem);
+                for (var index = 1; index < elements.Length; index++)
+                {
+                    var elem = elements[index];
+                    ret.Add(elem);
+                }
             }
 
             return ret.OrderBy(x => x.Sequence).ToList();
         }
 
-        private void OnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
+        private void OnNewSequence(NmeaSinkAndSource? source, NmeaSentence sentence)
         {
             // Cache only valid sentences
             if (!sentence.Valid)

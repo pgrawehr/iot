@@ -19,9 +19,9 @@ namespace Iot.Device.Nmea0183
         // Only used temporarily during build of the deviation table
         private List<NmeaSentence> _interestingSentences;
         private Angle _magneticVariation;
-        private DeviationPoint[] _deviationPointsToCompassReading;
-        private DeviationPoint[] _deviationPointsFromCompassReading;
-        private Identification _identification;
+        private DeviationPoint[]? _deviationPointsToCompassReading;
+        private DeviationPoint[]? _deviationPointsFromCompassReading;
+        private Identification? _identification;
 
         public MagneticDeviationCorrection()
         {
@@ -30,7 +30,7 @@ namespace Iot.Device.Nmea0183
             _identification = null;
         }
 
-        public Identification Identification
+        public Identification? Identification
         {
             get
             {
@@ -54,6 +54,11 @@ namespace Iot.Device.Nmea0183
             }
 
             DeviationPoint[] circle = new DeviationPoint[360]; // One entry per degree
+            foreach (var c in circle)
+            {
+                c.IsInvalid = true;
+            }
+
             string[] pointsWithProblems = new string[360];
             // This will get the average offset, which is assumed to be orientation dependent (i.e. if the magnetic compass's forward
             // direction doesn't properly align with the ship)
@@ -91,12 +96,12 @@ namespace Iot.Device.Nmea0183
             int numberOfConsecutiveGaps = 0;
             const int maxConsecutiveGaps = 5;
             // Evaluate the quality of the result
-            DeviationPoint previous = null;
+            DeviationPoint? previous = null;
             double maxLocalChange = 0;
             for (int i = 0; i < 360; i++)
             {
                 var pt = circle[i];
-                if (pt == null)
+                if (pt.IsInvalid)
                 {
                     numberOfConsecutiveGaps++;
                     if (numberOfConsecutiveGaps > maxConsecutiveGaps)
@@ -129,7 +134,7 @@ namespace Iot.Device.Nmea0183
             {
                 if (pointsWithProblems[i] != null)
                 {
-                    circle[i] = null;
+                    circle[i].IsInvalid = true;
                 }
             }
 
@@ -137,7 +142,7 @@ namespace Iot.Device.Nmea0183
             for (int i = 0; i < 360; i++)
             {
                 var pt = circle[i];
-                if (pt == null)
+                if (pt.IsInvalid)
                 {
                     numberOfConsecutiveGaps++;
                     if (numberOfConsecutiveGaps > maxConsecutiveGaps)
@@ -198,7 +203,7 @@ namespace Iot.Device.Nmea0183
                 for (int k = i - smoothingPoints; k <= i + smoothingPoints; k++)
                 {
                     var ptIn = circle[(k + 360) % 360];
-                    if (ptIn != null)
+                    if (!ptIn.IsInvalid)
                     {
                         avgDeviation += ptIn.Deviation;
                         usedPoints++;
@@ -206,7 +211,7 @@ namespace Iot.Device.Nmea0183
                 }
 
                 avgDeviation /= usedPoints;
-                if (circle[i] != null)
+                if (!circle[i].IsInvalid)
                 {
                     circle[i].DeviationSmooth = (float)avgDeviation;
                     // The compass reading we get if we apply the smoothed deviation
@@ -253,7 +258,7 @@ namespace Iot.Device.Nmea0183
         {
             XmlSerializer ser = new XmlSerializer(typeof(CompassCalibration));
 
-            CompassCalibration topLevel = null;
+            CompassCalibration? topLevel = null;
 
             using (StreamReader tw = new StreamReader(file))
             {
@@ -338,6 +343,11 @@ namespace Iot.Device.Nmea0183
         /// <returns>The compass reading for the given magnetic heading</returns>
         public Angle FromMagneticHeading(Angle magneticHeading)
         {
+            if (_deviationPointsToCompassReading == null)
+            {
+                throw new InvalidOperationException("Deviation table not initialized");
+            }
+
             int ptIndex = (int)(magneticHeading.Normalize(true).Degrees);
             var ptToUse = _deviationPointsToCompassReading[ptIndex];
             return (magneticHeading - Angle.FromDegrees(ptToUse.DeviationSmooth)).Normalize(true);
@@ -350,6 +360,11 @@ namespace Iot.Device.Nmea0183
         /// <returns>The corrected magnetic heading</returns>
         public Angle ToMagneticHeading(Angle compassReading)
         {
+            if (_deviationPointsFromCompassReading == null)
+            {
+                throw new InvalidOperationException("Deviation table not initialized");
+            }
+
             int ptIndex = (int)(compassReading.Normalize(true).Degrees);
             var ptToUse = _deviationPointsFromCompassReading[ptIndex];
             return (compassReading + Angle.FromDegrees(ptToUse.DeviationSmooth)).Normalize(true);

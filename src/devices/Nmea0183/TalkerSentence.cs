@@ -130,7 +130,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="errorCode">Returns an error code, if the parsing failed</param>
         /// <returns>TalkerSentence instance, or null in case of an error</returns>
         /// <remarks><paramref name="sentence"/> does not include new line characters</remarks>
-        public static TalkerSentence FromSentenceString(string sentence, out NmeaError errorCode)
+        public static TalkerSentence? FromSentenceString(string sentence, out NmeaError errorCode)
         {
             return FromSentenceString(sentence, TalkerId.Any, out errorCode);
         }
@@ -144,7 +144,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="errorCode">Returns an error code, if the parsing failed</param>
         /// <returns>TalkerSentence instance, or null in case of an error</returns>
         /// <remarks><paramref name="sentence"/> does not include new line characters</remarks>
-        public static TalkerSentence FromSentenceString(string sentence, TalkerId expectedTalkerId, out NmeaError errorCode)
+        public static TalkerSentence? FromSentenceString(string sentence, TalkerId expectedTalkerId, out NmeaError errorCode)
         {
             // $XXYYY, ...
             const int SentenceHeaderLength = 7;
@@ -210,41 +210,6 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Compares sentence identifier with all known identifiers.
-        /// If found returns typed object corresponding to the identifier.
-        /// If not found returns null.
-        /// </summary>
-        /// <returns>Object corresponding to the identifier</returns>
-        public NmeaSentence TryGetTypedValue()
-        {
-            NmeaSentence retVal = null;
-            if (s_registeredSentences.TryGetValue(Id, out Func<TalkerSentence, DateTimeOffset, NmeaSentence> producer))
-            {
-                retVal = producer(this, LastMessageTime);
-            }
-            else
-            {
-                retVal = new RawSentence(TalkerId, Id, Fields, LastMessageTime);
-            }
-
-            if (retVal?.DateTime != null)
-            {
-                LastMessageTime = retVal.DateTime.Value;
-            }
-
-            return retVal;
-        }
-
-        /// <summary>
-        /// Returns this sentence without parsing its contents
-        /// </summary>
-        /// <returns>A raw sentence</returns>
-        public RawSentence GetAsRawSentence()
-        {
-            return new RawSentence(TalkerId, Id, Fields, LastMessageTime);
-        }
-
-        /// <summary>
         /// Registers sentence identifier as known. Registered sentences are used by <see cref="TryGetTypedValue()"/>.
         /// </summary>
         /// <param name="id">NMEA0183 sentence identifier</param>
@@ -254,7 +219,7 @@ namespace Iot.Device.Nmea0183
             s_registeredSentences[id] = producer;
         }
 
-        private static (int? checksum, string lastField) GetChecksumAndLastField(string lastEntry)
+        private static (int? Checksum, string LastField) GetChecksumAndLastField(string lastEntry)
         {
             int lastStarIdx = lastEntry.LastIndexOf('*');
 
@@ -315,6 +280,41 @@ namespace Iot.Device.Nmea0183
             }
 
             return ret;
+        }
+
+        /// <summary>
+         /// Compares sentence identifier with all known identifiers.
+         /// If found returns typed object corresponding to the identifier.
+         /// If not found returns null.
+         /// </summary>
+         /// <returns>Object corresponding to the identifier</returns>
+        public NmeaSentence? TryGetTypedValue()
+        {
+            NmeaSentence? retVal = null;
+            if (s_registeredSentences.TryGetValue(Id, out Func<TalkerSentence, DateTimeOffset, NmeaSentence>? producer))
+            {
+                retVal = producer(this, LastMessageTime);
+            }
+            else
+            {
+                retVal = new RawSentence(TalkerId, Id, Fields, LastMessageTime);
+            }
+
+            if (retVal?.DateTime != null)
+            {
+                LastMessageTime = retVal.DateTime.Value;
+            }
+
+            return retVal;
+        }
+
+        /// <summary>
+        /// Returns this sentence without parsing its contents
+        /// </summary>
+        /// <returns>A raw sentence</returns>
+        public RawSentence GetAsRawSentence()
+        {
+            return new RawSentence(TalkerId, Id, Fields, LastMessageTime);
         }
     }
 }

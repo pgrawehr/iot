@@ -19,9 +19,9 @@ namespace Iot.Device.Nmea0183
         private readonly int _port;
         private readonly List<NmeaSinkAndSource> _activeParsers;
         private readonly object _lock;
-        private TcpListener _server;
-        private Thread _serverThread;
-        private Thread _serverControlThread;
+        private TcpListener? _server;
+        private Thread? _serverThread;
+        private Thread? _serverControlThread;
         private AutoResetEvent _serverControlEvent;
         private ConcurrentQueue<Task> _serverTasks;
         private bool _terminated;
@@ -63,7 +63,7 @@ namespace Iot.Device.Nmea0183
 
         private void ConnectionWatcher()
         {
-            while (!_terminated)
+            while (!_terminated && _server != null)
             {
                 try
                 {
@@ -154,7 +154,7 @@ namespace Iot.Device.Nmea0183
         public override void StopDecode()
         {
             _terminated = true;
-            if (_server != null)
+            if (_server != null && _serverThread != null && _serverControlThread != null)
             {
                 _server.Stop();
                 _serverThread.Join();
@@ -181,6 +181,7 @@ namespace Iot.Device.Nmea0183
 
             _serverThread = null;
             _server = null;
+            _serverControlThread = null;
         }
     }
 }

@@ -120,60 +120,6 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Decodes the next field into a string
-        /// </summary>
-        protected string ReadString(IEnumerator<string> field)
-        {
-            if (!field.MoveNext())
-            {
-                return string.Empty;
-            }
-
-            return field.Current;
-        }
-
-        /// <summary>
-        /// Decodes the next field into a char
-        /// </summary>
-        protected char? ReadChar(IEnumerator<string> field)
-        {
-            string val = ReadString(field);
-            return string.IsNullOrEmpty(val) ? (char?)null : val.Single();
-        }
-
-        /// <summary>
-        /// Decodes the next field into a double
-        /// </summary>
-        protected double? ReadValue(IEnumerator<string> field)
-        {
-            string val = ReadString(field);
-            if (string.IsNullOrEmpty(val))
-            {
-                return null;
-            }
-            else
-            {
-                return double.Parse(val, CultureInfo.InvariantCulture);
-            }
-        }
-
-        /// <summary>
-        /// Decodes the next field into an int
-        /// </summary>
-        protected int? ReadInt(IEnumerator<string> field)
-        {
-            string val = ReadString(field);
-            if (string.IsNullOrEmpty(val))
-            {
-                return null;
-            }
-            else
-            {
-                return int.Parse(val, CultureInfo.InvariantCulture);
-            }
-        }
-
-        /// <summary>
         /// Parses a date and a time field or any possible combinations of those
         /// </summary>
         protected static DateTimeOffset ParseDateTime(string date, string time)
@@ -229,6 +175,60 @@ namespace Iot.Device.Nmea0183.Sentences
             }
 
             return dateTime;
+        }
+
+        /// <summary>
+        /// Decodes the next field into a string
+        /// </summary>
+        protected string ReadString(IEnumerator<string> field)
+        {
+            if (!field.MoveNext())
+            {
+                return string.Empty;
+            }
+
+            return field.Current;
+        }
+
+        /// <summary>
+        /// Decodes the next field into a char
+        /// </summary>
+        protected char? ReadChar(IEnumerator<string> field)
+        {
+            string val = ReadString(field);
+            return string.IsNullOrEmpty(val) ? (char?)null : val.Single();
+        }
+
+        /// <summary>
+        /// Decodes the next field into a double
+        /// </summary>
+        protected double? ReadValue(IEnumerator<string> field)
+        {
+            string val = ReadString(field);
+            if (string.IsNullOrEmpty(val))
+            {
+                return null;
+            }
+            else
+            {
+                return double.Parse(val, CultureInfo.InvariantCulture);
+            }
+        }
+
+        /// <summary>
+        /// Decodes the next field into an int
+        /// </summary>
+        protected int? ReadInt(IEnumerator<string> field)
+        {
+            string val = ReadString(field);
+            if (string.IsNullOrEmpty(val))
+            {
+                return null;
+            }
+            else
+            {
+                return int.Parse(val, CultureInfo.InvariantCulture);
+            }
         }
 
         /// <summary>

@@ -42,6 +42,9 @@ namespace Iot.Device.Nmea0183.Sentences
             DateTimeOffset now = ParseDateTime(time, timeString);
             DateTime = now;
 
+            NextWayPointName = string.Empty;
+            NextWayPoint = new GeographicPosition();
+
             double? nextWayPointLatitude = ReadValue(field);
             CardinalDirection? nextWayPointHemisphere = (CardinalDirection?)ReadChar(field);
             double? nextWayPointLongitude = ReadValue(field);
@@ -157,7 +160,7 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 StringBuilder b = new StringBuilder(256);
 
-                string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : null;
+                string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
                 b.Append(time + ",");
                 double? degrees;
                 CardinalDirection? direction;

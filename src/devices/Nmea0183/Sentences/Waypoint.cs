@@ -45,6 +45,8 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
+            Position = new GeographicPosition();
+            Name = string.Empty;
             double? wayPointLatitude = ReadValue(field);
             CardinalDirection? wayPointHemisphere = (CardinalDirection?)ReadChar(field);
             double? wayPointLongitude = ReadValue(field);

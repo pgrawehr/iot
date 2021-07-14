@@ -198,9 +198,9 @@ namespace Iot.Device.Nmea0183
             return ret;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            GeographicPosition position = obj as GeographicPosition;
+            GeographicPosition? position = obj as GeographicPosition;
 
             if (position == null)
             {
@@ -219,7 +219,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        public bool Equals(GeographicPosition position)
+        public bool Equals(GeographicPosition? position)
         {
             if (position == null)
             {

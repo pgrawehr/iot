@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp5.0</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>DisplayControl</RootNamespace>
   </PropertyGroup>
 <ItemGroup>
@@ -22,7 +22,7 @@
     <PackageReference Include="Avalonia" Version="0.9.3" />
     <PackageReference Include="Avalonia.Desktop" Version="0.9.3" />
     <PackageReference Include="Avalonia.ReactiveUI" Version="0.9.3" />
-    <PackageReference Include="System.IO.Ports" Version="4.6.0" />
+    <PackageReference Include="System.IO.Ports" Version="5.0.1" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Views\SensorValueControl.xaml">
@@ -31,9 +31,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(MainLibraryPath)System.Device.Gpio.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Calibration_Cirrus.xml">

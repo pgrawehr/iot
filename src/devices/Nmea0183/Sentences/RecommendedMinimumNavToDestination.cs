@@ -27,6 +27,9 @@ namespace Iot.Device.Nmea0183.Sentences
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
+            PreviousWayPointName = string.Empty;
+            NextWayPointName = String.Empty;
+            NextWayPoint = new GeographicPosition();
 
             string overallStatus = ReadString(field);
             double? crossTrackError = ReadValue(field);

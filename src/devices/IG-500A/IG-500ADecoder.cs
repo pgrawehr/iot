@@ -36,7 +36,7 @@ namespace Iot.Device.Imu
         private bool _outputModeReceived;
         private byte _outputMode;
 
-        public event Action<Vector3> OnNewData;
+        public event Action<Vector3>? OnNewData;
 
         private List<OutputDataOffsets> _dataFields = new List<OutputDataOffsets>()
         {
@@ -492,7 +492,10 @@ namespace Iot.Device.Imu
                 {
                     // The active data mask contains this data set
                     var dataSetProperties = _dataFields.Find(x => x.DataSet == (OutputDataSets)currentMask);
-                    byteOffset += dataSetProperties.Length;
+                    if (dataSetProperties != null)
+                    {
+                        byteOffset += dataSetProperties.Length;
+                    }
                 }
 
                 currentMask <<= 1;
@@ -505,7 +508,13 @@ namespace Iot.Device.Imu
         {
             // BinaryPrimitives.ReadFloatLittleEndian() doesn't exist yet, but see https://github.com/dotnet/corefx/issues/35791
             Int32 intRepresentation = BinaryPrimitives.ReadInt32LittleEndian(new ReadOnlySpan<byte>(buffer, offset, 4));
-            return BitConverter.Int32BitsToSingle(intRepresentation);
+            return Int32BitsToSingle(intRepresentation);
+        }
+
+        public static unsafe float Int32BitsToSingle(int value)
+        {
+            // The implementation in BitConverter is not available in .NET standard
+            return *((float*)&value);
         }
 
         private void SendDefaultConfiguration()
@@ -559,7 +568,7 @@ namespace Iot.Device.Imu
                 _cancellationTokenSource.Cancel();
                 _dataStream.Close();
                 _decoderThread?.Join();
-                _decoderThread = null;
+                _decoderThread = null!;
             }
         }
 

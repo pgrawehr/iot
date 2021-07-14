@@ -18,9 +18,9 @@ namespace Iot.Device.Nmea0183
     {
         private readonly object _lock;
         private Stream _dataSource;
-        private Stream _dataSink;
-        private Thread _parserThread;
-        private CancellationTokenSource _cancellationTokenSource;
+        private Stream? _dataSink;
+        private Thread? _parserThread;
+        private CancellationTokenSource? _cancellationTokenSource;
         private StreamReader _reader;
         private Raw8BitEncoding _encoding;
 
@@ -31,7 +31,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="dataSource">Data source (may be connected to a serial port, a network interface, or whatever). It is recommended to use a blocking Stream,
         /// to prevent unnecessary polling</param>
         /// <param name="dataSink">Optional data sink, to send information. Can be null, and can be identical to the source stream</param>
-        public NmeaParser(String interfaceName, Stream dataSource, Stream dataSink)
+        public NmeaParser(String interfaceName, Stream dataSource, Stream? dataSink)
         : base(interfaceName)
         {
             _encoding = new Raw8BitEncoding();
@@ -69,9 +69,9 @@ namespace Iot.Device.Nmea0183
 
         private void Parser()
         {
-            while (!_cancellationTokenSource.IsCancellationRequested)
+            while (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
-                string currentLine = null;
+                string? currentLine;
                 try
                 {
                     currentLine = _reader.ReadLine();
@@ -159,9 +159,9 @@ namespace Iot.Device.Nmea0183
                     _parserThread.Join();
                     _cancellationTokenSource = null;
                     _parserThread = null;
-                    _dataSource = null;
-                    _dataSink = null;
-                    _reader = null;
+                    _dataSource = null!;
+                    _dataSink = null!;
+                    _reader = null!;
                 }
             }
         }

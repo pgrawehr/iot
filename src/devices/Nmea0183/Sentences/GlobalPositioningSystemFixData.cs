@@ -80,20 +80,20 @@ namespace Iot.Device.Nmea0183.Sentences
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
-            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : null;
-            string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : null;
-            string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : null;
-            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : null;
-            string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : null;
+            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
+            string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : string.Empty;
+            string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : String.Empty;
+            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : String.Empty;
+            string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : String.Empty;
             string quality = ((int)Status).ToString(CultureInfo.InvariantCulture);
             string numSats = NumberOfSatellites.ToString(CultureInfo.InvariantCulture);
             string geoidElevation = GeoidAltitude.HasValue
                 ? GeoidAltitude.Value.ToString("F1", CultureInfo.InvariantCulture)
-                : null;
+                : String.Empty;
             string hdop = Hdop.ToString(CultureInfo.InvariantCulture);
             string undulation = Undulation.HasValue
                 ? Undulation.Value.ToString("F1", CultureInfo.InvariantCulture)
-                : null;
+                : String.Empty;
 
             return FormattableString.Invariant($"{time},{lat},{latTurn},{lon},{lonTurn},{quality},{numSats},{hdop},{geoidElevation},M,{undulation},M,,");
         }
@@ -181,6 +181,7 @@ namespace Iot.Device.Nmea0183.Sentences
             (_latitude, _latitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Latitude, true);
             (_longitude, _longitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Longitude, false);
             EllipsoidAltitude = position.EllipsoidalHeight;
+            Position = position;
             GeoidAltitude = geoidAltitude;
             Undulation = EllipsoidAltitude - geoidAltitude;
             Hdop = hdop;

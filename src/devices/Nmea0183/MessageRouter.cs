@@ -18,7 +18,7 @@ namespace Iot.Device.Nmea0183
         private bool _localInterfaceActive;
         private NmeaSinkAndSource _loggingSink;
 
-        public MessageRouter(LoggingConfiguration loggingConfiguration = null)
+        public MessageRouter(LoggingConfiguration? loggingConfiguration = null)
         : base(LocalMessageSource)
         {
             _sourcesAndSinks = new Dictionary<string, NmeaSinkAndSource>();
