@@ -54,11 +54,6 @@ namespace Iot.Device.Nmea0183
             }
 
             DeviationPoint[] circle = new DeviationPoint[360]; // One entry per degree
-            foreach (var c in circle)
-            {
-                c.IsInvalid = true;
-            }
-
             string[] pointsWithProblems = new string[360];
             // This will get the average offset, which is assumed to be orientation dependent (i.e. if the magnetic compass's forward
             // direction doesn't properly align with the ship)
@@ -101,7 +96,7 @@ namespace Iot.Device.Nmea0183
             for (int i = 0; i < 360; i++)
             {
                 var pt = circle[i];
-                if (pt.IsInvalid)
+                if (pt == null)
                 {
                     numberOfConsecutiveGaps++;
                     if (numberOfConsecutiveGaps > maxConsecutiveGaps)
@@ -134,7 +129,7 @@ namespace Iot.Device.Nmea0183
             {
                 if (pointsWithProblems[i] != null)
                 {
-                    circle[i].IsInvalid = true;
+                    circle[i] = null!;
                 }
             }
 
@@ -142,7 +137,7 @@ namespace Iot.Device.Nmea0183
             for (int i = 0; i < 360; i++)
             {
                 var pt = circle[i];
-                if (pt.IsInvalid)
+                if (pt == null)
                 {
                     numberOfConsecutiveGaps++;
                     if (numberOfConsecutiveGaps > maxConsecutiveGaps)
@@ -203,7 +198,7 @@ namespace Iot.Device.Nmea0183
                 for (int k = i - smoothingPoints; k <= i + smoothingPoints; k++)
                 {
                     var ptIn = circle[(k + 360) % 360];
-                    if (!ptIn.IsInvalid)
+                    if (ptIn != null)
                     {
                         avgDeviation += ptIn.Deviation;
                         usedPoints++;
@@ -211,7 +206,7 @@ namespace Iot.Device.Nmea0183
                 }
 
                 avgDeviation /= usedPoints;
-                if (!circle[i].IsInvalid)
+                if (circle[i] != null)
                 {
                     circle[i].DeviationSmooth = (float)avgDeviation;
                     // The compass reading we get if we apply the smoothed deviation

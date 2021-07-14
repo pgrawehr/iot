@@ -20,7 +20,8 @@ namespace Iot.Device.Nmea0183.Tests
             dev.Save("..\\..\\..\\Calibration_Cirrus.xml", "Cirrus", "HBY5127", "269110660");
         }
 
-        [Fact]
+        /*[Fact]
+        // Files are not usable
         public void CreateDeviationTable2()
         {
             MagneticDeviationCorrection dev = new MagneticDeviationCorrection();
@@ -31,7 +32,7 @@ namespace Iot.Device.Nmea0183.Tests
             });
 
             dev.Save("..\\..\\..\\Calibration_Cirrus_v2_deltas.xml", "Cirrus", "HBY5127", "269110660");
-        }
+        }*/
 
         [Fact]
         public void ReadAndUseDeviationTable()

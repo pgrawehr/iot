@@ -6,13 +6,6 @@ namespace Iot.Device.Nmea0183
 {
     public partial class DeviationPoint
     {
-        [XmlIgnore]
-        internal bool IsInvalid
-        {
-            get;
-            set;
-        }
-
         /// <summary>
         /// Generates a string representation of this object
         /// </summary>

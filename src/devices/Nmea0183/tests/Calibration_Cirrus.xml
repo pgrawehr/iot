@@ -4,7 +4,7 @@
     <ShipName>Cirrus</ShipName>
     <Callsign>HBY5127</Callsign>
     <MMSI>269110660</MMSI>
-    <CalibrationDate>2020-09-29</CalibrationDate>
+    <CalibrationDate>2021-07-14</CalibrationDate>
   </Identification>
   <CalibrationDataFromCompassReading>
     <Point>
@@ -30,283 +30,283 @@
     </Point>
     <Point>
       <CompassReading>3.26666665</CompassReading>
-      <CompassReadingSmooth>3.412169</CompassReadingSmooth>
+      <CompassReadingSmooth>3.28568745</CompassReadingSmooth>
       <MagneticHeading>354.926544</MagneticHeading>
       <Deviation>-8.340112</Deviation>
-      <DeviationSmooth>-8.485625</DeviationSmooth>
+      <DeviationSmooth>-8.359143</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>4.5</CompassReading>
       <CompassReadingSmooth>4.5</CompassReadingSmooth>
-      <MagneticHeading>355.6647</MagneticHeading>
-      <Deviation>-8.835283</Deviation>
-      <DeviationSmooth>-8.835283</DeviationSmooth>
+      <MagneticHeading>355.771759</MagneticHeading>
+      <Deviation>-8.728227</Deviation>
+      <DeviationSmooth>-8.728227</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>5.5</CompassReading>
       <CompassReadingSmooth>5.5</CompassReadingSmooth>
-      <MagneticHeading>356.0507</MagneticHeading>
-      <Deviation>-9.449296</Deviation>
-      <DeviationSmooth>-9.449296</DeviationSmooth>
+      <MagneticHeading>356.125458</MagneticHeading>
+      <Deviation>-9.374557</Deviation>
+      <DeviationSmooth>-9.374557</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>6.56923056</CompassReading>
-      <CompassReadingSmooth>6.409719</CompassReadingSmooth>
+      <CompassReadingSmooth>6.3588295</CompassReadingSmooth>
       <MagneticHeading>356.483429</MagneticHeading>
       <Deviation>-10.0858021</Deviation>
-      <DeviationSmooth>-9.92629051</DeviationSmooth>
+      <DeviationSmooth>-9.875401</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>7.390476</CompassReading>
-      <CompassReadingSmooth>5.557197</CompassReadingSmooth>
+      <CompassReadingSmooth>5.5463357</CompassReadingSmooth>
       <MagneticHeading>354.793976</MagneticHeading>
       <Deviation>-12.5965033</Deviation>
-      <DeviationSmooth>-10.7632208</DeviationSmooth>
+      <DeviationSmooth>-10.7523594</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>8.478572</CompassReading>
-      <CompassReadingSmooth>4.92832565</CompassReadingSmooth>
+      <CompassReadingSmooth>4.94892025</CompassReadingSmooth>
       <MagneticHeading>353.53598</MagneticHeading>
       <Deviation>-14.9425936</Deviation>
-      <DeviationSmooth>-11.3923454</DeviationSmooth>
+      <DeviationSmooth>-11.41294</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>9.362963</CompassReading>
-      <CompassReadingSmooth>9.269159</CompassReadingSmooth>
+      <CompassReadingSmooth>9.319077</CompassReadingSmooth>
       <MagneticHeading>357.290375</MagneticHeading>
       <Deviation>-12.0725765</Deviation>
-      <DeviationSmooth>-11.9787846</DeviationSmooth>
+      <DeviationSmooth>-12.0287018</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>10.325</CompassReading>
-      <CompassReadingSmooth>14.0116129</CompassReadingSmooth>
+      <CompassReadingSmooth>14.0922089</CompassReadingSmooth>
       <MagneticHeading>1.419256</MagneticHeading>
       <Deviation>-8.905744</Deviation>
-      <DeviationSmooth>-12.5923567</DeviationSmooth>
+      <DeviationSmooth>-12.6729527</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>11.4428568</CompassReading>
-      <CompassReadingSmooth>11.8550777</CompassReadingSmooth>
+      <CompassReadingSmooth>11.9531374</CompassReadingSmooth>
       <MagneticHeading>358.913422</MagneticHeading>
       <Deviation>-12.529438</Deviation>
-      <DeviationSmooth>-12.9416561</DeviationSmooth>
+      <DeviationSmooth>-13.0397158</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>12.48</CompassReading>
-      <CompassReadingSmooth>15.1336851</CompassReadingSmooth>
+      <CompassReadingSmooth>15.250227</CompassReadingSmooth>
       <MagneticHeading>1.93894362</MagneticHeading>
       <Deviation>-10.5410566</Deviation>
-      <DeviationSmooth>-13.1947412</DeviationSmooth>
+      <DeviationSmooth>-13.3112831</DeviationSmooth>
     </Point>
     <Point>
-      <CompassReading>13.583333</CompassReading>
-      <CompassReadingSmooth>15.7694035</CompassReadingSmooth>
-      <MagneticHeading>2.8210423</MagneticHeading>
-      <Deviation>-10.762291</Deviation>
-      <DeviationSmooth>-12.94836</DeviationSmooth>
+      <CompassReading>13.5</CompassReading>
+      <CompassReadingSmooth>13.5</CompassReadingSmooth>
+      <MagneticHeading>0.448064953</MagneticHeading>
+      <Deviation>-13.0519352</Deviation>
+      <DeviationSmooth>-13.0519352</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>14.6478262</CompassReading>
-      <CompassReadingSmooth>13.5216513</CompassReadingSmooth>
+      <CompassReadingSmooth>13.625226</CompassReadingSmooth>
       <MagneticHeading>1.06529629</MagneticHeading>
       <Deviation>-13.58253</Deviation>
-      <DeviationSmooth>-12.4563551</DeviationSmooth>
+      <DeviationSmooth>-12.55993</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>15.4852629</CompassReading>
-      <CompassReadingSmooth>10.4137392</CompassReadingSmooth>
+      <CompassReadingSmooth>10.522666</CompassReadingSmooth>
       <MagneticHeading>358.439148</MagneticHeading>
       <Deviation>-17.0461121</Deviation>
-      <DeviationSmooth>-11.9745913</DeviationSmooth>
+      <DeviationSmooth>-12.083518</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>16.4606056</CompassReading>
-      <CompassReadingSmooth>11.0700436</CompassReadingSmooth>
+      <CompassReadingSmooth>11.1827078</CompassReadingSmooth>
       <MagneticHeading>359.292084</MagneticHeading>
       <Deviation>-17.1685257</Deviation>
-      <DeviationSmooth>-11.77796</DeviationSmooth>
+      <DeviationSmooth>-11.890624</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>17.4547939</CompassReading>
-      <CompassReadingSmooth>10.9229212</CompassReadingSmooth>
-      <MagneticHeading>359.389252</MagneticHeading>
-      <Deviation>-18.06555</Deviation>
-      <DeviationSmooth>-11.5336695</DeviationSmooth>
+      <CompassReadingSmooth>11.0719318</CompassReadingSmooth>
+      <MagneticHeading>359.4256</MagneticHeading>
+      <Deviation>-18.0291862</Deviation>
+      <DeviationSmooth>-11.6463337</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>18.25135</CompassReading>
-      <CompassReadingSmooth>11.1137562</CompassReadingSmooth>
+      <CompassReadingSmooth>11.22642</CompassReadingSmooth>
       <MagneticHeading>359.9099</MagneticHeading>
       <Deviation>-18.34145</Deviation>
-      <DeviationSmooth>-11.2038441</DeviationSmooth>
+      <DeviationSmooth>-11.3165083</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>19.532</CompassReading>
-      <CompassReadingSmooth>12.3686419</CompassReadingSmooth>
+      <CompassReadingSmooth>12.4813061</CompassReadingSmooth>
       <MagneticHeading>1.23692763</MagneticHeading>
       <Deviation>-18.2950726</Deviation>
-      <DeviationSmooth>-11.1317148</DeviationSmooth>
+      <DeviationSmooth>-11.244379</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>20.4571438</CompassReading>
-      <CompassReadingSmooth>13.0652122</CompassReadingSmooth>
+      <CompassReadingSmooth>13.1778755</CompassReadingSmooth>
       <MagneticHeading>2.122126</MagneticHeading>
       <Deviation>-18.3350163</Deviation>
-      <DeviationSmooth>-10.9430857</DeviationSmooth>
+      <DeviationSmooth>-11.05575</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>21.4846153</CompassReading>
-      <CompassReadingSmooth>15.9634819</CompassReadingSmooth>
+      <CompassReadingSmooth>16.0761471</CompassReadingSmooth>
       <MagneticHeading>4.99568367</MagneticHeading>
       <Deviation>-16.4889317</Deviation>
-      <DeviationSmooth>-10.9677982</DeviationSmooth>
+      <DeviationSmooth>-11.0804625</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>22.5</CompassReading>
       <CompassReadingSmooth>22.5</CompassReadingSmooth>
-      <MagneticHeading>11.6143932</MagneticHeading>
-      <Deviation>-10.8856068</Deviation>
-      <DeviationSmooth>-10.8856068</DeviationSmooth>
+      <MagneticHeading>11.4957991</MagneticHeading>
+      <Deviation>-11.0042009</Deviation>
+      <DeviationSmooth>-11.0042009</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>23.5333328</CompassReading>
-      <CompassReadingSmooth>31.4310551</CompassReadingSmooth>
+      <CompassReadingSmooth>31.5496483</CompassReadingSmooth>
       <MagneticHeading>20.95</MagneticHeading>
       <Deviation>-2.58333325</Deviation>
-      <DeviationSmooth>-10.4810543</DeviationSmooth>
+      <DeviationSmooth>-10.5996485</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>24.5</CompassReading>
-      <CompassReadingSmooth>36.10044</CompassReadingSmooth>
+      <CompassReadingSmooth>36.10455</CompassReadingSmooth>
       <MagneticHeading>26</MagneticHeading>
       <Deviation>1.5</Deviation>
-      <DeviationSmooth>-10.10044</DeviationSmooth>
+      <DeviationSmooth>-10.1045513</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>25.2</CompassReading>
-      <CompassReadingSmooth>35.1163139</CompassReadingSmooth>
+      <CompassReadingSmooth>35.1204262</CompassReadingSmooth>
       <MagneticHeading>26</MagneticHeading>
       <Deviation>0.8</Deviation>
-      <DeviationSmooth>-9.116313</DeviationSmooth>
+      <DeviationSmooth>-9.120425</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>26.4666672</CompassReading>
-      <CompassReadingSmooth>28.9577579</CompassReadingSmooth>
+      <CompassReadingSmooth>28.96187</CompassReadingSmooth>
       <MagneticHeading>20.95</MagneticHeading>
       <Deviation>-5.516667</Deviation>
-      <DeviationSmooth>-8.007757</DeviationSmooth>
+      <DeviationSmooth>-8.011869</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>27.5</CompassReading>
-      <CompassReadingSmooth>29.7893314</CompassReadingSmooth>
+      <CompassReadingSmooth>29.7934418</CompassReadingSmooth>
       <MagneticHeading>22.3</MagneticHeading>
       <Deviation>-5.2</Deviation>
-      <DeviationSmooth>-7.48933125</DeviationSmooth>
+      <DeviationSmooth>-7.493443</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>28.3</CompassReading>
-      <CompassReadingSmooth>29.2860527</CompassReadingSmooth>
+      <CompassReadingSmooth>29.2919827</CompassReadingSmooth>
       <MagneticHeading>22.3</MagneticHeading>
       <Deviation>-6</Deviation>
-      <DeviationSmooth>-6.986054</DeviationSmooth>
+      <DeviationSmooth>-6.99198341</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>29.4</CompassReading>
-      <CompassReadingSmooth>22.35232</CompassReadingSmooth>
+      <CompassReadingSmooth>22.35825</CompassReadingSmooth>
       <MagneticHeading>15.9</MagneticHeading>
       <Deviation>-13.5</Deviation>
-      <DeviationSmooth>-6.452321</DeviationSmooth>
+      <DeviationSmooth>-6.45825052</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>30.6</CompassReading>
-      <CompassReadingSmooth>28.237566</CompassReadingSmooth>
+      <CompassReadingSmooth>28.2434959</CompassReadingSmooth>
       <MagneticHeading>22.3</MagneticHeading>
       <Deviation>-8.3</Deviation>
-      <DeviationSmooth>-5.937567</DeviationSmooth>
+      <DeviationSmooth>-5.9434967</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>31.7</CompassReading>
-      <CompassReadingSmooth>27.5408154</CompassReadingSmooth>
+      <CompassReadingSmooth>27.5467453</CompassReadingSmooth>
       <MagneticHeading>22.3</MagneticHeading>
       <Deviation>-9.4</Deviation>
-      <DeviationSmooth>-5.24081659</DeviationSmooth>
+      <DeviationSmooth>-5.246746</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>32.5</CompassReading>
       <CompassReadingSmooth>32.5</CompassReadingSmooth>
-      <MagneticHeading>27.8136311</MagneticHeading>
-      <Deviation>-4.68637</Deviation>
-      <DeviationSmooth>-4.68637</DeviationSmooth>
+      <MagneticHeading>27.8077011</MagneticHeading>
+      <Deviation>-4.69229937</Deviation>
+      <DeviationSmooth>-4.69229937</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>33.65</CompassReading>
-      <CompassReadingSmooth>35.8025322</CompassReadingSmooth>
+      <CompassReadingSmooth>35.8028145</CompassReadingSmooth>
       <MagneticHeading>31.2</MagneticHeading>
       <Deviation>-2.45</Deviation>
-      <DeviationSmooth>-4.60253143</DeviationSmooth>
+      <DeviationSmooth>-4.60281372</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>34.35</CompassReading>
-      <CompassReadingSmooth>36.15809</CompassReadingSmooth>
+      <CompassReadingSmooth>36.15837</CompassReadingSmooth>
       <MagneticHeading>31.2</MagneticHeading>
       <Deviation>-3.15</Deviation>
-      <DeviationSmooth>-4.958087</DeviationSmooth>
+      <DeviationSmooth>-4.95836926</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>35.45</CompassReading>
-      <CompassReadingSmooth>47.0191422</CompassReadingSmooth>
+      <CompassReadingSmooth>47.0194244</CompassReadingSmooth>
       <MagneticHeading>41.55</MagneticHeading>
       <Deviation>6.1</Deviation>
-      <DeviationSmooth>-5.469142</DeviationSmooth>
+      <DeviationSmooth>-5.46942425</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>36.425</CompassReading>
-      <CompassReadingSmooth>47.56676</CompassReadingSmooth>
+      <CompassReadingSmooth>47.5670433</CompassReadingSmooth>
       <MagneticHeading>41.55</MagneticHeading>
       <Deviation>5.125</Deviation>
-      <DeviationSmooth>-6.016761</DeviationSmooth>
+      <DeviationSmooth>-6.017043</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>37.65</CompassReading>
-      <CompassReadingSmooth>36.9421577</CompassReadingSmooth>
+      <CompassReadingSmooth>36.94244</CompassReadingSmooth>
       <MagneticHeading>30.85</MagneticHeading>
       <Deviation>-6.8</Deviation>
-      <DeviationSmooth>-6.09215736</DeviationSmooth>
+      <DeviationSmooth>-6.09244</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>38.5</CompassReading>
-      <CompassReadingSmooth>36.9540634</CompassReadingSmooth>
+      <CompassReadingSmooth>36.9543457</CompassReadingSmooth>
       <MagneticHeading>30.5</MagneticHeading>
       <Deviation>-8</Deviation>
-      <DeviationSmooth>-6.45406246</DeviationSmooth>
+      <DeviationSmooth>-6.45434475</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>39.5</CompassReading>
-      <CompassReadingSmooth>38.6563225</CompassReadingSmooth>
+      <CompassReadingSmooth>38.6566048</CompassReadingSmooth>
       <MagneticHeading>31.8332119</MagneticHeading>
       <Deviation>-7.666789</Deviation>
-      <DeviationSmooth>-6.82311</DeviationSmooth>
+      <DeviationSmooth>-6.82339239</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>40.5</CompassReading>
-      <CompassReadingSmooth>39.0897751</CompassReadingSmooth>
+      <CompassReadingSmooth>39.0900574</CompassReadingSmooth>
       <MagneticHeading>32.5</MagneticHeading>
       <Deviation>-8</Deviation>
-      <DeviationSmooth>-6.58977652</DeviationSmooth>
+      <DeviationSmooth>-6.590059</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>41.7</CompassReading>
-      <CompassReadingSmooth>43.9389839</CompassReadingSmooth>
+      <CompassReadingSmooth>43.9392662</CompassReadingSmooth>
       <MagneticHeading>37.3</MagneticHeading>
       <Deviation>-4.4</Deviation>
-      <DeviationSmooth>-6.638983</DeviationSmooth>
+      <DeviationSmooth>-6.63926554</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>42.7</CompassReading>
-      <CompassReadingSmooth>43.9746971</CompassReadingSmooth>
+      <CompassReadingSmooth>43.97498</CompassReadingSmooth>
       <MagneticHeading>37.3</MagneticHeading>
       <Deviation>-5.4</Deviation>
-      <DeviationSmooth>-6.6746974</DeviationSmooth>
+      <DeviationSmooth>-6.67497969</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>43.275</CompassReading>
@@ -2487,285 +2487,285 @@
     </Point>
     <Point>
       <CompassReading>354.483337</CompassReading>
-      <CompassReadingSmooth>354.06308</CompassReadingSmooth>
+      <CompassReadingSmooth>354.057983</CompassReadingSmooth>
       <MagneticHeading>349.717468</MagneticHeading>
       <Deviation>-4.7658534</Deviation>
-      <DeviationSmooth>-4.34561062</DeviationSmooth>
+      <DeviationSmooth>-4.34051228</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>355.719238</CompassReading>
-      <CompassReadingSmooth>353.3222</CompassReadingSmooth>
+      <CompassReadingSmooth>353.313568</CompassReadingSmooth>
       <MagneticHeading>348.5676</MagneticHeading>
       <Deviation>-7.15164328</Deviation>
-      <DeviationSmooth>-4.75462341</DeviationSmooth>
+      <DeviationSmooth>-4.74596643</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>356.34</CompassReading>
-      <CompassReadingSmooth>1.17617548</CompassReadingSmooth>
+      <CompassReadingSmooth>1.1675185</CompassReadingSmooth>
       <MagneticHeading>355.85</MagneticHeading>
       <Deviation>-0.49</Deviation>
-      <DeviationSmooth>-5.32616949</DeviationSmooth>
+      <DeviationSmooth>-5.31751251</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>357.6</CompassReading>
-      <CompassReadingSmooth>358.294067</CompassReadingSmooth>
+      <CompassReadingSmooth>358.2854</CompassReadingSmooth>
       <MagneticHeading>352.470154</MagneticHeading>
       <Deviation>-5.129842</Deviation>
-      <DeviationSmooth>-5.82390642</DeviationSmooth>
+      <DeviationSmooth>-5.81524944</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>358.45</CompassReading>
-      <CompassReadingSmooth>358.891968</CompassReadingSmooth>
+      <CompassReadingSmooth>358.8833</CompassReadingSmooth>
       <MagneticHeading>352.470154</MagneticHeading>
       <Deviation>-5.979842</Deviation>
-      <DeviationSmooth>-6.421806</DeviationSmooth>
+      <DeviationSmooth>-6.413149</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>359.5</CompassReading>
-      <CompassReadingSmooth>1.196678</CompassReadingSmooth>
+      <CompassReadingSmooth>1.18802106</CompassReadingSmooth>
       <MagneticHeading>354.05</MagneticHeading>
       <Deviation>-5.45</Deviation>
-      <DeviationSmooth>-7.14669037</DeviationSmooth>
+      <DeviationSmooth>-7.13803339</DeviationSmooth>
     </Point>
   </CalibrationDataFromCompassReading>
   <CalibrationDataToCompassReading>
     <Point>
-      <CompassReading>10.325</CompassReading>
-      <CompassReadingSmooth>14.0116129</CompassReadingSmooth>
-      <MagneticHeading>1.419256</MagneticHeading>
-      <Deviation>-8.905744</Deviation>
-      <DeviationSmooth>-12.5923567</DeviationSmooth>
+      <CompassReading>13.5</CompassReading>
+      <CompassReadingSmooth>13.5</CompassReadingSmooth>
+      <MagneticHeading>0.448064953</MagneticHeading>
+      <Deviation>-13.0519352</Deviation>
+      <DeviationSmooth>-13.0519352</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>10.325</CompassReading>
-      <CompassReadingSmooth>14.0116129</CompassReadingSmooth>
+      <CompassReadingSmooth>14.0922089</CompassReadingSmooth>
       <MagneticHeading>1.419256</MagneticHeading>
       <Deviation>-8.905744</Deviation>
-      <DeviationSmooth>-12.5923567</DeviationSmooth>
+      <DeviationSmooth>-12.6729527</DeviationSmooth>
     </Point>
     <Point>
-      <CompassReading>13.583333</CompassReading>
-      <CompassReadingSmooth>15.7694035</CompassReadingSmooth>
-      <MagneticHeading>2.8210423</MagneticHeading>
-      <Deviation>-10.762291</Deviation>
-      <DeviationSmooth>-12.94836</DeviationSmooth>
+      <CompassReading>20.4571438</CompassReading>
+      <CompassReadingSmooth>13.1778755</CompassReadingSmooth>
+      <MagneticHeading>2.122126</MagneticHeading>
+      <Deviation>-18.3350163</Deviation>
+      <DeviationSmooth>-11.05575</DeviationSmooth>
     </Point>
     <Point>
-      <CompassReading>13.583333</CompassReading>
-      <CompassReadingSmooth>15.7694035</CompassReadingSmooth>
-      <MagneticHeading>2.8210423</MagneticHeading>
-      <Deviation>-10.762291</Deviation>
-      <DeviationSmooth>-12.94836</DeviationSmooth>
-    </Point>
-    <Point>
-      <CompassReading>21.4846153</CompassReading>
-      <CompassReadingSmooth>15.9634819</CompassReadingSmooth>
-      <MagneticHeading>4.99568367</MagneticHeading>
-      <Deviation>-16.4889317</Deviation>
-      <DeviationSmooth>-10.9677982</DeviationSmooth>
+      <CompassReading>20.4571438</CompassReading>
+      <CompassReadingSmooth>13.1778755</CompassReadingSmooth>
+      <MagneticHeading>2.122126</MagneticHeading>
+      <Deviation>-18.3350163</Deviation>
+      <DeviationSmooth>-11.05575</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>21.4846153</CompassReading>
-      <CompassReadingSmooth>15.9634819</CompassReadingSmooth>
+      <CompassReadingSmooth>16.0761471</CompassReadingSmooth>
       <MagneticHeading>4.99568367</MagneticHeading>
       <Deviation>-16.4889317</Deviation>
-      <DeviationSmooth>-10.9677982</DeviationSmooth>
+      <DeviationSmooth>-11.0804625</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>21.4846153</CompassReading>
-      <CompassReadingSmooth>15.9634819</CompassReadingSmooth>
+      <CompassReadingSmooth>16.0761471</CompassReadingSmooth>
       <MagneticHeading>4.99568367</MagneticHeading>
       <Deviation>-16.4889317</Deviation>
-      <DeviationSmooth>-10.9677982</DeviationSmooth>
+      <DeviationSmooth>-11.0804625</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>21.4846153</CompassReading>
-      <CompassReadingSmooth>15.9634819</CompassReadingSmooth>
+      <CompassReadingSmooth>16.0761471</CompassReadingSmooth>
       <MagneticHeading>4.99568367</MagneticHeading>
       <Deviation>-16.4889317</Deviation>
-      <DeviationSmooth>-10.9677982</DeviationSmooth>
+      <DeviationSmooth>-11.0804625</DeviationSmooth>
+    </Point>
+    <Point>
+      <CompassReading>21.4846153</CompassReading>
+      <CompassReadingSmooth>16.0761471</CompassReadingSmooth>
+      <MagneticHeading>4.99568367</MagneticHeading>
+      <Deviation>-16.4889317</Deviation>
+      <DeviationSmooth>-11.0804625</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>22.5</CompassReading>
       <CompassReadingSmooth>22.5</CompassReadingSmooth>
-      <MagneticHeading>11.6143932</MagneticHeading>
-      <Deviation>-10.8856068</Deviation>
-      <DeviationSmooth>-10.8856068</DeviationSmooth>
+      <MagneticHeading>11.4957991</MagneticHeading>
+      <Deviation>-11.0042009</Deviation>
+      <DeviationSmooth>-11.0042009</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>22.5</CompassReading>
       <CompassReadingSmooth>22.5</CompassReadingSmooth>
-      <MagneticHeading>11.6143932</MagneticHeading>
-      <Deviation>-10.8856068</Deviation>
-      <DeviationSmooth>-10.8856068</DeviationSmooth>
+      <MagneticHeading>11.4957991</MagneticHeading>
+      <Deviation>-11.0042009</Deviation>
+      <DeviationSmooth>-11.0042009</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>22.5</CompassReading>
       <CompassReadingSmooth>22.5</CompassReadingSmooth>
-      <MagneticHeading>11.6143932</MagneticHeading>
-      <Deviation>-10.8856068</Deviation>
-      <DeviationSmooth>-10.8856068</DeviationSmooth>
+      <MagneticHeading>11.4957991</MagneticHeading>
+      <Deviation>-11.0042009</Deviation>
+      <DeviationSmooth>-11.0042009</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>22.5</CompassReading>
       <CompassReadingSmooth>22.5</CompassReadingSmooth>
-      <MagneticHeading>11.6143932</MagneticHeading>
-      <Deviation>-10.8856068</Deviation>
-      <DeviationSmooth>-10.8856068</DeviationSmooth>
+      <MagneticHeading>11.4957991</MagneticHeading>
+      <Deviation>-11.0042009</Deviation>
+      <DeviationSmooth>-11.0042009</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>22.5</CompassReading>
       <CompassReadingSmooth>22.5</CompassReadingSmooth>
-      <MagneticHeading>11.6143932</MagneticHeading>
-      <Deviation>-10.8856068</Deviation>
-      <DeviationSmooth>-10.8856068</DeviationSmooth>
+      <MagneticHeading>11.4957991</MagneticHeading>
+      <Deviation>-11.0042009</Deviation>
+      <DeviationSmooth>-11.0042009</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>22.5</CompassReading>
       <CompassReadingSmooth>22.5</CompassReadingSmooth>
-      <MagneticHeading>11.6143932</MagneticHeading>
-      <Deviation>-10.8856068</Deviation>
-      <DeviationSmooth>-10.8856068</DeviationSmooth>
+      <MagneticHeading>11.4957991</MagneticHeading>
+      <Deviation>-11.0042009</Deviation>
+      <DeviationSmooth>-11.0042009</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>29.4</CompassReading>
-      <CompassReadingSmooth>22.35232</CompassReadingSmooth>
+      <CompassReadingSmooth>22.35825</CompassReadingSmooth>
       <MagneticHeading>15.9</MagneticHeading>
       <Deviation>-13.5</Deviation>
-      <DeviationSmooth>-6.452321</DeviationSmooth>
+      <DeviationSmooth>-6.45825052</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>29.4</CompassReading>
-      <CompassReadingSmooth>22.35232</CompassReadingSmooth>
+      <CompassReadingSmooth>22.35825</CompassReadingSmooth>
       <MagneticHeading>15.9</MagneticHeading>
       <Deviation>-13.5</Deviation>
-      <DeviationSmooth>-6.452321</DeviationSmooth>
+      <DeviationSmooth>-6.45825052</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>29.4</CompassReading>
-      <CompassReadingSmooth>22.35232</CompassReadingSmooth>
+      <CompassReadingSmooth>22.35825</CompassReadingSmooth>
       <MagneticHeading>15.9</MagneticHeading>
       <Deviation>-13.5</Deviation>
-      <DeviationSmooth>-6.452321</DeviationSmooth>
+      <DeviationSmooth>-6.45825052</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>29.4</CompassReading>
-      <CompassReadingSmooth>22.35232</CompassReadingSmooth>
+      <CompassReadingSmooth>22.35825</CompassReadingSmooth>
       <MagneticHeading>15.9</MagneticHeading>
       <Deviation>-13.5</Deviation>
-      <DeviationSmooth>-6.452321</DeviationSmooth>
+      <DeviationSmooth>-6.45825052</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>23.5333328</CompassReading>
-      <CompassReadingSmooth>31.4310551</CompassReadingSmooth>
+      <CompassReadingSmooth>31.5496483</CompassReadingSmooth>
       <MagneticHeading>20.95</MagneticHeading>
       <Deviation>-2.58333325</Deviation>
-      <DeviationSmooth>-10.4810543</DeviationSmooth>
+      <DeviationSmooth>-10.5996485</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>23.5333328</CompassReading>
-      <CompassReadingSmooth>31.4310551</CompassReadingSmooth>
+      <CompassReadingSmooth>31.5496483</CompassReadingSmooth>
       <MagneticHeading>20.95</MagneticHeading>
       <Deviation>-2.58333325</Deviation>
-      <DeviationSmooth>-10.4810543</DeviationSmooth>
+      <DeviationSmooth>-10.5996485</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>23.5333328</CompassReading>
-      <CompassReadingSmooth>31.4310551</CompassReadingSmooth>
+      <CompassReadingSmooth>31.5496483</CompassReadingSmooth>
       <MagneticHeading>20.95</MagneticHeading>
       <Deviation>-2.58333325</Deviation>
-      <DeviationSmooth>-10.4810543</DeviationSmooth>
+      <DeviationSmooth>-10.5996485</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>23.5333328</CompassReading>
-      <CompassReadingSmooth>31.4310551</CompassReadingSmooth>
+      <CompassReadingSmooth>31.5496483</CompassReadingSmooth>
       <MagneticHeading>20.95</MagneticHeading>
       <Deviation>-2.58333325</Deviation>
-      <DeviationSmooth>-10.4810543</DeviationSmooth>
+      <DeviationSmooth>-10.5996485</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>27.5</CompassReading>
-      <CompassReadingSmooth>29.7893314</CompassReadingSmooth>
+      <CompassReadingSmooth>29.7934418</CompassReadingSmooth>
       <MagneticHeading>22.3</MagneticHeading>
       <Deviation>-5.2</Deviation>
-      <DeviationSmooth>-7.48933125</DeviationSmooth>
+      <DeviationSmooth>-7.493443</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>27.5</CompassReading>
-      <CompassReadingSmooth>29.7893314</CompassReadingSmooth>
+      <CompassReadingSmooth>29.7934418</CompassReadingSmooth>
       <MagneticHeading>22.3</MagneticHeading>
       <Deviation>-5.2</Deviation>
-      <DeviationSmooth>-7.48933125</DeviationSmooth>
+      <DeviationSmooth>-7.493443</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>24.5</CompassReading>
-      <CompassReadingSmooth>36.10044</CompassReadingSmooth>
+      <CompassReadingSmooth>36.10455</CompassReadingSmooth>
       <MagneticHeading>26</MagneticHeading>
       <Deviation>1.5</Deviation>
-      <DeviationSmooth>-10.10044</DeviationSmooth>
+      <DeviationSmooth>-10.1045513</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>24.5</CompassReading>
-      <CompassReadingSmooth>36.10044</CompassReadingSmooth>
+      <CompassReadingSmooth>36.10455</CompassReadingSmooth>
       <MagneticHeading>26</MagneticHeading>
       <Deviation>1.5</Deviation>
-      <DeviationSmooth>-10.10044</DeviationSmooth>
+      <DeviationSmooth>-10.1045513</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>24.5</CompassReading>
-      <CompassReadingSmooth>36.10044</CompassReadingSmooth>
+      <CompassReadingSmooth>36.10455</CompassReadingSmooth>
       <MagneticHeading>26</MagneticHeading>
       <Deviation>1.5</Deviation>
-      <DeviationSmooth>-10.10044</DeviationSmooth>
+      <DeviationSmooth>-10.1045513</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>32.5</CompassReading>
       <CompassReadingSmooth>32.5</CompassReadingSmooth>
-      <MagneticHeading>27.8136311</MagneticHeading>
-      <Deviation>-4.68637</Deviation>
-      <DeviationSmooth>-4.68637</DeviationSmooth>
+      <MagneticHeading>27.8077011</MagneticHeading>
+      <Deviation>-4.69229937</Deviation>
+      <DeviationSmooth>-4.69229937</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>32.5</CompassReading>
       <CompassReadingSmooth>32.5</CompassReadingSmooth>
-      <MagneticHeading>27.8136311</MagneticHeading>
-      <Deviation>-4.68637</Deviation>
-      <DeviationSmooth>-4.68637</DeviationSmooth>
+      <MagneticHeading>27.8077011</MagneticHeading>
+      <Deviation>-4.69229937</Deviation>
+      <DeviationSmooth>-4.69229937</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>37.65</CompassReading>
-      <CompassReadingSmooth>36.9421577</CompassReadingSmooth>
+      <CompassReadingSmooth>36.94244</CompassReadingSmooth>
       <MagneticHeading>30.85</MagneticHeading>
       <Deviation>-6.8</Deviation>
-      <DeviationSmooth>-6.09215736</DeviationSmooth>
+      <DeviationSmooth>-6.09244</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>37.65</CompassReading>
-      <CompassReadingSmooth>36.9421577</CompassReadingSmooth>
+      <CompassReadingSmooth>36.94244</CompassReadingSmooth>
       <MagneticHeading>30.85</MagneticHeading>
       <Deviation>-6.8</Deviation>
-      <DeviationSmooth>-6.09215736</DeviationSmooth>
+      <DeviationSmooth>-6.09244</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>33.65</CompassReading>
-      <CompassReadingSmooth>35.8025322</CompassReadingSmooth>
+      <CompassReadingSmooth>35.8028145</CompassReadingSmooth>
       <MagneticHeading>31.2</MagneticHeading>
       <Deviation>-2.45</Deviation>
-      <DeviationSmooth>-4.60253143</DeviationSmooth>
+      <DeviationSmooth>-4.60281372</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>40.5</CompassReading>
-      <CompassReadingSmooth>39.0897751</CompassReadingSmooth>
+      <CompassReadingSmooth>39.0900574</CompassReadingSmooth>
       <MagneticHeading>32.5</MagneticHeading>
       <Deviation>-8</Deviation>
-      <DeviationSmooth>-6.58977652</DeviationSmooth>
+      <DeviationSmooth>-6.590059</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>40.5</CompassReading>
-      <CompassReadingSmooth>39.0897751</CompassReadingSmooth>
+      <CompassReadingSmooth>39.0900574</CompassReadingSmooth>
       <MagneticHeading>32.5</MagneticHeading>
       <Deviation>-8</Deviation>
-      <DeviationSmooth>-6.58977652</DeviationSmooth>
+      <DeviationSmooth>-6.590059</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>43.275</CompassReading>
@@ -2790,17 +2790,17 @@
     </Point>
     <Point>
       <CompassReading>41.7</CompassReading>
-      <CompassReadingSmooth>43.9389839</CompassReadingSmooth>
+      <CompassReadingSmooth>43.9392662</CompassReadingSmooth>
       <MagneticHeading>37.3</MagneticHeading>
       <Deviation>-4.4</Deviation>
-      <DeviationSmooth>-6.638983</DeviationSmooth>
+      <DeviationSmooth>-6.63926554</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>41.7</CompassReading>
-      <CompassReadingSmooth>43.9389839</CompassReadingSmooth>
+      <CompassReadingSmooth>43.9392662</CompassReadingSmooth>
       <MagneticHeading>37.3</MagneticHeading>
       <Deviation>-4.4</Deviation>
-      <DeviationSmooth>-6.638983</DeviationSmooth>
+      <DeviationSmooth>-6.63926554</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>47.5</CompassReading>
@@ -2818,10 +2818,10 @@
     </Point>
     <Point>
       <CompassReading>35.45</CompassReading>
-      <CompassReadingSmooth>47.0191422</CompassReadingSmooth>
+      <CompassReadingSmooth>47.0194244</CompassReadingSmooth>
       <MagneticHeading>41.55</MagneticHeading>
       <Deviation>6.1</Deviation>
-      <DeviationSmooth>-5.469142</DeviationSmooth>
+      <DeviationSmooth>-5.46942425</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>50.8</CompassReading>
@@ -4974,10 +4974,10 @@
     </Point>
     <Point>
       <CompassReading>354.483337</CompassReading>
-      <CompassReadingSmooth>354.06308</CompassReadingSmooth>
+      <CompassReadingSmooth>354.057983</CompassReadingSmooth>
       <MagneticHeading>349.717468</MagneticHeading>
       <Deviation>-4.7658534</Deviation>
-      <DeviationSmooth>-4.34561062</DeviationSmooth>
+      <DeviationSmooth>-4.34051228</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>0.5</CompassReading>
@@ -4995,10 +4995,10 @@
     </Point>
     <Point>
       <CompassReading>357.6</CompassReading>
-      <CompassReadingSmooth>358.294067</CompassReadingSmooth>
+      <CompassReadingSmooth>358.2854</CompassReadingSmooth>
       <MagneticHeading>352.470154</MagneticHeading>
       <Deviation>-5.129842</Deviation>
-      <DeviationSmooth>-5.82390642</DeviationSmooth>
+      <DeviationSmooth>-5.81524944</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>1.5</CompassReading>
@@ -5017,37 +5017,37 @@
     <Point>
       <CompassReading>4.5</CompassReading>
       <CompassReadingSmooth>4.5</CompassReadingSmooth>
-      <MagneticHeading>355.6647</MagneticHeading>
-      <Deviation>-8.835283</Deviation>
-      <DeviationSmooth>-8.835283</DeviationSmooth>
+      <MagneticHeading>355.771759</MagneticHeading>
+      <Deviation>-8.728227</Deviation>
+      <DeviationSmooth>-8.728227</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>5.5</CompassReading>
       <CompassReadingSmooth>5.5</CompassReadingSmooth>
-      <MagneticHeading>356.0507</MagneticHeading>
-      <Deviation>-9.449296</Deviation>
-      <DeviationSmooth>-9.449296</DeviationSmooth>
+      <MagneticHeading>356.125458</MagneticHeading>
+      <Deviation>-9.374557</Deviation>
+      <DeviationSmooth>-9.374557</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>9.362963</CompassReading>
-      <CompassReadingSmooth>9.269159</CompassReadingSmooth>
+      <CompassReadingSmooth>9.319077</CompassReadingSmooth>
       <MagneticHeading>357.290375</MagneticHeading>
       <Deviation>-12.0725765</Deviation>
-      <DeviationSmooth>-11.9787846</DeviationSmooth>
+      <DeviationSmooth>-12.0287018</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>11.4428568</CompassReading>
-      <CompassReadingSmooth>11.8550777</CompassReadingSmooth>
+      <CompassReadingSmooth>11.9531374</CompassReadingSmooth>
       <MagneticHeading>358.913422</MagneticHeading>
       <Deviation>-12.529438</Deviation>
-      <DeviationSmooth>-12.9416561</DeviationSmooth>
+      <DeviationSmooth>-13.0397158</DeviationSmooth>
     </Point>
     <Point>
       <CompassReading>16.4606056</CompassReading>
-      <CompassReadingSmooth>11.0700436</CompassReadingSmooth>
+      <CompassReadingSmooth>11.1827078</CompassReadingSmooth>
       <MagneticHeading>359.292084</MagneticHeading>
       <Deviation>-17.1685257</Deviation>
-      <DeviationSmooth>-11.77796</DeviationSmooth>
+      <DeviationSmooth>-11.890624</DeviationSmooth>
     </Point>
   </CalibrationDataToCompassReading>
 </CompassCalibration>
