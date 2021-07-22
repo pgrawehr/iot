@@ -115,11 +115,13 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         /// <param name="roll">Roll angle (positive right or left wing up)</param>
         /// <param name="pitch">Pitch angle (positive nose up)</param>
+        /// <param name="yaw">Yaw angle (heading)</param>
         /// <returns>A measurement sequence ready to send</returns>
-        public static TransducerMeasurement FromRollAndPitch(Angle roll, Angle pitch)
+        public static TransducerMeasurement FromRollAndPitch(Angle roll, Angle pitch, Angle yaw)
         {
-            TransducerDataSet ds1 = new TransducerDataSet("A", roll.Normalize(false).Degrees, "D", "ROLL");
-            TransducerDataSet ds2 = new TransducerDataSet("A", pitch.Normalize(false).Degrees, "D", "PITCH");
+            TransducerDataSet ds1 = new TransducerDataSet("A", roll.Normalize(false).Degrees, "D", "Roll");
+            TransducerDataSet ds2 = new TransducerDataSet("A", pitch.Normalize(false).Degrees, "D", "Pitch");
+            TransducerDataSet ds3 = new TransducerDataSet("A", yaw.Normalize(false).Degrees, "D", "Yaw");
             return new TransducerMeasurement(new[] { ds1, ds2 });
         }
 
