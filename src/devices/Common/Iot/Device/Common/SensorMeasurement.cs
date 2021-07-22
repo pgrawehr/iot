@@ -58,10 +58,10 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement AirTemperatureOutside = new SensorMeasurement("Outside Air temperature", Temperature.Zero, SensorSource.Air);
         public static readonly SensorMeasurement AirPressureRawOutside = new SensorMeasurement("Outside Raw Pressure", Pressure.Zero, SensorSource.Air);
         public static readonly SensorMeasurement AirPressureBarometricOutside = new SensorMeasurement("Outside Barometric Pressure", Pressure.Zero, SensorSource.Air, 2);
-        public static readonly SensorMeasurement AirHumidityOutside = new SensorMeasurement("Outside Humidity", Ratio.Zero, SensorSource.Air);
+        public static readonly SensorMeasurement AirHumidityOutside = new SensorMeasurement("Outside Humidity", RelativeHumidity.Zero, SensorSource.Air);
         public static readonly SensorMeasurement AirTemperatureInside = new SensorMeasurement("Inside Air Temperature", Temperature.Zero, SensorSource.Air, -1);
         public static readonly SensorMeasurement AirPressureRawInside = new SensorMeasurement("Inside Raw Pressure", Pressure.Zero, SensorSource.Air, -1);
-        public static readonly SensorMeasurement AirHumidityInside = new SensorMeasurement("Inside Humidity", Ratio.Zero, SensorSource.Air, -1);
+        public static readonly SensorMeasurement AirHumidityInside = new SensorMeasurement("Inside Humidity", RelativeHumidity.Zero, SensorSource.Air, -1);
         public static readonly SensorMeasurement AirSpeed = new SensorMeasurement("Air Speed", Angle.Zero, SensorSource.Air);
         public static readonly SensorMeasurement WindSpeedApparent = new SensorMeasurement("Apparent Wind Speed", Speed.Zero, SensorSource.WindRelative);
         public static readonly SensorMeasurement WindDirectionApparent = new SensorMeasurement("Apparent Wind Direction", Angle.Zero, SensorSource.WindRelative);

@@ -458,7 +458,7 @@ namespace DisplayControl
             }
 
             var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees(value.Y),
-                Angle.FromDegrees(value.Z));
+                Angle.FromDegrees(value.Z), Angle.FromDegrees(value.X));
             _router.SendSentence(attitude);
 
             //// If the above doesn't work, try this instead (See also the engine data below, this is actually an NMEA-2000 sequence)

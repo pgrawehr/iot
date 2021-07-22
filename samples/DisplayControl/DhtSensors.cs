@@ -20,7 +20,7 @@ namespace DisplayControl
         public DhtSensors(MeasurementManager manager)
         : base(manager, TimeSpan.FromSeconds(5))
         {
-            _engineHumidity = new SensorMeasurement("Engine room humidity", Ratio.Zero, SensorSource.Engine); // Just because we have that sensor - not because it's useful
+            _engineHumidity = new SensorMeasurement("Engine room humidity", RelativeHumidity.Zero, SensorSource.Engine); // Just because we have that sensor - not because it's useful
         }
         
         public override void Init(GpioController gpioController)
