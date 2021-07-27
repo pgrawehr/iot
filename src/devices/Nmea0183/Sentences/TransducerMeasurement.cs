@@ -122,7 +122,7 @@ namespace Iot.Device.Nmea0183.Sentences
             TransducerDataSet ds1 = new TransducerDataSet("A", roll.Normalize(false).Degrees, "D", "Roll");
             TransducerDataSet ds2 = new TransducerDataSet("A", pitch.Normalize(false).Degrees, "D", "Pitch");
             TransducerDataSet ds3 = new TransducerDataSet("A", yaw.Normalize(false).Degrees, "D", "Yaw");
-            return new TransducerMeasurement(new[] { ds1, ds2 });
+            return new TransducerMeasurement(new[] { ds1, ds2, ds3 });
         }
 
         /// <summary>

@@ -74,6 +74,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// - ENV_INSIDE_H
         /// - PTCH, PITCH
         /// - ROLL
+        /// - YAW
         /// - ENGT - Engine temperature
         /// - FUEL
         /// - FRESHWATER
