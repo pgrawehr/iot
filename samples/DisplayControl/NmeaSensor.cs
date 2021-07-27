@@ -394,11 +394,21 @@ namespace DisplayControl
                     _manager.UpdateValues(new[] { SensorMeasurement.SpeedOverGround, SensorMeasurement.Track },
                         new IQuantity[] { vtg.Speed, vtg.CourseOverGroundTrue });
                     break;
-                case WindSpeedAndAngle mwv when mwv.Relative && mwv.Valid:
+                case WindSpeedAndAngle mwv when mwv.Relative:
                 {
-                    _manager.UpdateValues(
+                    if (mwv.Valid)
+                    {
+                        _manager.UpdateValues(
                             new[] {SensorMeasurement.WindSpeedApparent, SensorMeasurement.WindDirectionApparent},
                             new IQuantity[] {mwv.Speed.ToUnit(SpeedUnit.Knot), mwv.Angle});
+                    }
+                    else
+                    {
+                        _manager.UpdateValue(SensorMeasurement.WindSpeedApparent, Speed.Zero,
+                            SensorMeasurementStatus.SensorError);
+                        _manager.UpdateValue(SensorMeasurement.WindDirectionApparent, Angle.Zero,
+                            SensorMeasurementStatus.SensorError);
+                    }
 
                     break;
                 }
@@ -460,24 +470,6 @@ namespace DisplayControl
             var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees(value.Y),
                 Angle.FromDegrees(value.Z), Angle.FromDegrees(value.X));
             _router.SendSentence(attitude);
-
-            //// If the above doesn't work, try this instead (See also the engine data below, this is actually an NMEA-2000 sequence)
-            //// $PCDIN,01F119,000C76CA,09,3DFF7F86FFBF00FF*5B
-            //// TODO: This doesn't work either
-            //string sequenceNoText = (_sequence % 256).ToString("X2", CultureInfo.InvariantCulture);
-            //_sequence++;
-            //string yawText = ConvertAngle(value.X);
-            //string pitchText = ConvertAngle(value.Z);
-            //string rollText = ConvertAngle(value.Y);
-            //string timeStampText = Environment.TickCount.ToString("X8", CultureInfo.InvariantCulture);
-            //var rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
-            //{
-            //    "01F119",
-            //    timeStampText,
-            //    "02",
-            //    sequenceNoText + yawText + pitchText + rollText + "FF"
-            //}, DateTimeOffset.UtcNow);
-            //_router.SendSentence(rs);
         }
 
         //private string ConvertAngle(double angle)

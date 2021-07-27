@@ -251,6 +251,11 @@ namespace Iot.Device.Common
             measurement.UpdateValue(newValue);
         }
 
+        public void UpdateValue(SensorMeasurement measurement, IQuantity newValue, SensorMeasurementStatus status)
+        {
+            measurement.UpdateValue(newValue, status);
+        }
+
         public void UpdateValue<T>(SensorMeasurement measurement, T newValue)
         where T : struct
         {
