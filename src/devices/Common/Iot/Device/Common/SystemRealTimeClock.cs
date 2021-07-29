@@ -25,22 +25,25 @@ namespace Iot.Device.Common
         /// The time must be given in utc.
         /// The method requires elevated permissions. On Windows, the calling user must either be administrator or the right
         /// "Change the system clock" must have been granted to the "Users" group (in Security policy management).
+        /// On Unix, the current user must be root or it must be able to sudo without password.
         /// </summary>
         /// <param name="dt">Date/time to set the system clock to. This must be in UTC</param>
-        /// <returns>True on success, false on failure. This fails if the current user has insufficient rights to set the system clock. </returns>
-        public static bool SetSystemTimeUtc(DateTime dt)
+        /// <exception cref="PlatformNotSupportedException">This method is not supported on this platform</exception>
+        /// <exception cref="IOException">There was an error executing a system command</exception>
+        /// <exception cref="UnauthorizedAccessException">The user does not have permissions to set the system clock</exception>
+        public static void SetSystemTimeUtc(DateTime dt)
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                return SetSystemTimeUtcWindows(dt);
+                SetSystemTimeUtcWindows(dt);
             }
             else if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
-                return SetDateTimeUtcUnix(dt);
+                SetDateTimeUtcUnix(dt);
             }
             else
             {
-                return false;
+                throw new PlatformNotSupportedException($"No implementation available for {Environment.OSVersion}");
             }
         }
 
@@ -48,65 +51,59 @@ namespace Iot.Device.Common
         /// Gets the current system time directly using OS calls.
         /// Normally, this should return the same as <see cref="DateTime.UtcNow"/>
         /// </summary>
-        /// <param name="dt">[Out] The current system time in UTC if the call succeeds</param>
-        /// <returns>True on success, false otherwise</returns>
-        public static bool GetSystemTimeUtc(out DateTime dt)
+        /// <returns>The current system time</returns>
+        public static DateTime GetSystemTimeUtc()
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                return GetSystemTimeUtcWindows(out dt);
+                return GetSystemTimeUtcWindows();
             }
             else if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
-                return GetDateTimeUtcUnix(out dt);
+                return GetDateTimeUtcUnix();
             }
             else
             {
-                dt = default;
-                return false;
+                throw new PlatformNotSupportedException($"No implementation available for {Environment.OSVersion}");
             }
         }
 
-        private static bool SetSystemTimeUtcWindows(DateTime dt)
+        private static void SetSystemTimeUtcWindows(DateTime dt)
         {
-            bool isSuccess = false;
             NativeMethods.SystemTime st = DateTimeToSystemTime(dt);
             try
             {
-                isSuccess = NativeMethods.SetSystemTime(ref st);
+                if (!NativeMethods.SetSystemTime(ref st))
+                {
+                    throw new IOException("SetSystemTime returned an unspecified error");
+                }
             }
-            catch (System.UnauthorizedAccessException)
+            catch (System.Security.SecurityException x)
             {
-                isSuccess = false;
+                throw new UnauthorizedAccessException("Permission denied for setting the clock", x);
             }
-            catch (System.Security.SecurityException)
-            {
-                isSuccess = false;
-            }
-
-            return isSuccess;
         }
 
-        private static bool GetSystemTimeUtcWindows(out DateTime dt)
+        private static DateTime GetSystemTimeUtcWindows()
         {
-            bool isSuccess = false;
             NativeMethods.SystemTime st;
-            dt = default;
+
+            DateTime dt;
             try
             {
-                isSuccess = NativeMethods.GetSystemTime(out st);
+                if (!NativeMethods.GetSystemTime(out st))
+                {
+                    throw new IOException("GetSystemTime returned an unspecified error");
+                }
+
                 dt = SystemTimeToDateTime(ref st);
             }
-            catch (System.UnauthorizedAccessException)
+            catch (System.Security.SecurityException x)
             {
-                isSuccess = false;
-            }
-            catch (System.Security.SecurityException)
-            {
-                isSuccess = false;
+                throw new UnauthorizedAccessException("Permission denied for getting the clock", x);
             }
 
-            return isSuccess;
+            return dt;
         }
 
         private static NativeMethods.SystemTime DateTimeToSystemTime(DateTime dt)
@@ -130,39 +127,22 @@ namespace Iot.Device.Common
             return new DateTime(st.Year, st.Month, st.Day, st.Hour, st.Minute, st.Second, st.Milliseconds);
         }
 
-        private static bool GetDateTimeUtcUnix(out DateTime dt)
+        private static DateTime GetDateTimeUtcUnix()
         {
-            try
+            string date = RunDateCommandUnix("-u +%s.%N", false); // Floating point seconds since epoch
+            if (Double.TryParse(date, NumberStyles.Any, CultureInfo.InvariantCulture, out var result))
             {
-                string date = RunDateCommandUnix("-u +%s.%N", false); // Floating point seconds since epoch
-                if (Double.TryParse(date, NumberStyles.Any, CultureInfo.InvariantCulture, out var result))
-                {
-                    dt = UnixEpochStart + TimeSpan.FromSeconds(result);
-                    return true;
-                }
+                DateTime dt = UnixEpochStart + TimeSpan.FromSeconds(result);
+                return dt;
+            }
 
-                dt = default;
-                return false;
-            }
-            catch (IOException)
-            {
-                dt = default;
-                return false;
-            }
+            throw new IOException($"The return value of the date command could not be parsed: {date} (seconds since 01/01/1970)");
         }
 
-        private static bool SetDateTimeUtcUnix(DateTime dt)
+        private static void SetDateTimeUtcUnix(DateTime dt)
         {
             string formattedTime = dt.ToString("yyyy-MM-dd HH:mm:ss.fffff", CultureInfo.InvariantCulture);
-            try
-            {
-                RunDateCommandUnix($"-u -s '{formattedTime}'", true);
-                return true;
-            }
-            catch (IOException)
-            {
-                return false;
-            }
+            RunDateCommandUnix($"-u -s '{formattedTime}'", true);
         }
 
         private static string RunDateCommandUnix(string commandLine, bool asRoot)
@@ -187,7 +167,7 @@ namespace Iot.Device.Common
 
                 if (process.ExitCode != 0)
                 {
-                    throw new IOException($"Error running date command. Error {process.ExitCode}: {errorData}");
+                    throw new UnauthorizedAccessException($"Error running date command. Error {process.ExitCode}: {errorData}");
                 }
             }
 

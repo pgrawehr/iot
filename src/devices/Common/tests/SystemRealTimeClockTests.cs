@@ -12,7 +12,7 @@ namespace Common.Tests
         public void GetSystemTimeReturnsCorrectTime()
         {
             DateTime shouldBe = DateTime.UtcNow;
-            Assert.True(SystemRealTimeClock.GetSystemTimeUtc(out var actual));
+            DateTime actual = SystemRealTimeClock.GetSystemTimeUtc();
             Assert.True((shouldBe - actual).Duration() < TimeSpan.FromSeconds(2));
         }
     }

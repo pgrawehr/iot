@@ -61,27 +61,14 @@ namespace Common.Samples.Test
 
         private static void GetSystemTime()
         {
-            if (SystemRealTimeClock.GetSystemTimeUtc(out DateTime dt))
-            {
-                Console.WriteLine($"The system time is now {dt}");
-            }
-            else
-            {
-                Console.WriteLine("The system time couldn't be read");
-            }
+            DateTime dt = SystemRealTimeClock.GetSystemTimeUtc();
+            Console.WriteLine($"The system time is now {dt}");
 
             DateTime newTime = new DateTime(2019, 4, 3, 20, 10, 10);
             Console.WriteLine($"Do you want to set the time to {newTime}?");
             if (Console.ReadLine()!.StartsWith("y"))
             {
-                if (!SystemRealTimeClock.SetSystemTimeUtc(newTime))
-                {
-                    Console.WriteLine("That didn't work");
-                }
-                else
-                {
-                    Console.WriteLine("That worked!");
-                }
+                SystemRealTimeClock.SetSystemTimeUtc(newTime);
             }
         }
     }
