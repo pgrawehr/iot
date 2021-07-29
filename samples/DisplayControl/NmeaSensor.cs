@@ -44,13 +44,7 @@ namespace DisplayControl
         /// Server instance for signal-k
         /// </summary>
         private NmeaServer _signalkServer;
-
-        /// <summary>
-        /// Client instance for signal-k (we need to read from here, maybe later we drop the separate server above)
-        /// </summary>
-        private TcpClient _signalKClient;
-        private NmeaParser _signalKClientParser;
-
+        
         private MessageRouter _router;
 
         private Stream _streamShip;
@@ -278,11 +272,11 @@ namespace DisplayControl
             _signalkServer.StartDecode();
 
             // TODO: This source is probably not required
-            _signalKClient = new TcpClient("127.0.0.1", 10110);
-            _signalKClientParser = new NmeaParser(SignalKIn, _signalKClient.GetStream(), _signalKClient.GetStream());
-            _signalKClientParser.OnParserError += OnParserError;
+            //_signalKClient = new TcpClient("127.0.0.1", 10110);
+            //_signalKClientParser = new NmeaParser(SignalKIn, _signalKClient.GetStream(), _signalKClient.GetStream());
+            //_signalKClientParser.OnParserError += OnParserError;
             // _signalKClientParser.ExclusiveTalkerId = new TalkerId('I', 'I');
-            _signalKClientParser.StartDecode();
+            // _signalKClientParser.StartDecode();
 
             _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/ShipLogs", MaxFileSize = 1024 * 1024 * 5 , SortByDate = true });
 
@@ -292,7 +286,7 @@ namespace DisplayControl
             _router.AddEndPoint(_parserHandheldInterface);
             _router.AddEndPoint(_openCpnServer);
             _router.AddEndPoint(_signalkServer);
-            _router.AddEndPoint(_signalKClientParser);
+            // _router.AddEndPoint(_signalKClientParser);
 
             _router.OnNewSequence += ParserOnNewSequence;
             foreach (var rule in ConstructRules())
@@ -505,10 +499,10 @@ namespace DisplayControl
             _signalkServer?.Dispose();
             _signalkServer = null;
 
-            _signalKClient?.Dispose();
-            _signalKClientParser?.Dispose();
-            _signalKClient = null;
-            _signalKClientParser = null;
+            ////_signalKClient?.Dispose();
+            ////_signalKClientParser?.Dispose();
+            ////_signalKClient = null;
+            ////_signalKClientParser = null;
 
             _autopilot?.Dispose();
             _autopilot = null;
