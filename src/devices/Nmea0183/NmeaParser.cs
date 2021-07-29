@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 

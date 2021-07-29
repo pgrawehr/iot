@@ -142,7 +142,7 @@ namespace Iot.Device.Common
         private static void SetDateTimeUtcUnix(DateTime dt)
         {
             string formattedTime = dt.ToString("yyyy-MM-dd HH:mm:ss.fffff", CultureInfo.InvariantCulture);
-            RunDateCommandUnix($"-u -s '{formattedTime}'", true);
+            RunDateCommandUnix($"-u -s \"{formattedTime}\"", true);
         }
 
         private static string RunDateCommandUnix(string commandLine, bool asRoot)

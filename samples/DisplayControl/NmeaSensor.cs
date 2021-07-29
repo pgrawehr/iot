@@ -11,6 +11,7 @@ using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
+using Microsoft.Extensions.Logging;
 using UnitsNet;
 using UnitsNet.Units;
 
@@ -44,6 +45,8 @@ namespace DisplayControl
         /// Server instance for signal-k
         /// </summary>
         private NmeaServer _signalkServer;
+
+        private SystemClockSynchronizer _clockSynchronizer;
         
         private MessageRouter _router;
 
@@ -63,6 +66,8 @@ namespace DisplayControl
         private SensorMeasurement _maxWindGusts;
         private CustomData<GeographicPosition> _position;
 
+        private ILogger _logger;
+
         public NmeaSensor(MeasurementManager manager)
         {
             _manager = manager;
@@ -70,6 +75,7 @@ namespace DisplayControl
             _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.WindTrue);
             _maxWindGusts = new SensorMeasurement("Wind Gusts", Speed.Zero, SensorSource.WindTrue);
             _position = new CustomData<GeographicPosition>("Geographic Position", new GeographicPosition(), SensorSource.Position);
+            _logger = this.GetCurrentClassLogger();
         }
 
         public IList<FilterRule> ConstructRules()
@@ -78,9 +84,11 @@ namespace DisplayControl
             // Note: Order is important. First ones are checked first
             IList<FilterRule> rules = new List<FilterRule>();
             // Drop any incoming sentences from this source, they were processed already (no known use case here)
-            rules.Add(new FilterRule(SignalKIn, TalkerId.Any, SentenceId.Any, new List<string>(), false ));
+            // rules.Add(new FilterRule(SignalKIn, TalkerId.Any, SentenceId.Any, new List<string>(), false ));
             // Log just everything, but of course continue processing
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
+            // The time message is required by the time component
+            rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
             // GGA messages from the ship are discarded (the ones from the handheld shall be used instead)
             rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>(), false, false));
             // Same applies for this. For some reason, this also gets a different value for the magnetic variation
@@ -278,6 +286,9 @@ namespace DisplayControl
             // _signalKClientParser.ExclusiveTalkerId = new TalkerId('I', 'I');
             // _signalKClientParser.StartDecode();
 
+            _clockSynchronizer = new SystemClockSynchronizer();
+            _clockSynchronizer.StartDecode();
+
             _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/ShipLogs", MaxFileSize = 1024 * 1024 * 5 , SortByDate = true });
 
             _autopilot = new AutopilotController(_router, _router);
@@ -286,6 +297,7 @@ namespace DisplayControl
             _router.AddEndPoint(_parserHandheldInterface);
             _router.AddEndPoint(_openCpnServer);
             _router.AddEndPoint(_signalkServer);
+            _router.AddEndPoint(_clockSynchronizer);
             // _router.AddEndPoint(_signalKClientParser);
 
             _router.OnNewSequence += ParserOnNewSequence;
@@ -439,7 +451,7 @@ namespace DisplayControl
 
         private void OnParserError(NmeaSinkAndSource source, string error, NmeaError errorCode)
         {
-            Console.WriteLine($"Nmea error from {source.InterfaceName}: {error}");
+            _logger.LogError($"Nmea error from {source.InterfaceName}: {error}");
         }
 
         public void SendImuData(Vector3 value)
@@ -463,7 +475,7 @@ namespace DisplayControl
 
             var attitude = TransducerMeasurement.FromRollAndPitch(Angle.FromDegrees(value.Y),
                 Angle.FromDegrees(value.Z), Angle.FromDegrees(value.X));
-            _router.SendSentence(attitude);
+            _router.SendSentences(attitude);
         }
 
         //private string ConvertAngle(double angle)

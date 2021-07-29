@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\CommonHelpers.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingPackageVersion)" />
   </ItemGroup>
 
 </Project>
