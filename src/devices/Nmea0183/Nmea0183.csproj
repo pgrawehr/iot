@@ -14,4 +14,8 @@
     <None Include="README.md" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Common\CommonHelpers.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -6,6 +6,9 @@ using Iot.Device.Nmea0183;
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
+    /// <summary>
+    /// Represents one date and time message (GPZDA)
+    /// </summary>
     public class TimeDate : NmeaSentence
     {
         public static SentenceId Id => new SentenceId('Z', 'D', 'A');
