@@ -12,6 +12,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Logging.Serilog;
 using Avalonia.ReactiveUI;
+using Iot.Device.Common;
 
 namespace DisplayControl
 {
@@ -48,6 +49,7 @@ namespace DisplayControl
             }
 
             Console.WriteLine($"Initializing Hardware...");
+            LogDispatcher.LoggerFactory = new SimpleConsoleLoggerFactory();
             using (GpioController controller = new GpioController(PinNumberingScheme.Logical, new RaspberryPi3Driver()))
             {
                 Program prog = new Program(controller);
