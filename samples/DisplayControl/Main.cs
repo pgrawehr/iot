@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Logging.Serilog;
+using Avalonia.Logging;
 using Avalonia.ReactiveUI;
 using Iot.Device.Common;
 

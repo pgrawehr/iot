@@ -19,7 +19,6 @@ namespace DisplayControl.Views
         public MainWindow()
         {
             InitializeComponent();
-            this.AttachDevTools();
             m_listBox = this.FindControl<ListBox>("ListElements");
         }
 
