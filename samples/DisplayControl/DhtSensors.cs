@@ -39,8 +39,7 @@ namespace DisplayControl
         /// </summary>
         protected override void UpdateSensors()
         {
-            var temp = _dht11.Temperature;
-            if (_dht11.IsLastReadSuccessful)
+            if (_dht11.TryReadTemperatureAndHumidity(out var temp, out var humidity))
             {
                 SensorMeasurement.Engine0Temperature.UpdateValue(temp);
                 _engineHumidity.UpdateValue(_dht11.Humidity);

@@ -15,6 +15,9 @@ namespace Iot.Device.DHTxx
     /// <summary>
     /// Temperature and Humidity Sensor DHTxx
     /// </summary>
+    /// <remarks>
+    /// This class is not thread safe. Reading the sensor from different threads returns undefined results.
+    /// </remarks>
     [Interface("Temperature and Humidity Sensor DHTxx")]
     public abstract class DhtBase : IDisposable
     {
@@ -88,12 +91,72 @@ namespace Iot.Device.DHTxx
         }
 
         /// <summary>
+        /// Try to read a temperature from the sensor
+        /// </summary>
+        /// <param name="temperature">[Out] Returns the temperature if successful</param>
+        /// <returns>True on success, false otherwise</returns>
+        public virtual bool TryReadTemperature(
+            out Temperature temperature)
+        {
+            ReadData();
+            if (IsLastReadSuccessful)
+            {
+                temperature = GetTemperature(_readBuff);
+                return true;
+            }
+
+            temperature = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Try to read a temperature from the sensor
+        /// </summary>
+        /// <param name="humidity">[Out] Returns the humidity if successful</param>
+        /// <returns>True on success, false otherwise</returns>
+        public virtual bool TryReadHumidity(
+            out RelativeHumidity humidity)
+        {
+            ReadData();
+            if (IsLastReadSuccessful)
+            {
+                humidity = GetHumidity(_readBuff);
+                return true;
+            }
+
+            humidity = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Try to read temperature and humidity from the sensor
+        /// </summary>
+        /// <param name="temperature">[Out] Returns the temperature if successful</param>
+        /// <param name="humidity">[Out] Returns the humidity if successful</param>
+        /// <returns>True on success, false otherwise</returns>
+        public virtual bool TryReadTemperatureAndHumidity(
+            out Temperature temperature, out RelativeHumidity humidity)
+        {
+            ReadData();
+            if (IsLastReadSuccessful)
+            {
+                temperature = GetTemperature(_readBuff);
+                humidity = GetHumidity(_readBuff);
+                return true;
+            }
+
+            temperature = default;
+            humidity = default;
+            return false;
+        }
+
+        /// <summary>
         /// Create a DHT sensor
         /// </summary>
         /// <param name="pin">The pin number (GPIO number)</param>
         /// <param name="pinNumberingScheme">The GPIO pin numbering scheme</param>
         /// <param name="gpioController"><see cref="GpioController"/> related with operations on pins</param>
-        /// <param name="shouldDispose">True to dispose the Gpio Controller</param>
+        /// <param name="shouldDispose">True to dispose the Gpio Controller when this object is disposed</param>
         public DhtBase(int pin, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, GpioController? gpioController = null, bool shouldDispose = true)
         {
             _protocol = CommunicationProtocol.OneWire;
@@ -294,13 +357,13 @@ namespace Iot.Device.DHTxx
             if (_shouldDispose)
             {
                 _controller?.Dispose();
-                _controller = null;
             }
             else if (_controller?.IsPinOpen(_pin) ?? false)
             {
                 _controller.ClosePin(_pin);
             }
 
+            _controller = null;
             _i2cDevice?.Dispose();
             _i2cDevice = null;
         }
