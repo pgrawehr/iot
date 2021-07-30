@@ -17,11 +17,13 @@ namespace DisplayControl.ViewModels
         private string _valueAsString;
         private string _unit;
         private IBrush _statusColor;
+        private long _lastUpdateTicks;
 
         public SensorValueViewModel()
         {
             _valueDescription = string.Empty;
             _sensorValueSource = null;
+            _lastUpdateTicks = Environment.TickCount64;
         }
 
         public SensorValueViewModel(SensorMeasurement source)
@@ -130,6 +132,13 @@ namespace DisplayControl.ViewModels
 
         private void SourcePropertyChanged(object sender, PropertyChangedEventArgs e)
         {
+            long ticksNow = Environment.TickCount64;
+            if (_lastUpdateTicks + 1000 > ticksNow)
+            {
+                return;
+            }
+
+            _lastUpdateTicks = ticksNow;
             if (Dispatcher.UIThread.CheckAccess())
             {
                 UpdateValuesFromSource();
