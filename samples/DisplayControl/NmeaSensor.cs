@@ -252,7 +252,8 @@ namespace DisplayControl
                 SensorMeasurement.WindDirectionAbsolute, SensorMeasurement.WindDirectionApparent, SensorMeasurement.WindDirectionTrue,
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
-                SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, _smoothedTrueWindSpeed, _maxWindGusts
+                SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
+                SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -445,6 +446,9 @@ namespace DisplayControl
                             }
                         }
                     }
+                    break;
+                case TimeDate zda when zda.Valid && zda.DateTime.HasValue:
+                    _manager.UpdateValue(SensorMeasurement.UtcTime, zda.DateTime.Value.UtcDateTime);
                     break;
             }
         }

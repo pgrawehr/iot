@@ -116,6 +116,9 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement Engine1OperatingTime = new SensorMeasurement("Engine 1 operating time", Duration.Zero, SensorSource.Engine, 1);
         public static readonly SensorMeasurement Engine1Temperature = new SensorMeasurement("Engine 1 Temperature", Temperature.Zero, Common.SensorSource.Engine, 1);
 
+        public static readonly SensorMeasurement UtcTime =
+            new CustomData<DateTime>("UTC Time from GNSS", DateTime.MinValue, SensorSource.Position);
+
         /// <summary>
         /// Magnetic variation is usually computed using the NOAA formulas from the position
         /// </summary>
