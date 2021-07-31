@@ -18,6 +18,11 @@ namespace Iot.Device.Nmea0183
         private int _numberOfValidMessagesSeen;
         private ILogger _logger;
 
+        static SystemClockSynchronizer()
+        {
+            RequiredAccuracy = TimeSpan.FromSeconds(20);
+        }
+
         /// <summary>
         /// Creates an instance of this class
         /// </summary>
@@ -26,6 +31,16 @@ namespace Iot.Device.Nmea0183
         {
             _numberOfValidMessagesSeen = 0;
             _logger = this.GetCurrentClassLogger();
+        }
+
+        /// <summary>
+        /// The time delta that triggers a resync. Setting this to a low value may cause permantent clock updates
+        /// if messages are delayed.
+        /// </summary>
+        public static TimeSpan RequiredAccuracy
+        {
+            get;
+            set;
         }
 
         /// <inheritdoc />
@@ -46,11 +61,12 @@ namespace Iot.Device.Nmea0183
                     if (_numberOfValidMessagesSeen > 10)
                     {
                         TimeSpan delta = (zda.DateTime.Value.UtcDateTime - DateTime.UtcNow);
-                        if (Math.Abs(delta.TotalSeconds) > 10)
+                        if (Math.Abs(delta.TotalSeconds) > RequiredAccuracy.TotalSeconds)
                         {
                             // The time message seems valid, but it is off by more than 10 seconds from what the system clock
                             // says. Synchronize.
                             SetTime(zda.DateTime.Value.UtcDateTime);
+                            _numberOfValidMessagesSeen = -50; // Don't try to often.
                         }
                     }
                 }
@@ -61,7 +77,7 @@ namespace Iot.Device.Nmea0183
         {
             try
             {
-                _logger.LogInformation($"About to synchronize clock to {dt}");
+                _logger.LogInformation($"About to synchronize clock from {DateTime.UtcNow} to {dt}");
                 SystemRealTimeClock.SetSystemTimeUtc(dt);
             }
             catch (Exception e) when (e is UnauthorizedAccessException || e is IOException)
