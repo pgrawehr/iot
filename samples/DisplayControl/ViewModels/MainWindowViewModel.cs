@@ -15,7 +15,6 @@ namespace DisplayControl.ViewModels
         private IBrush m_statusColor;
         private bool m_cancel;
         private ObservableCollection<SensorValueViewModel> m_sensorValueViewModels;
-        private SensorValueViewModel m_selectedViewModel;
         private Size _size;
         private double _clientHeight;
         private Point _headerHeight;
@@ -93,18 +92,6 @@ namespace DisplayControl.ViewModels
             }
         }
 
-        public SensorValueViewModel SelectedViewModel
-        {
-            get
-            {
-                return m_selectedViewModel;
-            }
-            private set
-            {
-                this.RaiseAndSetIfChanged(ref m_selectedViewModel, value);
-            }
-        }
-
         public Size Size
         {
             get
@@ -144,19 +131,16 @@ namespace DisplayControl.ViewModels
 
         public void ActivateValueSingle(SensorValueViewModel vm)
         {
-            SelectedViewModel = vm;
             DataContainer.ActiveValueSourceSingle = vm.Source;
         }
 
         public void ActivateValueUpper(SensorValueViewModel vm)
         {
-            SelectedViewModel = vm;
             DataContainer.ActiveValueSourceUpper = vm.Source;
         }
 
         public void ActivateValueLower(SensorValueViewModel vm)
         {
-            SelectedViewModel = vm;
             DataContainer.ActiveValueSourceLower = vm.Source;
         }
 

@@ -256,7 +256,7 @@ namespace DisplayControl
         {
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                Dispatcher.UIThread.InvokeAsync(() => DisplayButtonPressed(button, pressed));
+                Dispatcher.UIThread.Post(() => DisplayButtonPressed(button, pressed));
                 return;
             }
             if (pressed == false)
@@ -365,11 +365,11 @@ namespace DisplayControl
 
         private void OnSensorValueChanged(SensorMeasurement newMeasurement)
         {
-            if (!Dispatcher.UIThread.CheckAccess())
-            {
-                Dispatcher.UIThread.InvokeAsync(() => OnSensorValueChanged(newMeasurement));
-                return;
-            }
+            ////if (!Dispatcher.UIThread.CheckAccess())
+            ////{
+            ////    Dispatcher.UIThread.Post(() => OnSensorValueChanged(newMeasurement));
+            ////    return;
+            ////}
 
             CheckForTriggers(newMeasurement);
 

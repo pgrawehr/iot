@@ -144,7 +144,7 @@ namespace DisplayControl.ViewModels
                 UpdateValuesFromSource();
                 return;
             }
-            Dispatcher.UIThread.InvokeAsync(() =>
+            Dispatcher.UIThread.Post(() =>
             {
                 UpdateValuesFromSource();
             });
