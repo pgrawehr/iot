@@ -87,7 +87,7 @@ namespace Iot.Device.Nmea0183
                     {
                         string msg = FormattableString.Invariant(
                             $"{DateTime.UtcNow:s}|{source.InterfaceName}|${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()}|{sentence.ToReadableContent()}");
-                        _textWriter.WriteLine(msg);
+                        // _textWriter.WriteLine(msg);
                     }
 
                     if ((_logFile.Length > Configuration.MaxFileSize) && (Configuration.MaxFileSize != 0))

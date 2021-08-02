@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Ports;
@@ -359,6 +360,7 @@ namespace DisplayControl
 
         private void ParserOnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
+            Stopwatch sw = Stopwatch.StartNew();
             switch (sentence)
             {
                 case GlobalPositioningSystemFixData gga:
@@ -367,7 +369,7 @@ namespace DisplayControl
                     {
                         if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(0.5))
                         {
-                            return;
+                            break;
                         }
 
                         _lastGgaMessage = gga;
@@ -385,7 +387,7 @@ namespace DisplayControl
                     break;
                 }
                 case RecommendedMinimumNavigationInformation rmc when _lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(0.5):
-                    return;
+                    break;
                 case RecommendedMinimumNavigationInformation rmc:
                 {
                     _lastRmcMessage = rmc;
@@ -395,7 +397,7 @@ namespace DisplayControl
                     break;
                 }
                 case TrackMadeGood vtg when _lastVtgMessage != null && _lastVtgMessage.Age < TimeSpan.FromSeconds(0.5):
-                    return;
+                    break;
                 case TrackMadeGood vtg:
                     _lastVtgMessage = vtg;
                     _manager.UpdateValues(new[] { SensorMeasurement.SpeedOverGround, SensorMeasurement.Track },
@@ -450,6 +452,11 @@ namespace DisplayControl
                 case TimeDate zda when zda.Valid && zda.DateTime.HasValue:
                     _manager.UpdateValue(SensorMeasurement.UtcTime, zda.DateTime.Value.UtcDateTime);
                     break;
+            }
+
+            if (sw.ElapsedMilliseconds > 50)
+            {
+                _logger.LogError($"Processing message {sentence.GetType().Name} took {sw.ElapsedMilliseconds}");
             }
         }
 

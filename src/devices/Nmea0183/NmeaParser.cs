@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -106,8 +107,11 @@ namespace Iot.Device.Nmea0183
                     continue; // Probably because the stream was closed.
                 }
 
+                Stopwatch sw = Stopwatch.StartNew();
                 // Console.WriteLine(currentLine);
                 TalkerSentence? sentence = TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out var error);
+
+                var step1 = sw.ElapsedMilliseconds;
                 if (sentence == null)
                 {
                     // If error is none, but the return value is null, we just ignored that message.
@@ -120,13 +124,26 @@ namespace Iot.Device.Nmea0183
                 }
 
                 NmeaSentence? typed = sentence.TryGetTypedValue();
+                if (typed != null && typed.Age > TimeSpan.FromSeconds(5))
+                {
+                    FireOnParserError($"Message {typed} is already {typed.Age} old when it is processed", NmeaError.MessageDelayed);
+                }
+
+                var step2 = sw.ElapsedMilliseconds;
                 DispatchSentenceEvents(typed);
 
+                var step3 = sw.ElapsedMilliseconds;
                 if (!(typed is RawSentence))
                 {
                     // If we didn't dispatch it as raw sentence, do this as well
                     RawSentence raw = sentence.GetAsRawSentence();
                     DispatchSentenceEvents(raw);
+                }
+
+                var step4 = sw.ElapsedMilliseconds;
+                if (sw.ElapsedMilliseconds > 100 && typed != null)
+                {
+                    FireOnParserError($"Message {typed} took {sw.ElapsedMilliseconds}ms to process. {step1}, {step2}, {step3}, {step4}", NmeaError.MessageDelayed);
                 }
             }
         }

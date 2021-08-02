@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
@@ -339,6 +340,7 @@ namespace Iot.Device.Nmea0183
                 return;
             }
 
+            Stopwatch sw = Stopwatch.StartNew();
             lock (_lock)
             {
                 if (!_groupSentences.Contains(sentence.SentenceId))
@@ -362,6 +364,11 @@ namespace Iot.Device.Nmea0183
                 }
 
                 // GSV would be special, too. But we're currently not supporting it
+            }
+
+            if (sw.ElapsedMilliseconds > 100)
+            {
+                Console.WriteLine($"SentenceCACHE took {sw.ElapsedMilliseconds}ms to process {sentence}", NmeaError.MessageDelayed);
             }
         }
 

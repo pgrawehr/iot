@@ -139,15 +139,15 @@ namespace DisplayControl.ViewModels
             }
 
             _lastUpdateTicks = ticksNow;
-            if (Dispatcher.UIThread.CheckAccess())
-            {
-                UpdateValuesFromSource();
-                return;
-            }
-            Dispatcher.UIThread.Post(() =>
-            {
-                UpdateValuesFromSource();
-            });
+            //if (Dispatcher.UIThread.CheckAccess())
+            //{
+            //    UpdateValuesFromSource();
+            //    return;
+            //}
+            //Dispatcher.UIThread.Post(() =>
+            //{
+            //    UpdateValuesFromSource();
+            //});
         }
     }
 }
