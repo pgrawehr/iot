@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
 
@@ -64,7 +63,7 @@ namespace Iot.Device.Nmea0183
         {
             // Get name of source for this message
             string name = source.InterfaceName;
-            Stopwatch swp = Stopwatch.StartNew();
+
             foreach (var filter in _filterRules)
             {
                 if (filter.SentenceMatch(name, sentence))
@@ -76,11 +75,6 @@ namespace Iot.Device.Nmea0183
                         return;
                     }
                 }
-            }
-
-            if (swp.ElapsedMilliseconds > 60)
-            {
-                Console.WriteLine($"REquired {swp.ElapsedMilliseconds} to process filters");
             }
         }
 
@@ -99,7 +93,6 @@ namespace Iot.Device.Nmea0183
                         continue;
                     }
 
-                    Stopwatch sw = Stopwatch.StartNew();
                     if (filter.ForwardingAction != null)
                     {
                         var newMsg = filter.ForwardingAction(source, sink, sentence);
@@ -111,11 +104,6 @@ namespace Iot.Device.Nmea0183
                     else
                     {
                         sink.SendSentence(source, sentence);
-                    }
-
-                    if (sw.ElapsedMilliseconds > 60)
-                    {
-                        Console.WriteLine($"Required {sw.ElapsedMilliseconds} to send message to {sink.InterfaceName}");
                     }
                 }
             }
