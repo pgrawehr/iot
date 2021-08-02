@@ -139,6 +139,7 @@ namespace Iot.Device.Nmea0183
             byte[] buffer = _encoding.GetBytes(dataToSend);
             try
             {
+                // TODO: This appears to be synchronous, which is a problem on a slow serial port.
                 _dataSink?.Write(buffer, 0, buffer.Length);
             }
             catch (ObjectDisposedException)
