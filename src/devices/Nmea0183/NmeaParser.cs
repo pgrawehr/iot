@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Iot.Device.Common;
@@ -25,6 +27,10 @@ namespace Iot.Device.Nmea0183
         private CancellationTokenSource? _cancellationTokenSource;
         private StreamReader _reader;
         private Raw8BitEncoding _encoding;
+        private Thread? _sendQueueThread;
+        private ConcurrentQueue<NmeaSentence> _outQueue;
+        private AutoResetEvent _outEvent;
+        private Exception? _ioExceptionOnSend;
 
         /// <summary>
         /// Creates a new instance of the NmeaParser, taking an input and an output stream
@@ -41,7 +47,10 @@ namespace Iot.Device.Nmea0183
             _reader = new StreamReader(_dataSource, _encoding); // Nmea sentences are text
             _dataSink = dataSink;
             _lock = new object();
+            _outQueue = new();
+            _outEvent = new AutoResetEvent(false);
             ExclusiveTalkerId = TalkerId.Any;
+            _ioExceptionOnSend = null;
         }
 
         /// <summary>
@@ -62,10 +71,15 @@ namespace Iot.Device.Nmea0183
                     throw new InvalidOperationException("Parser thread already started");
                 }
 
+                _ioExceptionOnSend = null;
                 _cancellationTokenSource = new CancellationTokenSource();
                 _parserThread = new Thread(Parser);
                 _parserThread.Name = $"Nmea Parser for {InterfaceName}";
                 _parserThread.Start();
+
+                _sendQueueThread = new Thread(Sender);
+                _sendQueueThread.Name = $"Nmea Sender for {InterfaceName}";
+                _sendQueueThread.Start();
             }
         }
 
@@ -148,21 +162,58 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        private void Sender()
+        {
+            while (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
+            {
+                if (_outQueue.TryDequeue(out var sentenceToSend))
+                {
+                    if (sentenceToSend.ReplacesOlderInstance)
+                    {
+                        // If there are other instances of the same message in the queue, we drop the current one (as it's not the newest)
+                        // and continue processing.
+                        var newerInstance = _outQueue.FirstOrDefault(x => x.SentenceId == sentenceToSend.SentenceId && x.TalkerId == sentenceToSend.TalkerId);
+                        if (newerInstance != null)
+                        {
+                            continue;
+                        }
+                    }
+
+                    TalkerSentence ts = new TalkerSentence(sentenceToSend);
+                    string dataToSend = ts.ToString() + "\r\n";
+                    byte[] buffer = _encoding.GetBytes(dataToSend);
+                    try
+                    {
+                        _dataSink?.Write(buffer, 0, buffer.Length);
+                    }
+                    catch (IOException x)
+                    {
+                        // Sink may be a network port
+                        _ioExceptionOnSend = x;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Probably going to close the port any moment
+                    }
+                }
+
+                if (_outQueue.IsEmpty)
+                {
+                    WaitHandle.WaitAny(new WaitHandle[] { _outEvent, _cancellationTokenSource.Token.WaitHandle });
+                }
+            }
+        }
+
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
-            // Console.WriteLine($"Sending sentence ${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaMessage()} from {source.InterfaceName} to {InterfaceName}");
-            TalkerSentence ts = new TalkerSentence(sentence);
-            string dataToSend = ts.ToString() + "\r\n";
-            byte[] buffer = _encoding.GetBytes(dataToSend);
-            try
+            if (_ioExceptionOnSend != null)
             {
-                // TODO: This appears to be synchronous, which is a problem on a slow serial port.
-                _dataSink?.Write(buffer, 0, buffer.Length);
+                // Rethrow exception from other thread (required for correct termination of stale network sockets)
+                throw _ioExceptionOnSend;
             }
-            catch (ObjectDisposedException)
-            {
-                // Todo: return false
-            }
+
+            _outQueue.Enqueue(sentence);
+            _outEvent?.Set();
         }
 
         public override void StopDecode()
@@ -176,11 +227,17 @@ namespace Iot.Device.Nmea0183
                     _dataSink?.Dispose();
                     _reader.Dispose();
                     _parserThread.Join();
+
+                    _sendQueueThread?.Join();
                     _cancellationTokenSource = null;
+                    _outEvent.Dispose();
+
                     _parserThread = null;
                     _dataSource = null!;
                     _dataSink = null!;
                     _reader = null!;
+                    _sendQueueThread = null;
+                    _outEvent = null!;
                 }
             }
         }

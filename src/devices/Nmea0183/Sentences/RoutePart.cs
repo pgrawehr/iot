@@ -38,6 +38,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// False, since multiple messages belong to a packet
+        /// </summary>
+        public override bool ReplacesOlderInstance => false;
+
+        /// <summary>
         /// Internal constructor
         /// </summary>
         public RoutePart(TalkerSentence sentence, DateTimeOffset time)

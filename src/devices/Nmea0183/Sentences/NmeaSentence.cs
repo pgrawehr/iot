@@ -116,7 +116,15 @@ namespace Iot.Device.Nmea0183.Sentences
 
                 return DateTimeOffset.UtcNow - DateTime.Value;
             }
+        }
 
+        /// <summary>
+        /// True if an instance of this message type can be discarded if a newer instance of the same message type
+        /// is available. Used to prevent buffer overflow on outgoing streams.
+        /// </summary>
+        public abstract bool ReplacesOlderInstance
+        {
+            get;
         }
 
         /// <summary>

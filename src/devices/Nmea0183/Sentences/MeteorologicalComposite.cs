@@ -104,6 +104,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// This is true for this message type
+        /// </summary>
+        public override bool ReplacesOlderInstance => true;
+
+        /// <summary>
         /// Barometric pressure (corrected for station altitude)
         /// </summary>
         public Pressure? BarometricPressure { get; }

@@ -100,6 +100,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// False, because XDR sentences can contain a variety of elements
+        /// </summary>
+        public override bool ReplacesOlderInstance => false;
+
+        /// <summary>
         /// Return the data sets of this message
         /// </summary>
         public IList<TransducerDataSet> DataSets

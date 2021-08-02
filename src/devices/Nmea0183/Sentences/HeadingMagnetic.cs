@@ -7,7 +7,7 @@ namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
     /// HDT Sentence: Heading magnetic.
-    /// Usually measured using an electronic compass.
+    /// Usually measured using an electronic compass. See also <see cref="HeadingTrue"/>.
     /// </summary>
     public class HeadingMagnetic : NmeaSentence
     {
@@ -61,7 +61,12 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Angle of the wind
+        /// This is true for this message type
+        /// </summary>
+        public override bool ReplacesOlderInstance => true;
+
+        /// <summary>
+        /// Angle to report
         /// </summary>
         public Angle Angle
         {

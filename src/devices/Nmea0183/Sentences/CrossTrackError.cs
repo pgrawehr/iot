@@ -68,6 +68,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// This is true for this message type
+        /// </summary>
+        public override bool ReplacesOlderInstance => true;
+
+        /// <summary>
         /// Cross track distance. Positive if to the right of the track (meaning one shall steer left or to port)
         /// </summary>
         public Length Distance

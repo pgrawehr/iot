@@ -24,6 +24,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// This is false for this message type
+        /// </summary>
+        public override bool ReplacesOlderInstance => false;
+
+        /// <summary>
         /// Returns the formatted payload
         /// </summary>
         public override string ToNmeaMessage()

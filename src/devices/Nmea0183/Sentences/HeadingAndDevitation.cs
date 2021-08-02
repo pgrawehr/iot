@@ -88,6 +88,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// This is true for this message type
+        /// </summary>
+        public override bool ReplacesOlderInstance => true;
+
+        /// <summary>
         /// Angle of the wind
         /// </summary>
         public Angle HeadingTrue

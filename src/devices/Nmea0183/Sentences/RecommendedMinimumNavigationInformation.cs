@@ -24,6 +24,11 @@ namespace Iot.Device.Nmea0183.Sentences
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
+        /// <summary>
+        /// This is true for this message type
+        /// </summary>
+        public override bool ReplacesOlderInstance => true;
+
         public NavigationStatus? Status
         {
             get;

@@ -83,6 +83,11 @@ namespace Iot.Device.Nmea0183.Sentences
             Valid = true;
         }
 
+        /// <summary>
+        /// This is true for this message type
+        /// </summary>
+        public override bool ReplacesOlderInstance => true;
+
         public bool ReverseDateFormat
         {
             get;

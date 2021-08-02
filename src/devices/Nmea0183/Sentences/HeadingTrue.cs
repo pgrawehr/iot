@@ -8,8 +8,10 @@ namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
     /// HDT Sentence: Heading true.
-    /// This is either a calculated message by using the HDT message and a magnetic variation model, or directly measured using a gyrocompass.
-    /// But since these are very expensive an power-hungry, they are only available in big ships or aircraft.
+    /// This is either a calculated message by using the HDM message and a magnetic variation model, or directly measured using a gyrocompass.
+    /// But since these are very expensive and power-hungry, they are only available in big ships or aircraft.
+    /// Note that the direction reported by the GNS sequence <see cref="TrackMadeGood">GPVTG</see> is the track over ground, which is generally
+    /// not equal to the heading.
     /// </summary>
     public class HeadingTrue : NmeaSentence
     {
@@ -63,7 +65,12 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Angle of the wind
+        /// This is true for this message type
+        /// </summary>
+        public override bool ReplacesOlderInstance => true;
+
+        /// <summary>
+        /// Angle to report (0: North, 90 East, etc.)
         /// </summary>
         public Angle Angle
         {

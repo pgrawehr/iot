@@ -70,6 +70,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// Multiple instances sent in sequence
+        /// </summary>
+        public override bool ReplacesOlderInstance => false;
+
+        /// <summary>
         /// Position of waypoint
         /// </summary>
         public GeographicPosition Position

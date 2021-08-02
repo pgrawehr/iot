@@ -40,6 +40,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// Sent twice: With true and with apparent wind
+        /// </summary>
+        public override bool ReplacesOlderInstance => false;
+
+        /// <summary>
         /// Internal constructor
         /// </summary>
         public WindSpeedAndAngle(TalkerSentence sentence, DateTimeOffset time)
