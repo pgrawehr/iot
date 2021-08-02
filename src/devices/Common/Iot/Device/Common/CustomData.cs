@@ -22,7 +22,7 @@ namespace Iot.Device.Common
         /// </summary>
         public void UpdateValue(T value)
         {
-            UpdateValue(new CustomQuantity<T>(value));
+            UpdateValue(new CustomQuantity<T>(value), false);
         }
 
         /// <inheritdoc />

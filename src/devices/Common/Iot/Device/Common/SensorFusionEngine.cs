@@ -112,7 +112,7 @@ namespace Iot.Device.Common
                     if (changedMeasurements.Contains(op.Input))
                     {
                         IQuantity? result = op.Operation(op.Input, _manager);
-                        op.Output.UpdateValue(result);
+                        op.Output.UpdateValue(result, false);
                     }
                 }
 
@@ -135,7 +135,7 @@ namespace Iot.Device.Common
             if (!result.UseValue)
             {
                 // Mark all results of the fusion engine as indirect
-                op.Result.UpdateValue(result.Value, SensorMeasurementStatus.IndirectResult);
+                op.Result.UpdateValue(result.Value, SensorMeasurementStatus.IndirectResult, false);
             }
         }
 

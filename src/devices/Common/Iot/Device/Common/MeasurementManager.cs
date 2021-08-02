@@ -14,19 +14,11 @@ namespace Iot.Device.Common
         private readonly List<MeasurementHistoryConfiguration> _historyConfigurations;
         private readonly object _lock;
 
-        /// <summary>
-        /// Used to keep track of the callback recursion depth. Some recursive calls might be ok, but
-        /// if several fusion operations depend on output of others, circular dependencies will occur. The
-        /// most common reason for that is if one fusion operation tests whether another value is still valid;
-        /// </summary>
-        private int _callbackDepth;
-
         public MeasurementManager()
         {
             _measurements = new List<SensorMeasurement>();
             _historyConfigurations = new List<MeasurementHistoryConfiguration>();
             _lock = new object();
-            _callbackDepth = 0;
         }
 
         /// <summary>
@@ -218,7 +210,7 @@ namespace Iot.Device.Common
             return _measurements.Where(x => predicate(x));
         }
 
-        private void MeasurementOnValueChanged(SensorMeasurement measurement)
+        private void MeasurementOnValueChanged(SensorMeasurement measurement, bool skipAnyMeasurementChanged)
         {
             lock (_lock)
             {
@@ -228,32 +220,22 @@ namespace Iot.Device.Common
                     entry.TryAddMeasurement(measurement.Value);
                     entry.RemoveOldEntries();
                 }
+            }
 
-                // Done within the lock, so if it is true, we still hold the outer lock and are therefore in
-                // the same thread.
-                if (_callbackDepth < MaxCallbackDepth)
-                {
-                    try
-                    {
-                        _callbackDepth++;
-                        AnyMeasurementChanged?.Invoke(new[] { measurement });
-                    }
-                    finally
-                    {
-                        _callbackDepth--;
-                    }
-                }
+            if (!skipAnyMeasurementChanged)
+            {
+                AnyMeasurementChanged?.Invoke(new[] { measurement });
             }
         }
 
         public void UpdateValue(SensorMeasurement measurement, IQuantity newValue)
         {
-            measurement.UpdateValue(newValue);
+            measurement.UpdateValue(newValue, false);
         }
 
         public void UpdateValue(SensorMeasurement measurement, IQuantity newValue, SensorMeasurementStatus status)
         {
-            measurement.UpdateValue(newValue, status);
+            measurement.UpdateValue(newValue, status, false);
         }
 
         public void UpdateValue<T>(SensorMeasurement measurement, T newValue)
@@ -284,17 +266,15 @@ namespace Iot.Device.Common
             Monitor.Enter(_lock);
             try
             {
-                _callbackDepth++;
                 for (int i = 0; i < measurements.Count; i++)
                 {
-                    measurements[i].UpdateValue(values[i]);
+                    measurements[i].UpdateValue(values[i], true);
                 }
 
                 AnyMeasurementChanged?.Invoke(measurements);
             }
             finally
             {
-                _callbackDepth--;
                 Monitor.Exit(_lock);
             }
         }

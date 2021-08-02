@@ -37,7 +37,7 @@ namespace Iot.Device.Common
 
         /// <summary>
         /// Creates a new instance with a given quantity.
-        /// The actual value of the instance is ignored until a first value is set using <see cref="UpdateValue(IQuantity)"/>, the argument
+        /// The actual value of the instance is ignored until a first value is set using <see cref="UpdateValue(IQuantity, bool)"/>, the argument
         /// is only used to define the physical quantity and the default unit for the values that will be managed.
         /// </summary>
         /// <param name="name">Name of element (english, probably needs translation outside)</param>
@@ -164,7 +164,7 @@ namespace Iot.Device.Common
         }
 
         /// <summary>
-        /// Retrieves the current value. Use <see cref="UpdateValue(IQuantity)"/> to update the value.
+        /// Retrieves the current value. Use <see cref="UpdateValue(IQuantity, bool)"/> to update the value.
         /// This will return null unless an initial value has been defined.
         /// </summary>
         public virtual IQuantity? Value
@@ -207,7 +207,7 @@ namespace Iot.Device.Common
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public event Action<SensorMeasurement>? ValueChanged;
+        public event Action<SensorMeasurement, bool>? ValueChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
@@ -221,9 +221,10 @@ namespace Iot.Device.Common
         /// <param name="value">The new value. Pass null to indicate that there's no valid measurement any more (i.e.
         /// the sensor doesn't work for some reason and we want to pass this information to the user instead of keeping
         /// the last good value).</param>
-        public void UpdateValue(IQuantity? value)
+        /// <param name="skipAnyMeasurementChanged">True to skip the "AnyMeasurementChanged" callback on the manager</param>
+        public void UpdateValue(IQuantity? value, bool skipAnyMeasurementChanged = false)
         {
-            UpdateValue(value, SensorMeasurementStatus.None);
+            UpdateValue(value, SensorMeasurementStatus.None, skipAnyMeasurementChanged);
         }
 
         /// <summary>
@@ -234,7 +235,8 @@ namespace Iot.Device.Common
         /// the sensor doesn't work for some reason and we want to pass this information to the user instead of keeping
         /// the last good value).</param>
         /// <param name="status">Status of new measurement. NoData is automatically added if null is passed as <paramref name="value"/>.</param>
-        public void UpdateValue(IQuantity? value, SensorMeasurementStatus status)
+        /// <param name="skipAnyMeasurementChanged">True to skip the "AnyMeasurementChanged" callback on the manager</param>
+        public void UpdateValue(IQuantity? value, SensorMeasurementStatus status, bool skipAnyMeasurementChanged)
         {
             if (value == null)
             {
@@ -247,7 +249,7 @@ namespace Iot.Device.Common
 
                 // Note: Must not skip this callback, even if nothing changed. Some functions (i.e. keeping a history
                 // of old values) must get the callback even if the same value is measured multiple times.
-                ValueChanged?.Invoke(this);
+                ValueChanged?.Invoke(this, skipAnyMeasurementChanged);
                 return;
             }
 
@@ -263,7 +265,7 @@ namespace Iot.Device.Common
                 OnPropertyChanged(nameof(Value));
             }
 
-            ValueChanged?.Invoke(this);
+            ValueChanged?.Invoke(this, skipAnyMeasurementChanged);
         }
 
         public bool TryGetAs<T>(
