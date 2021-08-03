@@ -263,20 +263,12 @@ namespace Iot.Device.Common
                 throw new ArgumentException("Must provide an equal number of measurements and values");
             }
 
-            Monitor.Enter(_lock);
-            try
+            for (int i = 0; i < measurements.Count; i++)
             {
-                for (int i = 0; i < measurements.Count; i++)
-                {
-                    measurements[i].UpdateValue(values[i], true);
-                }
+                measurements[i].UpdateValue(values[i], true);
+            }
 
-                AnyMeasurementChanged?.Invoke(measurements);
-            }
-            finally
-            {
-                Monitor.Exit(_lock);
-            }
+            AnyMeasurementChanged?.Invoke(measurements);
         }
 
         private sealed class MeasurementHistoryConfiguration
