@@ -264,7 +264,7 @@ namespace Iot.Device.Nmea0183
             }
 
             routeName = string.Empty;
-            RoutePart[]? elements = null;
+            RoutePart?[]? elements = null;
 
             // This is initially never 0 here
             while (routeSentences.Count > 0)
@@ -319,6 +319,12 @@ namespace Iot.Device.Nmea0183
                 for (var index = 1; index < elements.Length; index++)
                 {
                     var elem = elements[index];
+                    if (elem == null)
+                    {
+                        // List is incomplete
+                        return null;
+                    }
+
                     ret.Add(elem);
                 }
             }
