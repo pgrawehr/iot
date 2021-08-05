@@ -31,6 +31,7 @@ namespace Iot.Device.Nmea0183
         private RoutePoint? _manualNextWaypoint;
 
         private Route? _activeRoute;
+        private HeadingAndDeviation? _activeDeviation;
 
         public AutopilotController(NmeaSinkAndSource input, NmeaSinkAndSource output)
         {
@@ -131,6 +132,7 @@ namespace Iot.Device.Nmea0183
             }
 
             _cache.Clear();
+            _activeDeviation = null;
         }
 
         private void Loop()
@@ -145,9 +147,9 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Navigation loop. Generally called internally only.
+        /// Navigation loop.
         /// </summary>
-        public void CalculateNewStatus(int loops, DateTimeOffset now)
+        private void CalculateNewStatus(int loops, DateTimeOffset now)
         {
             bool passedWp = false;
             RecommendedMinimumNavToDestination? currentLeg = null;
@@ -171,20 +173,26 @@ namespace Iot.Device.Nmea0183
                 currentLeg = null;
             }
 
-            // TODO: Optimize. This rarely changes
-            if (!_cache.TryGetLastSentence(HeadingAndDeviation.Id, out HeadingAndDeviation deviation) || !deviation.Variation.HasValue)
+            if (_activeDeviation == null || loops % 100 == 0)
             {
-                if (!_cache.TryGetLastSentence(RecommendedMinimumNavigationInformation.Id, out RecommendedMinimumNavigationInformation rmc) || !rmc.MagneticVariationInDegrees.HasValue)
+                if (!_cache.TryGetLastSentence(HeadingAndDeviation.Id, out HeadingAndDeviation deviation) ||
+                    !deviation.Variation.HasValue)
                 {
-                    if (loops % LogSkip == 0)
+                    if (!_cache.TryGetLastSentence(RecommendedMinimumNavigationInformation.Id,
+                        out RecommendedMinimumNavigationInformation rmc) || !rmc.MagneticVariationInDegrees.HasValue)
                     {
-                        Console.WriteLine("Autopilot: No magnetic variance");
+                        if (loops % LogSkip == 0)
+                        {
+                            Console.WriteLine("Autopilot: No magnetic variance");
+                        }
+
+                        return;
                     }
 
-                    return;
+                    deviation = new HeadingAndDeviation(Angle.Zero, Angle.Zero, rmc.MagneticVariationInDegrees);
                 }
 
-                deviation = new HeadingAndDeviation(Angle.Zero, Angle.Zero, rmc.MagneticVariationInDegrees);
+                _activeDeviation = deviation;
             }
 
             if (_cache.TryGetCurrentPosition(out var position, out Angle track, out Speed sog, out Angle? heading) && position != null)
@@ -324,7 +332,7 @@ namespace Iot.Device.Nmea0183
 
                 CrossTrackError xte = new CrossTrackError(crossTrackError);
 
-                Angle variation = deviation.Variation.GetValueOrDefault(Angle.Zero);
+                Angle variation = _activeDeviation.Variation.GetValueOrDefault(Angle.Zero);
 
                 TrackMadeGood vtg = new TrackMadeGood(track, AngleExtensions.TrueToMagnetic(track, variation), sog);
 
