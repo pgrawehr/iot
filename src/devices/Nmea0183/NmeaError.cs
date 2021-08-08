@@ -13,5 +13,6 @@ namespace Iot.Device.Nmea0183
         MessageToLong,
         NoSyncByte,
         PortClosed,
+        MessageDelayed
     }
 }

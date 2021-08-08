@@ -134,6 +134,11 @@ namespace Iot.Device.Nmea0183
                 }
 
                 NmeaSentence? typed = sentence.TryGetTypedValue();
+                if (typed != null && typed.Age > TimeSpan.FromSeconds(5))
+                {
+                    FireOnParserError($"Message {typed} is already {typed.Age} old when it is processed", NmeaError.MessageDelayed);
+                }
+
                 DispatchSentenceEvents(typed);
 
                 if (!(typed is RawSentence))
@@ -165,6 +170,12 @@ namespace Iot.Device.Nmea0183
                     TalkerSentence ts = new TalkerSentence(sentenceToSend);
                     string dataToSend = ts.ToString() + "\r\n";
                     byte[] buffer = _encoding.GetBytes(dataToSend);
+
+                    ////if (InterfaceName == "Handheld")
+                    ////{
+                    ////    Console.Write($"--> {InterfaceName} ({_outQueue.Count}): {dataToSend}");
+                    ////}
+
                     try
                     {
                         _dataSink?.Write(buffer, 0, buffer.Length);
