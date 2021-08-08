@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnitsNet;
+using UnitsNet.Units;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Common
@@ -43,7 +44,7 @@ namespace Iot.Device.Common
                     if (args[0].TryGetAs(out Temperature temperature) &&
                         args[1].TryGetAs(out RelativeHumidity humidity))
                     {
-                        return (WeatherHelper.CalculateHeatIndex(temperature, humidity), false);
+                        return (WeatherHelper.CalculateHeatIndex(temperature, humidity).ToUnit(TemperatureUnit.DegreeCelsius), false);
                     }
 
                     return (null, false); // At least one input not available - skip this operation

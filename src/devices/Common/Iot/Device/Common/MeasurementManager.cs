@@ -13,12 +13,17 @@ namespace Iot.Device.Common
         private readonly List<SensorMeasurement> _measurements;
         private readonly List<MeasurementHistoryConfiguration> _historyConfigurations;
         private readonly object _lock;
+        private readonly Thread _monitoringThread;
+        private bool _doMonitor;
 
         public MeasurementManager()
         {
             _measurements = new List<SensorMeasurement>();
             _historyConfigurations = new List<MeasurementHistoryConfiguration>();
             _lock = new object();
+            _doMonitor = true;
+            _monitoringThread = new Thread(SensorMonitoring);
+            _monitoringThread.Start();
         }
 
         /// <summary>
@@ -30,9 +35,31 @@ namespace Iot.Device.Common
 
         public void Dispose()
         {
+            _doMonitor = false;
+            _monitoringThread.Join();
+
             // That's mostly to prevent memory leaks (or more precise, dangling big instances)
             _measurements.Clear();
             _historyConfigurations.Clear();
+        }
+
+        /// <summary>
+        /// Monitors all sensor measurements (mainly used to detect if sensors stop sending data)
+        /// </summary>
+        private void SensorMonitoring()
+        {
+            while (_doMonitor)
+            {
+                lock (_lock)
+                {
+                    foreach (var m in _measurements)
+                    {
+                        m.UpdateStatus();
+                    }
+                }
+
+                Thread.Sleep(500);
+            }
         }
 
         /// <summary>

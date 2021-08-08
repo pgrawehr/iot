@@ -620,6 +620,8 @@ namespace DisplayControl
             _characterLcd = null;
             _displayDevice.Dispose();
             _displayDevice = null;
+
+            _sensorManager.Dispose();
         }
 
         private sealed class MenuController

@@ -18,6 +18,14 @@ namespace Iot.Device.Common
         }
 
         /// <summary>
+        /// Constructs a custom data instance with a custom quantity
+        /// </summary>
+        public CustomData(String name, T value, SensorSource source, int instanceNo, TimeSpan maxMeasurementAge)
+            : base(name, new CustomQuantity<T>(value), source, instanceNo, maxMeasurementAge)
+        {
+        }
+
+        /// <summary>
         /// Update the value
         /// </summary>
         public void UpdateValue(T value)
