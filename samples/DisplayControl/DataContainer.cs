@@ -91,6 +91,7 @@ namespace DisplayControl
                 {
                     _activeValueSourceUpper = value;
                     _activeValueSourceSingle = null;
+                    LeaveMenu();
                     // Immediately show the new value
                     OnSensorValueChanged(value);
                 }
@@ -109,6 +110,7 @@ namespace DisplayControl
                 {
                     _activeValueSourceLower = value;
                     _activeValueSourceSingle = null;
+                    LeaveMenu();
                     // Immediately show the new value
                     OnSensorValueChanged(value);
                 }
@@ -128,6 +130,7 @@ namespace DisplayControl
                     _activeValueSourceSingle = value;
                     _activeValueSourceUpper = null;
                     _activeValueSourceLower = null;
+                    LeaveMenu();
                     _timer.Restart();
                     // Immediately show the new value
                     OnSensorValueChanged(value);
@@ -270,10 +273,7 @@ namespace DisplayControl
                 if (_menuController.ButtonPressed(button) == false)
                 {
                     // The user has left the menu
-                    _menuMode = false;
-                    // Make sure the display is blank
-                    SwitchToConsoleMode();
-                    _lcdConsole.Clear();
+                    LeaveMenu();
                     if (ActiveValueSourceSingle != null)
                     {
                         OnSensorValueChanged(ActiveValueSourceSingle);
@@ -353,6 +353,14 @@ namespace DisplayControl
             {
                 ActiveValueSourceLower = sourceToChange;
             }
+        }
+
+        private void LeaveMenu()
+        {
+            _menuMode = false;
+            // Make sure the display is blank
+            SwitchToConsoleMode();
+            _lcdConsole.Clear();
         }
 
         private void OnSensorValueChanged(IList<SensorMeasurement> newMeasurements)
