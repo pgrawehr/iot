@@ -45,6 +45,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[RoutePart.Id] = (sentence, time) => new RoutePart(sentence, time);
             knownSentences[EngineRevolutions.Id] = (sentence, time) => new EngineRevolutions(sentence, time);
             knownSentences[MeteorologicalComposite.Id] = (sentence, time) => new MeteorologicalComposite(sentence, time);
+            knownSentences[SatellitesInView.Id] = (sentence, time) => new SatellitesInView(sentence, time);
 
             return knownSentences;
         }

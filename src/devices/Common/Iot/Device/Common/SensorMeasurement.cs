@@ -124,12 +124,15 @@ namespace Iot.Device.Common
 
         public static readonly SensorMeasurement SpeedOverGround = new SensorMeasurement("SOG", Speed.Zero, SensorSource.Position, 1, TimeSpan.FromSeconds(5));
         public static readonly SensorMeasurement Track = new SensorMeasurement("Track", Angle.FromDegrees(0), SensorSource.Position, 1, TimeSpan.FromSeconds(5));
-        public static readonly SensorMeasurement Heading = new SensorMeasurement("Heading", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
+        public static readonly SensorMeasurement Heading = new SensorMeasurement("Magnetic Heading", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
+
+        public static readonly SensorMeasurement Deviation =
+            new SensorMeasurement("Deviation", Angle.FromDegrees(0), SensorSource.Compass, 1);
 
         /// <summary>
         /// Raw heading (no compass deviation correction applied)
         /// </summary>
-        public static readonly SensorMeasurement HeadingRaw = new SensorMeasurement("Raw Heading", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
+        public static readonly SensorMeasurement HeadingRaw = new SensorMeasurement("Compass Heading", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
         public static readonly SensorMeasurement Pitch = new SensorMeasurement("Pitch", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
         public static readonly SensorMeasurement Roll = new SensorMeasurement("Roll", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
 

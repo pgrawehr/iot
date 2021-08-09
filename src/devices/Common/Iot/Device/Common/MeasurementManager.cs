@@ -147,7 +147,7 @@ namespace Iot.Device.Common
                     ret.Add(e);
                 }
 
-                if (ret.Count == 0)
+                if (ret.Count == 0 || interval <= TimeSpan.Zero)
                 {
                     return ret;
                 }
@@ -265,9 +265,19 @@ namespace Iot.Device.Common
             measurement.UpdateValue(newValue, status, false);
         }
 
-        public void UpdateValue<T>(SensorMeasurement measurement, T newValue)
-        where T : struct
+        /// <summary>
+        /// Updates the given measurement with the new value. This overload is used if the measurement is of custom type
+        /// </summary>
+        /// <typeparam name="T">The type of the measurement (typically the type of the used <see cref="CustomData{T}"/>.)</typeparam>
+        /// <param name="measurement">The measurement</param>
+        /// <param name="newValue">The new value. Must not be null</param>
+        public void UpdateValue<T>(SensorMeasurement measurement, T? newValue)
         {
+            if (newValue == null)
+            {
+                throw new ArgumentNullException(nameof(newValue));
+            }
+
             if (measurement is CustomData<T> casted)
             {
                 casted.UpdateValue(newValue);

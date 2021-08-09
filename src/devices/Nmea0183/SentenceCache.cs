@@ -19,6 +19,7 @@ namespace Iot.Device.Nmea0183
         private Dictionary<SentenceId, NmeaSentence> _sentences;
         private Queue<RoutePart> _lastRouteSentences;
         private Dictionary<string, Waypoint> _wayPoints;
+        private Queue<SatellitesInView> _lastSatelliteInfos;
 
         private SentenceId[] _groupSentences = new SentenceId[]
         {
@@ -34,6 +35,7 @@ namespace Iot.Device.Nmea0183
             _lock = new object();
             _sentences = new Dictionary<SentenceId, NmeaSentence>();
             _lastRouteSentences = new Queue<RoutePart>();
+            _lastSatelliteInfos = new Queue<SatellitesInView>();
             _wayPoints = new Dictionary<string, Waypoint>();
             StoreRawSentences = false;
             _source.OnNewSequence += OnNewSequence;
@@ -56,6 +58,7 @@ namespace Iot.Device.Nmea0183
                 _sentences.Clear();
                 _lastRouteSentences.Clear();
                 _wayPoints.Clear();
+                _lastSatelliteInfos.Clear();
             }
         }
 
@@ -332,6 +335,62 @@ namespace Iot.Device.Nmea0183
             return ret.OrderBy(x => x.Sequence).ToList();
         }
 
+        /// <summary>
+        /// Returns the list of satellites in view
+        /// </summary>
+        /// <param name="totalNumberOfSatellites">Total number of satellites reported.
+        /// This number might be larger than the number of elements in the list, as there might not be enough
+        /// slots to transfer the whole status for all satellites</param>
+        /// <returns></returns>
+        public List<SatelliteInfo> GetSatellitesInView(out int totalNumberOfSatellites)
+        {
+            int maxSats = 0;
+            List<SatellitesInView> sentences = new List<SatellitesInView>();
+            lock (_lock)
+            {
+                sentences = _lastSatelliteInfos.ToList();
+                sentences.Reverse();
+            }
+
+            List<SatellitesInView> filtered = new List<SatellitesInView>();
+            foreach (var s in sentences)
+            {
+                // We might be getting satellite status from more than one source
+                if (!filtered.Any(x => x.Sequence == s.Sequence && x.TalkerId == s.TalkerId))
+                {
+                    filtered.Add(s);
+                }
+
+                if (maxSats < s.TotalSatellites)
+                {
+                    maxSats = s.TotalSatellites;
+                }
+            }
+
+            var allsats = filtered.Select(x => x.Satellites);
+
+            List<SatelliteInfo> ret = new();
+            foreach (var list1 in allsats)
+            {
+                foreach (var s2 in list1)
+                {
+                    if (ret.All(x => x.Id != s2.Id))
+                    {
+                        ret.Add(s2);
+                    }
+                }
+            }
+
+            if (maxSats < ret.Count)
+            {
+                maxSats = ret.Count;
+            }
+
+            ret = ret.OrderBy(x => x.Id).ToList();
+            totalNumberOfSatellites = maxSats;
+            return ret;
+        }
+
         private void OnNewSequence(NmeaSinkAndSource? source, NmeaSentence sentence)
         {
             // Cache only valid sentences
@@ -366,8 +425,15 @@ namespace Iot.Device.Nmea0183
                     // No reason to clean this up, this will never grow larger than a few hundred entries
                     _wayPoints[wpt.Name] = wpt;
                 }
-
-                // GSV would be special, too. But we're currently not supporting it
+                else if (sentence.SentenceId == SatellitesInView.Id && (sentence is SatellitesInView gsv))
+                {
+                    _lastSatelliteInfos.Enqueue(gsv);
+                    while (_lastSatelliteInfos.Count > 20)
+                    {
+                        // Throw away old entry
+                        _lastSatelliteInfos.Dequeue();
+                    }
+                }
             }
         }
 

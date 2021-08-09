@@ -17,6 +17,7 @@ namespace Iot.Device.Nmea0183
         private readonly NmeaSinkAndSource _output;
         private readonly TimeSpan _loopTime = TimeSpan.FromMilliseconds(200);
         private readonly SentenceCache _cache;
+        private readonly bool _ownsCache;
         private bool _threadRunning;
         private Thread? _updateThread;
 
@@ -33,10 +34,26 @@ namespace Iot.Device.Nmea0183
         private Route? _activeRoute;
         private HeadingAndDeviation? _activeDeviation;
 
-        public AutopilotController(NmeaSinkAndSource input, NmeaSinkAndSource output)
+        /// <summary>
+        /// This class can control an autopilot, given an external input (of mainly WPT and RTE sentences)
+        /// </summary>
+        /// <param name="input">Input stream (GPS device and plotter)</param>
+        /// <param name="output">Output stream (emits rmb, xte, vtg, bwc, bod)</param>
+        /// <param name="cache">Sentence cache, optional</param>
+        public AutopilotController(NmeaSinkAndSource input, NmeaSinkAndSource output, SentenceCache? cache = null)
         {
             _output = output;
-            _cache = new SentenceCache(input);
+            if (cache == null)
+            {
+                _ownsCache = true;
+                _cache = new SentenceCache(input);
+            }
+            else
+            {
+                _ownsCache = false;
+                _cache = cache;
+            }
+
             _threadRunning = false;
             _currentOrigin = null;
             _knownNextWaypoint = null;
@@ -131,7 +148,11 @@ namespace Iot.Device.Nmea0183
                 _updateThread = null;
             }
 
-            _cache.Clear();
+            if (_ownsCache)
+            {
+                _cache.Clear();
+            }
+
             _activeDeviation = null;
         }
 
@@ -149,7 +170,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Navigation loop.
         /// </summary>
-        private void CalculateNewStatus(int loops, DateTimeOffset now)
+        internal void CalculateNewStatus(int loops, DateTimeOffset now)
         {
             bool passedWp = false;
             RecommendedMinimumNavToDestination? currentLeg = null;

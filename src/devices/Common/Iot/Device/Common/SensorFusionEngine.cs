@@ -74,11 +74,22 @@ namespace Iot.Device.Common
         public void RegisterHistoryOperation(SensorMeasurement measurement,
             Func<SensorMeasurement, MeasurementManager, IQuantity?> operation, SensorMeasurement result)
         {
+            RegisterHistoryOperation(measurement, operation, result, TimeSpan.Zero);
+        }
+
+        /// <summary>
+        /// Perform an operation on a measurement history (i.e. calculate a smoothed measurement).
+        /// History settings for the given input measurement need to be configured already.
+        /// </summary>
+        public void RegisterHistoryOperation(SensorMeasurement measurement,
+            Func<SensorMeasurement, MeasurementManager, IQuantity?> operation, SensorMeasurement result,
+            TimeSpan minWaitBetweenUpdates)
+        {
             _manager.TryAddMeasurement(result);
             _manager.TryAddMeasurement(measurement);
             lock (_lock)
             {
-                _historyOperations.Add(new HistoryOperation(measurement, operation, result));
+                _historyOperations.Add(new HistoryOperation(measurement, operation, result, minWaitBetweenUpdates));
             }
         }
 
@@ -111,13 +122,25 @@ namespace Iot.Device.Common
                 {
                     if (changedMeasurements.Contains(op.Input))
                     {
-                        IQuantity? result = op.Operation(op.Input, _manager);
-                        op.Output.UpdateValue(result, false);
+                        ExecuteHistoryOperation(op);
                     }
                 }
 
                 _operationsInProgress = false;
             }
+        }
+
+        private void ExecuteHistoryOperation(HistoryOperation op)
+        {
+            var now = DateTime.Now;
+            if (now - op.LastUpdate < op.MinWaitTimeBetweenUpdates)
+            {
+                return;
+            }
+
+            op.LastUpdate = now;
+            IQuantity? result = op.Operation(op.Input, _manager);
+            op.Output.UpdateValue(result, false);
         }
 
         private void ExecuteFusionOperation(FusionOperation op)
@@ -175,17 +198,21 @@ namespace Iot.Device.Common
         private sealed class HistoryOperation
         {
             public HistoryOperation(SensorMeasurement input,
-                Func<SensorMeasurement, MeasurementManager, IQuantity?> operation, SensorMeasurement output)
+                Func<SensorMeasurement, MeasurementManager, IQuantity?> operation, SensorMeasurement output, TimeSpan minWaitTimeBetweenUpdates)
             {
                 Input = input;
                 Operation = operation;
                 Output = output;
+                MinWaitTimeBetweenUpdates = minWaitTimeBetweenUpdates;
+
+                LastUpdate = DateTime.MinValue;
             }
 
             public SensorMeasurement Input { get; }
             public Func<SensorMeasurement, MeasurementManager, IQuantity?> Operation { get; }
             public SensorMeasurement Output { get; }
-
+            public TimeSpan MinWaitTimeBetweenUpdates { get; }
+            public DateTime LastUpdate { get; set; }
         }
     }
 }

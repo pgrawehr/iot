@@ -12,6 +12,7 @@ using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 using UnitsNet.Units;
@@ -55,6 +56,7 @@ namespace DisplayControl
         private SerialPort _serialPortShip;
         private Stream _streamHandheld;
         private SerialPort _serialPortHandheld;
+        private SentenceCache _cache;
 
         private Angle? _magneticVariation;
         private GlobalPositioningSystemFixData _lastGgaMessage;
@@ -66,6 +68,8 @@ namespace DisplayControl
         private SensorMeasurement _smoothedTrueWindSpeed;
         private SensorMeasurement _maxWindGusts;
         private CustomData<GeographicPosition> _position;
+        private CustomData<int> _numSatellites;
+        private CustomData<string> _satStatus;
 
         private ILogger _logger;
 
@@ -76,6 +80,8 @@ namespace DisplayControl
             _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.WindTrue);
             _maxWindGusts = new SensorMeasurement("Wind Gusts", Speed.Zero, SensorSource.WindTrue);
             _position = new CustomData<GeographicPosition>("Geographic Position", new GeographicPosition(), SensorSource.Position);
+            _numSatellites = new CustomData<int>("Number of Sats in view", 0, SensorSource.Position);
+            _satStatus = new CustomData<string>("Satellites in View", string.Empty, SensorSource.Position);
             _logger = this.GetCurrentClassLogger();
         }
 
@@ -97,6 +103,10 @@ namespace DisplayControl
             // And these.
             rules.Add(new FilterRule("*", yd, new SentenceId("GLL"), new List<string>(), false, false));
             rules.Add(new FilterRule("*", yd, new SentenceId("VTG"), new List<string>(), false, false));
+            // The ship provides these for its GPS signal, but if we forward them i.e to OpenCPN, it gets confused (showing random data 
+            // in the satellite plot)
+            rules.Add(new FilterRule("*", yd, new SentenceId("GSV"), new List<string>(), false, false));
+            rules.Add(new FilterRule("*", yd, new SentenceId("GSA"), new List<string>(), false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut }, false, true));
 
@@ -113,7 +123,7 @@ namespace DisplayControl
             // The GPS messages are sent everywhere (as raw)
             string[] gpsSequences = new string[]
             {
-                "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG"
+                "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG", "GSA"
             };
 
             foreach (var gpsSequence in gpsSequences)
@@ -130,7 +140,7 @@ namespace DisplayControl
             {
                 // Send these from handheld to the nav software, so that this picks up the current destination.
                 // signalK is able to do this, OpenCPN is not
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut }, RemoveNonAsciiFromMessageForSignalk, false, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut, OpenCpn }, RemoveNonAsciiFromMessageForSignalk, false, true));
                 // And send the result of that nav operation to the ship 
                 // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
                 // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
@@ -145,8 +155,6 @@ namespace DisplayControl
             };
             foreach (var autopilot in autoPilotSentences)
             {
-                // TODO: needs testing (we must make sure the autopilot gets sentences only from one nav device, or 
-                // it will get confused)
                 // - Maybe we need to be able to switch between using OpenCpn and the Handheld for autopilot / navigation control
                 // - For now, we forward anything from our own processor to the real autopilot and the ship (so it gets displayed on the displays)
                 rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilot), new []{ HandheldSourceName }, false, true));
@@ -254,7 +262,7 @@ namespace DisplayControl
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
-                SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts
+                SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -293,7 +301,8 @@ namespace DisplayControl
 
             _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/ShipLogs", MaxFileSize = 1024 * 1024 * 5 , SortByDate = true });
 
-            _autopilot = new AutopilotController(_router, _router);
+            _cache = new SentenceCache(_router);
+            _autopilot = new AutopilotController(_router, _router, _cache);
 
             _router.AddEndPoint(_parserShipInterface);
             _router.AddEndPoint(_parserHandheldInterface);
@@ -319,7 +328,7 @@ namespace DisplayControl
                         return null;
                     }
                     return list.AverageValue();
-                }, _smoothedTrueWindSpeed);
+                }, _smoothedTrueWindSpeed, TimeSpan.FromSeconds(2));
 
             // This is the same value
             fusionEngine.RegisterFusionOperation(new[] { SensorMeasurement.WindSpeedTrue },
@@ -352,7 +361,7 @@ namespace DisplayControl
                         return null;
                     }
                     return list.MaxValue();
-                }, _maxWindGusts);
+                }, _maxWindGusts, TimeSpan.FromSeconds(5));
 
             _router.StartDecode();
             _autopilot.Start();
@@ -452,6 +461,12 @@ namespace DisplayControl
                 case TimeDate zda when zda.Valid && zda.DateTime.HasValue:
                     _manager.UpdateValue(SensorMeasurement.UtcTime, zda.DateTime.Value.UtcDateTime);
                     break;
+                case SatellitesInView gsv when gsv.Valid && gsv.Sequence == gsv.TotalSequences:
+                    var sats = _cache.GetSatellitesInView(out int totalSats);
+                    _manager.UpdateValue(_numSatellites, totalSats);
+                    string data = string.Join(", ", sats.Select(x => x.Id));
+                    _manager.UpdateValue(_satStatus, data);
+                    break;
             }
 
             if (sw.ElapsedMilliseconds > 50)
@@ -501,6 +516,7 @@ namespace DisplayControl
             _autopilot?.Stop();
             _router?.Dispose();
             _router = null;
+            _cache?.Clear();
 
             if (_serialPortShip != null)
             {
