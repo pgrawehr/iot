@@ -50,6 +50,8 @@ namespace DisplayControl
         private EngineSurveillance _engine;
         private PersistenceFile _configFile;
 
+        private object _displayLock;
+
         private enum MenuOptionResult
         {
             None,
@@ -73,6 +75,7 @@ namespace DisplayControl
             _timer = new Stopwatch();
             _activeEncoding = CultureInfo.CreateSpecificCulture("de-CH");
             _menuMode = false;
+            _displayLock = new object();
         }
 
         public GpioController Controller { get; }
@@ -140,23 +143,26 @@ namespace DisplayControl
 
         private void InitializeDisplay()
         {
-            _displayDevice = I2cDevice.Create(new I2cConnectionSettings(1, 0x27));
-            var lcdInterface = LcdInterface.CreateI2c(_displayDevice, false);
-            _characterLcd = new Lcd2004(lcdInterface);
+            lock (_displayLock)
+            {
+                _displayDevice = I2cDevice.Create(new I2cConnectionSettings(1, 0x27));
+                var lcdInterface = LcdInterface.CreateI2c(_displayDevice, false);
+                _characterLcd = new Lcd2004(lcdInterface);
 
-            _characterLcd.UnderlineCursorVisible = false;
-            _characterLcd.BacklightOn = true;
-            _characterLcd.DisplayOn = true;
-            _characterLcd.Clear();
-            _lcdConsole = new LcdConsole(_characterLcd, "A00", false);
-            LoadEncoding();
-            _lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
-            _lcdConsole.Clear();
-            _lcdConsole.WriteLine("== Startup ==");
-            _lcdConsoleActive = true;
-            _menuController = new MenuController(this);
-            _menuMode = false;
-            _bigValueDisplay = new LcdValueUnitDisplay(_characterLcd, _activeEncoding);
+                _characterLcd.UnderlineCursorVisible = false;
+                _characterLcd.BacklightOn = true;
+                _characterLcd.DisplayOn = true;
+                _characterLcd.Clear();
+                _lcdConsole = new LcdConsole(_characterLcd, "A00", false);
+                LoadEncoding();
+                _lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
+                _lcdConsole.Clear();
+                _lcdConsole.WriteLine("== Startup ==");
+                _lcdConsoleActive = true;
+                _menuController = new MenuController(this);
+                _menuMode = false;
+                _bigValueDisplay = new LcdValueUnitDisplay(_characterLcd, _activeEncoding);
+            }
         }
 
         private void InitializeSensors()
@@ -235,9 +241,12 @@ namespace DisplayControl
         private void WriteLineToConsoleAndDisplay(string text)
         {
             Console.WriteLine(text);
-            if (_lcdConsoleActive)
+            lock (_displayLock)
             {
-                _lcdConsole?.WriteLine(text);
+                if (_lcdConsoleActive)
+                {
+                    _lcdConsole?.WriteLine(text);
+                }
             }
         }
 
@@ -357,10 +366,13 @@ namespace DisplayControl
 
         private void LeaveMenu()
         {
-            _menuMode = false;
-            // Make sure the display is blank
-            SwitchToConsoleMode();
-            _lcdConsole.Clear();
+            lock (_displayLock)
+            {
+                _menuMode = false;
+                // Make sure the display is blank
+                SwitchToConsoleMode();
+                _lcdConsole.Clear();
+            }
         }
 
         private void OnSensorValueChanged(IList<SensorMeasurement> newMeasurements)
@@ -407,35 +419,44 @@ namespace DisplayControl
                 _activeValueSourceSingle = withValue;
                 _timer.Restart();
             }
-            
-            if (_lcdConsoleActive)
+
+            lock (_displayLock)
             {
-                _bigValueDisplay.InitForRom("A00");
-                _bigValueDisplay.Clear();
-                _lcdConsoleActive = false;
+                if (_lcdConsoleActive)
+                {
+                    _bigValueDisplay.InitForRom("A00");
+                    _bigValueDisplay.Clear();
+                    _lcdConsoleActive = false;
+                }
             }
         }
 
         private void SwitchToConsoleMode()
         {
-            if (!_lcdConsoleActive)
+            lock (_displayLock)
             {
-                LoadEncoding();
-                _lcdConsole.Clear();
-                _lcdConsoleActive = true;
+                if (!_lcdConsoleActive)
+                {
+                    LoadEncoding();
+                    _lcdConsole.Clear();
+                    _lcdConsoleActive = true;
+                }
             }
         }
 
         private void SwitchToConsoleMode(SensorMeasurement upper, SensorMeasurement lower)
         {
-            _activeValueSourceSingle = null;
-            _activeValueSourceUpper = upper;
-            _activeValueSourceLower = lower;
-            if (!_lcdConsoleActive)
+            lock (_displayLock)
             {
-                LoadEncoding();
-                _lcdConsole.Clear();
-                _lcdConsoleActive = true;
+                _activeValueSourceSingle = null;
+                _activeValueSourceUpper = upper;
+                _activeValueSourceLower = lower;
+                if (!_lcdConsoleActive)
+                {
+                    LoadEncoding();
+                    _lcdConsole.Clear();
+                    _lcdConsoleActive = true;
+                }
             }
         }
 
@@ -541,28 +562,33 @@ namespace DisplayControl
                 valueSourceUpper = SensorMeasurement.CpuTemperature;
             }
 
-            _lcdConsole.ReplaceLine(0, valueSourceUpper.Name ?? string.Empty);
-            string text = valueSourceUpper.ToString();
-            if (text.Contains("\n"))
+            lock (_displayLock)
             {
-                _lcdConsole.SetCursorPosition(0, 1);
-                _lcdConsole.Write(text);
-            }
-            else
-            {
-                _lcdConsole.ReplaceLine(1, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceUpper.Unit));
-                // Only if the first entry is a 1-liner
-                if (valueSourceLower != null)
+                _lcdConsole.ReplaceLine(0, valueSourceUpper.Name ?? string.Empty);
+                string text = valueSourceUpper.ToString();
+                if (text.Contains("\n"))
                 {
-                    _lcdConsole.ReplaceLine(2, valueSourceLower.Name);
-                    text = valueSourceLower.ToString();
-                    if (text.Contains("\n"))
+                    _lcdConsole.SetCursorPosition(0, 1);
+                    _lcdConsole.Write(text);
+                }
+                else
+                {
+                    _lcdConsole.ReplaceLine(1,
+                        String.Format(CultureInfo.CurrentCulture, "{0} {1:a}", text, valueSourceUpper.Value));
+                    // Only if the first entry is a 1-liner
+                    if (valueSourceLower != null)
                     {
-                        // We can't display a two liner here
-                        text = text.Replace("\n", " ", StringComparison.OrdinalIgnoreCase);
-                    }
+                        _lcdConsole.ReplaceLine(2, valueSourceLower.Name);
+                        text = valueSourceLower.ToString();
+                        if (text.Contains("\n"))
+                        {
+                            // We can't display a two liner here
+                            text = text.Replace("\n", " ", StringComparison.OrdinalIgnoreCase);
+                        }
 
-                    _lcdConsole.ReplaceLine(3, String.Format(CultureInfo.CurrentCulture, "{0} {1}", text, valueSourceLower.Unit));
+                        _lcdConsole.ReplaceLine(3,
+                            String.Format(CultureInfo.CurrentCulture, "{0} {1:a}", text, valueSourceLower.Value));
+                    }
                 }
             }
         }
@@ -580,7 +606,10 @@ namespace DisplayControl
         /// </summary>
         public void LoadEncoding()
         {
-            _lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(_activeEncoding, "A00"));
+            lock (_displayLock)
+            {
+                _lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(_activeEncoding, "A00"));
+            }
         }
 
         public void ShutDown()
@@ -823,6 +852,23 @@ namespace DisplayControl
             private void AddOption(string subMenuName, SensorMeasurement source, Func<SensorMeasurement, MenuOptionResult> operation)
             {
                 _options.Add((subMenuName, source, operation));
+            }
+        }
+
+        public void ReinitDisplay()
+        {
+            LeaveMenu();
+            _lcdConsole.Dispose();
+            _characterLcd.Dispose();
+            _displayDevice.Dispose();
+            InitializeDisplay();
+        }
+
+        public void EnableDeviation(bool enable)
+        {
+            if (_imuSensor != null)
+            {
+                _imuSensor.DeviationCorrectionEnabled = enable;
             }
         }
     }
