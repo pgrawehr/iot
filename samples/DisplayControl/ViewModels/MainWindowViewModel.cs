@@ -156,6 +156,21 @@ namespace DisplayControl.ViewModels
             DoClose?.Invoke();
         }
 
+        public void ReinitDisplayCommand()
+        {
+            DataContainer.ReinitDisplay();
+        }
+
+        public void DisableDeviation()
+        {
+            DataContainer.EnableDeviation(false);
+        }
+
+        public void EnableDeviation()
+        {
+            DataContainer.EnableDeviation(true);
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && DataContainer != null)

@@ -16,6 +16,17 @@
             <Setter Property="FontSize" Value="22"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
+        <Style Selector="ScrollBar:horizontal /template/ Thumb#thumb">
+            <Setter Property="MinWidth" Value="10" />
+            <Setter Property="Height" Value="10" />
+        </Style>
+        <Style Selector="ScrollBar:vertical">
+            <Setter Property="Width" Value="20" />
+        </Style>
+        <Style Selector="ScrollBar:vertical /template/ Thumb#thumb">
+            <Setter Property="MinHeight" Value="20" />
+            <Setter Property="Width" Value="20" />
+        </Style>
     </Window.Styles>
     <Design.DataContext>
         <vm:MainWindowViewModel/>
@@ -24,6 +35,11 @@
         <Menu DockPanel.Dock="Top" MinHeight="30">
             <MenuItem Header="_File" VerticalAlignment="Center">
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
+            </MenuItem>
+            <MenuItem Header="_Actions" VerticalAlignment="Center">
+                <MenuItem Header="_Reinit Display" Command="{Binding ReinitDisplayCommand}" />
+                <MenuItem Header="_Disable Magnetic Deviation Correction" Command="{Binding DisableDeviation}" />
+                <MenuItem Header="_Enable Magnetic Deviation Correction" Command="{Binding EnableDeviation}" />
             </MenuItem>
         </Menu>
             <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">

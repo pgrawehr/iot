@@ -39,6 +39,7 @@ namespace DisplayControl.Views
                     Close();
                 };
 
+                ClientSize = new Size(800, 400);
                 PropertyChanged += (sender, args) =>
                 {
                     if (args.Property.Name == "ClientSize")

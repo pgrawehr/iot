@@ -17,10 +17,6 @@ namespace DisplayControl
     /// </summary>
     internal class ImuSensor : PollingSensorBase
     {
-        public const string ShipPitch = "Ship Pitch";
-        public const string ShipRoll = "Ship Roll";
-        public const string ShipMagneticHeading = "Ship Mag Heading";
-
         private readonly PersistentBool _correctionEnabled;
         private Ig500Sensor _imu;
         private SerialPort _serialPort;
@@ -56,7 +52,7 @@ namespace DisplayControl
             Manager.AddRange(new[]
             {
                 SensorMeasurement.Heading, SensorMeasurement.HeadingRaw, SensorMeasurement.Roll,
-                SensorMeasurement.Pitch, _imuTemperature
+                SensorMeasurement.Pitch, _imuTemperature, SensorMeasurement.Deviation, 
             });
 
             _deviationCorrection = new MagneticDeviationCorrection();
@@ -134,7 +130,14 @@ namespace DisplayControl
         protected override void UpdateSensors()
         {
             Angle hdgUncorrected = Angle.FromDegrees(_lastEulerAngles.X);
-            Angle hdg = _deviationCorrection.ToMagneticHeading(hdgUncorrected);
+            Angle hdg = hdgUncorrected;
+            Angle deviation = Angle.Zero;
+            if (DeviationCorrectionEnabled)
+            {
+                hdg = _deviationCorrection.ToMagneticHeading(hdgUncorrected);
+                deviation = (hdg - hdgUncorrected).Normalize(false);
+            }
+
             Manager.UpdateValues(new List<SensorMeasurement>()
             {
                 SensorMeasurement.Pitch, SensorMeasurement.Roll, SensorMeasurement.Heading, SensorMeasurement.HeadingRaw,
@@ -145,6 +148,8 @@ namespace DisplayControl
                 Angle.FromDegrees(_lastEulerAngles.Z), Angle.FromDegrees(_lastEulerAngles.Y), 
                 hdg.Normalize(true), hdgUncorrected.Normalize(true), _imu.Temperature
             });
+
+            Manager.UpdateValue(SensorMeasurement.Deviation, deviation, DeviationCorrectionEnabled ? SensorMeasurementStatus.None : SensorMeasurementStatus.Warning);
         }
 
         protected override void Dispose(bool disposing)
