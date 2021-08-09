@@ -134,7 +134,8 @@ namespace Iot.Device.Nmea0183
                 }
 
                 NmeaSentence? typed = sentence.TryGetTypedValue();
-                if (typed != null && typed.Age > TimeSpan.FromSeconds(5))
+                // Only test the messages that actually bring their own time, otherwise a wrong clock will cause this to get worse.
+                if (typed != null && typed.Age > TimeSpan.FromSeconds(5) && (typed is TimeDate || typed is GlobalPositioningSystemFixData))
                 {
                     FireOnParserError($"Message {typed} is already {typed.Age} old when it is processed", NmeaError.MessageDelayed);
                 }
