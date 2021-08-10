@@ -13,7 +13,7 @@ using Iot.Device.Nmea0183.Sentences;
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
-    public class NmeaServer : NmeaSinkAndSource
+    public class NmeaTcpServer : NmeaSinkAndSource
     {
         private readonly IPAddress _bindTo;
         private readonly int _port;
@@ -26,12 +26,12 @@ namespace Iot.Device.Nmea0183
         private ConcurrentQueue<Task> _serverTasks;
         private bool _terminated;
 
-        public NmeaServer(string name)
+        public NmeaTcpServer(string name)
         : this(name, IPAddress.Any, 10110)
         {
         }
 
-        public NmeaServer(string name, IPAddress bindTo, int port)
+        public NmeaTcpServer(string name, IPAddress bindTo, int port)
         : base(name)
         {
             _bindTo = bindTo;

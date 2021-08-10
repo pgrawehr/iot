@@ -27,6 +27,7 @@ namespace DisplayControl
         private const string OpenCpn = "OpenCpn";
         private const string SignalKOut = "SignalKOut";
         private const string SignalKIn = "SignalK";
+        private const string Udp = "Udp";
         
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -41,12 +42,17 @@ namespace DisplayControl
         /// <summary>
         /// OpenCPN is supposed to connect here
         /// </summary>
-        private NmeaServer _openCpnServer;
+        private NmeaTcpServer _openCpnServer;
 
         /// <summary>
         /// Server instance for signal-k
         /// </summary>
-        private NmeaServer _signalkServer;
+        private NmeaTcpServer _signalkServer;
+
+        /// <summary>
+        /// Udp datagram server
+        /// </summary>
+        private NmeaUdpServer _udpServer;
 
         private SystemClockSynchronizer _clockSynchronizer;
         
@@ -108,7 +114,7 @@ namespace DisplayControl
             rules.Add(new FilterRule("*", yd, new SentenceId("GSV"), new List<string>(), false, false));
             rules.Add(new FilterRule("*", yd, new SentenceId("GSA"), new List<string>(), false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut }, false, true));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut, Udp }, false, true));
 
             // Anything from SignalK is currently discarded (maybe there are some computed sentences that are useful)
             // Note: This source does not normally generate any data. Input from SignalK is on SignalKIn
@@ -116,7 +122,7 @@ namespace DisplayControl
             // Anything from OpenCpn is distributed everywhere
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { SignalKOut, ShipSourceName, HandheldSourceName }));
             // Anything from the ship is sent locally
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalKOut, MessageRouter.LocalMessageSource }, false, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalKOut, MessageRouter.LocalMessageSource, Udp }, false, true));
             // Anything from the handheld is sent to our processor
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
@@ -128,7 +134,7 @@ namespace DisplayControl
 
             foreach (var gpsSequence in gpsSequences)
             {
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { OpenCpn, ShipSourceName, SignalKOut }, true, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { OpenCpn, ShipSourceName, SignalKOut, Udp }, true, true));
             }
 
             string[] navigationSentences = new string[]
@@ -140,7 +146,7 @@ namespace DisplayControl
             {
                 // Send these from handheld to the nav software, so that this picks up the current destination.
                 // signalK is able to do this, OpenCPN is not
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut, OpenCpn }, RemoveNonAsciiFromMessageForSignalk, false, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut, OpenCpn, Udp }, RemoveNonAsciiFromMessageForSignalk, false, true));
                 // And send the result of that nav operation to the ship 
                 // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
                 // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
@@ -281,11 +287,11 @@ namespace DisplayControl
             _parserHandheldInterface.OnParserError += OnParserError;
             _parserHandheldInterface.StartDecode();
 
-            _openCpnServer = new NmeaServer(OpenCpn, IPAddress.Any, 10100);
+            _openCpnServer = new NmeaTcpServer(OpenCpn, IPAddress.Any, 10100);
             _openCpnServer.OnParserError += OnParserError;
             _openCpnServer.StartDecode();
 
-            _signalkServer = new NmeaServer(SignalKOut, IPAddress.Any, 10101);
+            _signalkServer = new NmeaTcpServer(SignalKOut, IPAddress.Any, 10101);
             _signalkServer.OnParserError += OnParserError;
             _signalkServer.StartDecode();
 
@@ -295,6 +301,9 @@ namespace DisplayControl
             //_signalKClientParser.OnParserError += OnParserError;
             // _signalKClientParser.ExclusiveTalkerId = new TalkerId('I', 'I');
             // _signalKClientParser.StartDecode();
+            _udpServer = new NmeaUdpServer(Udp, 10101);
+            _udpServer.OnParserError += OnParserError;
+            _udpServer.StartDecode();
 
             _clockSynchronizer = new SystemClockSynchronizer();
             _clockSynchronizer.StartDecode();
@@ -309,6 +318,7 @@ namespace DisplayControl
             _router.AddEndPoint(_openCpnServer);
             _router.AddEndPoint(_signalkServer);
             _router.AddEndPoint(_clockSynchronizer);
+            _router.AddEndPoint(_udpServer);
             // _router.AddEndPoint(_signalKClientParser);
 
             _router.OnNewSequence += ParserOnNewSequence;
@@ -538,10 +548,8 @@ namespace DisplayControl
             _signalkServer?.Dispose();
             _signalkServer = null;
 
-            ////_signalKClient?.Dispose();
-            ////_signalKClientParser?.Dispose();
-            ////_signalKClient = null;
-            ////_signalKClientParser = null;
+            _udpServer?.Dispose();
+            _udpServer = null;
 
             _autopilot?.Dispose();
             _autopilot = null;
