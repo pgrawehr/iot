@@ -163,7 +163,15 @@ namespace Iot.Device.Nmea0183
                 while (true)
                 {
                     pt = new IPEndPoint(IPAddress.Any, _port);
-                    datagram = _client.Receive(ref pt);
+                    try
+                    {
+                        datagram = _client.Receive(ref pt);
+                    }
+                    catch (SocketException)
+                    {
+                        return 0;
+                    }
+
                     if (_knownSenders.TryGetValue(pt.Address, out isself))
                     {
                         if (isself)
@@ -253,6 +261,16 @@ namespace Iot.Device.Nmea0183
             public override bool CanWrite => true;
             public override long Length => 0;
             public override long Position { get; set; }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _client.Dispose();
+                }
+
+                base.Dispose(disposing);
+            }
         }
     }
 }

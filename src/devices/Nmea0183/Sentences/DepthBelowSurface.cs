@@ -19,12 +19,13 @@ namespace Iot.Device.Nmea0183.Sentences
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
         /// <summary>
-        /// Constructs a new MWV sentence
+        /// Constructs a new DBS sentence
         /// </summary>
         public DepthBelowSurface(Length depth)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             Depth = depth;
+            Valid = true;
         }
 
         /// <summary>
