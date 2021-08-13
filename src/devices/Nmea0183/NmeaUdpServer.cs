@@ -58,7 +58,7 @@ namespace Iot.Device.Nmea0183
 
             _server = new UdpClient(_port);
             _server.DontFragment = true;
-            _clientStream = new UdpClientStream(_server, _port);
+            _clientStream = new UdpClientStream(_server, _port, this);
             _parser = new NmeaParser($"{InterfaceName} (Port {_port})", _clientStream, _clientStream);
             _parser.OnNewSequence += OnSentenceReceivedFromClient;
             _parser.OnParserError += ParserOnParserError;
@@ -123,15 +123,17 @@ namespace Iot.Device.Nmea0183
         {
             private readonly UdpClient _client;
             private readonly int _port;
+            private readonly NmeaUdpServer _parent;
             private readonly Queue<byte> _data;
 
             private Stopwatch _lastUnsuccessfulSend;
             private Dictionary<IPAddress, bool> _knownSenders;
 
-            public UdpClientStream(UdpClient client, int port)
+            public UdpClientStream(UdpClient client, int port, NmeaUdpServer parent)
             {
                 _client = client;
                 _port = port;
+                _parent = parent;
                 _data = new Queue<byte>();
                 _knownSenders = new();
                 _lastUnsuccessfulSend = new Stopwatch();
@@ -167,8 +169,9 @@ namespace Iot.Device.Nmea0183
                     {
                         datagram = _client.Receive(ref pt);
                     }
-                    catch (SocketException)
+                    catch (SocketException x)
                     {
+                        _parent.FireOnParserError($"Udp server error: {x.Message}", NmeaError.PortClosed);
                         return 0;
                     }
 
@@ -250,7 +253,8 @@ namespace Iot.Device.Nmea0183
                 }
                 catch (SocketException x)
                 {
-                    Console.WriteLine($"Exception sending to UDP port: {x.Message}");
+                    // This is normal if no network connection is available.
+                    _parent.FireOnParserError($"Udp server send error: {x.Message}", NmeaError.None);
                     _lastUnsuccessfulSend.Reset();
                     _lastUnsuccessfulSend.Start();
                 }

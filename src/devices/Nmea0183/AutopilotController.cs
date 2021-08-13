@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
+using Microsoft.Extensions.Logging;
 using UnitsNet;
 
 #pragma warning disable CS1591
@@ -18,6 +20,8 @@ namespace Iot.Device.Nmea0183
         private readonly TimeSpan _loopTime = TimeSpan.FromMilliseconds(200);
         private readonly SentenceCache _cache;
         private readonly bool _ownsCache;
+
+        private readonly ILogger _logger;
         private bool _threadRunning;
         private Thread? _updateThread;
 
@@ -62,6 +66,7 @@ namespace Iot.Device.Nmea0183
             _manualNextWaypoint = null;
             _activeRoute = null;
             WaypointSwitchDistance = Length.FromMeters(200);
+            _logger = this.GetCurrentClassLogger();
         }
 
         public bool Running
@@ -81,7 +86,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Use for testing purposes only
         /// </summary>
-        public SentenceCache SentenceCache
+        internal SentenceCache SentenceCache
         {
             get
             {
@@ -204,7 +209,7 @@ namespace Iot.Device.Nmea0183
                     {
                         if (loops % LogSkip == 0)
                         {
-                            Console.WriteLine("Autopilot: No magnetic variance");
+                            _logger.LogWarning("Autopilot: No magnetic variance");
                         }
 
                         return;
@@ -436,6 +441,7 @@ namespace Iot.Device.Nmea0183
             GreatCircle.DistAndDir(position, nextWaypoint.Position, out var distanceToNext, out var angleToNext);
             if (distanceToNext < WaypointSwitchDistance)
             {
+                _logger.LogInformation($"Reached waypoint {nextWaypoint.WaypointName}");
                 nextWaypoint = wayPointAfterNext;
                 return true;
             }
@@ -455,6 +461,7 @@ namespace Iot.Device.Nmea0183
                 // opposite directions
                 if (crossTrackCurrentLeg > crossTrackNextLeg && Math.Abs(delta.Normalize(false).Degrees) > 90)
                 {
+                    _logger.LogInformation($"Reached waypoint {nextWaypoint.WaypointName}");
                     nextWaypoint = wayPointAfterNext;
                     return true;
                 }
