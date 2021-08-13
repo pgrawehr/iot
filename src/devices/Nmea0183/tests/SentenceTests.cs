@@ -343,6 +343,26 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Equal(msg, rmb.ToNmeaMessage());
         }
 
+        [Fact]
+        public void GsvDecode()
+        {
+            const string msg = "$YDGSV,5,1,18,19,29,257,45,22,30,102,45,04,76,143,44,06,47,295,42";
+            var decoded = TalkerSentence.FromSentenceString(msg, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(decoded);
+
+            SatellitesInView nav = (SatellitesInView)decoded!.TryGetTypedValue()!;
+            Assert.False(nav.ReplacesOlderInstance);
+            Assert.Equal(4, nav.Satellites.Count);
+            Assert.Equal(18, nav.TotalSatellites);
+            foreach (var s in nav.Satellites)
+            {
+                Assert.True(!string.IsNullOrWhiteSpace(s.Id));
+                Assert.True(s.Elevation > 0 && s.Elevation < 90);
+                Assert.True(s.Azimuth > 0 && s.Azimuth < 360);
+            }
+        }
+
         [Theory]
         // These were seen in actual NMEA data streams
         [InlineData("$GPGGA,163806,,*4E")]
@@ -388,6 +408,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$YDVHW,,T,,M,3.1,N,5.7,K,*64")]
         [InlineData("$ENRPM,S,1,3200,100,A*7B")]
         [InlineData("$ECMDA,30.12,I,1.020,B,18.5,C,,C,38.7,,4.2,C,,T,,M,,N,,M*37")]
+        [InlineData("$YDGSV,5,1,18,19,29,257,45,22,30,102,45,04,76,143,44,06,47,295,42*73")]
         public void SentenceRoundTrip(string input)
         {
             var inSentence = TalkerSentence.FromSentenceString(input, out var error);
@@ -465,6 +486,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$IIXDR,C,18.20,C,ENV_WATER_T,C,28.69,C,ENV_OUTAIR_T,P,101400,P,ENV_ATMOS_P")]
         [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D")]
         [InlineData("$YDVHW,,T,,M,3.1,N,5.7,K,")]
+        [InlineData("$YDGSV,5,1,18,19,29,257,45,22,30,102,45,04,76,143,44,06,47,295,42")]
         public void SentenceRoundTripIsUnaffectedByCulture(string input)
         {
             // de-DE has "," as decimal separator. Big trouble if using CurrentCulture for any parsing or formatting here

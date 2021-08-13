@@ -20,7 +20,7 @@ namespace Nmea.Simulator
         private Thread? _simulatorThread;
         private bool _terminate;
         private SimulatorData _activeData;
-        private NmeaServer? _server;
+        private NmeaTcpServer? _server;
 
         public Simulator()
         {
@@ -43,7 +43,7 @@ namespace Nmea.Simulator
                 _terminate = false;
                 _simulatorThread = new Thread(MainSimulator);
                 _simulatorThread.Start();
-                _server = new NmeaServer("Server");
+                _server = new NmeaTcpServer("Server");
                 _server.StartDecode();
                 _server.OnNewSequence += (source, sentence) =>
                 {

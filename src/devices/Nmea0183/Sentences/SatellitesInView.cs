@@ -72,6 +72,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             TotalSequences = totalSequences.Value;
             Sequence = currentSequence.Value;
+            TotalSatellites = totalSatellites.Value;
 
             string id = ReadString(field);
             while (!string.IsNullOrWhiteSpace(id))
@@ -124,10 +125,17 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 StringBuilder b = new StringBuilder();
                 b.AppendFormat(CultureInfo.InvariantCulture, "{0},{1},{2},", TotalSequences, Sequence, TotalSatellites);
-                foreach (var s in Satellites)
+                for (var index = 0; index < Satellites.Count; index++)
                 {
+                    var s = Satellites[index];
                     if (s.Elevation.HasValue && s.Azimuth.HasValue && s.Snr.HasValue)
                     {
+                        // Must make sure we have a , between blocks, but only if it's not the first nor the last block
+                        if (index != 0)
+                        {
+                            b.Append(',');
+                        }
+
                         b.AppendFormat(CultureInfo.InvariantCulture, "{0},{1:F0},{2:F0},{3:F0}", s.Id, s.Elevation,
                             s.Azimuth, s.Snr);
                     }
