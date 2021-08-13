@@ -36,7 +36,7 @@ namespace Iot.Device.Nmea0183
         private RoutePoint? _manualNextWaypoint;
 
         private Route? _activeRoute;
-        private HeadingAndDeviation? _activeDeviation;
+        private HeadingAndDeclination? _activeDeviation;
 
         /// <summary>
         /// This class can control an autopilot, given an external input (of mainly WPT and RTE sentences)
@@ -201,8 +201,8 @@ namespace Iot.Device.Nmea0183
 
             if (_activeDeviation == null || loops % 100 == 0)
             {
-                if (!_cache.TryGetLastSentence(HeadingAndDeviation.Id, out HeadingAndDeviation deviation) ||
-                    !deviation.Variation.HasValue)
+                if (!_cache.TryGetLastSentence(HeadingAndDeclination.Id, out HeadingAndDeclination deviation) ||
+                    !deviation.Declination.HasValue)
                 {
                     if (!_cache.TryGetLastSentence(RecommendedMinimumNavigationInformation.Id,
                         out RecommendedMinimumNavigationInformation rmc) || !rmc.MagneticVariationInDegrees.HasValue)
@@ -215,7 +215,7 @@ namespace Iot.Device.Nmea0183
                         return;
                     }
 
-                    deviation = new HeadingAndDeviation(Angle.Zero, Angle.Zero, rmc.MagneticVariationInDegrees);
+                    deviation = new HeadingAndDeclination(Angle.Zero, Angle.Zero, rmc.MagneticVariationInDegrees);
                 }
 
                 _activeDeviation = deviation;
@@ -358,7 +358,7 @@ namespace Iot.Device.Nmea0183
 
                 CrossTrackError xte = new CrossTrackError(crossTrackError);
 
-                Angle variation = _activeDeviation.Variation.GetValueOrDefault(Angle.Zero);
+                Angle variation = _activeDeviation.Declination.GetValueOrDefault(Angle.Zero);
 
                 TrackMadeGood vtg = new TrackMadeGood(track, AngleExtensions.TrueToMagnetic(track, variation), sog);
 

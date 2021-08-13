@@ -7,10 +7,10 @@ using UnitsNet;
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
-    /// HDG Sentence (Heading, deviation, variation)
-    /// Usually measured using an electronic compass. This is required for HDT and HDM to work properly sometimes.
+    /// HDG Sentence (Heading, declination, variation)
+    /// Usually measured using an electronic compass. This is required for HDT and HDM to work properly.
     /// </summary>
-    public class HeadingAndDeviation : NmeaSentence
+    public class HeadingAndDeclination : NmeaSentence
     {
         /// <summary>
         /// This sentence's id
@@ -22,19 +22,19 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs a new MWV sentence
         /// </summary>
-        public HeadingAndDeviation(Angle headingTrue, Angle? deviation, Angle? variation)
+        public HeadingAndDeclination(Angle headingTrue, Angle? deviation, Angle? variation)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
             HeadingTrue = headingTrue;
             Deviation = deviation;
-            Variation = variation;
+            Declination = variation;
             Valid = true;
         }
 
         /// <summary>
         /// Internal constructor
         /// </summary>
-        public HeadingAndDeviation(TalkerSentence sentence, DateTimeOffset time)
+        public HeadingAndDeclination(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
@@ -42,7 +42,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Magnetic heading message
         /// </summary>
-        public HeadingAndDeviation(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+        public HeadingAndDeclination(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
@@ -78,11 +78,11 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 if (magVarDirection == "E")
                 {
-                    Variation = Angle.FromDegrees(magVar.Value);
+                    Declination = Angle.FromDegrees(magVar.Value);
                 }
                 else
                 {
-                    Variation = Angle.FromDegrees(magVar.Value * -1);
+                    Declination = Angle.FromDegrees(magVar.Value * -1);
                 }
             }
         }
@@ -102,7 +102,8 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Deviation at current location. Usually unknown (empty)
+        /// Deviation at current location. Usually unknown (empty). Not sure what this field means. The deviation is a property
+        /// of the actual compass and the current orientation, not the location.
         /// </summary>
         public Angle? Deviation
         {
@@ -111,10 +112,10 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Magnetic variation at current location. Usually derived from the NOAA magnetic field model by one
+        /// Magnetic declination (sometimes also called variation) at current location. Usually derived from the NOAA magnetic field model by one
         /// of the attached devices.
         /// </summary>
-        public Angle? Variation
+        public Angle? Declination
         {
             get;
             private set;
@@ -139,10 +140,10 @@ namespace Iot.Device.Nmea0183.Sentences
                     b.AppendFormat(",,");
                 }
 
-                if (Variation.HasValue)
+                if (Declination.HasValue)
                 {
-                    b.AppendFormat(CultureInfo.InvariantCulture, "{0:F1},{1}", Math.Abs(Variation.Value.Degrees),
-                        Variation.Value.Degrees >= 0 ? "E" : "W");
+                    b.AppendFormat(CultureInfo.InvariantCulture, "{0:F1},{1}", Math.Abs(Declination.Value.Degrees),
+                        Declination.Value.Degrees >= 0 ? "E" : "W");
                 }
                 else
                 {
@@ -158,9 +159,9 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <inheritdoc />
         public override string ToReadableContent()
         {
-            if (Valid && Variation.HasValue)
+            if (Valid && Declination.HasValue)
             {
-                return $"Magnetic Heading: {HeadingTrue.Degrees:F1}°, Variation: {Variation.Value.Degrees:F1}°";
+                return $"Magnetic Heading: {HeadingTrue.Degrees:F1}°, Declination: {Declination.Value.Degrees:F1}°";
             }
 
             return "Magnetic Heading unknown";

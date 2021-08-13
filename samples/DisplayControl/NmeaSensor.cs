@@ -477,6 +477,9 @@ namespace DisplayControl
                     string data = string.Join(", ", sats.Select(x => x.Id));
                     _manager.UpdateValue(_satStatus, data);
                     break;
+                case HeadingAndDeclination decl when decl.Valid:
+                    _magneticVariation = decl.Declination;
+                    break;
             }
 
             if (sw.ElapsedMilliseconds > 50)
@@ -505,7 +508,7 @@ namespace DisplayControl
                 HeadingTrue hdt = new HeadingTrue(value.X + _magneticVariation.Value.Degrees);
                 _router.SendSentence(hdt);
 
-                HeadingAndDeviation hdg = new HeadingAndDeviation(Angle.FromDegrees(value.X), null, _magneticVariation.Value);
+                HeadingAndDeclination hdg = new HeadingAndDeclination(Angle.FromDegrees(value.X), null, _magneticVariation.Value);
                 _router.SendSentence(hdg);
             }
 
