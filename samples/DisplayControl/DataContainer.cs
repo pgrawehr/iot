@@ -524,6 +524,15 @@ namespace DisplayControl
                 }
             }
 
+            if (source == SensorMeasurement.WindDirectionAbsolute)
+            {
+                if (source.TryGetAs(out Angle directionTrue) &&
+                    SensorMeasurement.WindSpeedAbsolute.TryGetAs(out Speed speed))
+                {
+                    _nmeaSensor.SendTrueWind(directionTrue, speed);
+                }
+            }
+
         }
 
         public void DisplayBigValue(SensorMeasurement valueSource)

@@ -46,6 +46,8 @@ namespace Iot.Device.Nmea0183
             knownSentences[EngineRevolutions.Id] = (sentence, time) => new EngineRevolutions(sentence, time);
             knownSentences[MeteorologicalComposite.Id] = (sentence, time) => new MeteorologicalComposite(sentence, time);
             knownSentences[SatellitesInView.Id] = (sentence, time) => new SatellitesInView(sentence, time);
+            knownSentences[WindDirectionWithRespectToNorth.Id] =
+                (sentence, time) => new WindDirectionWithRespectToNorth(sentence, time);
 
             return knownSentences;
         }

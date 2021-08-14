@@ -113,6 +113,8 @@ namespace DisplayControl
             // in the satellite plot)
             rules.Add(new FilterRule("*", yd, new SentenceId("GSV"), new List<string>(), false, false));
             rules.Add(new FilterRule("*", yd, new SentenceId("GSA"), new List<string>(), false, false));
+            // Drop this, it's wrong
+            rules.Add(new FilterRule("*", yd, WindDirectionWithRespectToNorth.Id, new List<string>(), false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut, Udp }, false, true));
 
@@ -559,6 +561,20 @@ namespace DisplayControl
 
             _parserHandheldInterface?.Dispose();
             _parserHandheldInterface = null;
+        }
+
+        public void SendTrueWind(Angle windDirectionTrue, Speed windSpeed)
+        {
+            if (_magneticVariation == null)
+            {
+                return;
+            }
+
+            WindDirectionWithRespectToNorth dir = new WindDirectionWithRespectToNorth(windDirectionTrue,
+                windDirectionTrue + _magneticVariation,
+                windSpeed);
+
+            Send(dir);
         }
 
         public void SendTemperature(Temperature value)

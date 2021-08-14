@@ -459,6 +459,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$GPVTG,41.3,T,39.3,M,1.8,N,3.3,K,A")]
         [InlineData("$HCHDG,30.9,,,1.9,E")]
         [InlineData("$YDVHW,,T,,M,3.1,N,5.7,K,*64")]
+        [InlineData("$YDMWD,336.8,T,333.8,M,21.6,N,11.1,M*58")]
         public void CanParseAllTheseMessages(string input)
         {
             var inSentence = TalkerSentence.FromSentenceString(input, out var error);
@@ -487,6 +488,7 @@ namespace Iot.Device.Nmea0183.Tests
         [InlineData("$GPRMB,A,2.341,L,R3,R4,4728.92180,N,00930.33590,E,0.009,192.9,2.5,V,D")]
         [InlineData("$YDVHW,,T,,M,3.1,N,5.7,K,")]
         [InlineData("$YDGSV,5,1,18,19,29,257,45,22,30,102,45,04,76,143,44,06,47,295,42")]
+        [InlineData("$YDMWD,336.8,T,333.8,M,21.6,N,11.1,M")]
         public void SentenceRoundTripIsUnaffectedByCulture(string input)
         {
             // de-DE has "," as decimal separator. Big trouble if using CurrentCulture for any parsing or formatting here

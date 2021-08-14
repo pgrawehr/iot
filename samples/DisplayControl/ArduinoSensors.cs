@@ -35,5 +35,16 @@ namespace DisplayControl
         protected override void UpdateSensors()
         {
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _board?.Dispose();
+                _board = null;
+            }
+
+            base.Dispose(disposing);
+        }
     }
 }
