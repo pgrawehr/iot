@@ -113,8 +113,11 @@ namespace DisplayControl
             // in the satellite plot)
             rules.Add(new FilterRule("*", yd, new SentenceId("GSV"), new List<string>(), false, false));
             rules.Add(new FilterRule("*", yd, new SentenceId("GSA"), new List<string>(), false, false));
-            // Drop this, it's wrong
+            // Drop this, it's wrong (seems not to use the heading, even if it should).
+            // We're instead reconstructing this message - but in that case, don't send it back to the ship, as this causes confusion
+            // for the wind displays
             rules.Add(new FilterRule("*", yd, WindDirectionWithRespectToNorth.Id, new List<string>(), false, false));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.ElectronicChartDisplayAndInformationSystem, WindDirectionWithRespectToNorth.Id, new List<string>() { OpenCpn, SignalKOut, Udp }, false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut, Udp }, false, true));
 
@@ -571,7 +574,7 @@ namespace DisplayControl
             }
 
             WindDirectionWithRespectToNorth dir = new WindDirectionWithRespectToNorth(windDirectionTrue,
-                windDirectionTrue + _magneticVariation,
+                windDirectionTrue - _magneticVariation,
                 windSpeed);
 
             Send(dir);
