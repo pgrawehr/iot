@@ -49,6 +49,7 @@ namespace DisplayControl
         private Bmp680Environment _weatherSensor;
         private EngineSurveillance _engine;
         private PersistenceFile _configFile;
+        private ArduinoSensors _arduino;
 
         private object _displayLock;
 
@@ -212,6 +213,10 @@ namespace DisplayControl
             WriteLineToConsoleAndDisplay("NMEA Source...");
             _nmeaSensor = new NmeaSensor(_sensorManager);
             _nmeaSensor.Initialize(_fusionEngine);
+
+            WriteLineToConsoleAndDisplay("Arduino...");
+            _arduino = new ArduinoSensors(_sensorManager);
+            _arduino.Init(Controller);
 
             WriteLineToConsoleAndDisplay("Motor...");
             _engine = new EngineSurveillance(_sensorManager, 9);
@@ -645,6 +650,9 @@ namespace DisplayControl
 
             _nmeaSensor.Dispose();
             _nmeaSensor = null;
+
+            _arduino?.Dispose();
+            _arduino = null;
 
             _engine?.Dispose();
             _engine = null;

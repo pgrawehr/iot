@@ -87,6 +87,45 @@ namespace Iot.Device.Common
 
                     return (null, false); // At least one input not available - skip this operation
                 }, SensorMeasurement.AirHumidityOutside);
+
+            engine.RegisterFusionOperation(new[]
+                {
+                    SensorMeasurement.WindSpeedApparent,
+                    SensorMeasurement.AirTemperatureOutside,
+                },
+                args =>
+                {
+                    if (args[0].TryGetAs(out Speed speed) &&
+                        args[1].TryGetAs(out Temperature temperature))
+                    {
+                        var result = WeatherHelper.CalculateWindchill(temperature, speed);
+                        return (result, false);
+                    }
+
+                    return (null, false);
+                }, SensorMeasurement.Windchill);
+
+            engine.RegisterFusionOperation(new[]
+                {
+                    SensorMeasurement.AirHumidityOutside,
+                    SensorMeasurement.WindSpeedApparent,
+                    SensorMeasurement.AirTemperatureOutside,
+                    SensorMeasurement.AirPressureBarometricOutside,
+                },
+                args =>
+                {
+                    if (args[0].TryGetAs(out RelativeHumidity humidity) &&
+                        args[1].TryGetAs(out Speed speed) &&
+                        args[2].TryGetAs(out Temperature temperature) &&
+                        args[3].TryGetAs(out Pressure barometricPressure))
+                    {
+                        var density = WeatherHelper.CalculateAirDensity(barometricPressure, temperature, humidity);
+                        var result = WeatherHelper.CalculateWindForce(density, speed);
+                        return (result, false);
+                    }
+
+                    return (null, false);
+                }, SensorMeasurement.WindForce);
         }
     }
 }
