@@ -33,11 +33,35 @@ xsd DeviationTable.xsd /c /namespace:Iot.Device.Nmea0183 /order
             <xs:element type="xs:float" name="DeviationSmooth" minOccurs="1" maxOccurs="1" />
         </xs:sequence>
 	</xs:complexType>
+    <xs:complexType name="MagneticReading">
+        <xs:sequence>
+            <xs:element type="xs:dateTime" name="TimeStamp" minOccurs="1" maxOccurs="1" />
+            <xs:element type="xs:float" name="MagneticCompassReading" minOccurs="1" maxOccurs="1" />
+            <xs:element type="xs:float" name="DeltaToPrevious" minOccurs="1" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="GnssReading">
+        <xs:sequence>
+            <xs:element type="xs:dateTime" name="TimeStamp" minOccurs="1" maxOccurs="1" />
+            <xs:element type="xs:float" name="TrackReading" minOccurs="1" maxOccurs="1" />
+            <xs:element type="xs:float" name="DeltaToPrevious" minOccurs="1" maxOccurs="1" />
+        </xs:sequence>
+    </xs:complexType>
+    <!-- This block contains the raw data used for the calibration. That is the magnetic compass readings and the 
+    corresponding tracks from the GNSS receiver. This table can be used to check the quality of the input data (both
+    rows should show more or less an evenly distributed circle)-->
+    <xs:complexType name="RawData">
+        <xs:sequence>
+            <xs:element name="Compass" type="MagneticReading" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="Track" type="GnssReading" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
     <xs:complexType name="CompassCalibration">
         <xs:sequence>
             <xs:element type="Identification" name="Identification" minOccurs="1" maxOccurs="1" />
             <xs:element type="CalibrationData" name="CalibrationDataFromCompassReading" minOccurs="1" maxOccurs="1" />
             <xs:element type="CalibrationData" name="CalibrationDataToCompassReading" minOccurs="1" maxOccurs="1" />
+            <xs:element type="RawData" name ="RawDataReadings" minOccurs="0" maxOccurs="1" />
         </xs:sequence>
     </xs:complexType>
 </xs:schema>

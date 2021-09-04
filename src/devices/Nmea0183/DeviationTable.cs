@@ -9,14 +9,14 @@
 //------------------------------------------------------------------------------
 
 // 
-// Dieser Quellcode wurde automatisch generiert von xsd, Version=4.6.1055.0.
+// Dieser Quellcode wurde automatisch generiert von xsd, Version=4.8.3928.0.
 // 
 namespace Iot.Device.Nmea0183 {
     using System.Xml.Serialization;
     
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.6.1055.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -29,6 +29,8 @@ namespace Iot.Device.Nmea0183 {
         private DeviationPoint[] calibrationDataFromCompassReadingField;
         
         private DeviationPoint[] calibrationDataToCompassReadingField;
+        
+        private RawData rawDataReadingsField;
         
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(Order=0)]
@@ -64,10 +66,21 @@ namespace Iot.Device.Nmea0183 {
                 this.calibrationDataToCompassReadingField = value;
             }
         }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=3)]
+        public RawData RawDataReadings {
+            get {
+                return this.rawDataReadingsField;
+            }
+            set {
+                this.rawDataReadingsField = value;
+            }
+        }
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.6.1055.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
@@ -128,7 +141,138 @@ namespace Iot.Device.Nmea0183 {
     }
     
     /// <remarks/>
-    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.6.1055.0")]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/DeviationTable.xsd")]
+    public partial class GnssReading {
+        
+        private System.DateTime timeStampField;
+        
+        private float trackReadingField;
+        
+        private float deltaToPreviousField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public System.DateTime TimeStamp {
+            get {
+                return this.timeStampField;
+            }
+            set {
+                this.timeStampField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public float TrackReading {
+            get {
+                return this.trackReadingField;
+            }
+            set {
+                this.trackReadingField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=2)]
+        public float DeltaToPrevious {
+            get {
+                return this.deltaToPreviousField;
+            }
+            set {
+                this.deltaToPreviousField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/DeviationTable.xsd")]
+    public partial class MagneticReading {
+        
+        private System.DateTime timeStampField;
+        
+        private float magneticCompassReadingField;
+        
+        private float deltaToPreviousField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public System.DateTime TimeStamp {
+            get {
+                return this.timeStampField;
+            }
+            set {
+                this.timeStampField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public float MagneticCompassReading {
+            get {
+                return this.magneticCompassReadingField;
+            }
+            set {
+                this.magneticCompassReadingField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=2)]
+        public float DeltaToPrevious {
+            get {
+                return this.deltaToPreviousField;
+            }
+            set {
+                this.deltaToPreviousField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
+    [System.SerializableAttribute()]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://tempuri.org/DeviationTable.xsd")]
+    public partial class RawData {
+        
+        private MagneticReading[] compassField;
+        
+        private GnssReading[] trackField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute("Compass", Order=0)]
+        public MagneticReading[] Compass {
+            get {
+                return this.compassField;
+            }
+            set {
+                this.compassField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute("Track", Order=1)]
+        public GnssReading[] Track {
+            get {
+                return this.trackField;
+            }
+            set {
+                this.trackField = value;
+            }
+        }
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("xsd", "4.8.3928.0")]
     [System.SerializableAttribute()]
     [System.Diagnostics.DebuggerStepThroughAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]

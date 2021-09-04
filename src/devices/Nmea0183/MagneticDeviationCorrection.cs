@@ -22,6 +22,7 @@ namespace Iot.Device.Nmea0183
         private DeviationPoint[]? _deviationPointsToCompassReading;
         private DeviationPoint[]? _deviationPointsFromCompassReading;
         private Identification? _identification;
+        private RawData? _rawData;
 
         public MagneticDeviationCorrection()
         {
@@ -40,11 +41,89 @@ namespace Iot.Device.Nmea0183
 
         public void CreateCorrectionTable(string file)
         {
-            CreateCorrectionTable(new[] { file });
+            CreateCorrectionTable(new[] { file }, DateTimeOffset.MinValue, DateTimeOffset.MaxValue);
         }
 
-        public void CreateCorrectionTable(string[] fileSet)
+        public void CreateCorrectionTable(string[] fileSet, DateTimeOffset beginCalibration, DateTimeOffset endCalibration)
         {
+            _interestingSentences.Clear();
+            _magneticVariation = Angle.Zero;
+            _rawData = new RawData();
+            var rawCompass = new List<MagneticReading>();
+            var rawTrack = new List<GnssReading>();
+
+            void MessageFilter(NmeaSinkAndSource nmeaSinkAndSource, NmeaSentence nmeaSentence)
+            {
+                if (nmeaSentence.DateTime < beginCalibration || nmeaSentence.DateTime > endCalibration)
+                {
+                    return;
+                }
+
+                if (nmeaSentence is RecommendedMinimumNavigationInformation rmc)
+                {
+                    // Track over ground from GPS is useless if not moving
+                    if (rmc.Valid && rmc.SpeedOverGround > Speed.FromKnots(0.3) && rmc.DateTime.HasValue)
+                    {
+                        _interestingSentences.Add(rmc);
+                        if (rmc.MagneticVariationInDegrees.HasValue)
+                        {
+                            _magneticVariation = rmc.MagneticVariationInDegrees.Value;
+                        }
+
+                        float delta = 0;
+                        if (rawTrack.Count > 0)
+                        {
+                            delta = rawTrack[rawTrack.Count - 1].TrackReading - (float)rmc.TrackMadeGoodInDegreesTrue.Degrees;
+                            // Need to do it the ugly way here - converting back to an angle is also not really nice
+                            while (delta > 180)
+                            {
+                                delta -= 360;
+                            }
+
+                            while (delta < -180)
+                            {
+                                delta += 360;
+                            }
+                        }
+
+                        rawTrack.Add(new GnssReading()
+                        {
+                            TimeStamp = rmc.DateTime.Value.DateTime,
+                            TrackReading = (float)rmc.TrackMadeGoodInDegreesTrue.Degrees,
+                            DeltaToPrevious = delta
+                        });
+                    }
+                }
+
+                if (nmeaSentence is HeadingMagnetic hdm && hdm.DateTime.HasValue)
+                {
+                    if (hdm.Valid)
+                    {
+                        _interestingSentences.Add(hdm);
+                        float delta = 0;
+                        if (rawCompass.Count > 0)
+                        {
+                            delta = rawCompass[rawCompass.Count - 1].MagneticCompassReading - (float)hdm.Angle.Degrees;
+                            while (delta > 180)
+                            {
+                                delta -= 360;
+                            }
+
+                            while (delta < -180)
+                            {
+                                delta += 360;
+                            }
+                        }
+
+                        rawCompass.Add(new MagneticReading()
+                        {
+                            TimeStamp = hdm.DateTime.Value.DateTime, MagneticCompassReading = (float)hdm.Angle.Degrees,
+                            DeltaToPrevious = delta
+                        });
+                    }
+                }
+            }
+
             foreach (var f in fileSet)
             {
                 NmeaLogDataReader reader = new NmeaLogDataReader("Reader", f);
@@ -53,9 +132,11 @@ namespace Iot.Device.Nmea0183
                 reader.Dispose();
             }
 
+            _rawData.Compass = rawCompass.ToArray();
+            _rawData.Track = rawTrack.ToArray();
             DeviationPoint[] circle = new DeviationPoint[360]; // One entry per degree
             string[] pointsWithProblems = new string[360];
-            // This will get the average offset, which is assumed to be orientation dependent (i.e. if the magnetic compass's forward
+            // This will get the average offset, which is assumed to be orientation independent (i.e. if the magnetic compass's forward
             // direction doesn't properly align with the ship)
             double averageOffset = 0;
             for (int i = 0; i < 360; i++)
@@ -72,13 +153,19 @@ namespace Iot.Device.Nmea0183
                     Angle magneticTrack = averageTrack - _magneticVariation; // Now in degrees magnetic
                     magneticTrack = magneticTrack.Normalize(true);
                     // This should be i + 0.5 if the data is good
-                    double averageHeading = headings.Sum() / headings.Count;
-                    double deviation = (Angle.FromDegrees(averageHeading) - magneticTrack).Normalize(false).Degrees;
+                    Angle averageHeading;
+                    if (!headings.TryAverageAngle(out averageHeading))
+                    {
+                        averageHeading = headings[0];
+
+                    }
+
+                    double deviation = (averageHeading - magneticTrack).Normalize(false).Degrees;
                     var pt = new DeviationPoint()
                     {
                         // First is less "true" than second, so CompassReading + Deviation => MagneticHeading
-                        CompassReading = (float)averageHeading,
-                        MagneticHeading = (float)magneticTrack.Degrees,
+                        CompassReading = (float)averageHeading.Normalize(true).Degrees,
+                        MagneticHeading = (float)magneticTrack.Normalize(true).Degrees,
                         Deviation = (float)-deviation,
                     };
 
@@ -153,6 +240,7 @@ namespace Iot.Device.Nmea0183
 
             CalculateSmoothing(circle);
 
+            // Now create the inverse of the above map, to get from compass reading back to undisturbed magnetic heading
             _deviationPointsFromCompassReading = circle;
             _deviationPointsToCompassReading = null;
 
@@ -182,10 +270,6 @@ namespace Iot.Device.Nmea0183
             }
 
             _deviationPointsToCompassReading = circle;
-
-            // Now create the inverse of the above map, to get from compass reading back to undisturbed magnetic heading
-            _interestingSentences.Clear();
-            _magneticVariation = Angle.Zero;
         }
 
         private static void CalculateSmoothing(DeviationPoint[] circle)
@@ -237,6 +321,7 @@ namespace Iot.Device.Nmea0183
             topLevel.CalibrationDataToCompassReading = _deviationPointsToCompassReading;
             topLevel.CalibrationDataFromCompassReading = _deviationPointsFromCompassReading;
             topLevel.Identification = id;
+            topLevel.RawDataReadings = _rawData;
 
             _identification = id;
             XmlSerializer ser = new XmlSerializer(topLevel.GetType());
@@ -267,10 +352,10 @@ namespace Iot.Device.Nmea0183
             _deviationPointsFromCompassReading = topLevel.CalibrationDataFromCompassReading;
         }
 
-        private void FindAllTracksWith(double direction, out List<Angle> tracks, out List<double> headings)
+        private void FindAllTracksWith(double direction, out List<Angle> tracks, out List<Angle> headings)
         {
             tracks = new List<Angle>();
-            headings = new List<double>();
+            headings = new List<Angle>();
 
             bool useNextTrack = false;
             DateTimeOffset? timeOfHdm = default;
@@ -289,7 +374,7 @@ namespace Iot.Device.Nmea0183
                     }
 
                     // Now we have an entry hdt that is a true heading more or less pointing to direction
-                    headings.Add(hdm.Angle.Degrees);
+                    headings.Add(hdm.Angle);
                     useNextTrack = true;
                     timeOfHdm = hdm.DateTime;
                 }
@@ -298,35 +383,11 @@ namespace Iot.Device.Nmea0183
                 if (s is RecommendedMinimumNavigationInformation rmc && useNextTrack)
                 {
                     useNextTrack = false;
-                    if (rmc.DateTime - timeOfHdm < TimeSpan.FromSeconds(10))
+                    if (rmc.DateTime - timeOfHdm < TimeSpan.FromSeconds(5))
                     {
                         // Only if this is near the corresponding heading message
                         tracks.Add(rmc.TrackMadeGoodInDegreesTrue);
                     }
-                }
-            }
-        }
-
-        private void MessageFilter(NmeaSinkAndSource nmeaSinkAndSource, NmeaSentence nmeaSentence)
-        {
-            if (nmeaSentence is RecommendedMinimumNavigationInformation rmc)
-            {
-                // Track over ground from GPS is useless if not moving
-                if (rmc.Valid && rmc.SpeedOverGround > Speed.FromKnots(0.5))
-                {
-                    _interestingSentences.Add(rmc);
-                    if (rmc.MagneticVariationInDegrees.HasValue)
-                    {
-                        _magneticVariation = rmc.MagneticVariationInDegrees.Value;
-                    }
-                }
-            }
-
-            if (nmeaSentence is HeadingMagnetic hdm)
-            {
-                if (hdm.Valid)
-                {
-                    _interestingSentences.Add(hdm);
                 }
             }
         }
