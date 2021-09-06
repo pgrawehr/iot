@@ -56,7 +56,7 @@ namespace DisplayControl
             });
 
             _deviationCorrection = new MagneticDeviationCorrection();
-            _deviationCorrection.Load(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Calibration_Cirrus.xml"));
+            _deviationCorrection.Load(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Calibration_Cirrus_v3.xml"));
 
             bool success = false;
             string errorMessage = string.Empty;
