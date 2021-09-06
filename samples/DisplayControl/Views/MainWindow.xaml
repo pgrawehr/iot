@@ -38,6 +38,17 @@
             </MenuItem>
             <MenuItem Header="_Actions" VerticalAlignment="Center">
                 <MenuItem Header="_Reinit Display" Command="{Binding ReinitDisplayCommand}" />
+                <Separator/>
+                <MenuItem Header="_Lock Display" Command="{Binding LockDisplay}">
+                    <MenuItem.Icon>
+                        <CheckBox BorderThickness="0"
+                                  IsHitTestVisible="False"
+                                  IsChecked="{Binding DisplayLocked}">
+                            Toggle _Me
+                        </CheckBox>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
                 <MenuItem Header="_Disable Magnetic Deviation Correction" Command="{Binding DisableDeviation}" />
                 <MenuItem Header="_Enable Magnetic Deviation Correction" Command="{Binding EnableDeviation}" />
             </MenuItem>

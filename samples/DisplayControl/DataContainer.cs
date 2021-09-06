@@ -888,5 +888,13 @@ namespace DisplayControl
                 _imuSensor.DeviationCorrectionEnabled = enable;
             }
         }
+
+        public void LockDisplay(bool displayLocked)
+        {
+            if (_adcSensors != null)
+            {
+                _adcSensors.ButtonsEnabled = !displayLocked;
+            }
+        }
     }
 }

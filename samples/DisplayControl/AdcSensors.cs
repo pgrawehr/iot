@@ -40,8 +40,15 @@ namespace DisplayControl
             throw new InvalidOperationException("Use another overload");
         }
 
+        public bool ButtonsEnabled
+        {
+            get;
+            set;
+        }
+
         internal void Init(GpioController controller, ExtendedDisplayController ledController)
         {
+            ButtonsEnabled = true;
             _ledController = ledController ?? throw new ArgumentNullException(nameof(ledController));
             var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.GND));
             m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.PowerDown);
@@ -84,6 +91,16 @@ namespace DisplayControl
                     Console.WriteLine($"Local ADC communication error: {x.Message}");
                 }
             }
+
+            if (!ButtonsEnabled)
+            {
+                // If the buttons are locked, show the status LED as red and do nothing more.
+                _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.Low);
+                _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Red, PinValue.High);
+                return;
+            }
+
+            _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Red, PinValue.Low);
 
             try
             {

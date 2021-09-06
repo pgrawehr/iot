@@ -18,12 +18,14 @@ namespace DisplayControl.ViewModels
         private Size _size;
         private double _clientHeight;
         private Point _headerHeight;
+        private bool _displayLocked;
 
         public MainWindowViewModel()
         {
             Status = "System initialized";
             StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
             Cancel = false;
+            DisplayLocked = false;
         }
 
         public MainWindowViewModel(DataContainer dataContainer)
@@ -129,6 +131,18 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public bool DisplayLocked
+        {
+            get
+            {
+                return _displayLocked;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _displayLocked, value);
+            }
+        }
+
         public void ActivateValueSingle(SensorValueViewModel vm)
         {
             DataContainer.ActiveValueSourceSingle = vm.Source;
@@ -169,6 +183,12 @@ namespace DisplayControl.ViewModels
         public void EnableDeviation()
         {
             DataContainer.EnableDeviation(true);
+        }
+
+        public void LockDisplay()
+        {
+            DisplayLocked = !DisplayLocked;
+            DataContainer.LockDisplay(DisplayLocked);
         }
 
         protected override void Dispose(bool disposing)
