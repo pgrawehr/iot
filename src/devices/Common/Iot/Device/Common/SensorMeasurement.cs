@@ -322,6 +322,7 @@ namespace Iot.Device.Common
                 if (newStatus != _measurementStatus)
                 {
                     _measurementStatus = newStatus;
+                    OnPropertyChanged(nameof(Status));
                     OnPropertyChanged(nameof(Value));
                 }
 
@@ -340,6 +341,7 @@ namespace Iot.Device.Common
             {
                 _value = value;
                 _measurementStatus = status;
+                OnPropertyChanged(nameof(Status));
                 OnPropertyChanged(nameof(Value));
             }
 
