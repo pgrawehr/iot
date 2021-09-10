@@ -10,7 +10,9 @@ using UnitsNet;
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
-    /// RMB sentence: Recommended minimum navigation information (current leg)
+    /// RMB sentence: Recommended minimum navigation information (current leg).
+    /// This sentence is the bare minimum a navigation system should send to the autopilot.
+    /// Normally, you would also send at least BWC, XTE and MWV
     /// </summary>
     public class RecommendedMinimumNavToDestination : NmeaSentence
     {

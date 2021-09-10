@@ -102,7 +102,7 @@ namespace DisplayControl.ViewModels
             }
             ValueDescription = _sensorValueSource.Name;
             ValueAsString = _sensorValueSource.ToString();
-            // Get the unit abbreviation string (Unit.ToString() would give the full name)
+            // Get the unit abbreviation string (Value.ToString() would give the full name)
             if (_sensorValueSource.Value != null)
             {
                 Unit = _sensorValueSource.Value.ToString("a", CultureInfo.CurrentCulture);
