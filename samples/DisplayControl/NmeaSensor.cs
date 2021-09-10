@@ -86,7 +86,7 @@ namespace DisplayControl
             _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.WindTrue);
             _maxWindGusts = new SensorMeasurement("Wind Gusts", Speed.Zero, SensorSource.WindTrue);
             _position = new CustomData<GeographicPosition>("Geographic Position", new GeographicPosition(), SensorSource.Position);
-            _numSatellites = new CustomData<int>("Number of Sats in view", 0, SensorSource.Position);
+            _numSatellites = new CustomData<int>("Number of Sats in view", 0, SensorSource.Position) { CustomFormatOperation = x => x.ToString(CultureInfo.CurrentCulture) };
             _satStatus = new CustomData<string>("Satellites in View", string.Empty, SensorSource.Position);
             _logger = this.GetCurrentClassLogger();
         }
@@ -273,6 +273,7 @@ namespace DisplayControl
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
+                SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint,
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus
             });
 
@@ -484,6 +485,26 @@ namespace DisplayControl
                     break;
                 case HeadingAndDeclination decl when decl.Valid:
                     _magneticVariation = decl.Declination;
+                    break;
+                case RecommendedMinimumNavToDestination rmb when rmb.Valid:
+                    _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
+                        rmb.DistanceToWayPoint.HasValue ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData);
+                    if (rmb.DistanceToWayPoint.HasValue &&
+                        _cache.TryGetCurrentPosition(out var position, out var track, out var sog, out var heading))
+                    {
+                        if (sog.MetersPerSecond < 0.01)
+                        {
+                            sog = Speed.FromMetersPerSecond(0.01);
+                        }
+
+                        Duration timeToWp = rmb.DistanceToWayPoint.Value / sog;
+                        if (timeToWp > Duration.FromDays(1))
+                        {
+                            _manager.UpdateValue(SensorMeasurement.TimeToNextWaypoint, Duration.Zero, SensorMeasurementStatus.NoData);
+                        }
+                        _manager.UpdateValue(SensorMeasurement.TimeToNextWaypoint, timeToWp);
+                    }
+
                     break;
             }
 
