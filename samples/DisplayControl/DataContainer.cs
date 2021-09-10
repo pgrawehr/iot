@@ -11,6 +11,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Iot.Device.CharacterLcd;
@@ -52,6 +53,8 @@ namespace DisplayControl
         private ArduinoSensors _arduino;
 
         private object _displayLock;
+        private Task _displayUpdateTask;
+        private object _displayUpdateTaskLock;
 
         private enum MenuOptionResult
         {
@@ -77,6 +80,8 @@ namespace DisplayControl
             _activeEncoding = CultureInfo.CreateSpecificCulture("de-CH");
             _menuMode = false;
             _displayLock = new object();
+            _displayUpdateTask = null;
+            _displayUpdateTaskLock = new object();
         }
 
         public GpioController Controller { get; }
@@ -144,6 +149,7 @@ namespace DisplayControl
 
         private void InitializeDisplay()
         {
+            WaitDisplayIdle();
             lock (_displayLock)
             {
                 _displayDevice = I2cDevice.Create(new I2cConnectionSettings(1, 0x27));
@@ -163,6 +169,19 @@ namespace DisplayControl
                 _menuController = new MenuController(this);
                 _menuMode = false;
                 _bigValueDisplay = new LcdValueUnitDisplay(_characterLcd, _activeEncoding);
+            }
+        }
+
+        private void WaitDisplayIdle()
+        {
+            lock (_displayUpdateTaskLock)
+            {
+                if (_displayUpdateTask != null)
+                {
+                    _displayUpdateTask.Wait();
+                    _displayUpdateTask.Dispose();
+                    _displayUpdateTask = null;
+                }
             }
         }
 
@@ -228,7 +247,11 @@ namespace DisplayControl
 
             foreach (var m in _sensorManager.Measurements())
             {
-                m.CustomFormat = "{1:N2}"; // No unit
+                // Don't add a default rule for subclasses (specifically, CustomData instances)
+                if (m.CustomFormatOperation == null && m.GetType() == typeof(SensorMeasurement))
+                {
+                    m.CustomFormatOperation = x => x.Value.ToString("F2", CultureInfo.CurrentCulture); // No unit
+                }
             }
 
             WriteLineToConsoleAndDisplay($"Found {_sensorManager.Measurements().Count} sensors.");
@@ -403,16 +426,42 @@ namespace DisplayControl
                 return;
             }
 
-            if (_activeValueSourceUpper == newMeasurement || _activeValueSourceLower == newMeasurement)
+            bool updateRunning = false;
+            lock (_displayUpdateTaskLock)
             {
-                SwitchToConsoleMode();
-                Display2Values(_activeValueSourceUpper, _activeValueSourceLower);
+                if (_displayUpdateTask != null)
+                {
+                    if (_displayUpdateTask.IsCompleted)
+                    {
+                        _displayUpdateTask.Dispose();
+                        _displayUpdateTask = null;
+                    }
+                }
+
+                updateRunning = _displayUpdateTask != null;
+            }
+
+            if (updateRunning)
+            {
                 return;
             }
-            else if (_activeValueSourceSingle == newMeasurement)
+
+            lock (_displayUpdateTaskLock)
             {
-                SwitchToBigMode(_activeValueSourceSingle);
-                DisplayBigValue(_activeValueSourceSingle);
+                _displayUpdateTask = Task.Factory.StartNew(() =>
+                {
+                    if (_activeValueSourceUpper == newMeasurement || _activeValueSourceLower == newMeasurement)
+                    {
+                        SwitchToConsoleMode();
+                        Display2Values(_activeValueSourceUpper, _activeValueSourceLower);
+                        return;
+                    }
+                    else if (_activeValueSourceSingle == newMeasurement)
+                    {
+                        SwitchToBigMode(_activeValueSourceSingle);
+                        DisplayBigValue(_activeValueSourceSingle);
+                    }
+                });
             }
         }
 
@@ -540,36 +589,39 @@ namespace DisplayControl
 
         }
 
-        public void DisplayBigValue(SensorMeasurement valueSource)
+        private void DisplayBigValue(SensorMeasurement valueSource)
         {
-            if (valueSource == null)
+            lock (_displayLock)
             {
-                _bigValueDisplay.DisplayValue("No data");
-                return;
-            }
+                if (valueSource == null)
+                {
+                    _bigValueDisplay.DisplayValue("No data");
+                    return;
+                }
 
-            string text = valueSource.ToString();
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                text = "No data";
-            }
-            else
-            {
-                text += valueSource.Value?.ToString("a", CultureInfo.CurrentCulture);
-            }
+                string text = valueSource.ToString();
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    text = "No data";
+                }
+                else
+                {
+                    text += valueSource.Value?.ToString("a", CultureInfo.CurrentCulture);
+                }
 
-            if (_timer.Elapsed < TimeSpan.FromSeconds(3))
-            {
-                // Display the value description for 3 seconds after changing
-                _bigValueDisplay.DisplayValue(text, valueSource.Name);
-            }
-            else
-            {
-                _bigValueDisplay.DisplayValue(text);
+                if (_timer.Elapsed < TimeSpan.FromSeconds(3))
+                {
+                    // Display the value description for 3 seconds after changing
+                    _bigValueDisplay.DisplayValue(text, valueSource.Name);
+                }
+                else
+                {
+                    _bigValueDisplay.DisplayValue(text);
+                }
             }
         }
 
-        public void Display2Values(SensorMeasurement valueSourceUpper, SensorMeasurement valueSourceLower)
+        private void Display2Values(SensorMeasurement valueSourceUpper, SensorMeasurement valueSourceLower)
         {
             if (valueSourceUpper == null)
             {
@@ -628,6 +680,7 @@ namespace DisplayControl
 
         public void ShutDown()
         {
+            WaitDisplayIdle();
             _lcdConsole.Clear();
             _lcdConsole.BacklightOn = false;
             _lcdConsole.DisplayOn = false;

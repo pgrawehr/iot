@@ -66,6 +66,11 @@ namespace Iot.Device.Common
         public static readonly SensorSource UserInput = new SensorSource("User input");
         public static readonly SensorSource Cpu = new SensorSource("Cpu");
 
+        /// <summary>
+        /// Navigation system (e.g. waypoints, distance to target)
+        /// </summary>
+        public static readonly SensorSource Navigation = new SensorSource("Navigation");
+
         /// <inheritdoc/>
         public override bool Equals(object? obj)
         {

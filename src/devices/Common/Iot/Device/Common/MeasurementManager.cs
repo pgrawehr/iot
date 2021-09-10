@@ -260,7 +260,7 @@ namespace Iot.Device.Common
             measurement.UpdateValue(newValue, false);
         }
 
-        public void UpdateValue(SensorMeasurement measurement, IQuantity newValue, SensorMeasurementStatus status)
+        public void UpdateValue(SensorMeasurement measurement, IQuantity? newValue, SensorMeasurementStatus status)
         {
             measurement.UpdateValue(newValue, status, false);
         }
@@ -285,6 +285,36 @@ namespace Iot.Device.Common
             else
             {
                 UpdateValue(measurement, (IQuantity)newValue);
+            }
+        }
+
+        /// <summary>
+        /// Updates the given measurement with the new value. This overload is used if the measurement is of custom type
+        /// </summary>
+        /// <typeparam name="T">The type of the measurement (typically the type of the used <see cref="CustomData{T}"/>.)</typeparam>
+        /// <param name="measurement">The measurement</param>
+        /// <param name="newValue">The new value. If null, the status will get the <see cref="SensorMeasurementStatus.NoData"/> flag added.</param>
+        /// <param name="status">The status of the last measurement</param>
+        public void UpdateValue<T>(SensorMeasurement measurement, T? newValue, SensorMeasurementStatus status)
+        {
+            if (newValue == null && status == SensorMeasurementStatus.None)
+            {
+                throw new ArgumentNullException(nameof(newValue));
+            }
+
+            if (newValue == null)
+            {
+                UpdateValue(measurement, null, SensorMeasurementStatus.NoData);
+                return;
+            }
+
+            if (measurement is CustomData<T> casted)
+            {
+                casted.UpdateValue(newValue, status);
+            }
+            else
+            {
+                UpdateValue(measurement, (IQuantity)newValue, status);
             }
         }
 

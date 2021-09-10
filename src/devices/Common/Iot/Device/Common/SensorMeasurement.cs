@@ -153,7 +153,14 @@ namespace Iot.Device.Common
             new SensorMeasurement("Wind pressure", Pressure.Zero, SensorSource.Air);
 
         public static readonly SensorMeasurement UtcTime =
-            new CustomData<DateTime>("UTC Time from GNSS", DateTime.MinValue, SensorSource.Position, 1, TimeSpan.FromSeconds(2));
+            new CustomData<DateTime>("UTC Time from GNSS", DateTime.MinValue, SensorSource.Position, 1, TimeSpan.FromSeconds(2))
+                { CustomFormatOperation = x => x.ToLongTimeString() };
+
+        public static readonly SensorMeasurement DistanceToNextWaypoint =
+            new SensorMeasurement("Distance to next Waypoint", Length.Zero, SensorSource.Navigation);
+
+        public static readonly SensorMeasurement TimeToNextWaypoint =
+            new SensorMeasurement("Time to next Waypoint", Duration.Zero, SensorSource.Navigation) { CustomFormatOperation = x => ((Duration)x).ToTimeSpan().ToString() };
 
         /// <summary>
         /// Magnetic variation is usually computed using the NOAA formulas from the position
@@ -190,10 +197,9 @@ namespace Iot.Device.Common
         }
 
         /// <summary>
-        /// A format string used to format a value. Argument 0 is the <see cref="IQuantity"/> of the measurement, Argument 1 is the raw double value.
-        /// Example: "{1:F2} {0:a}" to format the value with two digits and add the unit abbreviation. "{0:F2}" results in the same.
+        /// A custom formatting operation. Takes the value as input and returns a string.
         /// </summary>
-        public string? CustomFormat
+        public Func<IQuantity, string>? CustomFormatOperation
         {
             get;
             set;
@@ -379,17 +385,19 @@ namespace Iot.Device.Common
                 return string.Empty; // Leave to the client to eventually replace with something like "N/A"
             }
 
-            if (Value == null)
+            var v = Value;
+
+            if (v == null)
             {
                 return String.Empty;
             }
 
-            if (CustomFormat != null)
+            if (CustomFormatOperation != null)
             {
-                return string.Format(CultureInfo.CurrentCulture, CustomFormat, Value, Value.Value);
+                return CustomFormatOperation(v);
             }
 
-            return Value.ToString("g", CultureInfo.CurrentCulture);
+            return v.ToString("g", CultureInfo.CurrentCulture);
         }
 
         public IDisposable Subscribe(IObserver<IQuantity> observer)
