@@ -48,6 +48,12 @@ namespace DisplayControl
                 }
             }
 
+            Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs)
+            {
+                // Just ignore CTRL+C
+                eventArgs.Cancel = true;
+            };
+
             Console.WriteLine($"Initializing Hardware...");
             LogDispatcher.LoggerFactory = new SimpleConsoleLoggerFactory();
             using (GpioController controller = new GpioController(PinNumberingScheme.Logical, new RaspberryPi3Driver()))
