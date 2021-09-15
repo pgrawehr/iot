@@ -55,7 +55,10 @@ namespace DisplayControl
             };
 
             Console.WriteLine($"Initializing Hardware...");
-            LogDispatcher.LoggerFactory = new SimpleConsoleLoggerFactory();
+            var date = DateTime.Now;
+            string fmt = date.ToString("yyyy-MM-dd");
+            LogDispatcher.LoggerFactory = new MultiTargetLoggerFactory(new SimpleConsoleLoggerFactory(), 
+                new SimpleFileLoggerFactory($"/home/pi/projects/ShipLogs/OutputLog-{fmt}.txt"));
             using (GpioController controller = new GpioController(PinNumberingScheme.Logical, new RaspberryPi3Driver()))
             {
                 Program prog = new Program(controller);
