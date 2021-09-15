@@ -92,6 +92,8 @@ namespace DisplayControl
                 }
             }
 
+            _count++;
+
             if (!ButtonsEnabled)
             {
                 // If the buttons are locked, show the status LED as red and do nothing more.
@@ -204,9 +206,6 @@ namespace DisplayControl
             {
                 Console.WriteLine($"Remote ADC communication error: {x.Message}");
             }
-
-            _count++;
-
         }
 
         private double RetryableReadAdc(InputMultiplexer mpx)
