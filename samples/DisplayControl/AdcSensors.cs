@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Iot.Device.Common;
+using Microsoft.Extensions.Logging;
 using UnitsNet;
 
 namespace DisplayControl
@@ -26,11 +27,13 @@ namespace DisplayControl
         private SensorMeasurement _button4;
         private bool _atLeastOneButtonPressed = false;
         private int _count;
+        private ILogger _logger;
 
         public AdcSensors(MeasurementManager manager)
         : base(manager, TimeSpan.FromMilliseconds(200))
         {
             _count = 0;
+            _logger = this.GetCurrentClassLogger();
         }
 
         public event Action<DisplayButton, bool> ButtonPressed;
@@ -88,7 +91,7 @@ namespace DisplayControl
                 }
                 catch (IOException x)
                 {
-                    Console.WriteLine($"Local ADC communication error: {x.Message}");
+                    _logger.LogError(x, $"Local ADC communication error: {x.Message}");
                 }
             }
 
@@ -204,7 +207,7 @@ namespace DisplayControl
             }
             catch (IOException x)
             {
-                Console.WriteLine($"Remote ADC communication error: {x.Message}");
+                _logger.LogError(x, $"Remote ADC communication error: {x.Message}");
             }
         }
 

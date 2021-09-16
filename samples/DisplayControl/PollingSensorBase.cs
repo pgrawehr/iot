@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Common;
 using Iot.Device.CpuTemperature;
+using Microsoft.Extensions.Logging;
 
 namespace DisplayControl
 {
@@ -25,9 +26,15 @@ namespace DisplayControl
 
             Manager = manager;
             PollTime = pollTime;
+            Logger = this.GetCurrentClassLogger();
         }
 
         public MeasurementManager Manager { get; }
+
+        protected ILogger Logger
+        {
+            get;
+        }
 
         public TimeSpan PollTime
         {
@@ -69,7 +76,7 @@ namespace DisplayControl
                 catch (IOException x)
                 {
                     // Likely an I2C communication error, try again
-                    Console.WriteLine($"{GetType().Name}: {x}");
+                    Logger.LogError(x, $"{GetType().Name}: {x}");
                 }
 
                 _cancellationTokenSource.Token.WaitHandle.WaitOne(PollTime);

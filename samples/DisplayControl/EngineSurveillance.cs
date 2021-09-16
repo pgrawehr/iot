@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Mcp23xxx;
 using Iot.Device.Common;
+using Microsoft.Extensions.Logging;
 using UnitsNet;
 using UnitsNet.Units;
 
@@ -38,7 +39,7 @@ namespace DisplayControl
         private const int InterruptPin = 21;
         private static readonly TimeSpan MaxIdleTime = TimeSpan.FromSeconds(8);
         private static readonly TimeSpan AveragingTime = TimeSpan.FromSeconds(5);
-        private const double TicksPerRevolution = 1.48; // Because our sensor sits on the smaller wheel from the alternator
+        public const double TicksPerRevolution = 1.48; // Because our sensor sits on the smaller wheel from the alternator
         private int _maxCounterValue;
         private Queue<CounterEvent> _lastEvents;
         private bool _engineOn;
@@ -57,6 +58,7 @@ namespace DisplayControl
         public SensorMeasurement Engine0OperatingTimeSinceRefill = new SensorMeasurement("Engine 0 operating time since refill", Duration.Zero, SensorSource.Engine, 0);
 
         private object _counterLock;
+        private ILogger _logger;
 
         /// <summary>
         /// Create an instance of this class.
@@ -73,6 +75,7 @@ namespace DisplayControl
             _engineOn = false;
             _lastTickForUpdate = 0;
             _rpm = 0;
+            _logger = this.GetCurrentClassLogger();
             _enginePersistenceFile = new PersistenceFile("/home/pi/projects/ShipLogs/Engine.txt");
             _engineOperatingTime = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours", TimeSpan.Zero, TimeSpan.FromMinutes(1));
             _engineOperatingTimeAtLastRefill = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours at last refill", new TimeSpan(0, 15, 33, 0), TimeSpan.Zero);
@@ -141,7 +144,9 @@ namespace DisplayControl
                 int counter = ReadCurrentCounterValue();
                 if (counter != initialValue)
                 {
-                    throw new InvalidOperationException($"Engine revolution counter: Bit error (should be {initialValue} but was {counter}.)");
+                    string msg = $"Engine revolution counter: Bit error (should be {initialValue} but was {counter}.)";
+                    _logger.LogError(msg);
+                    throw new InvalidOperationException(msg);
                 }
             }
 
@@ -213,7 +218,7 @@ namespace DisplayControl
         {
             if (!condition)
             {
-                Console.WriteLine("Error: Extended self test validation failed");
+                _logger.LogError("Error: Extended self test validation failed");
                 throw new InvalidOperationException("Engine counter validation failure");
             }
         }
@@ -307,7 +312,7 @@ namespace DisplayControl
 
             if (_engineOn)
             {
-                Console.WriteLine($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
+                _logger.LogInformation($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
             }
             // Final step: Send values to UI
             Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(_rpm));

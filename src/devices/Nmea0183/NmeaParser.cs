@@ -120,7 +120,6 @@ namespace Iot.Device.Nmea0183
                     continue; // Probably because the stream was closed.
                 }
 
-                // Console.WriteLine(currentLine);
                 TalkerSentence? sentence = TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out var error);
                 if (sentence == null)
                 {
