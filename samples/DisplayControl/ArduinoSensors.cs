@@ -54,6 +54,7 @@ namespace DisplayControl
         protected override void UpdateSensors()
         {
             var freq = _frequencySensor.GetMeasuredFrequency();
+            freq = freq / EngineSurveillance.TicksPerRevolution;
             _frequencyMeasurement.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
         }
 
