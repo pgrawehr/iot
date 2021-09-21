@@ -706,7 +706,7 @@ namespace DisplayControl
             // Status = 0 is ok, anything else seems to indicate a fault
             int status = rpm != 0 ? 0 : 1;
             string statusString = status.ToString("X4", CultureInfo.InvariantCulture);
-            int engineTempKelvin = (int)(engineData.EngineTemperature.Kelvins * 100.0);
+            int engineTempKelvin = (int)Math.Round(engineData.EngineTemperature.Kelvins * 100.0, 1);
             string engineTempString = engineTempKelvin.ToString("X4", CultureInfo.InvariantCulture);
             // Seems to require a little endian conversion as well
             engineTempString = engineTempString.Substring(2, 2) + engineTempString.Substring(0, 2);

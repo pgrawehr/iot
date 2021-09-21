@@ -20,6 +20,7 @@ namespace Iot.Device.Arduino
         private int _lastFrequencyUpdateTicks = 0;
 
         private Frequency _currentFrequency = Frequency.Zero;
+        private Frequency _lastFrequency = Frequency.Zero;
 
         private object _frequencyLock = new object();
 
@@ -115,9 +116,9 @@ namespace Iot.Device.Arduino
                 if (deltaTime > 0) // Otherwise, this just wraps around or no time has passed
                 {
                     _currentFrequency = Frequency.FromHertz(deltaTicks / (deltaTime / 1000));
-                    Logger.LogInformation($"Current frequency: {_currentFrequency.CyclesPerMinute:F1} RPM");
-                    if (result.Timings.Any() && _currentFrequency != Frequency.Zero)
+                    if (result.Timings.Any() && _currentFrequency != Frequency.Zero && _lastFrequency != Frequency.Zero)
                     {
+                        Logger.LogInformation($"Current frequency: {_currentFrequency.CyclesPerMinute:F1} RPM");
                         var ordered = result.Timings.OrderBy(x => x).ToList();
                         string msg = string.Join(", ", ordered);
                         List<int> deltas = new List<int>();
@@ -130,6 +131,8 @@ namespace Iot.Device.Arduino
                         Logger.LogDebug("Raw timings: " + msg);
                         Logger.LogDebug("Deltas: " + msg2);
                     }
+
+                    _lastFrequency = _currentFrequency;
                 }
 
                 _lastFrequencyUpdateClock = result.TimeStamp;
