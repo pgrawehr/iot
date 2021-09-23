@@ -47,6 +47,22 @@ namespace DisplayControl
             }
         }
 
+        /// <summary>
+        /// Take value from the external heading sensor (it seems that the internal compass sometimes plays
+        /// havoc, need to analyze)
+        /// </summary>
+        public bool PreferExternalHeading
+        {
+            get;
+            set;
+        }
+
+        public Angle? ExternalHeading
+        {
+            get;
+            set;
+        }
+
         public override void Init(GpioController gpioController)
         {
             Manager.AddRange(new[]
@@ -117,26 +133,15 @@ namespace DisplayControl
         private void ImuOnNewData(Vector3 eulerAngles)
         {
             _lastEulerAngles = eulerAngles;
-            Angle correctedHdg = Angle.FromDegrees(eulerAngles.X);
-            if (DeviationCorrectionEnabled)
-            {
-                correctedHdg = _deviationCorrection.ToMagneticHeading(correctedHdg);
-            }
+            GetHeadingAndDeviation(_lastEulerAngles, out Angle hdgUncorrected, out Angle hdg, out Angle deviation);
 
-            var correctedAngles = new Vector3((float)correctedHdg.Degrees, eulerAngles.Y, eulerAngles.Z);
+            var correctedAngles = new Vector3((float)hdg.Degrees, eulerAngles.Y, eulerAngles.Z);
             OnNewOrientation?.Invoke(correctedAngles);
         }
 
         protected override void UpdateSensors()
         {
-            Angle hdgUncorrected = Angle.FromDegrees(_lastEulerAngles.X);
-            Angle hdg = hdgUncorrected;
-            Angle deviation = Angle.Zero;
-            if (DeviationCorrectionEnabled)
-            {
-                hdg = _deviationCorrection.ToMagneticHeading(hdgUncorrected);
-                deviation = (hdg - hdgUncorrected).Normalize(false);
-            }
+            GetHeadingAndDeviation(_lastEulerAngles, out Angle hdgUncorrected, out Angle hdg, out Angle deviation);
 
             Manager.UpdateValues(new List<SensorMeasurement>()
             {
@@ -150,6 +155,25 @@ namespace DisplayControl
             });
 
             Manager.UpdateValue(SensorMeasurement.Deviation, deviation, DeviationCorrectionEnabled ? SensorMeasurementStatus.None : SensorMeasurementStatus.Warning);
+        }
+
+        private void GetHeadingAndDeviation(Vector3 angles, out Angle hdgUncorrected, out Angle hdg, out Angle deviation)
+        {
+            hdgUncorrected = Angle.FromDegrees(angles.X);
+            hdg = hdgUncorrected;
+            deviation = Angle.Zero;
+            if (DeviationCorrectionEnabled)
+            {
+                hdg = _deviationCorrection.ToMagneticHeading(hdgUncorrected);
+                deviation = (hdg - hdgUncorrected).Normalize(false);
+            }
+
+            if (PreferExternalHeading && ExternalHeading.HasValue)
+            {
+                hdg = ExternalHeading.Value;
+                // Will show us the error of the internal sensor
+                deviation = (hdg - hdgUncorrected).Normalize(false);
+            }
         }
 
         protected override void Dispose(bool disposing)

@@ -8,7 +8,8 @@ namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
     /// HDG Sentence (Heading, declination, variation)
-    /// Usually measured using an electronic compass. This is required for HDT and HDM to work properly.
+    /// Usually measured using an electronic compass. Can be used instead of HDM or HDT (the variation is also included
+    /// in message RMC)
     /// </summary>
     public class HeadingAndDeclination : NmeaSentence
     {
@@ -20,7 +21,7 @@ namespace Iot.Device.Nmea0183.Sentences
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
         /// <summary>
-        /// Constructs a new MWV sentence
+        /// Constructs a new HDG sentence
         /// </summary>
         public HeadingAndDeclination(Angle headingTrue, Angle? deviation, Angle? variation)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
@@ -99,6 +100,22 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             get;
             private set;
+        }
+
+        /// <summary>
+        /// Magnetic heading (derived from true heading and declination)
+        /// </summary>
+        public Angle? HeadingMagnetic
+        {
+            get
+            {
+                if (Declination.HasValue)
+                {
+                    return (HeadingTrue - Declination.Value).Normalize(true);
+                }
+
+                return null;
+            }
         }
 
         /// <summary>

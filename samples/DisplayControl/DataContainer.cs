@@ -231,7 +231,7 @@ namespace DisplayControl
 
             WriteLineToConsoleAndDisplay("NMEA Source...");
             _nmeaSensor = new NmeaSensor(_sensorManager);
-            _nmeaSensor.Initialize(_fusionEngine);
+            _nmeaSensor.Initialize(_fusionEngine, _imuSensor);
 
             WriteLineToConsoleAndDisplay("Arduino...");
             _arduino = new ArduinoSensors(_sensorManager);
@@ -934,11 +934,29 @@ namespace DisplayControl
             InitializeDisplay();
         }
 
-        public void EnableDeviation(bool enable)
+        public void EnableDeviationCorrection(bool enable)
         {
             if (_imuSensor != null)
             {
                 _imuSensor.DeviationCorrectionEnabled = enable;
+            }
+        }
+
+        public bool IsDeviationCorrectionEnabled()
+        {
+            if (_imuSensor != null)
+            {
+                return _imuSensor.DeviationCorrectionEnabled;
+            }
+
+            return true; // default
+        }
+
+        public void UseHandheldForHeading(bool enable)
+        {
+            if (_imuSensor != null)
+            {
+                _imuSensor.PreferExternalHeading = enable;
             }
         }
 

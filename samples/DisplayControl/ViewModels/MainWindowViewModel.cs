@@ -19,6 +19,8 @@ namespace DisplayControl.ViewModels
         private double _clientHeight;
         private Point _headerHeight;
         private bool _displayLocked;
+        private bool _deviationEnabled;
+        private bool _useHeadingFromHandheld;
 
         public MainWindowViewModel()
         {
@@ -26,6 +28,8 @@ namespace DisplayControl.ViewModels
             StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
             Cancel = false;
             DisplayLocked = false;
+            _deviationEnabled = true;
+            _useHeadingFromHandheld = false;
         }
 
         public MainWindowViewModel(DataContainer dataContainer)
@@ -35,6 +39,8 @@ namespace DisplayControl.ViewModels
             _clientHeight = 100;
             _headerHeight = new Point(0, 50);
             DataContainer = dataContainer;
+            // Get value from settings
+            DeviationEnabled = dataContainer.IsDeviationCorrectionEnabled();
             m_sensorValueViewModels = new ObservableCollection<SensorValueViewModel>();
             foreach (var elem in dataContainer.SensorValueSources)
             {
@@ -143,6 +149,31 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public bool DeviationEnabled
+        {
+            get
+            {
+                return _deviationEnabled;
+            }
+
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _deviationEnabled, value);
+            }
+        }
+
+        public bool UseHeadingFromHandheld
+        {
+            get
+            {
+                return _useHeadingFromHandheld;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _useHeadingFromHandheld, value);
+            }
+        }
+
         public void ActivateValueSingle(SensorValueViewModel vm)
         {
             DataContainer.ActiveValueSourceSingle = vm.Source;
@@ -175,14 +206,21 @@ namespace DisplayControl.ViewModels
             DataContainer.ReinitDisplay();
         }
 
-        public void DisableDeviation()
+        public void EnableDisableDeviationCorrection()
         {
-            DataContainer.EnableDeviation(false);
+            DeviationEnabled = !DeviationEnabled;
+            DataContainer.EnableDeviationCorrection(DeviationEnabled);
+        }
+
+        public void EnableDisableHandheldForHeading()
+        {
+            UseHeadingFromHandheld = !UseHeadingFromHandheld;
+            DataContainer.UseHandheldForHeading(UseHeadingFromHandheld);
         }
 
         public void EnableDeviation()
         {
-            DataContainer.EnableDeviation(true);
+            DataContainer.EnableDeviationCorrection(true);
         }
 
         public void LockDisplay()

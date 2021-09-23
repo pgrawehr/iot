@@ -73,11 +73,13 @@ namespace DisplayControl
         private AutopilotController _autopilot;
         private SensorMeasurement _smoothedTrueWindSpeed;
         private SensorMeasurement _maxWindGusts;
+        private SensorMeasurement _hdgFromHandheld;
         private CustomData<GeographicPosition> _position;
         private CustomData<int> _numSatellites;
         private CustomData<string> _satStatus;
 
         private ILogger _logger;
+        private ImuSensor _imu;
 
         public NmeaSensor(MeasurementManager manager)
         {
@@ -88,6 +90,7 @@ namespace DisplayControl
             _position = new CustomData<GeographicPosition>("Geographic Position", new GeographicPosition(), SensorSource.Position);
             _numSatellites = new CustomData<int>("Number of Sats in view", 0, SensorSource.Position) { CustomFormatOperation = x => x.ToString(CultureInfo.CurrentCulture) };
             _satStatus = new CustomData<string>("Satellites in View", string.Empty, SensorSource.Position);
+            _hdgFromHandheld = new SensorMeasurement("Handheld heading", Angle.Zero, SensorSource.Compass, 2, TimeSpan.FromSeconds(20));
             _logger = this.GetCurrentClassLogger();
         }
 
@@ -263,8 +266,9 @@ namespace DisplayControl
             return input;
         }
 
-        public void Initialize(SensorFusionEngine fusionEngine)
+        internal void Initialize(SensorFusionEngine fusionEngine, ImuSensor imuSensor)
         {
+            _imu = imuSensor;
             _position.UpdateValue(new GeographicPosition());
             _manager.AddRange(new[]
             {
@@ -272,6 +276,7 @@ namespace DisplayControl
                 SensorMeasurement.WindDirectionAbsolute, SensorMeasurement.WindDirectionApparent, SensorMeasurement.WindDirectionTrue,
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
+                _hdgFromHandheld,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint,
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus
@@ -485,6 +490,15 @@ namespace DisplayControl
                     break;
                 case HeadingAndDeclination decl when decl.Valid:
                     _magneticVariation = decl.Declination;
+                    if (decl.HeadingMagnetic.HasValue)
+                    {
+                        _manager.UpdateValue(_hdgFromHandheld, decl.HeadingMagnetic);
+                        if (_imu != null)
+                        {
+                            _imu.ExternalHeading = decl.HeadingMagnetic;
+                        }
+                    }
+
                     break;
                 case RecommendedMinimumNavToDestination rmb when rmb.Valid:
                     _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
