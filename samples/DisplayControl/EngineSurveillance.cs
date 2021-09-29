@@ -38,7 +38,7 @@ namespace DisplayControl
 
         private const int InterruptPin = 21;
         private static readonly TimeSpan MaxIdleTime = TimeSpan.FromSeconds(8);
-        private static readonly TimeSpan AveragingTime = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan AveragingTime = TimeSpan.FromSeconds(3);
         public const double TicksPerRevolution = 1.48; // Because our sensor sits on the smaller wheel from the alternator
         private int _maxCounterValue;
         private Queue<CounterEvent> _lastEvents;
@@ -51,6 +51,7 @@ namespace DisplayControl
         private Mcp23017Ex _mcp23017;
         private GpioController _controllerUsingMcp;
         private double _rpm;
+        private bool _inSelfTest;
 
         private int _lastCounterValue;
         private int _totalCounterValue;
@@ -75,6 +76,7 @@ namespace DisplayControl
             _engineOn = false;
             _lastTickForUpdate = 0;
             _rpm = 0;
+            _inSelfTest = false;
             _logger = this.GetCurrentClassLogger();
             _enginePersistenceFile = new PersistenceFile("/home/pi/projects/ShipLogs/Engine.txt");
             _engineOperatingTime = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours", TimeSpan.Zero, TimeSpan.FromMinutes(1));
@@ -92,6 +94,7 @@ namespace DisplayControl
 
         public override void Init(GpioController gpioController)
         {
+            _inSelfTest = true;
             MainController = gpioController;
             _device = I2cDevice.Create(new I2cConnectionSettings(1, 0x21));
             // Interrupt pin B is connected to GPIO pin 22
@@ -165,6 +168,12 @@ namespace DisplayControl
 
             _lastTickForUpdate = Environment.TickCount64;
             base.Init(gpioController);
+            lock (_counterLock)
+            {
+                _lastEvents.Clear();
+            }
+            _logger.LogInformation("Engine controller self test completed.");
+            _inSelfTest = false;
         }
 
         private void WritePresetValue(int initialValue)
@@ -315,11 +324,18 @@ namespace DisplayControl
                 _logger.LogInformation($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
             }
             // Final step: Send values to UI
-            Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
-            Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn);
-            TimeSpan timeSinceRefill = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
-            Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
-                new IQuantity[] { Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds).ToUnit(DurationUnit.Hour), Duration.FromSeconds(timeSinceRefill.TotalSeconds).ToUnit(DurationUnit.Hour) });
+            if (!_inSelfTest)
+            {
+                Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
+                Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn);
+                TimeSpan timeSinceRefill = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
+                Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
+                    new IQuantity[]
+                    {
+                        Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds).ToUnit(DurationUnit.Hour),
+                        Duration.FromSeconds(timeSinceRefill.TotalSeconds).ToUnit(DurationUnit.Hour)
+                    });
+            }
 
             Temperature engineTemp;
 

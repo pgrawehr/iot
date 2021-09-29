@@ -14,16 +14,27 @@ namespace DisplayControl
 {
     public class ArduinoSensors : PollingSensorBase
     {
+        const int RpmSensorPin = 2;
+        const int TankSensorRelaisPin = 7;
         private ArduinoBoard _board;
         private ILogger _logger;
         private FrequencySensor _frequencySensor;
         private SensorMeasurement _frequencyMeasurement;
         private GpioController _gpioController;
+        private bool _tankSensorIsOn;
 
         public ArduinoSensors(MeasurementManager manager) : base(manager,
             TimeSpan.FromSeconds(1))
         {
             _logger = this.GetCurrentClassLogger();
+            ForceTankSensorEnable = false;
+            _tankSensorIsOn = false;
+        }
+
+        public bool ForceTankSensorEnable
+        {
+            get;
+            set;
         }
 
         public override void Init(GpioController gpioController)
@@ -41,10 +52,13 @@ namespace DisplayControl
             }
 
             _gpioController = _board.CreateGpioController();
-            _gpioController.OpenPin(2, PinMode.Input);
-            _gpioController.ClosePin(2);
+            _gpioController.OpenPin(RpmSensorPin, PinMode.Input);
+            _gpioController.ClosePin(RpmSensorPin);
 
-            _frequencySensor.EnableFrequencyReporting(2, FrequencyMode.Falling, 1000);
+            _gpioController.OpenPin(TankSensorRelaisPin, PinMode.Output);
+            _gpioController.Write(TankSensorRelaisPin, _tankSensorIsOn);
+
+            _frequencySensor.EnableFrequencyReporting(RpmSensorPin, FrequencyMode.Falling, 1000);
             _frequencyMeasurement = new SensorMeasurement("Alternate RPM sensor", RotationalSpeed.Zero, SensorSource.Engine, 2,
                 TimeSpan.FromSeconds(3));
             Manager.AddMeasurement(_frequencyMeasurement);
@@ -56,6 +70,15 @@ namespace DisplayControl
             var freq = _frequencySensor.GetMeasuredFrequency();
             freq = freq / EngineSurveillance.TicksPerRevolution;
             _frequencyMeasurement.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
+
+            var engOn = (CustomData<bool>)SensorMeasurement.Engine0On;
+            bool newSensorValue = ForceTankSensorEnable || engOn.Value;
+
+            if (newSensorValue != _tankSensorIsOn)
+            {
+                _tankSensorIsOn = newSensorValue;
+                _gpioController.Write(TankSensorRelaisPin, _tankSensorIsOn);
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -64,6 +87,7 @@ namespace DisplayControl
             {
                 StopThread();
 
+                _gpioController.Write(TankSensorRelaisPin, PinValue.Low);
                 _board?.Dispose();
                 _board = null;
             }

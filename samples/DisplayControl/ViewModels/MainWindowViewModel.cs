@@ -21,6 +21,7 @@ namespace DisplayControl.ViewModels
         private bool _displayLocked;
         private bool _deviationEnabled;
         private bool _useHeadingFromHandheld;
+        private bool _forceTankSensorEnable;
 
         public MainWindowViewModel()
         {
@@ -30,6 +31,7 @@ namespace DisplayControl.ViewModels
             DisplayLocked = false;
             _deviationEnabled = true;
             _useHeadingFromHandheld = false;
+            _forceTankSensorEnable = false;
         }
 
         public MainWindowViewModel(DataContainer dataContainer)
@@ -174,6 +176,18 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public bool ForceTankSensorEnable
+        {
+            get
+            {
+                return _forceTankSensorEnable;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _forceTankSensorEnable, value);
+            }
+        }
+
         public void ActivateValueSingle(SensorValueViewModel vm)
         {
             DataContainer.ActiveValueSourceSingle = vm.Source;
@@ -218,9 +232,10 @@ namespace DisplayControl.ViewModels
             DataContainer.UseHandheldForHeading(UseHeadingFromHandheld);
         }
 
-        public void EnableDeviation()
+        public void EnableDisableForceTankSensorEnable()
         {
-            DataContainer.EnableDeviationCorrection(true);
+            ForceTankSensorEnable = !ForceTankSensorEnable;
+            DataContainer.ForceTankSensorEnable(ForceTankSensorEnable);
         }
 
         public void LockDisplay()

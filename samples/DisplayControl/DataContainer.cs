@@ -960,6 +960,14 @@ namespace DisplayControl
             }
         }
 
+        public void ForceTankSensorEnable(bool enable)
+        {
+            if (_arduino != null)
+            {
+                _arduino.ForceTankSensorEnable = enable;
+            }
+        }
+
         public void LockDisplay(bool displayLocked)
         {
             if (_adcSensors != null)

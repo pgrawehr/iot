@@ -36,6 +36,23 @@ namespace Iot.Device.Common
         }
 
         /// <summary>
+        /// Gets the embedded value in its specific type
+        /// </summary>
+        public new T? Value
+        {
+            get
+            {
+                var v = (CustomQuantity<T>?)(base.Value);
+                if (v == null)
+                {
+                    return default(T);
+                }
+
+                return v.Value;
+            }
+        }
+
+        /// <summary>
         /// Update the value
         /// </summary>
         public void UpdateValue(T value, SensorMeasurementStatus status)
@@ -55,7 +72,7 @@ namespace Iot.Device.Common
         public override string ToString()
         {
             // So this stays thread safe
-            var v = Value;
+            var v = base.Value;
             if (v == null)
             {
                 return string.Empty;
