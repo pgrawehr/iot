@@ -111,14 +111,17 @@ namespace Iot.Device.Arduino
 
             lock (_frequencyLock)
             {
+                // These are in milliseconds
                 double deltaTime = result.TimeStamp - _lastFrequencyUpdateClock;
                 double deltaTicks = result.NewTicks - _lastFrequencyUpdateTicks;
                 if (deltaTime > 0) // Otherwise, this just wraps around or no time has passed
                 {
                     _currentFrequency = Frequency.FromHertz(deltaTicks / (deltaTime / 1000));
-                    if (result.Timings.Any() && _currentFrequency != Frequency.Zero && _lastFrequency != Frequency.Zero)
+                    if (result.Timings.Any())
                     {
                         Logger.LogInformation($"Current frequency: {_currentFrequency.CyclesPerMinute:F1} RPM");
+
+                        // These are in microseconds
                         var ordered = result.Timings.OrderBy(x => x).ToList();
                         string msg = string.Join(", ", ordered);
                         List<int> deltas = new List<int>();
