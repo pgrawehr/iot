@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,7 +23,6 @@ namespace Iot.Device.Arduino
         private int _lastFrequencyUpdateTicks = 0;
 
         private Frequency _currentFrequency = Frequency.Zero;
-        private Frequency _lastFrequency = Frequency.Zero;
 
         private object _frequencyLock = new object();
 
@@ -111,31 +113,11 @@ namespace Iot.Device.Arduino
 
             lock (_frequencyLock)
             {
-                // These are in milliseconds
                 double deltaTime = result.TimeStamp - _lastFrequencyUpdateClock;
                 double deltaTicks = result.NewTicks - _lastFrequencyUpdateTicks;
                 if (deltaTime > 0) // Otherwise, this just wraps around or no time has passed
                 {
                     _currentFrequency = Frequency.FromHertz(deltaTicks / (deltaTime / 1000));
-                    if (result.Timings.Any())
-                    {
-                        Logger.LogInformation($"Current frequency: {_currentFrequency.CyclesPerMinute:F1} RPM");
-
-                        // These are in microseconds
-                        var ordered = result.Timings.OrderBy(x => x).ToList();
-                        string msg = string.Join(", ", ordered);
-                        List<int> deltas = new List<int>();
-                        for (int i = 1; i < ordered.Count; i++)
-                        {
-                            deltas.Add(ordered[i] - ordered[i - 1]);
-                        }
-
-                        string msg2 = string.Join(", ", deltas);
-                        Logger.LogDebug("Raw timings: " + msg);
-                        Logger.LogDebug("Deltas: " + msg2);
-                    }
-
-                    _lastFrequency = _currentFrequency;
                 }
 
                 _lastFrequencyUpdateClock = result.TimeStamp;
@@ -145,7 +127,7 @@ namespace Iot.Device.Arduino
             return true;
         }
 
-        private (int TimeStamp, int NewTicks, bool Success, int[] Timings) EnableFrequencyReportingInternal(int pinNumber, FrequencyMode mode, int reportDelay)
+        private (int TimeStamp, int NewTicks, bool Success) EnableFrequencyReportingInternal(int pinNumber, FrequencyMode mode, int reportDelay)
         {
             if (reportDelay >= (1 << 14))
             {
@@ -165,24 +147,17 @@ namespace Iot.Device.Arduino
             return DecodeFrequencyReport(new Span<byte>(reply.ToArray()));
         }
 
-        private (int TimeStamp, int NewTicks, bool Success, int[] Timings) DecodeFrequencyReport(Span<byte> reply)
+        private (int TimeStamp, int NewTicks, bool Success) DecodeFrequencyReport(Span<byte> reply)
         {
             if (reply.Length < 13 || reply[0] != (byte)FirmataSysexCommand.FREQUENCY_COMMAND)
             {
                 // Logger.LogError("Frequency sensor extension: Incorrect answer received");
-                return (0, 0, false, Array.Empty<int>());
+                return (0, 0, false);
             }
 
             int timestamp = (int)FirmataCommandSequence.DecodeUInt32(reply, 3);
             int ticks = (int)FirmataCommandSequence.DecodeUInt32(reply, 8);
-            int numberOfExtraWords = reply[8 + 5];
-            int[] timings = new int[numberOfExtraWords];
-            for (int i = 0; i < numberOfExtraWords; i++)
-            {
-                timings[i] = (int)FirmataCommandSequence.DecodeUInt32(reply, 14 + i * 5);
-            }
-
-            return (timestamp, ticks, true, timings);
+            return (timestamp, ticks, true);
         }
 
         /// <summary>

@@ -13,7 +13,12 @@ namespace Iot.Device
     /// <summary>
     /// Implementations of some functions missing in older .NET versions
     /// </summary>
-    public static class MathExtensions
+#if BUILDING_IOT_DEVICE_BINDINGS
+    internal
+#else
+    public
+#endif
+    static class MathExtensions
     {
         /// <summary>
         /// Returns val, limited to the range min-max (inclusive)
@@ -21,7 +26,7 @@ namespace Iot.Device
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Clamp(double val, double min, double max)
         {
-#if NETSTANDARD2_0
+#if !NET5_0_OR_GREATER
             if (val < min)
             {
                 return min;
@@ -44,7 +49,7 @@ namespace Iot.Device
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Clamp(int val, int min, int max)
         {
-#if NETSTANDARD2_0
+#if !NET5_0_OR_GREATER
             if (val < min)
             {
                 return min;
@@ -67,7 +72,7 @@ namespace Iot.Device
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static byte Clamp(byte val, byte min, byte max)
         {
-#if NETSTANDARD2_0
+#if !NET5_0_OR_GREATER
             if (val < min)
             {
                 return min;
@@ -90,7 +95,7 @@ namespace Iot.Device
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long Clamp(long val, long min, long max)
         {
-#if NETSTANDARD2_0
+#if !NET5_0_OR_GREATER
             if (val < min)
             {
                 return min;
@@ -113,7 +118,7 @@ namespace Iot.Device
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint Clamp(uint val, uint min, uint max)
         {
-#if NETSTANDARD2_0
+#if !NET5_0_OR_GREATER
             if (val < min)
             {
                 return min;

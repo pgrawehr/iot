@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace Iot.Device.Arduino
@@ -61,9 +62,19 @@ namespace Iot.Device.Arduino
         /// </summary>
         /// <param name="data">Data. 5 bytes expected</param>
         /// <param name="fromOffset">Start offset in data</param>
-        /// <returns></returns>
+        /// <returns>The decoded unsigned integer</returns>
+        /// <exception cref="InvalidDataException">The received data is invalid</exception>
         public static UInt32 DecodeUInt32(ReadOnlySpan<byte> data, int fromOffset)
         {
+            for (int i = 0; i < 5; i++)
+            {
+                // Bit 7 of the data must always be 0, or there's either a communication problem or a protocol mismatch
+                if ((data[fromOffset + i] & 0x80) != 0)
+                {
+                    throw new InvalidDataException("An invalid byte was received. The message was probably corrupted");
+                }
+            }
+
             Int32 value = data[fromOffset];
             value |= data[fromOffset + 1] << 7;
             value |= data[fromOffset + 2] << 14;
@@ -73,12 +84,71 @@ namespace Iot.Device.Arduino
         }
 
         /// <summary>
+        /// Decode an int from packed 7-bit data.
+        /// This way of encoding uints is only used in extension modules.
+        /// </summary>
+        /// <param name="data">Data. 5 bytes expected</param>
+        /// <param name="fromOffset">Start offset in data</param>
+        /// <returns>The decoded number</returns>
+        public static Int32 DecodeInt32(ReadOnlySpan<byte> data, int fromOffset)
+        {
+            return (Int32)DecodeUInt32(data, fromOffset);
+        }
+
+        /// <summary>
+        /// Send an Uint32 as 5 x 7 bits. This form of transmitting integers is only supported by extension modules
+        /// </summary>
+        /// <param name="value">The 32-Bit value to transmit</param>
+        public void SendUInt32(UInt32 value)
+        {
+            byte[] data = new byte[5];
+            data[0] = (byte)(value & 0x7F);
+            data[1] = (byte)((value >> 7) & 0x7F);
+            data[2] = (byte)((value >> 14) & 0x7F);
+            data[3] = (byte)((value >> 21) & 0x7F);
+            data[4] = (byte)((value >> 28) & 0x7F);
+            _sequence.AddRange(data);
+        }
+
+        /// <summary>
+        /// Send an Int32 as 5 x 7 bits. This form of transmitting integers is only supported by extension modules
+        /// </summary>
+        /// <param name="value">The 32-Bit value to transmit</param>
+        public void SendInt32(Int32 value)
+        {
+            SendUInt32((uint)value);
+        }
+
+        /// <summary>
         /// Add a byte to the command sequence
         /// </summary>
         /// <param name="b">The byte to add</param>
         public void WriteByte(byte b)
         {
             _sequence.Add(b);
+        }
+
+        /// <summary>
+        /// Add a sequence of bytes to the command sequence. The bytes must be encoded already.
+        /// </summary>
+        /// <param name="bytesToSend">The raw block to send</param>
+        public void Write(byte[] bytesToSend)
+        {
+            _sequence.AddRange(bytesToSend);
+        }
+
+        /// <summary>
+        /// Add a sequence of bytes to the command sequence. The bytes must be encoded already.
+        /// </summary>
+        /// <param name="bytesToSend">The raw block to send</param>
+        /// <param name="startIndex">Start index</param>
+        /// <param name="length">Number of bytes to send</param>
+        public void Write(byte[] bytesToSend, int startIndex, int length)
+        {
+            for (int i = startIndex; i < startIndex + length; i++)
+            {
+                _sequence.Add(bytesToSend[i]);
+            }
         }
 
         internal bool Validate()
@@ -100,7 +170,7 @@ namespace Iot.Device.Arduino
         /// Encodes a set of bytes with 7 bits and adds them to the sequence. Each input byte is encoded in 2 bytes.
         /// </summary>
         /// <param name="values">Binary data to add</param>
-        public void AddValuesAsTwo7bitBytes(ReadOnlySpan<byte> values)
+        public void WriteBytesAsTwo7bitBytes(ReadOnlySpan<byte> values)
         {
             for (int i = 0; i < values.Length; i++)
             {
