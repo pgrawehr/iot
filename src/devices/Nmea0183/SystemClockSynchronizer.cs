@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Rtc;
 using Microsoft.Extensions.Logging;
 
 namespace Iot.Device.Nmea0183
@@ -78,7 +79,7 @@ namespace Iot.Device.Nmea0183
             try
             {
                 _logger.LogInformation($"About to synchronize clock from {DateTime.UtcNow} to {dt}");
-                SystemRealTimeClock.SetSystemTimeUtc(dt);
+                SystemClock.SetSystemTimeUtc(dt);
             }
             catch (Exception e) when (e is UnauthorizedAccessException || e is IOException)
             {

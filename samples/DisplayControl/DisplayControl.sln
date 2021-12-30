@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29409.12
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32002.185
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisplayControl", "DisplayControl.csproj", "{62733748-E938-4E40-B761-6AF6E61040CE}"
 EndProject
@@ -26,6 +26,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CpuTemperature", "..\..\src\devices\CpuTemperature\CpuTemperature.csproj", "{A9B5FF46-E263-47A7-A819-C29DE8A8F644}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arduino", "..\..\src\devices\Arduino\Arduino.csproj", "{0B9E4A3C-2CC2-4D63-A156-B99FF3AF8384}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rtc", "..\..\src\devices\Rtc\Rtc.csproj", "{FE3B8671-308B-4D31-A42C-E728BF6497CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -81,6 +83,10 @@ Global
 		{0B9E4A3C-2CC2-4D63-A156-B99FF3AF8384}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0B9E4A3C-2CC2-4D63-A156-B99FF3AF8384}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0B9E4A3C-2CC2-4D63-A156-B99FF3AF8384}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FE3B8671-308B-4D31-A42C-E728BF6497CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FE3B8671-308B-4D31-A42C-E728BF6497CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FE3B8671-308B-4D31-A42C-E728BF6497CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FE3B8671-308B-4D31-A42C-E728BF6497CC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

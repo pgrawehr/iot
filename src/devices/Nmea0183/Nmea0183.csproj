@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\CommonHelpers.csproj" />
+    <ProjectReference Include="..\Rtc\Rtc.csproj" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingPackageVersion)" />
   </ItemGroup>
   <!-- Make the internal classes visible to the unit test assembly -->
