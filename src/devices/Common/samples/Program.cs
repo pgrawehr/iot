@@ -20,8 +20,6 @@ namespace Common.Samples.Test
 
             LogWithSimpleProvider();
 
-            GetSystemTime();
-
             return 0;
         }
 
@@ -57,19 +55,6 @@ namespace Common.Samples.Test
 
             testee.DoSomeLogging();
             LogDispatcher.LoggerFactory = null;
-        }
-
-        private static void GetSystemTime()
-        {
-            DateTime dt = SystemRealTimeClock.GetSystemTimeUtc();
-            Console.WriteLine($"The system time is now {dt}");
-
-            DateTime newTime = new DateTime(2019, 4, 3, 20, 10, 10);
-            Console.WriteLine($"Do you want to set the time to {newTime}?");
-            if (Console.ReadLine()!.StartsWith("y"))
-            {
-                SystemRealTimeClock.SetSystemTimeUtc(newTime);
-            }
         }
     }
 }
