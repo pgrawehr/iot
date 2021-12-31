@@ -13,10 +13,16 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public class TimeDate : NmeaSentence
     {
+        /// <summary>
+        /// Sentence ID of this message ZDA.
+        /// </summary>
         public static SentenceId Id => new SentenceId('Z', 'D', 'A');
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public TimeDate(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
@@ -77,6 +83,9 @@ namespace Iot.Device.Nmea0183.Sentences
             }
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public TimeDate(DateTimeOffset dateTime)
         : base(OwnTalkerId, Id, dateTime)
         {
@@ -90,17 +99,26 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public override bool ReplacesOlderInstance => true;
 
+        /// <summary>
+        /// True if the date format is using a reverse schema. GNSS receivers don't agree on whether the date is to be sent as
+        /// day-month-year or year-month-day. Luckily, the year is always sent as 4-digit number, so that decoding is unambiguous.
+        /// This field is used to reconstruct the same order for sending the message out.
+        /// </summary>
         public bool ReverseDateFormat
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// Time offset of the local time from UTC:
+        /// </summary>
         public TimeSpan LocalTimeOffset
         {
             get;
         }
 
+        /// <inheritdoc />
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
@@ -138,6 +156,7 @@ namespace Iot.Device.Nmea0183.Sentences
             return $",,,,00,";
         }
 
+        /// <inheritdoc />
         public override string ToReadableContent()
         {
             if (DateTime.HasValue)

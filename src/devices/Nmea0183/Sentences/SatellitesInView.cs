@@ -83,7 +83,11 @@ namespace Iot.Device.Nmea0183.Sentences
                 double? elevation = ReadValue(field);
                 double? azimuth = ReadValue(field);
                 double? snr = ReadValue(field);
-                SatelliteInfo info = new SatelliteInfo(id) { Azimuth = azimuth, Elevation = elevation, Snr = snr };
+                SatelliteInfo info = new SatelliteInfo(id)
+                {
+                    Azimuth = azimuth.HasValue ? Angle.FromDegrees(azimuth.Value) : null,
+                    Elevation = elevation.HasValue ? Angle.FromDegrees(elevation.Value) : null, Snr = snr
+                };
                 Satellites.Add(info);
                 id = ReadString(field);
             }
@@ -139,8 +143,8 @@ namespace Iot.Device.Nmea0183.Sentences
                             b.Append(',');
                         }
 
-                        b.AppendFormat(CultureInfo.InvariantCulture, "{0},{1:F0},{2:F0},{3:F0}", s.Id, s.Elevation,
-                            s.Azimuth, s.Snr);
+                        b.AppendFormat(CultureInfo.InvariantCulture, "{0},{1:F0},{2:F0},{3:F0}", s.Id, s.Elevation.Value.Value,
+                            s.Azimuth.Value.Value, s.Snr);
                     }
                 }
 

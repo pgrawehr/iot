@@ -14,10 +14,16 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public class PositionFastUpdate : NmeaSentence
     {
+        /// <summary>
+        /// The sentence ID GLL
+        /// </summary>
         public static SentenceId Id => new SentenceId("GLL");
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
+        /// <summary>
+        /// GPS Status
+        /// </summary>
         public GpsQuality Status { get; private set; }
 
         private double? _latitude;
@@ -44,16 +50,28 @@ namespace Iot.Device.Nmea0183.Sentences
             get => RecommendedMinimumNavigationInformation.Nmea0183ToDegrees(_longitude, _longitudeTurn);
         }
 
+        /// <summary>
+        /// Position
+        /// </summary>
         public GeographicPosition Position
         {
             get;
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
+        /// <param name="sentence">A sentence to deconstruct</param>
+        /// <param name="time">The current time</param>
+        /// <exception cref="ArgumentException">This is not the correct sentence type</exception>
         public PositionFastUpdate(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public PositionFastUpdate(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
@@ -95,9 +113,11 @@ namespace Iot.Device.Nmea0183.Sentences
             }
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public PositionFastUpdate(
-            DateTimeOffset? dateTime,
-            GeographicPosition position)
+        DateTimeOffset? dateTime, GeographicPosition position)
         : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
         {
             DateTime = dateTime;
@@ -113,6 +133,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public override bool ReplacesOlderInstance => true;
 
+        /// <inheritdoc />
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
@@ -125,6 +146,7 @@ namespace Iot.Device.Nmea0183.Sentences
             return FormattableString.Invariant($"{lat},{latTurn},{lon},{lonTurn},{time},A,D");
         }
 
+        /// <inheritdoc />
         public override string ToReadableContent()
         {
             if (LatitudeDegrees.HasValue && LongitudeDegrees.HasValue)

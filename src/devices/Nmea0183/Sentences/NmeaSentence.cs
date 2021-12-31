@@ -15,6 +15,8 @@ namespace Iot.Device.Nmea0183.Sentences
     /// - A constructor taking a talker sentence and a time is used for automatic message construction by the parser or for manual decoding
     /// - A constructor taking the talker id and a field list is used as helper function for the parser.
     /// - A constructor taking individual values for the data is used to construct new messages to be sent out.
+    /// If sending out messages, you might want to use the third constructor, it is usually the one with most arguments and not taking a talker sentence, as this
+    /// is added automatically from the static field <see cref="OwnTalkerId"/>.
     /// </summary>
     public abstract class NmeaSentence
     {

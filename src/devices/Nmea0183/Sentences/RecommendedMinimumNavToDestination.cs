@@ -19,15 +19,24 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public class RecommendedMinimumNavToDestination : NmeaSentence
     {
+        /// <summary>
+        /// The sentence id "RMB"
+        /// </summary>
         public static SentenceId Id => new SentenceId('R', 'M', 'B');
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public RecommendedMinimumNavToDestination(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public RecommendedMinimumNavToDestination(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
@@ -98,6 +107,9 @@ namespace Iot.Device.Nmea0183.Sentences
             }
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public RecommendedMinimumNavToDestination(
             DateTimeOffset? dateTime,
             Length crossTrackError,
@@ -190,6 +202,7 @@ namespace Iot.Device.Nmea0183.Sentences
             get;
         }
 
+        /// <inheritdoc />
         public override string ToNmeaMessage()
         {
             if (Valid)
@@ -284,6 +297,7 @@ namespace Iot.Device.Nmea0183.Sentences
             return string.Empty;
         }
 
+        /// <inheritdoc />
         public override string ToReadableContent()
         {
             if (Valid)

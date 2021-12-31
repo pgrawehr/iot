@@ -83,6 +83,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </remarks>
         public NavigationStatus? Status2 { get; private set; }
 
+        /// <inheritdoc />
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
@@ -145,11 +146,17 @@ namespace Iot.Device.Nmea0183.Sentences
             return b.ToString();
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public RecommendedMinimumNavigationInformation(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public RecommendedMinimumNavigationInformation(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
@@ -217,6 +224,9 @@ namespace Iot.Device.Nmea0183.Sentences
             }
         }
 
+        /// <summary>
+        /// See <see cref="NmeaSentence"/> for constructor usage
+        /// </summary>
         public RecommendedMinimumNavigationInformation(
             DateTimeOffset? dateTime,
             NavigationStatus? status,
@@ -263,6 +273,7 @@ namespace Iot.Device.Nmea0183.Sentences
             return ((double)degrees + (double)minutes / 60.0) * DirectionToSign(direction.Value);
         }
 
+        /// <inheritdoc />
         public override string ToReadableContent()
         {
             if (Valid)
@@ -303,9 +314,19 @@ namespace Iot.Device.Nmea0183.Sentences
             return (degreesMinutes, direction);
         }
 
+        /// <summary>
+        /// Navigation status enum
+        /// </summary>
         public enum NavigationStatus : byte
         {
+            /// <summary>
+            /// Valid is represented with an "A"
+            /// </summary>
             Valid = (byte)'A',
+
+            /// <summary>
+            /// A warning is represented by a "V"
+            /// </summary>
             NavigationReceiverWarning = (byte)'V',
         }
     }
