@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using UnitsNet;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>

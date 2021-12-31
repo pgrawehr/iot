@@ -4,8 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Iot.Device.Common;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>

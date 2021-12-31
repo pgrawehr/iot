@@ -7,9 +7,11 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Nmea0183.Sentences;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
+    /// <summary>
+    /// This source can be used to play back a recorded log file
+    /// </summary>
     public class NmeaLogDataReader : NmeaSinkAndSource
     {
         private readonly string _fileToRead;
@@ -25,6 +27,7 @@ namespace Iot.Device.Nmea0183
             _fileToRead = fileToRead;
         }
 
+        /// <inheritdoc />
         public override void StartDecode()
         {
             using StreamReader sr = File.OpenText(_fileToRead);
@@ -67,10 +70,12 @@ namespace Iot.Device.Nmea0183
             DispatchSentenceEvents(sentence);
         }
 
+        /// <inheritdoc />
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
         }
 
+        /// <inheritdoc />
         public override void StopDecode()
         {
         }

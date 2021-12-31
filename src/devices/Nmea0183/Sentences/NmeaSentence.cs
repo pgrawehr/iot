@@ -10,7 +10,11 @@ using System.Text;
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
-    /// Base class for Nmea Sentences
+    /// Base class for Nmea Sentences.
+    /// All sentences can be constructed using three different approaches:
+    /// - A constructor taking a talker sentence and a time is used for automatic message construction by the parser or for manual decoding
+    /// - A constructor taking the talker id and a field list is used as helper function for the parser.
+    /// - A constructor taking individual values for the data is used to construct new messages to be sent out.
     /// </summary>
     public abstract class NmeaSentence
     {
@@ -246,7 +250,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// Translates the properties of this instance into an NMEA message body,
         /// without <see cref="TalkerId"/>, <see cref="SentenceId"/> and checksum.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The NMEA sentence string for this message</returns>
         public abstract string ToNmeaMessage();
 
         /// <summary>
@@ -258,8 +262,9 @@ namespace Iot.Device.Nmea0183.Sentences
         /// Generates a readable instance of this string.
         /// Not overridable, use <see cref="ToReadableContent"/> to override.
         /// (this is to prevent confusion with <see cref="ToNmeaMessage"/>.)
+        /// Do not use this method to create an NMEA sentence.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>An user-readable string representation of this message</returns>
         public sealed override string ToString()
         {
             return ToReadableContent();

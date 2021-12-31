@@ -11,9 +11,14 @@ using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
+    /// <summary>
+    /// This class controls an auto pilot, given an input and an output stream.
+    /// Depending on the input, it either refines the sequences to a higher resolution (many navigation programs will e.g. only
+    /// output XTE messages with a cross track error accuracy of 0.1nm, which is useless for precise navigation) or create the
+    /// sequences based on input waypoints.
+    /// </summary>
     public sealed class AutopilotController : IDisposable
     {
         // Every nth iteration log the output (i.e. no route. This will repeat frequently, since normally
@@ -72,6 +77,9 @@ namespace Iot.Device.Nmea0183
             _logger = this.GetCurrentClassLogger();
         }
 
+        /// <summary>
+        /// Returns true if the processing thread is running
+        /// </summary>
         public bool Running
         {
             get
@@ -80,6 +88,9 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Current operating state of the autopilot controller
+        /// </summary>
         public AutopilotErrorState OperationState
         {
             get;
@@ -97,6 +108,9 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Returns the next waypoint
+        /// </summary>
         public RoutePoint? NextWaypoint
         {
             get;
@@ -134,6 +148,9 @@ namespace Iot.Device.Nmea0183
             _manualNextWaypoint = null;
         }
 
+        /// <summary>
+        /// Starts the processing thread
+        /// </summary>
         public void Start()
         {
             if (_threadRunning)
@@ -147,6 +164,9 @@ namespace Iot.Device.Nmea0183
             _updateThread.Start();
         }
 
+        /// <summary>
+        /// Stops the processing thread.
+        /// </summary>
         public void Stop()
         {
             if (_updateThread != null)
@@ -512,6 +532,9 @@ namespace Iot.Device.Nmea0183
             return true;
         }
 
+        /// <summary>
+        /// Stops and disposes the component
+        /// </summary>
         public void Dispose()
         {
             Stop();

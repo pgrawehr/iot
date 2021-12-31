@@ -8,10 +8,10 @@ using System.Linq;
 using System.Text;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Common
 {
     /// <summary>
-    /// Represents an angle value (i.e. for track or heading data)
+    /// Provides extension methods for <see cref="UnitsNet.Angle"/>
     /// </summary>
     public static class AngleExtensions
     {

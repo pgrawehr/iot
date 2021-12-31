@@ -7,10 +7,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
@@ -27,6 +27,9 @@ namespace Iot.Device.Nmea0183
         private Identification? _identification;
         private RawData? _rawData;
 
+        /// <summary>
+        /// Create an instance of this class
+        /// </summary>
         public MagneticDeviationCorrection()
         {
             _interestingSentences = new List<NmeaSentence>();
@@ -34,6 +37,9 @@ namespace Iot.Device.Nmea0183
             _identification = null;
         }
 
+        /// <summary>
+        /// Returns the identification of the vessel for which the loaded calibration is valid
+        /// </summary>
         public Identification? Identification
         {
             get
@@ -42,11 +48,25 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Tries to calculate a correction from the given recorded file.
+        /// The recorded file should contain a data set where the vessel is turning two slow circles, one with the clock and one against the clock,
+        /// in calm conditions and with no current.
+        /// </summary>
+        /// <param name="file">The recorded nmea file (from a logged session)</param>
         public void CreateCorrectionTable(string file)
         {
             CreateCorrectionTable(new[] { file }, DateTimeOffset.MinValue, DateTimeOffset.MaxValue);
         }
 
+        /// <summary>
+        /// Tries to calculate a correction from the given recorded file, indicating the timespan where the calibration loops were performed.
+        /// The recorded file should contain a data set where the vessel is turning two slow circles, one with the clock and one against the clock,
+        /// in calm conditions and with no current.
+        /// </summary>
+        /// <param name="fileSet">The recorded nmea files (from a logged session)</param>
+        /// <param name="beginCalibration">The start time of the calibration loops</param>
+        /// <param name="endCalibration">The end time of the calibration loops</param>
         public void CreateCorrectionTable(string[] fileSet, DateTimeOffset beginCalibration, DateTimeOffset endCalibration)
         {
             _interestingSentences.Clear();
@@ -314,6 +334,13 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Saves the calculated calibration set to a file
+        /// </summary>
+        /// <param name="file">The file name (should be ending in XML)</param>
+        /// <param name="shipName">The name of the vessel</param>
+        /// <param name="callSign">The callsign of the vessel</param>
+        /// <param name="mmsi">The MMSI of the vessel</param>
         public void Save(string file, string shipName, string callSign, string mmsi)
         {
             CompassCalibration topLevel = new CompassCalibration();
@@ -337,6 +364,10 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Loads a previously saved calibration set
+        /// </summary>
+        /// <param name="file">The file from which to load</param>
         public void Load(string file)
         {
             XmlSerializer ser = new XmlSerializer(typeof(CompassCalibration));

@@ -12,9 +12,14 @@ using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
+    /// <summary>
+    /// A delegate for updating the current position
+    /// </summary>
+    /// <param name="position">The new position</param>
+    /// <param name="track">The current true track</param>
+    /// <param name="speed">The current speed over ground</param>
     public delegate void PositionUpdate(GeographicPosition position, Angle? track, Speed? speed);
 
     /// <summary>
@@ -64,6 +69,7 @@ namespace Iot.Device.Nmea0183
             set;
         }
 
+        /// <inheritdoc />
         public override void StartDecode()
         {
             lock (_lock)
@@ -201,6 +207,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <inheritdoc />
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             if (_ioExceptionOnSend != null)
@@ -213,6 +220,7 @@ namespace Iot.Device.Nmea0183
             _outEvent?.Set();
         }
 
+        /// <inheritdoc />
         public override void StopDecode()
         {
             lock (_lock)

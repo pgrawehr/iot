@@ -6,11 +6,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-#pragma warning disable CS1591
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Common
 {
     /// <summary>
-    /// Represents a position in WGS84 coordinates.
+    /// Represents a position in WGS84 coordinates. This is the standard coordinate format for most GNSS receivers currently available.
+    /// An instance with Latitude = Longitude = Height = 0 is considered invalid. A real GNSS receiver will never output this exact value
+    /// and that position is far out in the ocean.
+    ///
+    /// This object stores ellipsoidal height, depending on the GNSS receiver and the application, this needs to be transformed to geoidal height.
     /// </summary>
     [Serializable]
     public sealed class GeographicPosition : ICloneable, IEquatable<GeographicPosition>
@@ -23,11 +26,18 @@ namespace Iot.Device.Nmea0183
         private readonly double _longitude;
         private readonly double _height;
 
+        /// <summary>
+        /// Initializes an empty geographic position
+        /// </summary>
         public GeographicPosition()
         {
             _latitude = _longitude = _height = 0;
         }
 
+        /// <summary>
+        /// Copy constructor
+        /// </summary>
+        /// <param name="pos">Input position</param>
         public GeographicPosition(GeographicPosition pos)
         {
             _latitude = pos.Latitude;
@@ -35,6 +45,13 @@ namespace Iot.Device.Nmea0183
             _height = pos.EllipsoidalHeight;
         }
 
+        /// <summary>
+        /// Creates a <see cref="GeographicPosition"/> instance from latitude, longitude and ellipsoidal height.
+        /// </summary>
+        /// <param name="latitude">Latitude of position, in degrees. Valid values are -90 - +90</param>
+        /// <param name="longitude">Longitude of position, in degrees. Valid values are -180 to +180 or 0 to 360, depending on application</param>
+        /// <param name="ellipsoidalHeight">Height over the WGS84 ellipsoid.</param>
+        /// <remarks>No exception is thrown on denormalized or out-of-range positions.</remarks>
         public GeographicPosition(double latitude, double longitude, double ellipsoidalHeight)
         {
             _latitude = latitude;
@@ -42,6 +59,9 @@ namespace Iot.Device.Nmea0183
             _height = ellipsoidalHeight;
         }
 
+        /// <summary>
+        /// Height over the WGS84 ellipsoid
+        /// </summary>
         public double EllipsoidalHeight
         {
             get
@@ -50,6 +70,9 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Latitude. Positive for north of equator, negative for south.
+        /// </summary>
         public double Latitude
         {
             get
@@ -58,6 +81,9 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Longitude. Positive for east of Greenwich, negative for west.
+        /// </summary>
         public double Longitude
         {
             get
@@ -66,6 +92,15 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Returns the given angle as degrees, minutes and seconds
+        /// </summary>
+        /// <param name="angle">Input angle, in degrees</param>
+        /// <param name="secDigits">Number of digits for the second</param>
+        /// <param name="normalizedVal">Normalized angle value (to -180 to 180)</param>
+        /// <param name="degrees">Full degrees</param>
+        /// <param name="minutes">Full minutes</param>
+        /// <param name="seconds">Seconds including requested number of digits</param>
         public static void GetDegreesMinutesSeconds(double angle, int secDigits, out double normalizedVal, out double degrees, out double minutes, out double seconds)
         {
             angle = PositionExtensions.NormalizeAngleTo180(angle);
@@ -116,7 +151,7 @@ namespace Iot.Device.Nmea0183
             return "S";
         }
 
-        public static string GetLongitudeString(double longitude)
+        private static string GetLongitudeString(double longitude)
         {
             object[] args = new object[7];
             GetDegreesMinutesSeconds(longitude, 2, out var normalizedVal, out var deg, out var min, out var sec);
@@ -133,7 +168,7 @@ namespace Iot.Device.Nmea0183
             return strLonRet;
         }
 
-        public static string GetLatitudeString(double latitude)
+        private static string GetLatitudeString(double latitude)
         {
             object[] args = new object[7];
 
@@ -156,11 +191,21 @@ namespace Iot.Device.Nmea0183
             return new GeographicPosition(this);
         }
 
+        /// <summary>
+        /// Creates a copy of this instance
+        /// </summary>
+        /// <returns></returns>
         public GeographicPosition Clone()
         {
             return new GeographicPosition(this);
         }
 
+        /// <summary>
+        /// Returns true if this instance contains a valid position.
+        /// An invalid position is either when <see cref="Latitude"/> and <see cref="Longitude"/> and <see cref="EllipsoidalHeight"/> are exactly zero,
+        /// when either value is NaN or when the position is out of range.
+        /// </summary>
+        /// <returns>See above</returns>
         public bool ContainsValidPosition()
         {
             if (((Latitude == 0.0) && (Longitude == 0.0)) && (EllipsoidalHeight == 0.0))
@@ -181,6 +226,11 @@ namespace Iot.Device.Nmea0183
             return true;
         }
 
+        /// <summary>
+        /// Returns true if the two positions are (almost) equal. This ignores the altitude.
+        /// </summary>
+        /// <param name="position">Position to compare with</param>
+        /// <returns>True if the two positions are closer than about 1cm</returns>
         public bool EqualPosition(GeographicPosition position)
         {
             if (position == null)
@@ -201,6 +251,11 @@ namespace Iot.Device.Nmea0183
             return ret;
         }
 
+        /// <summary>
+        /// Equality comparer. Compares the two positions for equality within about 1cm.
+        /// </summary>
+        /// <param name="obj">The other position</param>
+        /// <returns>True if the two positions are almost identical</returns>
         public override bool Equals(object? obj)
         {
             GeographicPosition? position = obj as GeographicPosition;
@@ -222,6 +277,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Equality comparer. Compares the two positions for equality within about 1cm.
+        /// </summary>
+        /// <param name="position">The other position</param>
+        /// <returns>True if the two positions are almost identical</returns>
         public bool Equals(GeographicPosition? position)
         {
             if (position == null)
@@ -241,6 +301,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Returns a string representation of this position.
+        /// </summary>
+        /// <returns>A string representation in degrees, minutes and seconds for both latitude and longitude</returns>
+        // TODO: Add different formatting options and add parsing feature
         public override string ToString()
         {
             if (Double.IsNaN(Latitude) || Double.IsNaN(Longitude))
@@ -260,6 +325,7 @@ namespace Iot.Device.Nmea0183
             return string.Concat(strLatRet, " / ", strLonRet, " Ellipsoidal Height: ", EllipsoidalHeight.ToString("F0"));
         }
 
+        /// <inheritdoc />
         public override int GetHashCode()
         {
             return Latitude.GetHashCode() ^ Longitude.GetHashCode() ^ EllipsoidalHeight.GetHashCode() ^ 0x7a2b;

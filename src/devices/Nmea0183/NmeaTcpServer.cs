@@ -13,9 +13,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Nmea0183.Sentences;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
+    /// <summary>
+    /// A TCP Server bidirectional sink and source. Provides NMEA sentences to each connected client.
+    /// </summary>
     public class NmeaTcpServer : NmeaSinkAndSource
     {
         private readonly IPAddress _bindTo;
@@ -29,11 +31,22 @@ namespace Iot.Device.Nmea0183
         private ConcurrentQueue<Task> _serverTasks;
         private bool _terminated;
 
+        /// <summary>
+        /// Creates a server with the given source name. The default network port is 10110.
+        /// </summary>
+        /// <param name="name">Source name</param>
         public NmeaTcpServer(string name)
         : this(name, IPAddress.Any, 10110)
         {
         }
 
+        /// <summary>
+        /// Creates a server with the given source name bound to the given local IP and port.
+        /// This will not open the server yet. Use <see cref="StartDecode"/> to open the network port.
+        /// </summary>
+        /// <param name="name">Source name</param>
+        /// <param name="bindTo">Network interface to bind to (Use <see cref="IPAddress.Any"/> to bind to all available interfaces</param>
+        /// <param name="port">The network port to use</param>
         public NmeaTcpServer(string name, IPAddress bindTo, int port)
         : base(name)
         {
@@ -45,6 +58,11 @@ namespace Iot.Device.Nmea0183
             _serverTasks = new ConcurrentQueue<Task>();
         }
 
+        /// <summary>
+        /// Starts a network server with the settings provided by the constructor.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">The server was already started</exception>
+        /// <exception cref="SocketException">The network port is already in use</exception>
         public override void StartDecode()
         {
             if (_serverThread != null)
@@ -154,6 +172,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <inheritdoc />
         public override void StopDecode()
         {
             _terminated = true;

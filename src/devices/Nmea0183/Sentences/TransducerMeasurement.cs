@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Iot.Device.Common;
 using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Sentences

@@ -6,14 +6,14 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
-    /// Caches the last sentence(s) of each type
+    /// Caches the last sentence(s) of each type and so provides a way of asking for the current position without waiting for the next message
     /// </summary>
     public sealed class SentenceCache : IDisposable
     {
@@ -32,6 +32,10 @@ namespace Iot.Device.Nmea0183
             new SentenceId("WPL"),
         };
 
+        /// <summary>
+        /// Creates an new cache using the given source
+        /// </summary>
+        /// <param name="source">The source to monitor</param>
         public SentenceCache(NmeaSinkAndSource source)
         {
             _source = source;
@@ -54,6 +58,9 @@ namespace Iot.Device.Nmea0183
             set;
         }
 
+        /// <summary>
+        /// Clears the cache
+        /// </summary>
         public void Clear()
         {
             lock (_lock)
@@ -66,14 +73,31 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Get the current position from the latest message containing any of the relevant data bits
+        /// Get the current position from the latest message containing any of the relevant data parts. This does not extrapolate the position
+        /// if the last received message is old
         /// </summary>
         /// <param name="position">Current position</param>
         /// <param name="track">Track (course over ground)</param>
         /// <param name="sog">Speed over ground</param>
-        /// <param name="heading">Heading of bow (optional)</param>
-        /// <returns></returns>
+        /// <param name="heading">Vessel Heading</param>
+        /// <returns>True if a valid position is returned</returns>
         public bool TryGetCurrentPosition(out GeographicPosition? position, out Angle track, out Speed sog, out Angle? heading)
+        {
+            return TryGetCurrentPosition(out position, false, out track, out sog, out heading);
+        }
+
+        /// <summary>
+        /// Get the current position from the latest message containing any of the relevant data parts.
+        /// If <paramref name="extrapolate"></paramref> is true, the speed and direction are used to extrapolate the position (many older
+        /// GNSS receivers only deliver the position at 1Hz or less)
+        /// </summary>
+        /// <param name="position">Current position</param>
+        /// <param name="extrapolate">True to extrapolate the current position using speed and track</param>
+        /// <param name="track">Track (course over ground)</param>
+        /// <param name="sog">Speed over ground</param>
+        /// <param name="heading">Vessel Heading</param>
+        /// <returns>True if a valid position is returned</returns>
+        public bool TryGetCurrentPosition(out GeographicPosition? position, bool extrapolate, out Angle track, out Speed sog, out Angle? heading)
         {
             // Try to get any of the position messages
             var gll = (PositionFastUpdate?)GetLastSentence(PositionFastUpdate.Id);
@@ -81,6 +105,7 @@ namespace Iot.Device.Nmea0183
             var rmc = (RecommendedMinimumNavigationInformation?)GetLastSentence(RecommendedMinimumNavigationInformation.Id);
             var vtg = (TrackMadeGood?)GetLastSentence(TrackMadeGood.Id);
             var hdt = (HeadingTrue?)GetLastSentence(HeadingTrue.Id);
+            TimeSpan age;
 
             List<(GeographicPosition, TimeSpan)> orderablePositions = new List<(GeographicPosition, TimeSpan)>();
             if (gll != null && gll.Position != null)
@@ -108,7 +133,7 @@ namespace Iot.Device.Nmea0183
                 return false;
             }
 
-            position = orderablePositions.OrderBy(x => x.Item2).Select(x => x.Item1).First();
+            (position, age) = orderablePositions.OrderBy(x => x.Item2).Select(x => (x.Item1, x.Item2)).First();
 
             if (gga != null && gga.EllipsoidAltitude.HasValue)
             {
@@ -143,6 +168,11 @@ namespace Iot.Device.Nmea0183
                 heading = null;
             }
 
+            if (extrapolate)
+            {
+                position = GreatCircle.CalcCoords(position, track, sog * age);
+            }
+
             return true;
         }
 
@@ -165,6 +195,33 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Gets the last sentence for a given type
+        /// </summary>
+        /// <typeparam name="T">The message type</typeparam>
+        /// <returns>A sentence of the given type or null</returns>
+        public T? GetLastSentence<T>()
+            where T : NmeaSentence, new()
+        {
+            lock (_lock)
+            {
+                T sentenceType = new T(); // We need an instance to get the sentence id for the type
+                if (_sentences.TryGetValue(sentenceType.SentenceId, out var sentence))
+                {
+                    return sentence as T;
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Tries to get a sentence of the given type
+        /// </summary>
+        /// <typeparam name="T">The type of the sentence to query</typeparam>
+        /// <param name="id">The sentence id for T</param>
+        /// <param name="sentence">Receives the sentence, if any was found</param>
+        /// <returns>True on success, false if no such message was received</returns>
         public bool TryGetLastSentence<T>(SentenceId id,
 #if NET5_0_OR_GREATER
             [NotNullWhen(true)]
@@ -206,6 +263,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Returns the current route
+        /// </summary>
+        /// <param name="routeList">The list of points along the route</param>
+        /// <returns>The state of the route received</returns>
         public AutopilotErrorState TryGetCurrentRoute(out List<RoutePoint> routeList)
         {
             routeList = new List<RoutePoint>();
@@ -440,6 +502,9 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Clean up everything
+        /// </summary>
         public void Dispose()
         {
             _source.OnNewSequence -= OnNewSequence;

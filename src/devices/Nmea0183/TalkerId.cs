@@ -3,7 +3,6 @@
 
 using System;
 
-#pragma warning disable CS1591 // Fehledes XML-Kommentar für öffentlich sichtbaren Typ oder Element
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
@@ -11,9 +10,19 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public struct TalkerId : IEquatable<TalkerId>
     {
+        /// <summary>
+        /// The first letter of the talker id
+        /// </summary>
         public char Id1 { get; private set; }
+
+        /// <summary>
+        /// The second letter of the talker id
+        /// </summary>
         public char Id2 { get; private set; }
 
+        /// <summary>
+        /// The talker ID
+        /// </summary>
         public override string ToString() => $"{Id1}{Id2}";
 
         /// <summary>
@@ -27,6 +36,9 @@ namespace Iot.Device.Nmea0183
             Id2 = id2;
         }
 
+        /// <summary>
+        /// Equality member
+        /// </summary>
         public override bool Equals(object? obj)
         {
             if (obj is SentenceId other)
@@ -37,21 +49,33 @@ namespace Iot.Device.Nmea0183
             return false;
         }
 
+        /// <summary>
+        /// Hashcode function
+        /// </summary>
         public override int GetHashCode()
         {
             return Id1 << 8 + Id2;
         }
 
+        /// <summary>
+        /// Equality member
+        /// </summary>
         public bool Equals(TalkerId other)
         {
             return Id1 == other.Id1 && Id2 == other.Id2;
         }
 
+        /// <summary>
+        /// Equality operator
+        /// </summary>
         public static bool operator ==(TalkerId obj1, TalkerId obj2)
         {
             return obj1.Equals(obj2);
         }
 
+        /// <summary>
+        /// Unequality operator
+        /// </summary>
         public static bool operator !=(TalkerId obj1, TalkerId obj2) => !(obj1 == obj2);
 
         // Below information is based on http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf page 3
@@ -270,6 +294,9 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public static TalkerId Ais => new TalkerId('A', 'I');
 
+        /// <summary>
+        /// Filter placeholder for any talker id
+        /// </summary>
         public static TalkerId Any => new TalkerId('*', ' ');
     }
 }

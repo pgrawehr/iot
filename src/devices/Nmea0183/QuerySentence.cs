@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
@@ -14,8 +13,19 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public class QuerySentence
     {
+        /// <summary>
+        /// The talker ID of the requester
+        /// </summary>
         public TalkerId RequesterId { get; private set; }
+
+        /// <summary>
+        /// The talker id of the device to query
+        /// </summary>
         public TalkerId DeviceId { get; private set; }
+
+        /// <summary>
+        /// The name of the sequence to request
+        /// </summary>
         public SentenceId RequestedSentence { get; private set; }
 
         /// <summary>
@@ -77,6 +87,7 @@ namespace Iot.Device.Nmea0183
             RequestedSentence = requestedSentence;
         }
 
+        /// <inheritdoc />
         public override string ToString() => $"${RequesterId}{DeviceId}Q,{RequestedSentence}";
     }
 }

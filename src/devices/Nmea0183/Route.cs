@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Iot.Device.Common;
 
 namespace Iot.Device.Nmea0183
 {
@@ -33,11 +34,11 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Configure a route from a list of points. This gets precedence over an externally defined route.
+        /// Construct a route from a list of points. This gets precedence over an externally defined route.
         /// </summary>
         /// <param name="name">Name of route</param>
         /// <param name="route">The new route</param>
-        /// <param name="nextPoint">The next point on the route (optional, defaults to the first point)</param>
+        /// <param name="nextPoint">The next point on the route that is to be reached (optional, defaults to the first point)</param>
         /// <exception cref="ArgumentException">Different semantic errors with the definition of the route.</exception>
         public Route(string name, List<RoutePoint> route, RoutePoint? nextPoint = null)
         : this(name)
@@ -199,6 +200,9 @@ namespace Iot.Device.Nmea0183
             // Throw away the result
         }
 
+        /// <summary>
+        /// Calculates distances and directions between the waypoints
+        /// </summary>
         private void CalculateMetaData()
         {
             for (var index = 0; index < _routePoints.Count; index++)

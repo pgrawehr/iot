@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
@@ -18,6 +17,10 @@ namespace Iot.Device.Nmea0183
         /// State is unknown
         /// </summary>
         Unknown,
+
+        /// <summary>
+        /// The autopilot has no route to follow.
+        /// </summary>
         NoRoute,
 
         /// <summary>
@@ -40,7 +43,15 @@ namespace Iot.Device.Nmea0183
         /// A route is present
         /// </summary>
         RoutePresent,
+
+        /// <summary>
+        /// We're just having a target waypoint, but no route
+        /// </summary>
         DirectGoto,
+
+        /// <summary>
+        /// The next waypoint is invalid.
+        /// </summary>
         InvalidNextWaypoint,
 
         /// <summary>

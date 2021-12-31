@@ -14,11 +14,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Nmea0183.Sentences;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
-    /// This server distributes all incoming messages via UDP.
+    /// This server distributes all incoming messages via UDP. The advantage is that clients do not need to
+    /// know the IP of the server, which is useful if DHCP keeps reassigning addresses.
     /// </summary>
     public class NmeaUdpServer : NmeaSinkAndSource
     {
@@ -27,17 +27,30 @@ namespace Iot.Device.Nmea0183
         private NmeaParser? _parser;
         private UdpClientStream? _clientStream;
 
+        /// <summary>
+        /// Create an UDP server with the given name on the default port 10110
+        /// </summary>
+        /// <param name="name">The network source name</param>
         public NmeaUdpServer(string name)
         : this(name, 10110)
         {
         }
 
+        /// <summary>
+        /// Create an UDP server with the given name on the given port
+        /// </summary>
+        /// <param name="name">The network source name</param>
+        /// <param name="port">The network port to use</param>
         public NmeaUdpServer(string name, int port)
         : base(name)
         {
             _port = port;
         }
 
+        /// <summary>
+        /// Get the default IP address to bind to
+        /// </summary>
+        /// <returns></returns>
         public static IPAddress GetLocalIPAddress()
         {
             var host = Dns.GetHostEntry(Dns.GetHostName());
@@ -52,6 +65,7 @@ namespace Iot.Device.Nmea0183
             return IPAddress.Loopback;
         }
 
+        /// <inheritdoc />
         public override void StartDecode()
         {
             if (_server != null)
@@ -103,6 +117,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <inheritdoc />
         public override void StopDecode()
         {
             if (_parser != null)

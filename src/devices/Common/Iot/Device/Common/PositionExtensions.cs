@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Common
 {
     /// <summary>
     /// Extensions for positions

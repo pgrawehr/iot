@@ -7,9 +7,13 @@ using System.Collections.Generic;
 using System.Text;
 using UnitsNet;
 
-#pragma warning disable CS1591
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Common
 {
+    /// <summary>
+    /// This class provides some basic geodetic calculations on the WGS84 ellipsoid.
+    /// This returns exact distances between two points, considering the non-spherical shape of the earth.
+    /// The results are accurate for distances greater than about 1cm.
+    /// </summary>
     public static class GreatCircle
     {
         /// <summary>
@@ -39,6 +43,16 @@ namespace Iot.Device.Nmea0183
             GeoidCalculations.geod_init(out _geod, WGS84_A, WGS84_F);
         }
 
+        /// <summary>
+        /// Returns the distance and direction between two points on the globe
+        /// </summary>
+        /// <param name="position1">Input position 1</param>
+        /// <param name="position2">Input position 2</param>
+        /// <param name="distance">Great circle distance between the positions</param>
+        /// <param name="direction">Initial direction to travel, in degrees true</param>
+        /// <exception cref="ArgumentNullException">Either <paramref name="position1"/> or <paramref name="position2"/> are null.</exception>
+        /// <remarks>The distance and direction are calculated for the great circle. That is the shortest distance between two points on the globe.
+        /// This path does not follow a constant direction (for large distances)</remarks>
         public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out Length distance, out Angle direction)
         {
             if (position1 == null)
@@ -56,6 +70,16 @@ namespace Iot.Device.Nmea0183
             direction = Angle.FromDegrees(dir).Normalize(true);
         }
 
+        /// <summary>
+        /// Returns the distance and direction between two points on the globe
+        /// </summary>
+        /// <param name="position1">Input position 1</param>
+        /// <param name="position2">Input position 2</param>
+        /// <param name="distance">Great circle distance between the positions</param>
+        /// <param name="directionAtStart">Initial direction to travel, in degrees true</param>
+        /// <param name="directionAtEnd">Direction on which the target is reached</param>
+        /// <exception cref="ArgumentNullException">Either <paramref name="position1"/> or <paramref name="position2"/> are null.</exception>
+        /// <remarks>This path does not follow a constant direction (for large distances)</remarks>
         public static void DistAndDir(GeographicPosition position1, GeographicPosition position2, out Length distance, out Angle directionAtStart, out Angle directionAtEnd)
         {
             if (position1 == null)
@@ -75,12 +99,12 @@ namespace Iot.Device.Nmea0183
             directionAtEnd = Angle.FromDegrees(dirAtEnd).Normalize(true);
         }
 
-        public static void DistAndDir(double latitude1,  double longitude1, double latitude2, double longitude2, out double distance, out double direction)
+        private static void DistAndDir(double latitude1,  double longitude1, double latitude2, double longitude2, out double distance, out double direction)
         {
             GeoidCalculations.geod_inverse(_geod, latitude1, longitude1, latitude2, longitude2, out distance, out direction, out _);
         }
 
-        public static void DistAndDir(double latitude1, double longitude1, double latitude2, double longitude2, out double distance, out double directionAtStart, out double directionAtEnd)
+        private static void DistAndDir(double latitude1, double longitude1, double latitude2, double longitude2, out double distance, out double directionAtStart, out double directionAtEnd)
         {
             GeoidCalculations.geod_inverse(_geod, latitude1, longitude1, latitude2, longitude2, out distance, out directionAtStart, out directionAtEnd);
         }
@@ -140,6 +164,14 @@ namespace Iot.Device.Nmea0183
             return currentSpeed * Math.Cos(delta.Radians);
         }
 
+        /// <summary>
+        /// Calculate the coordinate one will be when traveling for the given distance in the given direction
+        /// </summary>
+        /// <param name="start">Starting point</param>
+        /// <param name="direction">Initial direction</param>
+        /// <param name="distance">Distance to travel</param>
+        /// <returns>The new position</returns>
+        /// <exception cref="ArgumentNullException">The start position is null</exception>
         public static GeographicPosition CalcCoords(GeographicPosition start, Angle direction, Length distance)
         {
             if (start == null)
@@ -151,11 +183,18 @@ namespace Iot.Device.Nmea0183
             return new GeographicPosition(resultLatitude, resultLongitude, start.EllipsoidalHeight);
         }
 
-        public static void CalcCoords(double startLatitude, double startLongitude, double direction, double distance, out double resultLatitude, out double resultLongitude)
+        private static void CalcCoords(double startLatitude, double startLongitude, double direction, double distance, out double resultLatitude, out double resultLongitude)
         {
             GeoidCalculations.geod_direct(_geod, startLatitude, startLongitude, direction, distance, out resultLatitude, out resultLongitude, out _);
         }
 
+        /// <summary>
+        /// Calculate a list of waypoints along the route from start to end.
+        /// </summary>
+        /// <param name="start">Starting position</param>
+        /// <param name="end">End position</param>
+        /// <param name="distanceStep">Distance between waypoints</param>
+        /// <returns>A list of waypoints</returns>
         public static IList<GeographicPosition> CalculateRoute(GeographicPosition start, GeographicPosition end, double distanceStep)
         {
             if (start == null)
@@ -181,6 +220,14 @@ namespace Iot.Device.Nmea0183
             return ret;
         }
 
+        /// <summary>
+        /// Calculate waypoints along a route
+        /// </summary>
+        /// <param name="start">Starting position</param>
+        /// <param name="direction">Starting direction</param>
+        /// <param name="distance">Distance to travel</param>
+        /// <param name="distanceStep">Waypoint step distance</param>
+        /// <returns>A list of waypoints</returns>
         public static IList<GeographicPosition> CalculateRoute(GeographicPosition start, double direction, double distance, double distanceStep)
         {
             if (start == null)

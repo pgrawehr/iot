@@ -1,29 +1,38 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
-    ///  Message routing for NMEA messages
+    /// Message routing for NMEA messages. See the Readme for an usage example.
+    /// This is used to route messages between different NMEA sources and sinks. Instances of <see cref="FilterRule"/> can be used
+    /// to describe which messages need to go from where to where.
     /// </summary>
     public sealed class MessageRouter : NmeaSinkAndSource
     {
+        /// <summary>
+        /// The name of the local message source. This field is constant.
+        /// </summary>
         public const string LocalMessageSource = "LOCAL";
+
+        /// <summary>
+        /// The name of the default logger. This field is constant.
+        /// </summary>
         public const string LoggingSinkName = "LOGGER";
         private readonly Dictionary<string, NmeaSinkAndSource> _sourcesAndSinks;
         private List<FilterRule> _filterRules;
         private bool _localInterfaceActive;
         private NmeaSinkAndSource _loggingSink;
 
+        /// <summary>
+        /// Creates a message router, optionally configuring the logging options
+        /// </summary>
+        /// <param name="loggingConfiguration">(Optional) Logging configuration. This can be used to log all incoming messages to a file.</param>
         public MessageRouter(LoggingConfiguration? loggingConfiguration = null)
         : base(LocalMessageSource)
         {
@@ -44,6 +53,9 @@ namespace Iot.Device.Nmea0183
             _localInterfaceActive = true;
         }
 
+        /// <summary>
+        /// The list of routing endpoints
+        /// </summary>
         public IReadOnlyDictionary<string, NmeaSinkAndSource> EndPoints
         {
             get
@@ -52,6 +64,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Adds a routing end point
+        /// </summary>
+        /// <param name="parser">The new end point</param>
+        /// <returns>True on success, false if an interface with the same name has already been registered.</returns>
         public bool AddEndPoint(NmeaSinkAndSource parser)
         {
             if (!_sourcesAndSinks.ContainsKey(parser.InterfaceName))
@@ -142,11 +159,13 @@ namespace Iot.Device.Nmea0183
             _filterRules = newRules;
         }
 
+        /// <inheritdoc />
         public override void StartDecode()
         {
             _localInterfaceActive = true;
         }
 
+        /// <inheritdoc />
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             if (_localInterfaceActive)
@@ -163,6 +182,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <inheritdoc />
         public override void StopDecode()
         {
             _localInterfaceActive = false;

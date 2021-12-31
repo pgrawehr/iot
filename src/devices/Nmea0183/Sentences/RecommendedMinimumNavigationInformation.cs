@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using Iot.Device.Common;
 using UnitsNet;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf
@@ -19,6 +19,9 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public class RecommendedMinimumNavigationInformation : NmeaSentence
     {
+        /// <summary>
+        /// The sentence id "RMC"
+        /// </summary>
         public static SentenceId Id => new SentenceId('R', 'M', 'C');
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
@@ -28,36 +31,56 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public override bool ReplacesOlderInstance => true;
 
+        /// <summary>
+        /// The navigation status of the message
+        /// </summary>
         public NavigationStatus? Status
         {
             get;
         }
 
+        /// <summary>
+        /// The position
+        /// </summary>
         public GeographicPosition Position
         {
             get;
         }
 
+        /// <summary>
+        /// Speed over ground
+        /// </summary>
         public Speed SpeedOverGround
         {
             get;
         }
 
+        /// <summary>
+        /// The track over ground
+        /// </summary>
         public Angle TrackMadeGoodInDegreesTrue
         {
             get;
         }
 
+        /// <summary>
+        /// The (estimated) magnetic variation at the current location
+        /// </summary>
         public Angle? MagneticVariationInDegrees
         {
             get;
         }
 
-        // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf
-        // doesn't mention this field but all other sentences have this
-        // and at least NEO-M8 sends it
-        // possibly each status is related with some part of the message
-        // but this unofficial spec does not clarify it
+        /// <summary>
+        /// Extended status. Not usually required.
+        /// </summary>
+        /// <remarks>
+        /// http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf
+        /// doesn't mention this field but all other sentences have this
+        /// and at least NEO-M8 sends it
+        /// possibly each status is related with some part of the message
+        /// but this unofficial spec does not clarify it
+        /// </remarks>
         public NavigationStatus? Status2 { get; private set; }
 
         public override string ToNmeaMessage()

@@ -4,8 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Iot.Device.Common;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf
@@ -16,6 +16,9 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public class GlobalPositioningSystemFixData : NmeaSentence
     {
+        /// <summary>
+        /// The GGA sentence identifer
+        /// </summary>
         public static SentenceId Id => new SentenceId("GGA");
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
@@ -25,6 +28,9 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public override bool ReplacesOlderInstance => true;
 
+        /// <summary>
+        /// GPS quality. The position is valid when this does not return <see cref="GpsQuality.NoFix"/>
+        /// </summary>
         public GpsQuality Status { get; private set; }
 
         private double? _latitude;
@@ -51,16 +57,27 @@ namespace Iot.Device.Nmea0183.Sentences
             get => RecommendedMinimumNavigationInformation.Nmea0183ToDegrees(_longitude, _longitudeTurn);
         }
 
+        /// <summary>
+        /// Undulation value reported. This is the difference between the geodetic and the elipsoid height at the current location and
+        /// usually provided by the GNSS receiver trough a build-in adjustment table.
+        /// </summary>
         public double? Undulation
         {
             get;
         }
 
+        /// <summary>
+        /// Altitude over the geoid. This is commonly called "altitude above sea level" and corrects for the change in
+        /// gravitational pull on different places of the globe.
+        /// </summary>
         public double? GeoidAltitude
         {
             get;
         }
 
+        /// <summary>
+        /// Altitude above the WGS84 ellipsoid. This is following a calculation model of the earth, which is used by the satellite systems
+        /// </summary>
         public double? EllipsoidAltitude
         {
             get;
@@ -71,16 +88,23 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public int NumberOfSatellites { get; }
 
+        /// <summary>
+        /// Horizontal dilution of precision. A number representing the quality of the GPS fix. Lower is better.
+        /// </summary>
         public double Hdop
         {
             get;
         }
 
+        /// <summary>
+        /// The position
+        /// </summary>
         public GeographicPosition Position
         {
             get;
         }
 
+        /// <inheritdoc />
         public override string ToNmeaMessage()
         {
             // seems nullable don't interpolate well
@@ -102,11 +126,20 @@ namespace Iot.Device.Nmea0183.Sentences
             return FormattableString.Invariant($"{time},{lat},{latTurn},{lon},{lonTurn},{quality},{numSats},{hdop},{geoidElevation},M,{undulation},M,,");
         }
 
+        /// <summary>
+        /// Manually decode the given sentence
+        /// </summary>
         public GlobalPositioningSystemFixData(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
 
+        /// <summary>
+        /// Construct a new sentence from the given fields. This is used by the parser
+        /// </summary>
+        /// <param name="talkerId">Talker id to use</param>
+        /// <param name="fields">The list of fields</param>
+        /// <param name="time">The current time</param>
         public GlobalPositioningSystemFixData(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
@@ -170,6 +203,15 @@ namespace Iot.Device.Nmea0183.Sentences
             }
         }
 
+        /// <summary>
+        /// Construct a message with the given values
+        /// </summary>
+        /// <param name="dateTime">The current time</param>
+        /// <param name="status">The GNSS status</param>
+        /// <param name="position">The position</param>
+        /// <param name="geoidAltitude">Geoid altitude</param>
+        /// <param name="hdop">HDOP</param>
+        /// <param name="numberOfSatellites">The number of satellites visible</param>
         public GlobalPositioningSystemFixData(
             DateTimeOffset? dateTime,
             GpsQuality status,
@@ -193,6 +235,7 @@ namespace Iot.Device.Nmea0183.Sentences
             Valid = true;
         }
 
+        /// <inheritdoc />
         public override string ToReadableContent()
         {
             if (LatitudeDegrees.HasValue && LongitudeDegrees.HasValue && EllipsoidAltitude.HasValue)

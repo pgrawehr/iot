@@ -23,7 +23,7 @@ using System.Text;
 */
 
 // Ported from the proj.4 project
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Common
 {
     internal static class GeoidCalculations
     {

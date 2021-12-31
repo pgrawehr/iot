@@ -9,10 +9,12 @@ using System.Text;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-#pragma warning disable CS1591
-
 namespace Iot.Device.Nmea0183
 {
+    /// <summary>
+    /// This is a sink for writing received NMEA sentences to a log file. The log file
+    /// can be used for later analysis or replay.
+    /// </summary>
     public sealed class LoggingSink : NmeaSinkAndSource
     {
         private object _lock;
@@ -20,6 +22,11 @@ namespace Iot.Device.Nmea0183
         private TextWriter? _textWriter;
         private NmeaSentence _lastSentence;
 
+        /// <summary>
+        /// Creates an instance of this class
+        /// </summary>
+        /// <param name="name">Name of the sink</param>
+        /// <param name="configuration">Logging configuration</param>
         public LoggingSink(string name, LoggingConfiguration? configuration)
         : base(name)
         {
@@ -30,11 +37,15 @@ namespace Iot.Device.Nmea0183
             Configuration = configuration ?? new LoggingConfiguration();
         }
 
+        /// <summary>
+        /// Gets the active logging configuration
+        /// </summary>
         public LoggingConfiguration Configuration
         {
             get;
         }
 
+        /// <inheritdoc />
         public override void StartDecode()
         {
             lock (_lock)
@@ -79,6 +90,7 @@ namespace Iot.Device.Nmea0183
             _textWriter = new StreamWriter(_logFile);
         }
 
+        /// <inheritdoc />
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             lock (_lock)
@@ -103,6 +115,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <inheritdoc />
         public override void StopDecode()
         {
             lock (_lock)
