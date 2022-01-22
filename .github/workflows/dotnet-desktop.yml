@@ -61,8 +61,8 @@ jobs:
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
 
     env:
-      Solution_Name: ArduinoCsCompiler.sln                         # Replace with your solution name, i.e. MyWpfApp.sln.
-      Test_Project_Path: ArduinoCsCompiler.Tests.csproj                 # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
+      Solution_Name: tools/ArduinoCsCompiler/ArduinoCsCompiler.sln                         # Replace with your solution name, i.e. MyWpfApp.sln.
+      Test_Project_Path: tools/ArduinoCsCompiler/tests/ArduinoCsCompiler.Tests.csproj                 # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
       
     steps:
     - name: Checkout
@@ -91,4 +91,5 @@ jobs:
         
     # Execute all unit tests in the solution
     - name: Execute unit tests
-      run: dotnet test ArduinoCsCompiler.Tests.csproj
+      run: dotnet test $env:Test_Project_Path
+      
