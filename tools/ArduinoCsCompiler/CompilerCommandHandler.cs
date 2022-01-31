@@ -16,6 +16,9 @@ namespace ArduinoCsCompiler
     {
         private static readonly TimeSpan ProgrammingTimeout = TimeSpan.FromMinutes(2);
         public const int SchedulerData = 0x7B;
+        public const int IlCodeMessageHeaderSize = 19; // SYSEX, SCHEDULER_DATA, 0x7F, Uint32 sequence_id x 5, subcommand, code x 2, length x 2, END_SYSEX, reserved
+        public const int AckMsgLength = 9; // Not including the START_SYSEX and END_SYSEX bytes
+
         private readonly MicroCompiler _compiler;
         private readonly ILogger _logger;
         private IlCapabilities? _ilCapabilities;
@@ -97,8 +100,8 @@ namespace ArduinoCsCompiler
             if (sequence is FirmataIlCommandSequence ilCommand)
             {
                 // Could test byte 1 as well (should be ExecutorCommand.Ack or ExecutorCommand.Nack), but we have no message that uses
-                // something else that is also 5 bytes long
-                if (reply.Length != 5 || reply[0] != SchedulerData || reply[4] != ilCommand.SequenceNumber)
+                // something else that is also 11 bytes long
+                if (reply.Length != AckMsgLength || reply[0] != SchedulerData || FirmataCommandSequence.DecodeUInt32(new ReadOnlySpan<byte>(reply), 4) != ilCommand.SequenceNumber)
                 {
                     return false;
                 }
@@ -122,17 +125,18 @@ namespace ArduinoCsCompiler
         /// <summary>
         /// This returns true if the command blob contains an ack or a nack for the given command
         /// </summary>
-        private bool ExpectAck(byte[] data, ExecutorCommand expectedCommand, int expectedSequenceNo, ref CommandError error)
+        private bool ExpectAck(byte[] data, ExecutorCommand expectedCommand, UInt32 expectedSequenceNo, ref CommandError error)
         {
-            if (data.Length >= 5 && data[0] == SchedulerData && data[2] == (byte)expectedCommand)
+            if (data.Length >= AckMsgLength && data[0] == SchedulerData && data[2] == (byte)expectedCommand)
             {
-                if (data.Length == 5 && data[1] == (byte)ExecutorCommand.Ack && data[4] == expectedSequenceNo)
+                var actualSequenceNo = FirmataCommandSequence.DecodeUInt32(new ReadOnlySpan<byte>(data), 4);
+                if (data.Length == AckMsgLength && data[1] == (byte)ExecutorCommand.Ack && actualSequenceNo == expectedSequenceNo)
                 {
                     // Just an ack for a programming command.
                     return true;
                 }
 
-                if (data.Length == 5 && data[1] == (byte)ExecutorCommand.Nack && data[4] == expectedSequenceNo)
+                if (data.Length == AckMsgLength && data[1] == (byte)ExecutorCommand.Nack && actualSequenceNo == expectedSequenceNo)
                 {
                     // This is a Nack
                     error = (CommandError)data[3];
@@ -243,7 +247,7 @@ namespace ArduinoCsCompiler
 
         public void AddMethodIlCode(List<FirmataCommandSequence> sequences, int methodToken, byte[] byteCode)
         {
-            int bytesPerPacket = (_maxBytesPerMessage - 15) * 7 / 8;
+            int bytesPerPacket = (_maxBytesPerMessage - IlCodeMessageHeaderSize) * 7 / 8;
             int codeIndex = 0;
             while (codeIndex < byteCode.Length)
             {
@@ -416,10 +420,8 @@ namespace ArduinoCsCompiler
             }
         }
 
-        public void SendClassDeclaration(Int32 classToken, Int32 parentToken, (int Dynamic, int Statics) sizeOfClass, short classFlags, IList<ClassMember> members, int[] interfaceImplementationData)
+        public void SendClassDeclaration(List<FirmataCommandSequence> sequences, Int32 classToken, Int32 parentToken, (int Dynamic, int Statics) sizeOfClass, short classFlags, IList<ClassMember> members, int[] interfaceImplementationData)
         {
-            List<FirmataCommandSequence> sequences = new();
-
             if (members.Count == 0)
             {
                 FirmataIlCommandSequence sequence = new FirmataIlCommandSequence(ExecutorCommand.ClassDeclarationEnd);
@@ -509,7 +511,10 @@ namespace ArduinoCsCompiler
                 idx = idx + remaining;
                 sequences.Add(sequence);
             }
+        }
 
+        public void SendSequences(List<FirmataCommandSequence> sequences)
+        {
             SendCommandsAndWait(sequences, ProgrammingTimeout, out var error);
             if (error != CommandError.None)
             {
@@ -618,6 +623,14 @@ namespace ArduinoCsCompiler
             WaitAndHandleIlCommand(sequence);
         }
 
+        public void CopyToFlash(List<FirmataCommandSequence> sequences)
+        {
+            FirmataIlCommandSequence sequence = new FirmataIlCommandSequence(ExecutorCommand.CopyToFlash);
+            sequence.WriteByte(0); // Command length must be at least 3 for IL commands
+            sequence.WriteByte((byte)FirmataCommandSequence.EndSysex);
+            sequences.Add(sequence);
+        }
+
         public void WriteFlashHeader(int dataVersion, int hashCode, int startupToken, CodeStartupFlags startupFlags)
         {
             FirmataIlCommandSequence sequence = new FirmataIlCommandSequence(ExecutorCommand.WriteFlashHeader);
@@ -639,20 +652,20 @@ namespace ArduinoCsCompiler
 
             if (data.Length > 0 && data[0] == SchedulerData)
             {
-                if (data.Length == 5 && data[1] == (byte)ExecutorCommand.Ack)
+                if (data.Length == AckMsgLength && data[1] == (byte)ExecutorCommand.Ack)
                 {
                     // Just an ack for a programming command.
                     return true;
                 }
 
-                if (data.Length == 5 && data[1] == (byte)ExecutorCommand.Nack)
+                if (data.Length == AckMsgLength && data[1] == (byte)ExecutorCommand.Nack)
                 {
                     // This is a Nack
                     return false;
                 }
             }
 
-            throw new InvalidOperationException("Unexpected command reply");
+            throw new InvalidOperationException("Unexpected reply when querying loaded program data");
         }
 
         public void QueryCapabilities()

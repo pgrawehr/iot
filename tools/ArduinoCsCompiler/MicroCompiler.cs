@@ -969,6 +969,7 @@ namespace ArduinoCsCompiler
             // Include all elements that are not in from but in to. Do not include elements in neither collection.
             var list = set.Classes.Where(x => !fromSnapShot.AlreadyAssignedTokens.Contains(x.NewToken) && toSnapShot.AlreadyAssignedTokens.Contains(x.NewToken));
             var classesToLoad = list.OrderBy(x => (uint)x.NewToken).ToList();
+            List<FirmataCommandSequence> sequences = new();
             foreach (var c in classesToLoad)
             {
                 var cls = c.TheType;
@@ -998,7 +999,7 @@ namespace ArduinoCsCompiler
                 }
 
                 _logger.LogDebug($"Sending class {idx + 1} of {classesToLoad.Count}: Declaration for {cls.MemberInfoSignature()} (Token 0x{token:x8}). Number of members: {c.Members.Count}, Dynamic size {c.DynamicSize} Bytes, Static Size {c.StaticSize} Bytes.");
-                _commandHandler.SendClassDeclaration(token, parentToken, (c.DynamicSize, c.StaticSize), classFlags, c.Members, c.Interfaces.Select(x => set.GetOrAddClassToken(x.GetTypeInfo())).ToArray());
+                _commandHandler.SendClassDeclaration(sequences, token, parentToken, (c.DynamicSize, c.StaticSize), classFlags, c.Members, c.Interfaces.Select(x => set.GetOrAddClassToken(x.GetTypeInfo())).ToArray());
 
                 if (markAsReadOnly)
                 {
@@ -1009,9 +1010,11 @@ namespace ArduinoCsCompiler
                 // Need to repeatedly copy to flash, or a set that just fits into flash cannot be loaded since the total RAM size is much less than the total flash size
                 if (set.CompilerSettings.DoCopyToFlash(markAsReadOnly) && (idx % 100 == 0))
                 {
-                    CopyToFlash();
+                    _commandHandler.CopyToFlash(sequences);
                 }
             }
+
+            _commandHandler.SendSequences(sequences);
         }
 
         internal void PrepareStringLoad(int constantSize, int stringSize)

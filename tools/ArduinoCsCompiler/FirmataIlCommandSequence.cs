@@ -6,7 +6,7 @@ namespace ArduinoCsCompiler
 {
     public class FirmataIlCommandSequence : FirmataCommandSequence
     {
-        private static int s_sequenceCount = 1;
+        private static UInt32 s_sequenceCount = 1;
 
         public FirmataIlCommandSequence(ExecutorCommand ilCommand)
         : base()
@@ -14,9 +14,9 @@ namespace ArduinoCsCompiler
             Command = ilCommand;
             WriteByte((byte)CompilerCommandHandler.SchedulerData);
             WriteByte((byte)0x7F); // IL data
-            byte seq = (byte)(Interlocked.Increment(ref s_sequenceCount) & 0x7F);
+            UInt32 seq = Interlocked.Increment(ref s_sequenceCount);
             SequenceNumber = seq;
-            WriteByte(seq);
+            SendUInt32(SequenceNumber);
             WriteByte((byte)ilCommand);
         }
 
@@ -25,7 +25,7 @@ namespace ArduinoCsCompiler
             get;
         }
 
-        public int SequenceNumber
+        public UInt32 SequenceNumber
         {
             get;
         }

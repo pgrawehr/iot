@@ -30,7 +30,7 @@ namespace Iot.Device.Arduino
     {
         private const byte FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
         private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 5; // 2.5 works, but 2.6 is recommended
-        private const int FIRMATA_INIT_TIMEOUT_SECONDS = 2;
+        private const int FIRMATA_INIT_TIMEOUT_SECONDS = 5;
         internal static readonly TimeSpan DefaultReplyTimeout = TimeSpan.FromMilliseconds(3000);
 
         private byte _firmwareVersionMajor;
@@ -45,7 +45,7 @@ namespace Iot.Device.Arduino
         private Thread? _inputThread;
         private bool _inputThreadShouldExit;
         private List<SupportedPinConfiguration> _supportedPinConfigurations;
-        private ConcurrentQueue<byte[]> _lastResponse;
+        private ConcurrentQueue<byte[]> _pendingResponses;
         private List<PinValue> _lastPinValues;
         private Dictionary<int, uint> _lastAnalogValues;
         private object _lastPinValueLock;
@@ -87,7 +87,7 @@ namespace Iot.Device.Arduino
             _lastAnalogValues = new Dictionary<int, uint>();
             _lastAnalogValueLock = new object();
             _dataQueue = new Queue<byte>(1024);
-            _lastResponse = new();
+            _pendingResponses = new();
             _lastRequestId = 1;
             _lastCommandError = CommandError.None;
             _firmwareName = string.Empty;
@@ -482,20 +482,20 @@ namespace Iot.Device.Arduino
                             break;
                         case FirmataSysexCommand.I2C_REPLY:
                             _lastCommandError = CommandError.None;
-                            _lastResponse.Enqueue(raw_data);
+                            _pendingResponses.Enqueue(raw_data);
                             _dataReceived.Set();
                             break;
 
                         case FirmataSysexCommand.SPI_DATA:
                             _lastCommandError = CommandError.None;
-                            _lastResponse.Enqueue(raw_data);
+                            _pendingResponses.Enqueue(raw_data);
                             _dataReceived.Set();
                             break;
 
                         default:
                             // we pass the data forward as-is for any other type of sysex command
                             _lastCommandError = CommandError.None;
-                            _lastResponse.Enqueue(raw_data); // the instance is constant, so we can just remember the pointer
+                            _pendingResponses.Enqueue(raw_data); // the instance is constant, so we can just remember the pointer
                             _dataReceived.Set();
                             OnSysexReply?.Invoke(ReplyType.SysexCommand, raw_data);
                             break;
@@ -599,7 +599,7 @@ namespace Iot.Device.Arduino
                 byte[]? response;
                 do
                 {
-                    if (!_lastResponse.TryDequeue(out response))
+                    if (!_pendingResponses.TryDequeue(out response))
                     {
                         bool result = _dataReceived.WaitOne(timeout);
                         if (result == false)
@@ -608,7 +608,7 @@ namespace Iot.Device.Arduino
                         }
 
                         // We're sure this works now
-                        if (!_lastResponse.TryDequeue(out response))
+                        if (!_pendingResponses.TryDequeue(out response))
                         {
                             throw new InvalidOperationException("Queue received an element but is empty - this must not happen");
                         }
@@ -640,18 +640,17 @@ namespace Iot.Device.Arduino
                 throw new ArgumentException("At least one command sequence is invalid", nameof(sequences));
             }
 
-            if (sequences.Count > 127)
-            {
-                // Because we only have 7 bits for the sequence counter.
-                throw new ArgumentException("At most 127 sequences can be chained together", nameof(sequences));
-            }
-
             if (isMatchingAck == null)
             {
                 throw new ArgumentNullException(nameof(isMatchingAck));
             }
 
             error = CommandError.None;
+
+            CommandError errorInternal = error;
+
+            int totalSequences = sequences.Count;
+
             lock (_synchronisationLock)
             {
                 if (_firmataStream == null)
@@ -664,47 +663,70 @@ namespace Iot.Device.Arduino
                 foreach (var s in sequences)
                 {
                     sequencesWithAck.Add(s, false);
-                    _firmataStream.Write(s.AsSpan());
                 }
 
                 _firmataStream.Flush();
 
-                byte[]? response;
-                do
-                {
-                    if (!_lastResponse.TryDequeue(out response))
+                Parallel.Invoke(() =>
                     {
-                        bool result = _dataReceived.WaitOne(timeout);
-                        if (result == false)
+                        int sequenceCnt = 0;
+                        foreach (var s in sequences)
                         {
-                            throw new TimeoutException("Timeout waiting for command answer");
-                        }
-                    }
-
-                    if (response != null) // It's possible that we're already done
-                    {
-                        foreach (var s2 in sequencesWithAck)
-                        {
-                            if (isMatchingAck(s2.Key, response))
+                            _firmataStream.Write(s.AsSpan());
+                            if (sequenceCnt++ % 10 == 0)
                             {
-                                CommandError e = CommandError.None;
-                                if (_lastCommandError != CommandError.None)
-                                {
-                                    error = _lastCommandError;
-                                }
-                                else if ((e = errorFunc(s2.Key, response)) != CommandError.None)
-                                {
-                                    error = e;
-                                }
-
-                                sequencesWithAck[s2.Key] = true;
-                                break;
+                                Thread.Sleep(20);
                             }
                         }
-                    }
-                }
-                while (sequencesWithAck.Any(x => x.Value == false));
 
+                        _firmataStream.Flush();
+                    },
+                    () =>
+                    {
+                        byte[]? response;
+                        do
+                        {
+                            if (!_pendingResponses.TryDequeue(out response))
+                            {
+                                bool result = _dataReceived.WaitOne(timeout);
+                                if (result == false)
+                                {
+                                    throw new TimeoutException("Timeout waiting for command answer");
+                                }
+                            }
+
+                            if (response != null) // It's possible that we're already done
+                            {
+                                foreach (var s2 in sequencesWithAck)
+                                {
+                                    if (isMatchingAck(s2.Key, response))
+                                    {
+                                        CommandError e = CommandError.None;
+                                        if (_lastCommandError != CommandError.None)
+                                        {
+                                            errorInternal = _lastCommandError;
+                                        }
+                                        else if ((e = errorFunc(s2.Key, response)) != CommandError.None)
+                                        {
+                                            errorInternal = e;
+                                        }
+
+                                        sequencesWithAck[s2.Key] = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            int doneSequences = sequencesWithAck.Count(x => x.Value == true);
+                            if (doneSequences % 50 == 0)
+                            {
+                                _logger.LogDebug($"Uploading... {doneSequences} / {totalSequences} sequences completed");
+                            }
+                        }
+                        while (sequencesWithAck.Any(x => x.Value == false));
+                    });
+
+                error = errorInternal;
                 return sequencesWithAck.All(x => x.Value);
             }
         }
@@ -876,9 +898,11 @@ namespace Iot.Device.Arduino
                 lock (_synchronisationLock)
                 {
                     _dataReceived.Reset();
-                    _firmataStream.WriteByte((byte)FirmataCommand.START_SYSEX);
-                    _firmataStream.WriteByte((byte)FirmataSysexCommand.REPORT_FIRMWARE);
-                    _firmataStream.WriteByte((byte)FirmataCommand.END_SYSEX);
+                    Span<byte> span = stackalloc byte[3];
+                    span[0] = (byte)FirmataCommand.START_SYSEX;
+                    span[1] = (byte)FirmataSysexCommand.REPORT_FIRMWARE;
+                    span[2] = (byte)FirmataCommand.END_SYSEX;
+                    _firmataStream.Write(span);
                     bool result = _dataReceived.WaitOne(TimeSpan.FromSeconds(FIRMATA_INIT_TIMEOUT_SECONDS));
                     if (result == false || _firmwareVersionMajor == 0)
                     {
