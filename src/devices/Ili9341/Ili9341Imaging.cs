@@ -16,7 +16,19 @@ namespace Iot.Device.Ili9341
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         public void SendBitmap(Bitmap bm)
         {
-            SendBitmap(bm, new Point(0, 0), new Rectangle(0, 0, ScreenWidthPx, ScreenHeightPx));
+            int width = (int)ScreenWidth;
+            if (width > bm.Width)
+            {
+                width = bm.Width;
+            }
+
+            int height = (int)ScreenHeight;
+            if (height > bm.Height)
+            {
+                height = bm.Height;
+            }
+
+            SendBitmap(bm, new Point(0, 0), new Rectangle(0, 0, width, height));
         }
 
         /// <summary>

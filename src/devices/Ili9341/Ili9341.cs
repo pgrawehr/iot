@@ -25,11 +25,9 @@ namespace Iot.Device.Ili9341
         /// </summary>
         public const SpiMode DefaultSpiMode = SpiMode.Mode3;
 
-        private const int ScreenWidthPx = 240;
-        private const int ScreenHeightPx = 320;
         private const int DefaultSPIBufferSize = 0x1000;
-        private const byte LcdPortraitConfig = 8 | 0x40;
-        private const byte LcdLandscapeConfig = 44;
+        internal const byte LcdPortraitConfig = 8 | 0x40;
+        internal const byte LcdLandscapeConfig = 44;
 
         private readonly int _dcPinId;
         private readonly int _resetPinId;
@@ -84,6 +82,41 @@ namespace Iot.Device.Ili9341
             SendCommand(Ili9341Command.SoftwareReset);
             SendCommand(Ili9341Command.DisplayOff);
             Thread.Sleep(10);
+            InitDisplayParameters();
+            SendCommand(Ili9341Command.SleepOut);
+            Thread.Sleep(120);
+            SendCommand(Ili9341Command.DisplayOn);
+            Thread.Sleep(100);
+            SendCommand(Ili9341Command.MemoryWrite);
+        }
+
+        /// <summary>
+        /// Width of the screen, in pixels
+        /// </summary>
+        public virtual uint ScreenWidth
+        {
+            get
+            {
+                return 240;
+            }
+        }
+
+        /// <summary>
+        /// Height of the screen, in pixels
+        /// </summary>
+        public virtual uint ScreenHeight
+        {
+            get
+            {
+                return 320;
+            }
+        }
+
+        /// <summary>
+        /// Configure memory and orientation parameters
+        /// </summary>
+        protected virtual void InitDisplayParameters()
+        {
             SendCommand(Ili9341Command.MemoryAccessControl, LcdPortraitConfig);
             SendCommand(Ili9341Command.ColModPixelFormatSet, 0x55); // 16-bits per pixel
             SendCommand(Ili9341Command.FrameRateControlInNormalMode, 0x00, 0x1B);
@@ -92,11 +125,6 @@ namespace Iot.Device.Ili9341
             SendCommand(Ili9341Command.PageAddressSet, 0x00, 0x00, 0x01, 0x3F); // height of the screen
             SendCommand(Ili9341Command.EntryModeSet, 0x07);
             SendCommand(Ili9341Command.DisplayFunctionControl, 0x0A, 0x82, 0x27, 0x00);
-            SendCommand(Ili9341Command.SleepOut);
-            Thread.Sleep(120);
-            SendCommand(Ili9341Command.DisplayOn);
-            Thread.Sleep(100);
-            SendCommand(Ili9341Command.MemoryWrite);
         }
 
         /// <summary>
@@ -168,7 +196,7 @@ namespace Iot.Device.Ili9341
         /// </summary>
         public void ClearScreen()
         {
-            FillRect(Color.Black, 0, 0, ScreenWidthPx, ScreenHeightPx);
+            FillRect(Color.Black, 0, 0, ScreenWidth, ScreenHeight);
         }
 
         /// <summary>
@@ -215,7 +243,7 @@ namespace Iot.Device.Ili9341
             _gpioDevice.Write(_backlightPin, PinValue.Low);
         }
 
-        private void SetWindow(uint x0 = 0, uint y0 = 0, uint x1 = ScreenWidthPx - 1, uint y1 = ScreenWidthPx - 1)
+        private void SetWindow(uint x0, uint y0, uint x1, uint y1)
         {
             SendCommand(Ili9341Command.ColumnAddressSet);
             Span<byte> data = stackalloc byte[4]
@@ -243,7 +271,7 @@ namespace Iot.Device.Ili9341
         /// </summary>
         /// <param name="command">Command to send.</param>
         /// <param name="commandParameters">parameteters for the command to be sent</param>
-        private void SendCommand(Ili9341Command command, params byte[] commandParameters)
+        internal void SendCommand(Ili9341Command command, params byte[] commandParameters)
         {
             SendCommand(command, commandParameters.AsSpan());
         }
@@ -253,7 +281,7 @@ namespace Iot.Device.Ili9341
         /// </summary>
         /// <param name="command">Command to send.</param>
         /// <param name="data">Span to send as parameters for the command.</param>
-        private void SendCommand(Ili9341Command command, Span<byte> data)
+        internal void SendCommand(Ili9341Command command, Span<byte> data)
         {
             Span<byte> commandSpan = stackalloc byte[]
             {
@@ -303,35 +331,45 @@ namespace Iot.Device.Ili9341
             while (index < data.Length); // repeat until all data sent.
         }
 
-        /// <inheritdoc/>
+        /// <inheritdoc cref="Dispose()"/>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_gpioDevice != null)
+                {
+                    if (_resetPinId >= 0)
+                    {
+                        _gpioDevice.ClosePin(_resetPinId);
+                    }
+
+                    if (_backlightPin >= 0)
+                    {
+                        _gpioDevice.ClosePin(_backlightPin);
+                    }
+
+                    if (_dcPinId >= 0)
+                    {
+                        _gpioDevice.ClosePin(_dcPinId);
+                    }
+
+                    if (_shouldDispose)
+                    {
+                        _gpioDevice?.Dispose();
+                        _gpioDevice = null!;
+                    }
+                }
+
+                _spiDevice?.Dispose();
+                _spiDevice = null!;
+            }
+        }
+
+        /// <inheritdoc />
         public void Dispose()
         {
-            if (_gpioDevice != null)
-            {
-                if (_resetPinId >= 0)
-                {
-                    _gpioDevice.ClosePin(_resetPinId);
-                }
-
-                if (_backlightPin >= 0)
-                {
-                    _gpioDevice.ClosePin(_backlightPin);
-                }
-
-                if (_dcPinId >= 0)
-                {
-                    _gpioDevice.ClosePin(_dcPinId);
-                }
-
-                if (_shouldDispose)
-                {
-                    _gpioDevice?.Dispose();
-                    _gpioDevice = null!;
-                }
-            }
-
-            _spiDevice?.Dispose();
-            _spiDevice = null!;
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }
