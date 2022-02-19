@@ -45,7 +45,7 @@ namespace Iot.Device.Ili9341
         /// </summary>
         /// <param name="spiDevice">The SPI device used for communication. This Spi device will be displayed along with the ILI9341 device.</param>
         /// <param name="dataCommandPin">The id of the GPIO pin used to control the DC line (data/command).</param>
-        /// <param name="resetPin">The id of the GPIO pin used to control the /RESET line (data/command).</param>
+        /// <param name="resetPin">The id of the GPIO pin used to control the /RESET line (RST).</param>
         /// <param name="backlightPin">The pin for turning the backlight on and off, or -1 if not connected.</param>
         /// <param name="spiBufferSize">The size of the SPI buffer. If data larger than the buffer is sent then it is split up into multiple transmissions. The default value is 4096.</param>
         /// <param name="gpioController">The GPIO controller used for communication and controls the the <paramref name="resetPin"/> and the <paramref name="dataCommandPin"/>
@@ -66,7 +66,10 @@ namespace Iot.Device.Ili9341
             _shouldDispose = shouldDispose || gpioController is null;
 
             _gpioDevice.OpenPin(_dcPinId, PinMode.Output);
-            _gpioDevice.OpenPin(_resetPinId, PinMode.Output);
+            if (_resetPinId >= 0)
+            {
+                _gpioDevice.OpenPin(_resetPinId, PinMode.Output);
+            }
 
             _spiBufferSize = spiBufferSize;
 
@@ -173,6 +176,11 @@ namespace Iot.Device.Ili9341
         /// </summary>
         public async Task ResetDisplayAsync()
         {
+            if (_resetPinId < 0)
+            {
+                return;
+            }
+
             _gpioDevice.Write(_resetPinId, PinValue.High);
             await Task.Delay(20).ConfigureAwait(false);
             _gpioDevice.Write(_resetPinId, PinValue.Low);
@@ -298,10 +306,28 @@ namespace Iot.Device.Ili9341
         /// <inheritdoc/>
         public void Dispose()
         {
-            if (_shouldDispose)
+            if (_gpioDevice != null)
             {
-                _gpioDevice?.Dispose();
-                _gpioDevice = null!;
+                if (_resetPinId >= 0)
+                {
+                    _gpioDevice.ClosePin(_resetPinId);
+                }
+
+                if (_backlightPin >= 0)
+                {
+                    _gpioDevice.ClosePin(_backlightPin);
+                }
+
+                if (_dcPinId >= 0)
+                {
+                    _gpioDevice.ClosePin(_dcPinId);
+                }
+
+                if (_shouldDispose)
+                {
+                    _gpioDevice?.Dispose();
+                    _gpioDevice = null!;
+                }
             }
 
             _spiDevice?.Dispose();
