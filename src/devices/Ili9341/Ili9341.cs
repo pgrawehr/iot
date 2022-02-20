@@ -192,6 +192,14 @@ namespace Iot.Device.Ili9341
         }
 
         /// <summary>
+        /// Clears screen to a specific color
+        /// </summary>
+        public void ClearScreen(Color color)
+        {
+            FillRect(color, 0, 0, ScreenWidth, ScreenHeight);
+        }
+
+        /// <summary>
         /// Clears screen
         /// </summary>
         public void ClearScreen()
@@ -356,8 +364,9 @@ namespace Iot.Device.Ili9341
                     if (_shouldDispose)
                     {
                         _gpioDevice?.Dispose();
-                        _gpioDevice = null!;
                     }
+
+                    _gpioDevice = null!;
                 }
 
                 _spiDevice?.Dispose();

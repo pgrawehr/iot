@@ -40,7 +40,7 @@ namespace Iot.Device.Ili9341
         /// </summary>
         protected override void InitDisplayParameters()
         {
-            SendCommand(Ili9341Command.MemoryAccessControl, 4);
+            SendCommand(Ili9341Command.MemoryAccessControl, 0b1100); // Landscape orientation, inverted color order
             SendCommand(Ili9341Command.ColModPixelFormatSet, 0x55); // 16-bits per pixel
             SendCommand(Ili9341Command.FrameRateControlInNormalMode, 0x00, 0x1B);
             SendCommand(Ili9341Command.GammaSet, 0x01);
