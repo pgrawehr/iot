@@ -7,6 +7,8 @@ using System.Device.Spi;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Iot.Device.Arduino;
 using Iot.Device.Common;
@@ -49,10 +51,14 @@ if (isFt4222)
 }
 else if (isArduino)
 {
-    board = new ArduinoBoard("COM5", 2_000_000);
+    if (!ArduinoBoard.TryConnectToNetworkedBoard(IPAddress.Parse("192.168.1.27"), 27016, out board))
+    {
+        throw new IOException("Couldn't connect to board");
+    }
+
     gpio = board.CreateGpioController();
-    displaySPI = board.CreateSpiDevice(new SpiConnectionSettings(0, 5) { ClockFrequency = 25_000_000 });
-    spiBufferSize = 16; // requires extended Firmata firmware for a bigger one
+    displaySPI = board.CreateSpiDevice(new SpiConnectionSettings(0, 5) { ClockFrequency = 50_000_000 });
+    spiBufferSize = 200; // requires extended Firmata firmware, default is 25
 }
 else
 {
@@ -60,7 +66,7 @@ else
     displaySPI = GetSpiFromDefault();
 }
 
-using Ili9342 ili9341 = new(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio, spiBufferSize: spiBufferSize);
+using Ili9342 ili9341 = new(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio, spiBufferSize: spiBufferSize, shouldDispose: false);
 
 while (!Console.KeyAvailable)
 {
@@ -71,28 +77,30 @@ while (!Console.KeyAvailable)
         g.Clear(Color.Black);
         g.DrawImage(bm, 0, 0, bm.Width, bm.Height);
         ili9341.SendBitmap(dotnetBM);
-        Task.Delay(1000).Wait();
+        //// Task.Delay(1000).Wait();
     }
 
-    Console.WriteLine("FillRect(Color.Red, 120, 160, 60, 80)");
+    Console.WriteLine("FillRect(Color.Gray, 0, 0, 10, 10)");
     ili9341.FillRect(Color.Gray, 0, 0, 10, 10);
 
     Console.WriteLine("FillRect(Color.Red, 120, 160, 60, 80)");
     ili9341.FillRect(Color.Red, 120, 160, 60, 80);
-    Task.Delay(1000).Wait();
+    //// Task.Delay(1000).Wait();
 
     Console.WriteLine("FillRect(Color.Blue, 0, 0, 320, 240)");
     ili9341.FillRect(Color.Blue, 0, 0, 320, 240);
-    Task.Delay(1000).Wait();
+    //// Task.Delay(1000).Wait();
 
     Console.WriteLine("ClearScreen()");
     ili9341.ClearScreen();
-    Task.Delay(1000).Wait();
+    //// Task.Delay(1000).Wait();
 
     Console.WriteLine("FillRect(Color.Green, 0, 0, 120, 160)");
     ili9341.FillRect(Color.Green, 0, 0, 120, 160);
-    Task.Delay(1000).Wait();
+    //// Task.Delay(1000).Wait();
 }
+
+ili9341.Dispose();
 
 board?.Dispose();
 
