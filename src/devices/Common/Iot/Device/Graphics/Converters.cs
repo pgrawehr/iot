@@ -52,5 +52,23 @@ namespace Iot.Device.Graphics
 
             throw new NotSupportedException($"Converting images of type {bmp.PixelFormat} is not supported");
         }
+
+        /// <summary>
+        /// Performs a color transformation on the image
+        /// </summary>
+        /// <param name="image">The image to transform</param>
+        /// <param name="transformFunc">A function that is called for each pixel, taking the index of the pixel in the whole image and the input color</param>
+        public static void ColorTransform(Image<Rgba32> image, Func<int, Rgba32, Rgba32> transformFunc)
+        {
+            if (!image.TryGetSinglePixelSpan(out var span))
+            {
+                throw new InvalidOperationException("Unable to get pixel data");
+            }
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                span[i] = transformFunc(i, span[i]);
+            }
+        }
     }
 }

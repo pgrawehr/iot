@@ -100,6 +100,58 @@ while (!Console.KeyAvailable)
     //// Task.Delay(1000).Wait();
 }
 
+Console.ReadKey(true);
+
+int left = 0;
+int top = 0;
+bool abort = false;
+while (!abort)
+{
+    var bmp = ScreenCapture.GetScreenContents();
+    ili9341.SendBitmap(bmp, new Point(left, top), new Rectangle(0, 0, (int)ili9341.ScreenWidth, (int)ili9341.ScreenHeight));
+    if (Console.KeyAvailable)
+    {
+        switch (Console.ReadKey(true).Key)
+        {
+            case ConsoleKey.Escape:
+                abort = true;
+                break;
+            case ConsoleKey.RightArrow:
+                left += 10;
+                break;
+            case ConsoleKey.DownArrow:
+                top += 10;
+                break;
+            case ConsoleKey.LeftArrow:
+                left -= 10;
+                break;
+            case ConsoleKey.UpArrow:
+                top -= 10;
+                break;
+        }
+
+        if (left < 0)
+        {
+            left = 0;
+        }
+
+        if (left > bmp.Width - ili9341.ScreenWidth)
+        {
+            left = bmp.Width - (int)ili9341.ScreenWidth;
+        }
+
+        if (top < 0)
+        {
+            top = 0;
+        }
+
+        if (top > bmp.Height - ili9341.ScreenHeight)
+        {
+            top = bmp.Height - (int)ili9341.ScreenHeight;
+        }
+    }
+}
+
 ili9341.Dispose();
 
 board?.Dispose();
