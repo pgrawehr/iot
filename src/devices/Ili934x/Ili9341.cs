@@ -8,7 +8,7 @@ using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Iot.Device.Ili9341
+namespace Iot.Device.Ili934x
 {
     /// <summary>
     /// The ILI9341 is a QVGA (Quarter VGA) driver integrated circuit that is used to control 240×320 VGA LCD screens.

@@ -6,7 +6,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
-namespace Iot.Device.Ili9341
+namespace Iot.Device.Ili934x
 {
     public partial class Ili9341
     {

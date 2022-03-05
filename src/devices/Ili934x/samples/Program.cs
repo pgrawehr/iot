@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Iot.Device.Arduino;
 using Iot.Device.Common;
 using Iot.Device.Ft4222;
-using Iot.Device.Ili9341;
+using Iot.Device.Ili934x;
 
 Console.WriteLine("Are you using Ft4222? Type 'yes' and press ENTER if so, anything else will be treated as no.");
 bool isFt4222 = Console.ReadLine() == "yes";

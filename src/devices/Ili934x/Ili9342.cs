@@ -6,12 +6,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Iot.Device.Ili9341
+namespace Iot.Device.Ili934x
 {
     /// <summary>
     /// Ili9342 QVGA display
     /// </summary>
-    public class Ili9342 : Iot.Device.Ili9341.Ili9341
+    public class Ili9342 : Ili9341
     {
         /// <summary>
         /// Initializes new instance of ILI9342 device that will communicate using SPI bus.
