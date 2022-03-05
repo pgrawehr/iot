@@ -7,6 +7,7 @@ using System.Device.Spi;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Ili934x
 {
@@ -145,7 +146,7 @@ namespace Iot.Device.Ili934x
         ///         BBBBBGGG GGGRRRRR
         ///         43210543 21043210
         /// </returns>
-        private (byte Low, byte High) Color565(Color color)
+        private (byte Low, byte High) Color565(Rgba32 color)
         {
             // get the top 5 MSB of the blue or red value
             UInt16 retval = (UInt16)(color.R >> 3);
@@ -168,7 +169,7 @@ namespace Iot.Device.Ili934x
         /// <param name="y">The y co-ordinate of the point to start the rectangle at in pixels.</param>
         /// <param name="w">The width of the rectangle in pixels.</param>
         /// <param name="h">The height of the rectangle in pixels.</param>
-        public void FillRect(Color color, uint x, uint y, uint w, uint h)
+        public void FillRect(Rgba32 color, uint x, uint y, uint w, uint h)
         {
             Span<byte> colourBytes = stackalloc byte[2]; // create a short span that holds the colour data to be sent to the display
             Span<byte> displayBytes = stackalloc byte[(int)(w * h * 2)]; // span used to form the data to be written out to the SPI interface
@@ -194,7 +195,7 @@ namespace Iot.Device.Ili934x
         /// <summary>
         /// Clears screen to a specific color
         /// </summary>
-        public void ClearScreen(Color color)
+        public void ClearScreen(Rgba32 color)
         {
             FillRect(color, 0, 0, ScreenWidth, ScreenHeight);
         }
@@ -204,7 +205,7 @@ namespace Iot.Device.Ili934x
         /// </summary>
         public void ClearScreen()
         {
-            FillRect(Color.Black, 0, 0, ScreenWidth, ScreenHeight);
+            FillRect(new Rgba32(0, 0, 0), 0, 0, ScreenWidth, ScreenHeight);
         }
 
         /// <summary>

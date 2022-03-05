@@ -5,16 +5,22 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.PixelFormats;
+using Color = System.Drawing.Color;
+using Point = System.Drawing.Point;
+using Rectangle = System.Drawing.Rectangle;
 
 namespace Iot.Device.Ili934x
 {
     public partial class Ili9341
     {
         /// <summary>
-        /// Send a bitmap to the Ili9341 display specifying the starting position and destination clipping rectangle.
+        /// Send a bitmap to the Ili9341 display.
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
-        public void SendBitmap(Bitmap bm)
+        public void SendBitmap(Image<Rgba32> bm)
         {
             int width = (int)ScreenWidth;
             if (width > bm.Width)
@@ -36,7 +42,7 @@ namespace Iot.Device.Ili934x
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="updateRect">A rectangle that defines where in the display the bitmap is written. Note that no scaling is done.</param>
-        public void SendBitmap(Bitmap bm, Rectangle updateRect)
+        public void SendBitmap(Image<Rgba32> bm, Rectangle updateRect)
         {
             SendBitmap(bm, new Point(updateRect.X, updateRect.Y), updateRect);
         }
@@ -47,7 +53,7 @@ namespace Iot.Device.Ili934x
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="sourcePoint">A coordinate point in the source bitmap where copying starts from.</param>
         /// <param name="destinationRect">A rectangle that defines where in the display the bitmap is written. Note that no scaling is done.</param>
-        public void SendBitmap(Bitmap bm, Point sourcePoint, Rectangle destinationRect)
+        public void SendBitmap(Image<Rgba32> bm, Point sourcePoint, Rectangle destinationRect)
         {
             if (bm is null)
             {
@@ -68,10 +74,9 @@ namespace Iot.Device.Ili934x
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="sourceRect">A rectangle that defines where in the bitmap data is to be converted from.</param>
-        public Span<byte> GetBitmapPixelData(Bitmap bm, Rectangle sourceRect)
+        public Span<byte> GetBitmapPixelData(Image<Rgba32> bm, Rectangle sourceRect)
         {
-            BitmapData bmd;
-            byte[] bitmapData; // array that takes the raw bytes of the bitmap
+            Rgba32[] bitmapData; // array that takes the raw bytes of the bitmap
             byte[] outputBuffer; // array used to form the data to be written out to the SPI interface
 
             if (bm is null)
@@ -79,27 +84,40 @@ namespace Iot.Device.Ili934x
                 throw new ArgumentNullException(nameof(bm));
             }
 
-            if (bm.PixelFormat != PixelFormat.Format32bppArgb)
+            if (bm.Width < sourceRect.Left + sourceRect.Width)
             {
                 throw new ArgumentException($"Pixel format {bm.PixelFormat.ToString()} not supported.", nameof(bm));
             }
 
+            if (bm.Height < sourceRect.Top + sourceRect.Height)
+            {
+                throw new ArgumentOutOfRangeException(nameof(sourceRect), "Rectangle exceeds size of image");
+            }
+
             // allocate the working arrays.
-            bitmapData = new byte[sourceRect.Width * sourceRect.Height * 4];
+            bitmapData = new Rgba32[sourceRect.Width * sourceRect.Height];
             outputBuffer = new byte[sourceRect.Width * sourceRect.Height * 2];
 
             // get the raw pixel data for the bitmap
-            bmd = bm.LockBits(sourceRect, ImageLockMode.ReadOnly, bm.PixelFormat);
-
-            Marshal.Copy(bmd.Scan0, bitmapData, 0, bitmapData.Length);
-
-            bm.UnlockBits(bmd);
-
-            // iterate over the source bitmap converting each pixle in the raw data
-            // to a format suitablle for sending to the display
-            for (int i = 0; i < bitmapData.Length; i += 4)
+            for (int i = 0; i < sourceRect.Height; i++)
             {
-                    (outputBuffer[i / 4 * 2 + 0], outputBuffer[i / 4 * 2 + 1]) = Color565(Color.FromArgb(bitmapData[i + 2], bitmapData[i + 1], bitmapData[i + 0]));
+                var sourceLine = bm.GetPixelRowSpan(sourceRect.Top + i);
+                if (sourceRect.Width == sourceLine.Length)
+                {
+                    sourceLine.CopyTo(new Span<Rgba32>(bitmapData).Slice(i * sourceRect.Width));
+                }
+                else
+                {
+                    // We need to copy only part of the line
+                    sourceLine.Slice(sourceRect.Left, sourceRect.Width).CopyTo(new Span<Rgba32>(bitmapData).Slice(i * sourceRect.Width));
+                }
+            }
+
+            // iterate over the source bitmap converting each pixel in the raw data
+            // to a format suitable for sending to the display
+            for (int i = 0; i < bitmapData.Length; i++)
+            {
+                    (outputBuffer[i * 2 + 0], outputBuffer[i * 2 + 1]) = Color565(bitmapData[i]);
             }
 
             return (outputBuffer);

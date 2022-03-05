@@ -13,7 +13,9 @@ using System.Threading.Tasks;
 using Iot.Device.Arduino;
 using Iot.Device.Common;
 using Iot.Device.Ft4222;
+using Iot.Device.Graphics;
 using Iot.Device.Ili934x;
+using SixLabors.ImageSharp.PixelFormats;
 
 Console.WriteLine("Are you using Ft4222? Type 'yes' and press ENTER if so, anything else will be treated as no.");
 bool isFt4222 = Console.ReadLine() == "yes";
@@ -76,19 +78,17 @@ while (!Console.KeyAvailable)
         using Bitmap bm = (Bitmap)Bitmap.FromFile(filepath);
         g.Clear(Color.Black);
         g.DrawImage(bm, 0, 0, bm.Width, bm.Height);
-        ili9341.SendBitmap(dotnetBM);
+        var converted = Converters.ToImage(dotnetBM);
+        ili9341.SendBitmap(converted);
         //// Task.Delay(1000).Wait();
     }
 
-    Console.WriteLine("FillRect(Color.Gray, 0, 0, 10, 10)");
-    ili9341.FillRect(Color.Gray, 0, 0, 10, 10);
-
     Console.WriteLine("FillRect(Color.Red, 120, 160, 60, 80)");
-    ili9341.FillRect(Color.Red, 120, 160, 60, 80);
+    ili9341.FillRect(new Rgba32(255, 0, 0), 120, 160, 60, 80);
     //// Task.Delay(1000).Wait();
 
     Console.WriteLine("FillRect(Color.Blue, 0, 0, 320, 240)");
-    ili9341.FillRect(Color.Blue, 0, 0, 320, 240);
+    ili9341.FillRect(new Rgba32(0, 0, 255), 0, 0, 320, 240);
     //// Task.Delay(1000).Wait();
 
     Console.WriteLine("ClearScreen()");
@@ -96,7 +96,7 @@ while (!Console.KeyAvailable)
     //// Task.Delay(1000).Wait();
 
     Console.WriteLine("FillRect(Color.Green, 0, 0, 120, 160)");
-    ili9341.FillRect(Color.Green, 0, 0, 120, 160);
+    ili9341.FillRect(new Rgba32(0, 255, 0), 0, 0, 120, 160);
     //// Task.Delay(1000).Wait();
 }
 
