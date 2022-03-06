@@ -4,6 +4,7 @@
 using System;
 using System.Device.Gpio;
 using System.Device.Spi;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -108,6 +109,7 @@ bool abort = false;
 ScreenCapture capture = new ScreenCapture();
 while (!abort)
 {
+    Stopwatch sw = Stopwatch.StartNew();
     var bmp = capture.GetScreenContents();
     ili9341.SendBitmap(bmp, new Point(left, top), new Rectangle(0, 0, (int)ili9341.ScreenWidth, (int)ili9341.ScreenHeight));
     if (Console.KeyAvailable)
@@ -151,6 +153,8 @@ while (!abort)
             top = bmp.Height - (int)ili9341.ScreenHeight;
         }
     }
+
+    Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
 }
 
 capture.Dispose();
