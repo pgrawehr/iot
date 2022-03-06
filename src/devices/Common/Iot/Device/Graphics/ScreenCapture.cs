@@ -14,33 +14,43 @@ namespace Iot.Device.Graphics
     /// <summary>
     /// A class that takes screenshots.
     /// </summary>
-    public static class ScreenCapture
+    public partial class ScreenCapture : IDisposable
     {
+        /// <summary>
+        /// Creates a new instance of the ScreenCapture class
+        /// </summary>
+        public ScreenCapture()
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                InitLinux();
+            }
+        }
+
         /// <summary>
         /// Gets the contents of a section of the screen
         /// </summary>
         /// <returns>An image</returns>
-        public static Image<Rgba32> GetScreenContents(SixLabors.ImageSharp.Rectangle area)
+        public virtual Image<Rgba32> GetScreenContents(SixLabors.ImageSharp.Rectangle area)
         {
-            using (Bitmap bitmap = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppArgb))
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bitmap))
-                {
-                    g.CopyFromScreen(new System.Drawing.Point(area.Left, area.Top), System.Drawing.Point.Empty, new System.Drawing.Size(area.Width, area.Height));
-                }
-
-                var image = Converters.ToImage(bitmap);
-                // For some reason, we need to swap R and B here. Strange...
-                Converters.ColorTransform(image, (i, c) => new Rgba32(c.B, c.G, c.R, c.A));
-                return image;
+                return GetScreenContentsWindows(area);
             }
+
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                return GetScreenContentsLinux(area);
+            }
+
+            throw new PlatformNotSupportedException();
         }
 
         /// <summary>
         /// Gets the contents of the screen
         /// </summary>
         /// <returns>An image</returns>
-        public static Image<Rgba32> GetScreenContents()
+        public Image<Rgba32> GetScreenContents()
         {
             return GetScreenContents(ScreenSize());
         }
@@ -50,12 +60,38 @@ namespace Iot.Device.Graphics
         /// This returns the full size of the virtual desktop, which might span multiple screens
         /// </summary>
         /// <returns>A rectangle with the size of all screens</returns>
-        public static SixLabors.ImageSharp.Rectangle ScreenSize()
+        public virtual SixLabors.ImageSharp.Rectangle ScreenSize()
         {
-            return new SixLabors.ImageSharp.Rectangle(Interop.GetSystemMetrics(Interop.SystemMetric.SM_XVIRTUALSCREEN),
-                Interop.GetSystemMetrics(Interop.SystemMetric.SM_YVIRTUALSCREEN),
-                Interop.GetSystemMetrics(Interop.SystemMetric.SM_CXVIRTUALSCREEN),
-                Interop.GetSystemMetrics(Interop.SystemMetric.SM_CYVIRTUALSCREEN));
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                return ScreenSizeWindows();
+            }
+
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                return ScreenSizeLinux();
+            }
+
+            throw new PlatformNotSupportedException();
+        }
+
+        /// <summary>
+        /// Cleans internal structures
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_display != IntPtr.Zero)
+            {
+                Interop.XCloseDisplay(_display);
+                _display = IntPtr.Zero;
+            }
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

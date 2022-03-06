@@ -105,9 +105,10 @@ Console.ReadKey(true);
 int left = 0;
 int top = 0;
 bool abort = false;
+ScreenCapture capture = new ScreenCapture();
 while (!abort)
 {
-    var bmp = ScreenCapture.GetScreenContents();
+    var bmp = capture.GetScreenContents();
     ili9341.SendBitmap(bmp, new Point(left, top), new Rectangle(0, 0, (int)ili9341.ScreenWidth, (int)ili9341.ScreenHeight));
     if (Console.KeyAvailable)
     {
@@ -151,6 +152,8 @@ while (!abort)
         }
     }
 }
+
+capture.Dispose();
 
 ili9341.Dispose();
 
