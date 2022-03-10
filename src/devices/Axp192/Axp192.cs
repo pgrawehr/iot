@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Device.Gpio;
 using System.Device.I2c;
 using UnitsNet;
 using UnitsNet.Units;
@@ -34,12 +35,11 @@ namespace Iot.Device.Axp192
         /// Sets LDO2 output
         /// </summary>
         /// <param name="output">From 0 (dark) to 12 representing 1.8 to 3.3V</param>
-        public void SetLDO2Output(byte output)
+        private void SetLDO2Output(byte output)
         {
-            // TODO: this should not be part of this binding, needs to move to the board support and accessing only the higher level functions
-            if (output > 12)
+            if (output > 15)
             {
-                output = 12;
+                output = 15;
             }
 
             byte buf = I2cRead(Register.VoltageSettingLdo2_3);
@@ -50,16 +50,61 @@ namespace Iot.Device.Axp192
         /// Sets LDO3 output
         /// </summary>
         /// <param name="output">From 0 (dark) to 12 representing 1.8 to 3.3V</param>
-        public void SetLDO3Output(byte output)
+        private void SetLDO3Output(byte output)
         {
-            // TODO: this should not be part of this binding, needs to move to the board support and accessing only the higher level functions
-            if (output > 12)
+            if (output > 15)
             {
-                output = 12;
+                output = 15;
             }
 
             byte buf = I2cRead(Register.VoltageSettingLdo2_3);
             I2cWrite(Register.VoltageSettingLdo2_3, (byte)((buf & 0xF0) | output));
+        }
+
+        /// <summary>
+        /// Sets LDO3 output value
+        /// </summary>
+        /// <param name="voltage">The voltage value to set. Will be chopped to the range 1.8-3.3V</param>
+        public void SetLdo2Output(ElectricPotential voltage)
+        {
+            int value = (int)voltage.Millivolts;
+            if (value < 1800)
+            {
+                value = 0;
+            }
+            else if (value > 3300)
+            {
+                value = 15;
+            }
+            else
+            {
+                value = (value - 1800) / 16;
+            }
+
+            SetLDO2Output((byte)value);
+        }
+
+        /// <summary>
+        /// Sets LDO3 output value
+        /// </summary>
+        /// <param name="voltage">The voltage value to set. Will be chopped to the range 1.8-3.3V</param>
+        public void SetLdo3Output(ElectricPotential voltage)
+        {
+            int value = (int)voltage.Millivolts;
+            if (value < 1800)
+            {
+                value = 0;
+            }
+            else if (value > 3300)
+            {
+                value = 15;
+            }
+            else
+            {
+                value = (value - 1800) / 16;
+            }
+
+            SetLDO3Output((byte)value);
         }
 
         /*
@@ -316,7 +361,7 @@ namespace Iot.Device.Axp192
             I2cWrite(Register.VoltageSettingOff, (byte)(I2cRead(Register.VoltageSettingOff) | (1 << 3))); // Turn on short press to wake up
             I2cWrite(Register.ControlGpio0, (byte)(I2cRead(Register.ControlGpio0) | 0x07)); // GPIO0 floating
             I2cWrite(Register.AdcPin1, 0x00); // Disable ADCs
-            I2cWrite(Register.SwitchControleDcDC1_3LDO2_3, (byte)(I2cRead(Register.SwitchControleDcDC1_3LDO2_3) & 0xA1)); // Disable all outputs but DCDC1
+            I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, (byte)(I2cRead(Register.SwitchControleDcDc1_3LDO2_3) & 0xA1)); // Disable all outputs but DCDC1
         }
 
         /// <summary>
@@ -362,7 +407,7 @@ namespace Iot.Device.Axp192
         /// <param name="State">True for on/high/1, false for off/low/O</param>
         public void EnableLDO2(bool State)
         {
-            byte buf = I2cRead(Register.SwitchControleDcDC1_3LDO2_3);
+            byte buf = I2cRead(Register.SwitchControleDcDc1_3LDO2_3);
             if (State == true)
             {
                 buf = (byte)((1 << 2) | buf);
@@ -372,7 +417,7 @@ namespace Iot.Device.Axp192
                 buf = (byte)(~(1 << 2) & buf);
             }
 
-            I2cWrite(Register.SwitchControleDcDC1_3LDO2_3, buf);
+            I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, buf);
         }
 
         /// <summary>
@@ -381,7 +426,7 @@ namespace Iot.Device.Axp192
         /// <param name="State">True to enable LDO3.</param>
         public void EnableLDO3(bool State)
         {
-            byte buf = I2cRead(Register.SwitchControleDcDC1_3LDO2_3);
+            byte buf = I2cRead(Register.SwitchControleDcDc1_3LDO2_3);
             if (State == true)
             {
                 buf = (byte)((1 << 3) | buf);
@@ -391,7 +436,7 @@ namespace Iot.Device.Axp192
                 buf = (byte)(~(1 << 3) & buf);
             }
 
-            I2cWrite(Register.SwitchControleDcDC1_3LDO2_3, buf);
+            I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, buf);
         }
 
         /// <summary>
@@ -400,7 +445,7 @@ namespace Iot.Device.Axp192
         /// <param name="State">True to enable DC-DC3.</param>
         public void EnableDCDC3(bool State)
         {
-            byte buf = I2cRead(Register.SwitchControleDcDC1_3LDO2_3);
+            byte buf = I2cRead(Register.SwitchControleDcDc1_3LDO2_3);
             if (State == true)
             {
                 buf = (byte)((1 << 1) | buf);
@@ -410,7 +455,7 @@ namespace Iot.Device.Axp192
                 buf = (byte)(~(1 << 1) & buf);
             }
 
-            I2cWrite(Register.SwitchControleDcDC1_3LDO2_3, buf);
+            I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, buf);
         }
 
         /// <summary>
@@ -419,7 +464,7 @@ namespace Iot.Device.Axp192
         /// <param name="State">True to enable DC-DC1.</param>
         public void EnableDCDC1(bool State)
         {
-            byte buf = I2cRead(Register.SwitchControleDcDC1_3LDO2_3);
+            byte buf = I2cRead(Register.SwitchControleDcDc1_3LDO2_3);
             if (State == true)
             {
                 buf = (byte)(1 | buf);
@@ -429,7 +474,7 @@ namespace Iot.Device.Axp192
                 buf = (byte)(~1 & buf);
             }
 
-            I2cWrite(Register.SwitchControleDcDC1_3LDO2_3, buf);
+            I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, buf);
         }
 
         /// <summary>
@@ -437,14 +482,14 @@ namespace Iot.Device.Axp192
         /// </summary>
         public LdoDcPinsEnabled LdoDcPinsEnabled
         {
-            get => (LdoDcPinsEnabled)(I2cRead(Register.SwitchControleDcDC1_3LDO2_3) & 0b0000_1111);
+            get => (LdoDcPinsEnabled)(I2cRead(Register.SwitchControleDcDc1_3LDO2_3) & 0b0000_1111);
 
             set
             {
-                byte buf = I2cRead(Register.SwitchControleDcDC1_3LDO2_3);
+                byte buf = I2cRead(Register.SwitchControleDcDc1_3LDO2_3);
                 buf &= 0b1111_0000;
                 buf |= (byte)value;
-                I2cWrite(Register.SwitchControleDcDC1_3LDO2_3, buf);
+                I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, buf);
             }
         }
 
@@ -461,6 +506,104 @@ namespace Iot.Device.Axp192
             }
 
             I2cWrite(Register.ControlGpio0, (byte)((byte)state | currentSink));
+        }
+
+        /// <summary>
+        /// Sets GPIO1 state
+        /// </summary>
+        /// <param name="state">The GPIO1 behavior</param>
+        public void SetGPIO1(GpioBehavior state)
+        {
+            I2cWrite(Register.ControlGpio1, (byte)state);
+        }
+
+        /// <summary>
+        /// Sets GPIO2 state
+        /// </summary>
+        /// <param name="state">The GPIO1 behavior</param>
+        public void SetGPIO2(GpioBehavior state)
+        {
+            I2cWrite(Register.ControlGpio2, (byte)state);
+        }
+
+        /// <summary>
+        /// Sets GPIO4 state
+        /// </summary>
+        /// <param name="state">The GPIO4 behavior</param>
+        public void SetGPIO4(GpioBehavior state)
+        {
+            // Note: Adapt this if GPIO3 is also public
+            if (state == GpioBehavior.NmosLeakOpenOutput)
+            {
+                I2cWrite(Register.ControlGpio34, 0x84);
+            }
+            else if (state == GpioBehavior.UniversalInputFunction)
+            {
+                I2cWrite(Register.ControlGpio34, 0x88);
+            }
+            else
+            {
+                throw new NotSupportedException($"Mode {state} is not supported on GPIO4");
+            }
+        }
+
+        /// <summary>
+        /// Reads GPIO Pins
+        /// </summary>
+        public PinValue ReadGpioValue(int pin)
+        {
+            int value = I2cRead(Register.ReadWriteGpio012);
+
+            switch (pin)
+            {
+                case 0:
+                    return (value & 0x10) != 0 ? PinValue.High : PinValue.Low;
+                case 1:
+                    return (value & 0x20) != 0 ? PinValue.High : PinValue.Low;
+                case 2:
+                    return (value & 0x40) != 0 ? PinValue.High : PinValue.Low;
+                case 4:
+                    value = I2cRead(Register.ReadWriteGpio34);
+                    return (value & 0x20) != 0 ? PinValue.High : PinValue.Low;
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(pin), "Valid pin numbers are 0-2 and 4");
+        }
+
+        /// <summary>
+        /// Configure the given GPIO Pin
+        /// </summary>
+        /// <param name="pin">Pin number</param>
+        /// <param name="value">Value</param>
+        public void WriteGpioValue(int pin, PinValue value)
+        {
+            if (pin == 3 || pin < 0 || pin > 4)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pin), "Valid pin numbers are 0-2 and 4");
+            }
+
+            if (pin == 4)
+            {
+                byte v = 0;
+                if (value == PinValue.High)
+                {
+                    v = 2;
+                }
+
+                I2cWrite(Register.ReadWriteGpio34, v);
+                return;
+            }
+
+            int values = I2cRead(Register.ReadWriteGpio012);
+            values >>= 4;
+            int mask = 1 << pin;
+            values = (values & ~mask);
+            if (value == PinValue.High)
+            {
+                values = values | mask;
+            }
+
+            I2cWrite(Register.ReadWriteGpio012, (byte)values);
         }
 
         /// <summary>
@@ -508,6 +651,43 @@ namespace Iot.Device.Axp192
             buf |= (byte)(pinControl ? 0b0000_1000 : 0);
             buf |= (byte)timing;
             I2cWrite(Register.ShutdownBatteryDetectionControl, buf);
+        }
+
+        /// <summary>
+        /// Sets the output voltage of one of the DC-DC inverters
+        /// </summary>
+        /// <param name="number">The DC-DC inverter number. Valid choices are 1, 2, and 3</param>
+        /// <param name="voltage">The voltage to set. Valid values are 0.7-3.5 V for inverters 1 and 3 and 0.7-2.275V for inverter 2. The
+        /// value will be chopped accordingly</param>
+        public void SetDcVoltage(int number, ElectricPotential voltage)
+        {
+            Register addr;
+
+            int val = (int)Math.Round(voltage.Millivolts);
+            val = (val < 700) ? 0 : (val - 700) / 25;
+            switch (number)
+            {
+                case 1:
+                    addr = Register.VoltageSettingDcDc1;
+                    break;
+                case 2:
+                    addr = Register.VoltageSettingDcDc2;
+                    // Inverter 2 has only 6 bits
+                    if (val > 0x3F)
+                    {
+                        val = 0x3F;
+                    }
+
+                    break;
+                case 3:
+                    addr = Register.VoltageSettingDcDc3;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(number), "Valid DC Ports are 1-3");
+            }
+
+            val = val & 0x7F;
+            I2cWrite(addr, (byte)val);
         }
 
         /// <summary>
@@ -805,6 +985,30 @@ namespace Iot.Device.Axp192
             _i2c.WriteByte((byte)command);
             _i2c.Read(buffer);
             return (uint)(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[1]);
+        }
+
+        /// <summary>
+        /// Enable or disable specified LDO output
+        /// </summary>
+        /// <param name="number">Port number. Valid values: 2 and 3</param>
+        /// <param name="enable">Enable or disable</param>
+        public void SetLdoEnable(int number, bool enable)
+        {
+            byte mark = 0x01;
+            if ((number < 2) || (number > 3))
+            {
+                throw new ArgumentOutOfRangeException(nameof(number));
+            }
+
+            mark <<= number;
+            if (enable)
+            {
+                I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, (byte)(I2cRead(Register.SwitchControleDcDc1_3LDO2_3) | mark));
+            }
+            else
+            {
+                I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, (byte)(I2cRead(Register.SwitchControleDcDc1_3LDO2_3) & (~mark)));
+            }
         }
     }
 }

@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arduino", "..\Arduino\Ardui
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common", "..\Common\Common.csproj", "{B63EB5C0-F1AD-4348-BFEF-F38F178D33D7}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axp192", "..\Axp192\Axp192.csproj", "{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,18 @@ Global
 		{B63EB5C0-F1AD-4348-BFEF-F38F178D33D7}.Release|x64.Build.0 = Release|Any CPU
 		{B63EB5C0-F1AD-4348-BFEF-F38F178D33D7}.Release|x86.ActiveCfg = Release|Any CPU
 		{B63EB5C0-F1AD-4348-BFEF-F38F178D33D7}.Release|x86.Build.0 = Release|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Debug|x64.Build.0 = Debug|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Debug|x86.Build.0 = Debug|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Release|x64.ActiveCfg = Release|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Release|x64.Build.0 = Release|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Release|x86.ActiveCfg = Release|Any CPU
+		{079BECB2-C2F8-4DC0-B9A2-111EA143A3C5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
