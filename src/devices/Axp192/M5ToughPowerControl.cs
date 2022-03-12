@@ -66,7 +66,7 @@ namespace Iot.Device.Axp192
             // LCD backlight voltage
             SetLcdVoltage(ElectricPotential.FromMillivolts(3000));
             // Peripheral bus voltage (for SD card and LCD logic)
-            _axp.SetLdo2Output(ElectricPotential.FromMillivolts(3300));
+            _axp.SetLdoOutput(2, ElectricPotential.FromMillivolts(3300));
 
             // LDO2: Peripheral voltage
             _axp.SetLdoEnable(2, true);
@@ -94,9 +94,22 @@ namespace Iot.Device.Axp192
             _axp.SetChargingFunctions(true, ChargingVoltage.V4_2, ChargingCurrent.Current450mA, ChargingStopThreshold.Percent10);
         }
 
+        /// <summary>
+        /// Set LCD backlight voltage. Valid values range from 1.8 - 3.3V. Low values switch off the backlight completely
+        /// </summary>
+        /// <param name="voltage">The voltage to set</param>
         public virtual void SetLcdVoltage(ElectricPotential voltage)
         {
-            _axp.SetLdo3Output(voltage);
+            if (voltage.Millivolts < 1800)
+            {
+                _axp.SetLdoEnable(3, false);
+            }
+            else
+            {
+                _axp.SetLdoEnable(3, true);
+            }
+
+            _axp.SetLdoOutput(3, voltage);
             _logger.LogInformation($"LCD voltage set to {voltage}");
         }
 

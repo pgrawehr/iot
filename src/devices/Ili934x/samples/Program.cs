@@ -22,6 +22,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
+using UnitsNet;
 
 Console.WriteLine("Are you using Ft4222? Type 'yes' and press ENTER if so, anything else will be treated as no.");
 bool isFt4222 = Console.ReadLine() == "yes";
@@ -122,8 +123,10 @@ int top = 0;
 float scale = 1.0f;
 bool abort = false;
 ScreenCapture capture = new ScreenCapture();
+ElectricPotential backLight = ElectricPotential.FromMillivolts(3000);
 while (!abort)
 {
+    bool backLightChanged = false;
     Stopwatch sw = Stopwatch.StartNew();
     if (Console.KeyAvailable)
     {
@@ -151,8 +154,21 @@ while (!abort)
             case ConsoleKey.Subtract:
                 scale /= 1.1f;
                 break;
+            case ConsoleKey.Insert:
+                backLight = backLight + ElectricPotential.FromMillivolts(200);
+                backLightChanged = true;
+                break;
+            case ConsoleKey.Delete:
+                backLight = backLight - ElectricPotential.FromMillivolts(200);
+                backLightChanged = true;
+                break;
         }
 
+    }
+
+    if (powerControl != null && backLightChanged)
+    {
+        powerControl.SetLcdVoltage(backLight);
     }
 
     var bmp = capture.GetScreenContents();

@@ -32,42 +32,13 @@ namespace Iot.Device.Axp192
         }
 
         /// <summary>
-        /// Sets LDO2 output
+        /// Sets LDO2 or LDO3 output voltage
         /// </summary>
-        /// <param name="output">From 0 (dark) to 12 representing 1.8 to 3.3V</param>
-        private void SetLDO2Output(byte output)
-        {
-            if (output > 15)
-            {
-                output = 15;
-            }
-
-            byte buf = I2cRead(Register.VoltageSettingLdo2_3);
-            I2cWrite(Register.VoltageSettingLdo2_3, (byte)((buf & 0x0f) | (output << 4)));
-        }
-
-        /// <summary>
-        /// Sets LDO3 output
-        /// </summary>
-        /// <param name="output">From 0 (dark) to 12 representing 1.8 to 3.3V</param>
-        private void SetLDO3Output(byte output)
-        {
-            if (output > 15)
-            {
-                output = 15;
-            }
-
-            byte buf = I2cRead(Register.VoltageSettingLdo2_3);
-            I2cWrite(Register.VoltageSettingLdo2_3, (byte)((buf & 0xF0) | output));
-        }
-
-        /// <summary>
-        /// Sets LDO3 output value
-        /// </summary>
+        /// <param name="output">The LDO port to configure. Valid values are 2 and 3 (LDO1 cannot be configured and is always on)</param>
         /// <param name="voltage">The voltage value to set. Will be chopped to the range 1.8-3.3V</param>
-        public void SetLdo2Output(ElectricPotential voltage)
+        public void SetLdoOutput(int output, ElectricPotential voltage)
         {
-            int value = (int)voltage.Millivolts;
+            double value = voltage.Millivolts;
             if (value < 1800)
             {
                 value = 0;
@@ -78,33 +49,23 @@ namespace Iot.Device.Axp192
             }
             else
             {
-                value = (value - 1800) / 16;
+                value = (value - 1800.0) / (3300.0 - 1800.0) * 15.0;
             }
 
-            SetLDO2Output((byte)value);
-        }
-
-        /// <summary>
-        /// Sets LDO3 output value
-        /// </summary>
-        /// <param name="voltage">The voltage value to set. Will be chopped to the range 1.8-3.3V</param>
-        public void SetLdo3Output(ElectricPotential voltage)
-        {
-            int value = (int)voltage.Millivolts;
-            if (value < 1800)
+            int v = (int)value;
+            byte buf = I2cRead(Register.VoltageSettingLdo2_3);
+            if (output == 3)
             {
-                value = 0;
+                I2cWrite(Register.VoltageSettingLdo2_3, (byte)((buf & 0xF0) | v));
             }
-            else if (value > 3300)
+            else if (output == 2)
             {
-                value = 15;
+                I2cWrite(Register.VoltageSettingLdo2_3, (byte)((buf & 0x0f) | (v << 4)));
             }
             else
             {
-                value = (value - 1800) / 16;
+                throw new ArgumentOutOfRangeException(nameof(output), "Only LDO ports 2 and 3 can be configured");
             }
-
-            SetLDO3Output((byte)value);
         }
 
         /*
