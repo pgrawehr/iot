@@ -3,6 +3,7 @@
 
 using System;
 using System.Device.Gpio;
+using System.Device.I2c;
 using System.Device.Spi;
 using System.Diagnostics;
 using System.IO;
@@ -52,6 +53,7 @@ ArduinoBoard? board = null;
 GpioController gpio;
 int spiBufferSize = 4096;
 M5ToughPowerControl? powerControl = null;
+Chsc6440? touch = null;
 
 if (isFt4222)
 {
@@ -69,6 +71,7 @@ else if (isArduino)
     displaySPI = board.CreateSpiDevice(new SpiConnectionSettings(0, 5) { ClockFrequency = 50_000_000 });
     spiBufferSize = 200; // requires extended Firmata firmware, default is 25
     powerControl = new M5ToughPowerControl(board);
+    touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), 39, board.CreateGpioController(), false);
 }
 else
 {
@@ -181,6 +184,19 @@ while (!abort)
         left = pt.X;
         top = pt.Y;
         ili9341.SendBitmap(bmp, pt, rect);
+    }
+
+    if (touch != null)
+    {
+        if (touch.IsPressed())
+        {
+            Console.WriteLine("Oh, you're touching me");
+        }
+        else
+        {
+            Console.WriteLine("Touch me!");
+        }
+
     }
 
     Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
