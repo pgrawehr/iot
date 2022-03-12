@@ -72,6 +72,8 @@ else if (isArduino)
     spiBufferSize = 200; // requires extended Firmata firmware, default is 25
     powerControl = new M5ToughPowerControl(board);
     touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), 39, board.CreateGpioController(), false);
+    touch.UpdateInterval = TimeSpan.FromMilliseconds(100);
+    touch.EnableEvents();
 }
 else
 {
@@ -121,8 +123,18 @@ int left = 0;
 int top = 0;
 float scale = 1.0f;
 bool abort = false;
+Point? lastTouchPoint = null;
 ScreenCapture capture = new ScreenCapture();
 ElectricPotential backLight = ElectricPotential.FromMillivolts(3000);
+if (touch != null)
+{
+    touch.Touched += (o, point) =>
+    {
+        lastTouchPoint = point;
+        Console.WriteLine($"Touched screen at {point}");
+    };
+}
+
 while (!abort)
 {
     bool backLightChanged = false;
@@ -179,30 +191,38 @@ while (!abort)
         Converters.AdjustImageDestination(bmp, ref pt, ref rect);
         left = pt.X;
         top = pt.Y;
+        if (lastTouchPoint != null)
+        {
+            var touchPos = lastTouchPoint.Value;
+            bmp.Mutate(x => x.Draw(Color.Red, 3.0f, new RectangleF(touchPos.X - 1, touchPos.Y - 1, 3, 3)));
+            lastTouchPoint = null;
+        }
+
         ili9341.SendBitmap(bmp, pt, rect);
     }
 
-    if (touch != null)
-    {
-        if (touch.IsPressed())
-        {
-            Console.WriteLine("Oh, you're touching me");
-        }
-        else
-        {
-            Console.WriteLine("Touch me!");
-        }
+    ////if (touch != null)
+    ////{
+    ////    if (touch.IsPressed())
+    ////    {
+    ////        Console.WriteLine("Oh, you're touching me");
+    ////    }
+    ////    else
+    ////    {
+    ////        Console.WriteLine("Touch me!");
+    ////    }
 
-        var pt = touch.GetPrimaryTouchPoint();
-        if (pt != null)
-        {
-            Console.WriteLine($"Touch point: {pt.Value.X}/{pt.Value.Y}");
-        }
-    }
+    ////    var pt = touch.GetPrimaryTouchPoint();
+    ////    if (pt != null)
+    ////    {
+    ////        Console.WriteLine($"Touch point: {pt.Value.X}/{pt.Value.Y}");
+    ////    }
+    ////}
 
     Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
 }
 
+touch?.Dispose();
 capture.Dispose();
 
 ili9341.Dispose();

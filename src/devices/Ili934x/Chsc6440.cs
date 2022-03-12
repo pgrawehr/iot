@@ -4,6 +4,7 @@ using System.Device.Gpio;
 using System.Device.I2c;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using SixLabors.ImageSharp;
 
@@ -28,14 +29,35 @@ namespace Iot.Device.Ili934x
         private I2cDevice _i2c;
 
         private bool _wasRead;
-        private bool _changed;
 
         private DateTime _lastRead;
         private TimeSpan _interval;
 
+        private Point[] _lastPoints;
         private Point[] _points;
         private int _point0finger;
+
         private int _activeTouches;
+        private int _lastActiveTouches;
+        private bool _dragging;
+
+        private bool _isPressed;
+
+        private Thread? _updateThread;
+        private bool _updateThreadActive;
+        private object _lock;
+
+        /// <summary>
+        /// This event is fired when the user "clicks" a position
+        /// Call <see cref="EnableEvents"/> to use event handling
+        /// </summary>
+        public event Action<object, Point>? Touched;
+
+        /// <summary>
+        /// This event is fired repeatedly when the user drags over the screen
+        /// Call <see cref="EnableEvents"/> to use event handling
+        /// </summary>
+        public event Action<object, Point, Point?>? Dragging;
 
         /// <summary>
         /// Create a controller from the given I2C device
@@ -51,12 +73,16 @@ namespace Iot.Device.Ili934x
             _gpioController = gpioController;
             _shouldDispose = shouldDispose;
             _wasRead = false;
-            _changed = false;
             _point0finger = 0;
             _points = new Point[2];
+            _lastPoints = new Point[2];
             _lastRead = DateTime.MinValue;
             _activeTouches = 0;
+            _lastActiveTouches = 0;
+            _dragging = false;
             _interval = TimeSpan.FromMilliseconds(20);
+            _updateThread = null;
+            _lock = new object();
 
             Span<byte> initData = stackalloc byte[2]
             {
@@ -70,13 +96,36 @@ namespace Iot.Device.Ili934x
                     throw new ArgumentNullException(nameof(gpioController));
                 }
 
-                _gpioController.OpenPin(_interruptPin, PinMode.Input);
+                _gpioController.OpenPin(_interruptPin, PinMode.InputPullUp);
                 _gpioController.RegisterCallbackForPinValueChangedEvent(_interruptPin, PinEventTypes.Rising | PinEventTypes.Falling, OnInterrupt);
+            }
+        }
+
+        /// <summary>
+        /// Sets the background thread update interval. Low values can impact performance, but increase the responsiveness.
+        /// </summary>
+        public TimeSpan UpdateInterval
+        {
+            get
+            {
+                return _interval;
+            }
+            set
+            {
+                _interval = value;
             }
         }
 
         private void OnInterrupt(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
         {
+            // The pin is low as long as the screen is being touched.
+            // So we still have to poll when the user drags
+            if (pinValueChangedEventArgs.PinNumber != _interruptPin)
+            {
+                return;
+            }
+
+            _isPressed = pinValueChangedEventArgs.ChangeType == PinEventTypes.Falling;
         }
 
         /// <summary>
@@ -85,10 +134,10 @@ namespace Iot.Device.Ili934x
         /// <returns>True if something presses the display, false if not. Null if no interrupt pin is defined</returns>
         public bool IsPressed()
         {
-            ////if (_gpioController != null)
-            ////{
-            ////    return _gpioController.Read(_interruptPin) == PinValue.High;
-            ////}
+            if (_gpioController != null)
+            {
+                return _isPressed;
+            }
 
             // Need to query the device instead
             Span<byte> register = stackalloc byte[1]
@@ -103,70 +152,68 @@ namespace Iot.Device.Ili934x
             return result[0] != 0;
         }
 
-        private bool ReadData()
+        private void ReadData()
         {
-            // true if real read, not a "come back later"
-            _wasRead = false;
-
-            // true is something actually changed on the touchpad
-            _changed = false;
-
-            // Return immediately if read() is called more frequently than the
-            // touch sensor updates. This prevents unnecessary I2C reads, and the
-            // data can also get corrupted if reads are too close together.
-            if (DateTime.UtcNow - _lastRead < _interval)
+            lock (_lock)
             {
-                return false;
-            }
+                // true if real read, not a "come back later"
+                _wasRead = false;
 
-            _lastRead = DateTime.UtcNow;
-
-            Span<Point> p = stackalloc Point[2];
-            byte pts = 0;
-            int p0f = 0;
-            Span<byte> register = stackalloc byte[1]
-            {
-                0x02
-            };
-
-            if (IsPressed())
-            {
-                Span<byte> data = stackalloc byte[11];
-                _i2c.WriteRead(register, data);
-
-                pts = data[0];
-                if (pts > 2)
+                // Return immediately if read() is called more frequently than the
+                // touch sensor updates. This prevents unnecessary I2C reads, and the
+                // data can also get corrupted if reads are too close together.
+                if (DateTime.UtcNow - _lastRead < _interval)
                 {
-                    return false;
+                    return;
                 }
 
-                if (pts > 0)
+                _lastRead = DateTime.UtcNow;
+
+                Span<Point> p = stackalloc Point[2];
+                byte pts = 0;
+                int p0f = 0;
+                Span<byte> register = stackalloc byte[1]
                 {
-                    // Read the data. Never mind trying to read the "weight" and
-                    // "size" properties or using the built-in gestures: they
-                    // are always set to zero.
-                    p0f = (data[3] >> 4 != 0) ? 1 : 0;
-                    p[0].X = ((data[1] << 8) | data[2]) & 0x0fff;
-                    p[0].Y = ((data[3] << 8) | data[4]) & 0x0fff;
-                    if (pts == 2)
+                    0x02
+                };
+
+                if (IsPressed())
+                {
+                    Span<byte> data = stackalloc byte[11];
+                    _i2c.WriteRead(register, data);
+
+                    pts = data[0];
+                    if (pts > 2)
                     {
-                        p[1].X = ((data[7] << 8) | data[8]) & 0x0fff;
-                        p[1].Y = ((data[9] << 8) | data[10]) & 0x0fff;
+                        return;
+                    }
+
+                    if (pts > 0)
+                    {
+                        // Read the data. Never mind trying to read the "weight" and
+                        // "size" properties or using the built-in gestures: they
+                        // are always set to zero.
+                        p0f = (data[3] >> 4 != 0) ? 1 : 0;
+                        p[0].X = ((data[1] << 8) | data[2]) & 0x0fff;
+                        p[0].Y = ((data[3] << 8) | data[4]) & 0x0fff;
+                        if (pts == 2)
+                        {
+                            p[1].X = ((data[7] << 8) | data[8]) & 0x0fff;
+                            p[1].Y = ((data[9] << 8) | data[10]) & 0x0fff;
+                        }
                     }
                 }
-            }
 
-            if (p[0] != _points[0] || p[1] != _points[1])
-            {
-                _changed = true;
-                _points[0] = p[0];
-                _points[1] = p[1];
-                _point0finger = p0f;
-                _activeTouches = pts;
-            }
+                if (p[0] != _points[0] || p[1] != _points[1])
+                {
+                    _points[0] = p[0];
+                    _points[1] = p[1];
+                    _point0finger = p0f;
+                    _activeTouches = pts;
+                }
 
-            _wasRead = true;
-            return true;
+                _wasRead = true;
+            }
         }
 
         /// <summary>
@@ -190,14 +237,60 @@ namespace Iot.Device.Ili934x
         }
 
         /// <summary>
-        /// Returns true if the data has changed since this method was called last
+        /// Enables event callback.
+        /// This starts an internal thread that will fire the <see cref="Touched"/> and <see cref="Dragging"/> events
         /// </summary>
-        public bool HasChanged()
+        public void EnableEvents()
         {
-            ReadData();
-            bool ret = _changed;
-            _changed = false;
-            return ret;
+            if (_updateThread != null)
+            {
+                return;
+            }
+
+            _updateThreadActive = true;
+            _updateThread = new Thread(UpdateLoop);
+            _updateThread.Name = "Touch Controller";
+            _updateThread.Start();
+        }
+
+        private void UpdateLoop()
+        {
+            while (_updateThreadActive)
+            {
+                Thread.Sleep(_interval);
+                if (!_isPressed)
+                {
+                    continue;
+                }
+
+                ReadData();
+                lock (_lock)
+                {
+                    if (_activeTouches == 0 && _lastActiveTouches == 1 && !_dragging)
+                    {
+                        // Should not do this within the lock, but call is synchronous anyway, so if it takes to long, we
+                        // are blocked either way
+                        Touched?.Invoke(this, _lastPoints[0]);
+                    }
+                    else if (_activeTouches == 0)
+                    {
+                        _dragging = false;
+                    }
+
+                    if (_activeTouches == 1 && _lastActiveTouches == 1)
+                    {
+                        if (_dragging || (Math.Abs(_lastPoints[0].X - _points[0].X) > 10 && Math.Abs(_lastPoints[0].Y - _points[0].Y) > 10))
+                        {
+                            _dragging = true;
+                            Dragging?.Invoke(this, _lastPoints[0], _points[0]);
+                        }
+                    }
+
+                    _lastActiveTouches = _activeTouches;
+                    _lastPoints[0] = _points[0];
+                    _lastPoints[1] = _points[1];
+                }
+            }
         }
 
         /// <summary>
@@ -207,6 +300,14 @@ namespace Iot.Device.Ili934x
         {
             if (disposing)
             {
+                _updateThreadActive = false;
+                var temp = _updateThread;
+                if (temp != null)
+                {
+                    temp.Join();
+                }
+
+                _updateThread = null;
                 if (_interruptPin >= 0 && _gpioController != null)
                 {
                     _gpioController.UnregisterCallbackForPinValueChangedEvent(_interruptPin, OnInterrupt);
