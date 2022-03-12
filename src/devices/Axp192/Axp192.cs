@@ -4,6 +4,7 @@
 using System;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.Security.Cryptography;
 using UnitsNet;
 using UnitsNet.Units;
 
@@ -509,10 +510,11 @@ namespace Iot.Device.Axp192
         }
 
         /// <summary>
-        /// Reads GPIO Pins
+        /// Reads GPIO Pins. This method works only for pins set to an input mode.
         /// </summary>
         public PinValue ReadGpioValue(int pin)
         {
+            // If we were to read back the current output level, we would have to read the lower nibble instead
             int value = I2cRead(Register.ReadWriteGpio012);
 
             switch (pin)
@@ -523,6 +525,9 @@ namespace Iot.Device.Axp192
                     return (value & 0x20) != 0 ? PinValue.High : PinValue.Low;
                 case 2:
                     return (value & 0x40) != 0 ? PinValue.High : PinValue.Low;
+                case 3:
+                    value = I2cRead(Register.ReadWriteGpio34);
+                    return (value & 0x10) != 0 ? PinValue.High : PinValue.Low;
                 case 4:
                     value = I2cRead(Register.ReadWriteGpio34);
                     return (value & 0x20) != 0 ? PinValue.High : PinValue.Low;
@@ -538,26 +543,30 @@ namespace Iot.Device.Axp192
         /// <param name="value">Value</param>
         public void WriteGpioValue(int pin, PinValue value)
         {
-            if (pin == 3 || pin < 0 || pin > 4)
+            if (pin < 0 || pin > 4)
             {
-                throw new ArgumentOutOfRangeException(nameof(pin), "Valid pin numbers are 0-2 and 4");
+                throw new ArgumentOutOfRangeException(nameof(pin), "Valid pin numbers are 0-4");
             }
 
-            if (pin == 4)
+            int values;
+            int mask;
+
+            if (pin == 4 || pin == 3)
             {
-                byte v = 0;
+                values = I2cRead(Register.ReadWriteGpio34);
+                mask = pin == 4 ? 2 : 1;
+                values = (values & ~mask);
                 if (value == PinValue.High)
                 {
-                    v = 2;
+                    values = values | mask;
                 }
 
-                I2cWrite(Register.ReadWriteGpio34, v);
+                I2cWrite(Register.ReadWriteGpio34, (byte)values);
                 return;
             }
 
-            int values = I2cRead(Register.ReadWriteGpio012);
-            values >>= 4;
-            int mask = 1 << pin;
+            values = I2cRead(Register.ReadWriteGpio012);
+            mask = 1 << pin;
             values = (values & ~mask);
             if (value == PinValue.High)
             {

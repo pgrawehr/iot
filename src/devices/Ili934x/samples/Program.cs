@@ -103,10 +103,6 @@ while (!Console.KeyAvailable)
     ili9341.ClearScreen();
     //// Task.Delay(1000).Wait();
 
-    Console.WriteLine("FillRect(Color.Green, 0, 0, 120, 160)");
-    ili9341.FillRect(new Rgba32(0, 255, 0), 0, 0, 120, 160);
-    //// Task.Delay(1000).Wait();
-
     if (powerControl != null)
     {
         powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
@@ -179,7 +175,7 @@ while (!abort)
     {
         bmp.Mutate(x => x.Resize((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
         var pt = new Point(left, top);
-        var rect = new Rectangle(10, 10, ili9341.ScreenWidth - 10, ili9341.ScreenHeight - 10);
+        var rect = new Rectangle(0, 10, ili9341.ScreenWidth - 0, ili9341.ScreenHeight - 10);
         Converters.AdjustImageDestination(bmp, ref pt, ref rect);
         left = pt.X;
         top = pt.Y;
@@ -197,6 +193,11 @@ while (!abort)
             Console.WriteLine("Touch me!");
         }
 
+        var pt = touch.GetPrimaryTouchPoint();
+        if (pt != null)
+        {
+            Console.WriteLine($"Touch point: {pt.Value.X}/{pt.Value.Y}");
+        }
     }
 
     Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");

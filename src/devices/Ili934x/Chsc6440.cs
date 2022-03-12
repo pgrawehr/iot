@@ -85,10 +85,10 @@ namespace Iot.Device.Ili934x
         /// <returns>True if something presses the display, false if not. Null if no interrupt pin is defined</returns>
         public bool IsPressed()
         {
-            if (_gpioController != null)
-            {
-                return _gpioController.Read(_interruptPin) == PinValue.Low;
-            }
+            ////if (_gpioController != null)
+            ////{
+            ////    return _gpioController.Read(_interruptPin) == PinValue.High;
+            ////}
 
             // Need to query the device instead
             Span<byte> register = stackalloc byte[1]
