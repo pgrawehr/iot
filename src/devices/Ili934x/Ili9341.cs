@@ -94,7 +94,8 @@ namespace Iot.Device.Ili934x
         /// <summary>
         /// Width of the screen, in pixels
         /// </summary>
-        public virtual uint ScreenWidth
+        /// <remarks>This is of type int, because all image sizes use int, even though this can never be negative</remarks>
+        public virtual int ScreenWidth
         {
             get
             {
@@ -105,7 +106,8 @@ namespace Iot.Device.Ili934x
         /// <summary>
         /// Height of the screen, in pixels
         /// </summary>
-        public virtual uint ScreenHeight
+        /// <remarks>This is of type int, because all image sizes use int, even though this can never be negative</remarks>
+        public virtual int ScreenHeight
         {
             get
             {
@@ -169,7 +171,7 @@ namespace Iot.Device.Ili934x
         /// <param name="y">The y co-ordinate of the point to start the rectangle at in pixels.</param>
         /// <param name="w">The width of the rectangle in pixels.</param>
         /// <param name="h">The height of the rectangle in pixels.</param>
-        public void FillRect(Rgba32 color, uint x, uint y, uint w, uint h)
+        public void FillRect(Rgba32 color, int x, int y, int w, int h)
         {
             Span<byte> colourBytes = stackalloc byte[2]; // create a short span that holds the colour data to be sent to the display
             Span<byte> displayBytes = stackalloc byte[(int)(w * h * 2)]; // span used to form the data to be written out to the SPI interface
@@ -252,7 +254,7 @@ namespace Iot.Device.Ili934x
             _gpioDevice.Write(_backlightPin, PinValue.Low);
         }
 
-        private void SetWindow(uint x0, uint y0, uint x1, uint y1)
+        private void SetWindow(int x0, int y0, int x1, int y1)
         {
             SendCommand(Ili9341Command.ColumnAddressSet);
             Span<byte> data = stackalloc byte[4]

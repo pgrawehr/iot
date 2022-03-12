@@ -13,14 +13,14 @@ using UnitsNet;
 #pragma warning disable CS1591
 namespace Iot.Device.Axp192
 {
-    public class M5ToughPowerControl
+    public class M5ToughPowerControl : IDisposable
     {
         private Axp192 _axp;
         private ILogger _logger;
 
         public M5ToughPowerControl(Board.Board board)
         {
-            var bus = board.CreateOrGetI2cBus(1, new int[]
+            var bus = board.CreateOrGetI2cBus(0, new int[]
             {
                 21, 22
             });
@@ -31,7 +31,19 @@ namespace Iot.Device.Axp192
             Init();
         }
 
-        private void Init()
+        public bool EnableSpeaker
+        {
+            get
+            {
+                return _axp.ReadGpioValue(2) == PinValue.High;
+            }
+            set
+            {
+                _axp.WriteGpioValue(2, value);
+            }
+        }
+
+        protected virtual void Init()
         {
             _axp.SetVbusSettings(true, false, VholdVoltage.V4_0, false, VbusCurrentLimit.MilliAmper500);
             _logger.LogInformation("axp: VBus limit off");
@@ -44,10 +56,12 @@ namespace Iot.Device.Axp192
             // GPIO 4: LCD Reset
             _axp.SetGPIO4(GpioBehavior.NmosLeakOpenOutput);
 
+            _logger.LogInformation("GPIO Ports configured");
+
             _axp.SetBackupBatteryChargingControl(true, BackupBatteryCharingVoltage.V3_0, BackupBatteryChargingCurrent.MicroAmperes200);
 
             // Set MCU voltage (probably not a good idea to mess to much with this one)
-            _axp.SetDcVoltage(0, ElectricPotential.FromMillivolts(3350));
+            _axp.SetDcVoltage(1, ElectricPotential.FromMillivolts(3350));
 
             // LCD backlight voltage
             SetLcdVoltage(ElectricPotential.FromMillivolts(3000));
@@ -80,9 +94,29 @@ namespace Iot.Device.Axp192
             _axp.SetChargingFunctions(true, ChargingVoltage.V4_2, ChargingCurrent.Current450mA, ChargingStopThreshold.Percent10);
         }
 
-        public void SetLcdVoltage(ElectricPotential voltage)
+        public virtual void SetLcdVoltage(ElectricPotential voltage)
         {
             _axp.SetLdo3Output(voltage);
+            _logger.LogInformation($"LCD voltage set to {voltage}");
+        }
+
+        public PowerControlData GetPowerControlData()
+        {
+            return _axp.GetPowerControlData();
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _axp.Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

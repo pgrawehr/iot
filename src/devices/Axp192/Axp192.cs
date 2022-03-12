@@ -12,7 +12,7 @@ namespace Iot.Device.Axp192
     /// <summary>
     /// AXP192 - Enhanced single Cell Li-Battery and Power System Management IC
     /// </summary>
-    public class Axp192
+    public class Axp192 : IDisposable
     {
         /// <summary>
         /// Default I2C address
@@ -1009,6 +1009,49 @@ namespace Iot.Device.Axp192
             {
                 I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, (byte)(I2cRead(Register.SwitchControleDcDc1_3LDO2_3) & (~mark)));
             }
+        }
+
+        /// <summary>
+        /// Returns all relevant power and current information in a single call
+        /// </summary>
+        /// <returns>An instance of <see cref="PowerControlData"/>.</returns>
+        public PowerControlData GetPowerControlData()
+        {
+            PowerControlData powerControlData = new PowerControlData()
+            {
+                Temperature = GetInternalTemperature(),
+                InputCurrent = GetInputCurrent(),
+                InputVoltage = GetInputVoltage(),
+                InputStatus = GetInputPowerStatus(),
+                InputUsbVoltage = GetUsbVoltageInput(),
+                InputUsbCurrent = GetUsbCurrentInput(),
+                BatteryChargingCurrent = GetBatteryChargeCurrent(),
+                BatteryChargingStatus = GetBatteryChargingStatus(),
+                BatteryDischargeCurrent = GetBatteryDischargeCurrent(),
+                BatteryInstantaneousPower = GetBatteryInstantaneousPower(),
+                BatteryVoltage = GetBatteryVoltage(),
+                BatteryPresent = IsBatteryConnected()
+            };
+
+            return powerControlData;
+        }
+
+        /// <summary>
+        /// Standard dispose method
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+               _i2c.Dispose();
+            }
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

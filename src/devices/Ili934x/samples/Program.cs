@@ -5,18 +5,23 @@ using System;
 using System.Device.Gpio;
 using System.Device.Spi;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Iot.Device.Arduino;
+using Iot.Device.Axp192;
 using Iot.Device.Common;
 using Iot.Device.Ft4222;
 using Iot.Device.Graphics;
 using Iot.Device.Ili934x;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Drawing;
+using SixLabors.ImageSharp.Drawing.Processing;
 
 Console.WriteLine("Are you using Ft4222? Type 'yes' and press ENTER if so, anything else will be treated as no.");
 bool isFt4222 = Console.ReadLine() == "yes";
@@ -41,12 +46,12 @@ if (isArduino)
 }
 
 LogDispatcher.LoggerFactory = new SimpleConsoleLoggerFactory();
-using Bitmap dotnetBM = new(240, 320);
-using Graphics g = Graphics.FromImage(dotnetBM);
 SpiDevice displaySPI;
 ArduinoBoard? board = null;
 GpioController gpio;
 int spiBufferSize = 4096;
+M5ToughPowerControl? powerControl = null;
+
 if (isFt4222)
 {
     gpio = GetGpioControllerFromFt4222();
@@ -62,6 +67,7 @@ else if (isArduino)
     gpio = board.CreateGpioController();
     displaySPI = board.CreateSpiDevice(new SpiConnectionSettings(0, 5) { ClockFrequency = 50_000_000 });
     spiBufferSize = 200; // requires extended Firmata firmware, default is 25
+    powerControl = new M5ToughPowerControl(board);
 }
 else
 {
@@ -76,11 +82,8 @@ while (!Console.KeyAvailable)
     foreach (string filepath in Directory.GetFiles(@"images", "*.png").OrderBy(f => f))
     {
         Console.WriteLine($"Drawing {filepath}");
-        using Bitmap bm = (Bitmap)Bitmap.FromFile(filepath);
-        g.Clear(Color.Black);
-        g.DrawImage(bm, 0, 0, bm.Width, bm.Height);
-        var converted = Converters.ToImage(dotnetBM);
-        ili9341.SendBitmap(converted);
+        using var bm = Image<Rgba32>.Load<Rgba32>(filepath);
+        ili9341.SendBitmap(bm);
         //// Task.Delay(1000).Wait();
     }
 
@@ -99,22 +102,33 @@ while (!Console.KeyAvailable)
     Console.WriteLine("FillRect(Color.Green, 0, 0, 120, 160)");
     ili9341.FillRect(new Rgba32(0, 255, 0), 0, 0, 120, 160);
     //// Task.Delay(1000).Wait();
+
+    if (powerControl != null)
+    {
+        powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
+        var pc = powerControl.GetPowerControlData();
+        using Image<Rgba32> bmp = ili9341.CreateBackBuffer();
+        FontFamily family = SystemFonts.Find("Arial");
+        Font font = new Font(family, 20);
+        bmp.Mutate(x => x.DrawText(pc.ToString(), font, SixLabors.ImageSharp.Color.Blue, new PointF(20, 10)));
+        ili9341.SendBitmap(bmp);
+    }
 }
 
 Console.ReadKey(true);
 
 int left = 0;
 int top = 0;
+float scale = 1.0f;
 bool abort = false;
 ScreenCapture capture = new ScreenCapture();
 while (!abort)
 {
     Stopwatch sw = Stopwatch.StartNew();
-    var bmp = capture.GetScreenContents();
-    ili9341.SendBitmap(bmp, new Point(left, top), new Rectangle(0, 0, (int)ili9341.ScreenWidth, (int)ili9341.ScreenHeight));
     if (Console.KeyAvailable)
     {
-        switch (Console.ReadKey(true).Key)
+        var key = Console.ReadKey(true).Key;
+        switch (key)
         {
             case ConsoleKey.Escape:
                 abort = true;
@@ -131,27 +145,26 @@ while (!abort)
             case ConsoleKey.UpArrow:
                 top -= 10;
                 break;
+            case ConsoleKey.Add:
+                scale *= 1.1f;
+                break;
+            case ConsoleKey.Subtract:
+                scale /= 1.1f;
+                break;
         }
 
-        if (left < 0)
-        {
-            left = 0;
-        }
+    }
 
-        if (left > bmp.Width - ili9341.ScreenWidth)
-        {
-            left = bmp.Width - (int)ili9341.ScreenWidth;
-        }
-
-        if (top < 0)
-        {
-            top = 0;
-        }
-
-        if (top > bmp.Height - ili9341.ScreenHeight)
-        {
-            top = bmp.Height - (int)ili9341.ScreenHeight;
-        }
+    var bmp = capture.GetScreenContents();
+    if (bmp != null)
+    {
+        bmp.Mutate(x => x.Resize((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
+        var pt = new Point(left, top);
+        var rect = new Rectangle(10, 10, ili9341.ScreenWidth - 10, ili9341.ScreenHeight - 10);
+        Converters.AdjustImageDestination(bmp, ref pt, ref rect);
+        left = pt.X;
+        top = pt.Y;
+        ili9341.SendBitmap(bmp, pt, rect);
     }
 
     Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
@@ -162,6 +175,7 @@ capture.Dispose();
 ili9341.Dispose();
 
 board?.Dispose();
+powerControl?.Dispose();
 
 GpioController GetGpioControllerFromFt4222()
 {

@@ -5,6 +5,8 @@ using System.Device.Spi;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Ili934x
 {
@@ -30,10 +32,10 @@ namespace Iot.Device.Ili934x
         }
 
         /// <inheritdoc />
-        public override uint ScreenHeight => 240;
+        public override int ScreenHeight => 240;
 
         /// <inheritdoc />
-        public override uint ScreenWidth => 320;
+        public override int ScreenWidth => 320;
 
         /// <summary>
         /// Configure the Ili9342 (it uses a different color format than the 9341 and by default is used in landscape mode)
@@ -49,6 +51,15 @@ namespace Iot.Device.Ili934x
             SendCommand(Ili9341Command.EntryModeSet, 0x07);
             SendCommand(Ili9341Command.DisplayFunctionControl, 0x0A, 0x82, 0x27, 0x00);
             SendCommand(Ili9341Command.DisplayInversionOn); // When enabling display inversion, the colors work the same as for the ILI9341
+        }
+
+        /// <summary>
+        /// Creates an image with the correct size and color depth to be sent to the screen
+        /// </summary>
+        /// <returns>An image instance</returns>
+        public Image<Rgba32> CreateBackBuffer()
+        {
+            return new Image<Rgba32>((int)ScreenWidth, (int)ScreenWidth, new Rgba32(0, 0, 0));
         }
     }
 }

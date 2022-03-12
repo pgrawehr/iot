@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
@@ -12,19 +13,26 @@ namespace Iot.Device.Graphics
 {
     public partial class ScreenCapture
     {
-        private Image<Rgba32> GetScreenContentsWindows(SixLabors.ImageSharp.Rectangle area)
+        private Image<Rgba32>? GetScreenContentsWindows(SixLabors.ImageSharp.Rectangle area)
         {
-            using (Bitmap bitmap = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppArgb))
+            try
             {
-                using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bitmap))
+                using (Bitmap bitmap = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppArgb))
                 {
-                    g.CopyFromScreen(new System.Drawing.Point(area.Left, area.Top), System.Drawing.Point.Empty, new System.Drawing.Size(area.Width, area.Height));
-                }
+                    using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bitmap))
+                    {
+                        g.CopyFromScreen(new System.Drawing.Point(area.Left, area.Top), System.Drawing.Point.Empty, new System.Drawing.Size(area.Width, area.Height));
+                    }
 
-                var image = Converters.ToImage(bitmap);
-                // For some reason, we need to swap R and B here. Strange...
-                Converters.ColorTransform(image, (i, c) => new Rgba32(c.B, c.G, c.R, c.A));
-                return image;
+                    var image = Converters.ToImage(bitmap);
+                    // For some reason, we need to swap R and B here. Strange...
+                    Converters.ColorTransform(image, (i, c) => new Rgba32(c.B, c.G, c.R, c.A));
+                    return image;
+                }
+            }
+            catch (Win32Exception)
+            {
+                return null;
             }
         }
 

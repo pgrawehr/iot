@@ -30,8 +30,8 @@ namespace Iot.Device.Graphics
         /// <summary>
         /// Gets the contents of a section of the screen
         /// </summary>
-        /// <returns>An image</returns>
-        public virtual Image<Rgba32> GetScreenContents(SixLabors.ImageSharp.Rectangle area)
+        /// <returns>An image. Returns null if no image can currently be retrieved (may happen e.g. when the safe desktop is shown)</returns>
+        public virtual Image<Rgba32>? GetScreenContents(SixLabors.ImageSharp.Rectangle area)
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
@@ -49,8 +49,8 @@ namespace Iot.Device.Graphics
         /// <summary>
         /// Gets the contents of the screen
         /// </summary>
-        /// <returns>An image</returns>
-        public Image<Rgba32> GetScreenContents()
+        /// <returns>An image. Returns null if no image can currently be retrieved (may happen e.g. when the safe desktop is shown)</returns>
+        public Image<Rgba32>? GetScreenContents()
         {
             return GetScreenContents(ScreenSize());
         }

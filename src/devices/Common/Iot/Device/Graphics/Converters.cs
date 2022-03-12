@@ -70,5 +70,52 @@ namespace Iot.Device.Graphics
                 span[i] = transformFunc(i, span[i]);
             }
         }
+
+        /// <summary>
+        /// Adjusts the target position and size so that a given image can be copied to a rectangle of size destination
+        /// </summary>
+        /// <param name="image">The input image size</param>
+        /// <param name="leftTop">[in, out] The top left corner of the input image to show. If at the bottom or right edge of the destination, this will be
+        /// reset so that the right edge of the input image is at the right edge of the destination</param>
+        /// <param name="destination">The destination rectangle. If this is smaller than the input image, it will be cropped</param>
+        public static void AdjustImageDestination(Image<Rgba32> image, ref SixLabors.ImageSharp.Point leftTop, ref SixLabors.ImageSharp.Rectangle destination)
+        {
+            int left = leftTop.X;
+            int top = leftTop.Y;
+
+            if (destination.Width > image.Width)
+            {
+                // Rectangle is a struct, so this has no effect on the caller (yet)
+                destination.Width = image.Width;
+            }
+
+            if (destination.Height > image.Height)
+            {
+                destination.Height = image.Height;
+            }
+
+            if (left < 0)
+            {
+                left = 0;
+            }
+
+            if (left > image.Width - destination.Width)
+            {
+                left = image.Width - destination.Width;
+            }
+
+            if (top < 0)
+            {
+                top = 0;
+            }
+
+            if (top > image.Height - destination.Height)
+            {
+                top = image.Height - destination.Height;
+            }
+
+            leftTop = new SixLabors.ImageSharp.Point(left, top);
+            destination = new SixLabors.ImageSharp.Rectangle(destination.X, destination.Y, destination.Width, destination.Height);
+        }
     }
 }

@@ -2,15 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
-using Color = System.Drawing.Color;
-using Point = System.Drawing.Point;
-using Rectangle = System.Drawing.Rectangle;
 
 namespace Iot.Device.Ili934x
 {
@@ -130,7 +124,7 @@ namespace Iot.Device.Ili934x
         /// <param name="destinationRect">A rectangle that defines where in the display the data is to be written.</param>
         public void SendBitmapPixelData(Span<byte> pixelData, Rectangle destinationRect)
         {
-            SetWindow((uint)destinationRect.X, (uint)destinationRect.Y, (uint)(destinationRect.Right - 1), (uint)(destinationRect.Bottom - 1));   // specifiy a location for the rows and columns on the display where the data is to be written
+            SetWindow(destinationRect.X, destinationRect.Y, (destinationRect.Right - 1), (destinationRect.Bottom - 1));   // specifiy a location for the rows and columns on the display where the data is to be written
             SendData(pixelData);
         }
     }

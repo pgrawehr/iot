@@ -6,6 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SixLabors.Fonts" Version="1.0.0-beta0013" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta11" />
     <PackageReference Include="System.Drawing.Common" Version="$(SystemDrawingCommonPackageVersion)" />    
   </ItemGroup>
 
@@ -13,6 +15,7 @@
   	<ProjectReference Include="../Ili934x.csproj" />
     <ProjectReference Include="../../Ft4222/Ft4222.csproj" />
     <ProjectReference Include="../../Arduino/Arduino.csproj" />
+    <ProjectReference Include="..\..\Axp192\Axp192.csproj" />
   </ItemGroup>
 
   <ItemGroup>
