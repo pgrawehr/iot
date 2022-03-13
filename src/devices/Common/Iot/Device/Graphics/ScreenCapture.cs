@@ -21,6 +21,7 @@ namespace Iot.Device.Graphics
         /// </summary>
         public ScreenCapture()
         {
+            _imageConfiguration = Configuration.Default;
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 InitLinux();

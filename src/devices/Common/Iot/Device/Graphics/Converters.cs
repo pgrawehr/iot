@@ -41,8 +41,12 @@ namespace Iot.Device.Graphics
                 {
                     IntPtr offsetSource = bmd.Scan0 + (bmd.Stride * i);
                     void* source = offsetSource.ToPointer();
-                    Span<Rgba32> sourceSpan = new Span<Rgba32>(source, bmd.Width);
-                    sourceSpan.CopyTo(target.GetPixelRowSpan(i));
+                    target.ProcessPixelRows(x =>
+                    {
+                        Span<Rgba32> sourceSpan = new Span<Rgba32>(source, bmd.Width);
+                        var targetSpan = x.GetRowSpan(i);
+                        sourceSpan.CopyTo(targetSpan);
+                    });
                 }
 
                 bmp.UnlockBits(bmd);
@@ -57,18 +61,20 @@ namespace Iot.Device.Graphics
         /// Performs a color transformation on the image
         /// </summary>
         /// <param name="image">The image to transform</param>
-        /// <param name="transformFunc">A function that is called for each pixel, taking the index of the pixel in the whole image and the input color</param>
-        public static void ColorTransform(Image<Rgba32> image, Func<int, Rgba32, Rgba32> transformFunc)
+        /// <param name="transformFunc">A function that is called for each pixel, taking the coordinate of the pixel in the whole image and the input color</param>
+        public static void ColorTransform(Image<Rgba32> image, Func<int, int, Rgba32, Rgba32> transformFunc)
         {
-            if (!image.TryGetSinglePixelSpan(out var span))
+            image.ProcessPixelRows(x =>
             {
-                throw new InvalidOperationException("Unable to get pixel data");
-            }
-
-            for (int i = 0; i < span.Length; i++)
-            {
-                span[i] = transformFunc(i, span[i]);
-            }
+                for (int j = 0; j < image.Height; j++)
+                {
+                    var span = x.GetRowSpan(j);
+                    for (int i = 0; i < image.Width; i++)
+                    {
+                        span[i] = transformFunc(i, j, span[i]);
+                    }
+                }
+            });
         }
 
         /// <summary>

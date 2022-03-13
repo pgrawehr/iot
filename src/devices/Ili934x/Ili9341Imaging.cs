@@ -93,19 +93,22 @@ namespace Iot.Device.Ili934x
             outputBuffer = new byte[sourceRect.Width * sourceRect.Height * 2];
 
             // get the raw pixel data for the bitmap
-            for (int i = 0; i < sourceRect.Height; i++)
+            bm.ProcessPixelRows(x =>
             {
-                var sourceLine = bm.GetPixelRowSpan(sourceRect.Top + i);
-                if (sourceRect.Width == sourceLine.Length)
+                for (int i = 0; i < sourceRect.Height; i++)
                 {
-                    sourceLine.CopyTo(new Span<Rgba32>(bitmapData).Slice(i * sourceRect.Width));
+                    var sourceLine = x.GetRowSpan(sourceRect.Top + i);
+                    if (sourceRect.Width == sourceLine.Length)
+                    {
+                        sourceLine.CopyTo(new Span<Rgba32>(bitmapData).Slice(i * sourceRect.Width));
+                    }
+                    else
+                    {
+                        // We need to copy only part of the line
+                        sourceLine.Slice(sourceRect.Left, sourceRect.Width).CopyTo(new Span<Rgba32>(bitmapData).Slice(i * sourceRect.Width));
+                    }
                 }
-                else
-                {
-                    // We need to copy only part of the line
-                    sourceLine.Slice(sourceRect.Left, sourceRect.Width).CopyTo(new Span<Rgba32>(bitmapData).Slice(i * sourceRect.Width));
-                }
-            }
+            });
 
             // iterate over the source bitmap converting each pixel in the raw data
             // to a format suitable for sending to the display

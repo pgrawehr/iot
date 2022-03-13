@@ -110,7 +110,7 @@ while (!Console.KeyAvailable)
         powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
         var pc = powerControl.GetPowerControlData();
         using Image<Rgba32> bmp = ili9341.CreateBackBuffer();
-        FontFamily family = SystemFonts.Find("Arial");
+        FontFamily family = SystemFonts.Get("Arial");
         Font font = new Font(family, 20);
         bmp.Mutate(x => x.DrawText(pc.ToString(), font, SixLabors.ImageSharp.Color.Blue, new PointF(20, 10)));
         ili9341.SendBitmap(bmp);

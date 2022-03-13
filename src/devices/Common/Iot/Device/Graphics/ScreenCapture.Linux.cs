@@ -14,9 +14,13 @@ namespace Iot.Device.Graphics
     {
         private IntPtr _display;
 
+        private Configuration _imageConfiguration;
+
         private unsafe void InitLinux()
         {
             _display = XOpenDisplay(null);
+            _imageConfiguration = Configuration.Default.Clone();
+            _imageConfiguration.PreferContiguousImageBuffers = true;
             if (_display == IntPtr.Zero)
             {
                 throw new NotSupportedException("Unable to open display");
@@ -36,9 +40,9 @@ namespace Iot.Device.Graphics
                 throw new NotSupportedException("Unable to get screen image pointer");
             }
 
-            var resultImage = new Image<Rgba32>(area.Width, area.Height);
+            var resultImage = new Image<Rgba32>(_imageConfiguration, area.Width, area.Height);
 
-            resultImage.TryGetSinglePixelSpan(out var span);
+            resultImage.DangerousTryGetSinglePixelMemory(out var memory);
 
             uint red_mask = image.red_mask;
             uint green_mask = image.green_mask;
@@ -55,7 +59,7 @@ namespace Iot.Device.Graphics
                     UInt32 red = (pixel & red_mask) >> 16;
 
                     var color = new Rgba32((byte)red, (byte)green, (byte)blue);
-                    span[area.Width * y + x] = color;
+                    memory.Span[area.Width * y + x] = color;
                 }
             }
 

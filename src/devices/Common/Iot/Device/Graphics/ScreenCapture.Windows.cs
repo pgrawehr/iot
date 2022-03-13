@@ -26,7 +26,7 @@ namespace Iot.Device.Graphics
 
                     var image = Converters.ToImage(bitmap);
                     // For some reason, we need to swap R and B here. Strange...
-                    Converters.ColorTransform(image, (i, c) => new Rgba32(c.B, c.G, c.R, c.A));
+                    Converters.ColorTransform(image, (i, j, c) => new Rgba32(c.B, c.G, c.R, c.A));
                     return image;
                 }
             }
