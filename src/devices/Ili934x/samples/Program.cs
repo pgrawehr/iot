@@ -71,6 +71,8 @@ else if (isArduino)
     displaySPI = board.CreateSpiDevice(new SpiConnectionSettings(0, 5) { ClockFrequency = 50_000_000 });
     spiBufferSize = 200; // requires extended Firmata firmware, default is 25
     powerControl = new M5ToughPowerControl(board);
+    powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
+
     touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), 39, board.CreateGpioController(), false);
     touch.UpdateInterval = TimeSpan.FromMilliseconds(100);
     touch.EnableEvents();
@@ -107,7 +109,6 @@ while (!Console.KeyAvailable)
 
     if (powerControl != null)
     {
-        powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
         var pc = powerControl.GetPowerControlData();
         using Image<Rgba32> bmp = ili9341.CreateBackBuffer();
         FontFamily family = SystemFonts.Get("Arial");
@@ -187,7 +188,7 @@ while (!abort)
     {
         bmp.Mutate(x => x.Resize((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
         var pt = new Point(left, top);
-        var rect = new Rectangle(0, 10, ili9341.ScreenWidth - 0, ili9341.ScreenHeight - 10);
+        var rect = new Rectangle(0, 0, ili9341.ScreenWidth, ili9341.ScreenHeight);
         Converters.AdjustImageDestination(bmp, ref pt, ref rect);
         left = pt.X;
         top = pt.Y;
@@ -199,6 +200,7 @@ while (!abort)
         }
 
         ili9341.SendBitmap(bmp, pt, rect);
+        bmp.Dispose();
     }
 
     ////if (touch != null)

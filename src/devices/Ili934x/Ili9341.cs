@@ -7,7 +7,9 @@ using System.Device.Spi;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Iot.Device.Ili934x
 {
@@ -38,6 +40,9 @@ namespace Iot.Device.Ili934x
 
         private SpiDevice _spiDevice;
         private GpioController _gpioDevice;
+
+        private SixLabors.ImageSharp.Image<Rgb565> _screenBuffer;
+        private SixLabors.ImageSharp.Image<Rgb565> _previousBuffer;
 
         /// <summary>
         /// Initializes new instance of ILI9341 device that will communicate using SPI bus.
@@ -89,6 +94,11 @@ namespace Iot.Device.Ili934x
             SendCommand(Ili9341Command.DisplayOn);
             Thread.Sleep(100);
             SendCommand(Ili9341Command.MemoryWrite);
+
+            Configuration imageConfiguration = Configuration.Default.Clone();
+            imageConfiguration.PreferContiguousImageBuffers = true;
+            _screenBuffer = new Image<Rgb565>(imageConfiguration, ScreenWidth, ScreenHeight, new Rgb565(0, 0, 0));
+            _previousBuffer = new Image<Rgb565>(imageConfiguration, ScreenWidth, ScreenHeight, new Rgb565(0, 0, 0));
         }
 
         /// <summary>
@@ -131,39 +141,6 @@ namespace Iot.Device.Ili934x
         }
 
         /// <summary>
-        /// Convert a color structure to a byte tuple representing the colour in 565 format.
-        /// </summary>
-        /// <param name="color">The color to be converted.</param>
-        /// <returns>
-        /// This method returns the low byte and the high byte of the 16bit value representing RGB565 or BGR565 value
-        ///
-        /// byte    11111111 00000000
-        /// bit     76543210 76543210
-        ///
-        /// For ColorSequence.RGB
-        ///         RRRRRGGG GGGBBBBB
-        ///         43210543 21043210
-        ///
-        /// For ColorSequence.BGR
-        ///         BBBBBGGG GGGRRRRR
-        ///         43210543 21043210
-        /// </returns>
-        private (byte Low, byte High) Color565(Rgba32 color)
-        {
-            // get the top 5 MSB of the blue or red value
-            UInt16 retval = (UInt16)(color.R >> 3);
-            // shift right to make room for the green Value
-            retval <<= 6;
-            // combine with the 6 MSB if the green value
-            retval |= (UInt16)(color.G >> 2);
-            // shift right to make room for the red or blue Value
-            retval <<= 5;
-            // combine with the 6 MSB if the red or blue value
-            retval |= (UInt16)(color.B >> 3);
-            return ((byte)(retval >> 8), (byte)(retval & 0xFF));
-        }
-
-        /// <summary>
         /// Send filled rectangle to the ILI9341 display.
         /// </summary>
         /// <param name="color">The color to fill the rectangle with.</param>
@@ -174,24 +151,27 @@ namespace Iot.Device.Ili934x
         public void FillRect(Rgba32 color, int x, int y, int w, int h)
         {
             Span<byte> colourBytes = stackalloc byte[2]; // create a short span that holds the colour data to be sent to the display
-            Span<byte> displayBytes = stackalloc byte[(int)(w * h * 2)]; // span used to form the data to be written out to the SPI interface
 
             // set the colourbyte array to represent the fill colour
-            (colourBytes[0], colourBytes[1]) = Color565(color);
+            var c = Rgb565.FromRgba32(color);
 
             // set the pixels in the array representing the raw data to be sent to the display
             // to the fill color
-            for (int i = 0; i < w * h; i++)
+            for (int j = y; j < y + h; j++)
             {
-                displayBytes[i * 2 + 0] = colourBytes[0];
-                displayBytes[i * 2 + 1] = colourBytes[1];
+                for (int i = x; i < x + w; i++)
+                {
+                    _screenBuffer[i, j] = c;
+                }
             }
 
-            // specify a location for the rows and columns on the display where the data is to be written
-            SetWindow(x, y, x + w - 1, y + h - 1);
+            ////// specify a location for the rows and columns on the display where the data is to be written
+            ////SetWindow(x, y, x + w - 1, y + h - 1);
 
-            // write out the pixel data
-            SendData(displayBytes);
+            ////// write out the pixel data
+            ////SendData(_screenBuffer);
+
+            DrawFrame();
         }
 
         /// <summary>

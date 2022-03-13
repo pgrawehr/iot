@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Iot.Device.Graphics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
@@ -60,7 +63,47 @@ namespace Iot.Device.Ili934x
             }
 
             // get the pixel data and send it to the display
-            SendBitmapPixelData(GetBitmapPixelData(bm, new Rectangle(sourcePoint.X, sourcePoint.Y, destinationRect.Width, destinationRect.Height)), destinationRect);
+            // SendBitmapPixelData(GetBitmapPixelData(bm, new Rectangle(sourcePoint.X, sourcePoint.Y, destinationRect.Width, destinationRect.Height)), destinationRect);
+            DrawFrame();
+        }
+
+        private void FillBackBufferFromImage(Image<Rgba32> image, Point sourcePoint, Rectangle destinationRect)
+        {
+            if (image is null)
+            {
+                throw new ArgumentNullException(nameof(image));
+            }
+
+            Converters.AdjustImageDestination(image, ref sourcePoint, ref destinationRect);
+
+            _screenBuffer.ProcessPixelRows(x =>
+            {
+                for (int y = destinationRect.Y; y < destinationRect.Height + destinationRect.Y; y++)
+                {
+                    var row = x.GetRowSpan(y);
+                    for (int i = destinationRect.X; i < destinationRect.Width + destinationRect.X; i++)
+                    {
+                        int xSource = sourcePoint.X + i;
+                        int ySource = sourcePoint.Y + y;
+                        row[i] = Rgb565.FromRgba32(image[xSource, ySource]);
+                    }
+                }
+            });
+        }
+
+        /// <summary>
+        /// Updates the display with the current screen buffer.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        public void DrawFrame()
+        {
+            SetWindow(0, 0, ScreenWidth, ScreenHeight);
+            if (!_screenBuffer.DangerousTryGetSinglePixelMemory(out var memory))
+            {
+                throw new NotSupportedException("Unable to retrieve image bitmap for drawing");
+            }
+
+            SendSPI(MemoryMarshal.Cast<Rgb565, byte>(memory.Span));
         }
 
         /// <summary>
@@ -68,6 +111,7 @@ namespace Iot.Device.Ili934x
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="sourceRect">A rectangle that defines where in the bitmap data is to be converted from.</param>
+        [Obsolete("Use conversion to Rgb565 instead, or use FillBackBufferImage")]
         public Span<byte> GetBitmapPixelData(Image<Rgba32> bm, Rectangle sourceRect)
         {
             Rgba32[] bitmapData; // array that takes the raw bytes of the bitmap
@@ -114,10 +158,44 @@ namespace Iot.Device.Ili934x
             // to a format suitable for sending to the display
             for (int i = 0; i < bitmapData.Length; i++)
             {
-                    (outputBuffer[i * 2 + 0], outputBuffer[i * 2 + 1]) = Color565(bitmapData[i]);
+                (outputBuffer[i * 2 + 0], outputBuffer[i * 2 + 1]) = Color565(bitmapData[i]);
             }
 
             return (outputBuffer);
+        }
+
+        /// <summary>
+        /// Convert a color structure to a byte tuple representing the colour in 565 format.
+        /// </summary>
+        /// <param name="color">The color to be converted.</param>
+        /// <returns>
+        /// This method returns the low byte and the high byte of the 16bit value representing RGB565 or BGR565 value
+        ///
+        /// byte    11111111 00000000
+        /// bit     76543210 76543210
+        ///
+        /// For ColorSequence.RGB
+        ///         RRRRRGGG GGGBBBBB
+        ///         43210543 21043210
+        ///
+        /// For ColorSequence.BGR
+        ///         BBBBBGGG GGGRRRRR
+        ///         43210543 21043210
+        /// </returns>
+        [Obsolete]
+        private (byte Low, byte High) Color565(Rgba32 color)
+        {
+            // get the top 5 MSB of the blue or red value
+            UInt16 retval = (UInt16)(color.R >> 3);
+            // shift right to make room for the green Value
+            retval <<= 6;
+            // combine with the 6 MSB if the green value
+            retval |= (UInt16)(color.G >> 2);
+            // shift right to make room for the red or blue Value
+            retval <<= 5;
+            // combine with the 6 MSB if the red or blue value
+            retval |= (UInt16)(color.B >> 3);
+            return ((byte)(retval >> 8), (byte)(retval & 0xFF));
         }
 
         /// <summary>
@@ -125,6 +203,7 @@ namespace Iot.Device.Ili934x
         /// </summary>
         /// <param name="pixelData">The data to be sent to the display.</param>
         /// <param name="destinationRect">A rectangle that defines where in the display the data is to be written.</param>
+        /// <remarks>This directly sends the data, circumventing the screen buffer</remarks>
         public void SendBitmapPixelData(Span<byte> pixelData, Rectangle destinationRect)
         {
             SetWindow(destinationRect.X, destinationRect.Y, (destinationRect.Right - 1), (destinationRect.Bottom - 1));   // specifiy a location for the rows and columns on the display where the data is to be written
