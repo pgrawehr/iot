@@ -12,7 +12,7 @@ namespace Iot.Device.Ili934x
     /// This is the image format used by the Ili934X internally
     /// It is similar to the default format <see cref="Bgr565"/>, but uses a different byte ordering
     /// </summary>
-    internal struct Rgb565 : IPixel<Rgb565>
+    internal struct Rgb565 : IPixel<Rgb565>, IEquatable<Rgb565>
     {
         private ushort _value;
 
@@ -185,6 +185,26 @@ namespace Iot.Device.Ili934x
         public bool Equals(Rgb565 other)
         {
             return _value == other._value;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is Rgb565 other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return _value;
+        }
+
+        public static bool operator ==(Rgb565 left, Rgb565 right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Rgb565 left, Rgb565 right)
+        {
+            return !left.Equals(right);
         }
     }
 }

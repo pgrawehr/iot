@@ -14,7 +14,7 @@ namespace Iot.Device.Ili934x
     /// Binding for Chipsemi CHSC6540 capacitive touch screen controller
     /// Used for instance on the M5Tough in conjunction with an ILI9342 display controller.
     /// Note: The M5Core2, while being very similar to the M5Tough otherwise, has a FT6336U instead.
-    /// The two chips are not compatible to each other.
+    /// The two chips appear to be similar, but the documentation is poor.
     /// </summary>
     public class Chsc6440 : IDisposable
     {
@@ -46,6 +46,7 @@ namespace Iot.Device.Ili934x
         private Thread? _updateThread;
         private bool _updateThreadActive;
         private object _lock;
+        private AutoResetEvent _updateEvent;
 
         /// <summary>
         /// This event is fired when the user "clicks" a position
@@ -83,6 +84,7 @@ namespace Iot.Device.Ili934x
             _interval = TimeSpan.FromMilliseconds(20);
             _updateThread = null;
             _lock = new object();
+            _updateEvent = new AutoResetEvent(false);
 
             Span<byte> initData = stackalloc byte[2]
             {
@@ -125,7 +127,9 @@ namespace Iot.Device.Ili934x
                 return;
             }
 
+            Console.WriteLine("Touché...");
             _isPressed = pinValueChangedEventArgs.ChangeType == PinEventTypes.Falling;
+            _updateEvent.Set();
         }
 
         /// <summary>
@@ -257,8 +261,8 @@ namespace Iot.Device.Ili934x
         {
             while (_updateThreadActive)
             {
-                Thread.Sleep(_interval);
-                if (!_isPressed)
+                _updateEvent.WaitOne(_interval);
+                if (!_isPressed && _lastActiveTouches == 0)
                 {
                     continue;
                 }
@@ -327,6 +331,7 @@ namespace Iot.Device.Ili934x
                 }
 
                 _i2c = null!;
+                _updateEvent.Dispose();
             }
         }
 

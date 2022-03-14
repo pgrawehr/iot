@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using Color = SixLabors.ImageSharp.Color;
 
 namespace Iot.Device.Ili934x
 {
@@ -99,6 +100,8 @@ namespace Iot.Device.Ili934x
             imageConfiguration.PreferContiguousImageBuffers = true;
             _screenBuffer = new Image<Rgb565>(imageConfiguration, ScreenWidth, ScreenHeight, new Rgb565(0, 0, 0));
             _previousBuffer = new Image<Rgb565>(imageConfiguration, ScreenWidth, ScreenHeight, new Rgb565(0, 0, 0));
+            // Init screen to black
+            FillRect(Color.Black, 0, 0, ScreenWidth, ScreenHeight);
         }
 
         /// <summary>

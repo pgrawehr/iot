@@ -62,7 +62,8 @@ namespace Iot.Device.Graphics
         /// </summary>
         /// <param name="image">The image to transform</param>
         /// <param name="transformFunc">A function that is called for each pixel, taking the coordinate of the pixel in the whole image and the input color</param>
-        public static void ColorTransform(Image<Rgba32> image, Func<int, int, Rgba32, Rgba32> transformFunc)
+        public static void ColorTransform<T>(Image<T> image, Func<int, int, T, T> transformFunc)
+            where T : unmanaged, IPixel<T>
         {
             image.ProcessPixelRows(x =>
             {

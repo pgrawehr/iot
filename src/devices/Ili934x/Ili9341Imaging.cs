@@ -93,17 +93,62 @@ namespace Iot.Device.Ili934x
 
         /// <summary>
         /// Updates the display with the current screen buffer.
+        /// <param name="forceFull">Forces a full update, otherwise only changed screen contents are updated</param>
         /// </summary>
-        /// <exception cref="NotImplementedException"></exception>
-        public void DrawFrame()
+        public void DrawFrame(bool forceFull = false)
         {
-            SetWindow(0, 0, ScreenWidth, ScreenHeight);
             if (!_screenBuffer.DangerousTryGetSinglePixelMemory(out var memory))
             {
                 throw new NotSupportedException("Unable to retrieve image bitmap for drawing");
             }
 
-            SendSPI(MemoryMarshal.Cast<Rgb565, byte>(memory.Span));
+            if (forceFull)
+            {
+                SetWindow(0, 0, ScreenWidth, ScreenHeight);
+                SendSPI(MemoryMarshal.Cast<Rgb565, byte>(memory.Span));
+            }
+            else
+            {
+                int topRow = 0;
+                int bottomRow = _screenBuffer.Height;
+                for (int y = 0; y < _screenBuffer.Height; y++)
+                {
+                    for (int x = 0; x < _screenBuffer.Width; x++)
+                    {
+                        if (_screenBuffer[x, y] != _previousBuffer[x, y])
+                        {
+                            topRow = y;
+                            goto reverse;
+                        }
+                    }
+                }
+
+                // if we get here, there were no screen changes
+                return;
+
+                reverse:
+
+                for (int y = _screenBuffer.Height - 1; y >= topRow; y--)
+                {
+                    for (int x = 0; x < _screenBuffer.Width; x++)
+                    {
+                        if (_screenBuffer[x, y] != _previousBuffer[x, y])
+                        {
+                            bottomRow = y;
+                            goto end;
+                        }
+                    }
+                }
+
+                end:
+
+                SetWindow(0, topRow, _screenBuffer.Width, bottomRow);
+                // Send the given number of rows (+1, because including the end row)
+                var partialSpan = MemoryMarshal.Cast<Rgb565, byte>(memory.Span.Slice(topRow * _screenBuffer.Width, (bottomRow - topRow + 1) * _screenBuffer.Width));
+                SendSPI(partialSpan);
+            }
+
+            (_screenBuffer, _previousBuffer) = (_previousBuffer, _screenBuffer);
         }
 
         /// <summary>
