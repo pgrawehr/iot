@@ -69,13 +69,9 @@ else if (isArduino)
 
     gpio = board.CreateGpioController();
     displaySPI = board.CreateSpiDevice(new SpiConnectionSettings(0, 5) { ClockFrequency = 50_000_000 });
-    spiBufferSize = 200; // requires extended Firmata firmware, default is 25
+    spiBufferSize = 200000; // requires extended Firmata firmware, default is 25
     powerControl = new M5ToughPowerControl(board);
     powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
-
-    touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), 39, board.CreateGpioController(), false);
-    touch.UpdateInterval = TimeSpan.FromMilliseconds(100);
-    touch.EnableEvents();
 }
 else
 {
@@ -84,6 +80,13 @@ else
 }
 
 using Ili9342 ili9341 = new(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio, spiBufferSize: spiBufferSize, shouldDispose: false);
+
+if (board != null)
+{
+    touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), new Size(ili9341.ScreenWidth, ili9341.ScreenHeight), 39, board.CreateGpioController(), false);
+    touch.UpdateInterval = TimeSpan.FromMilliseconds(100);
+    touch.EnableEvents();
+}
 
 while (!Console.KeyAvailable)
 {
@@ -120,8 +123,8 @@ while (!Console.KeyAvailable)
 
 Console.ReadKey(true);
 
-int left = 0;
-int top = 0;
+float left = 0;
+float top = 0;
 float scale = 1.0f;
 bool abort = false;
 Point? lastTouchPoint = null;
@@ -133,6 +136,17 @@ if (touch != null)
     {
         lastTouchPoint = point;
         Console.WriteLine($"Touched screen at {point}");
+    };
+
+    touch.Dragging += (o, point1, point2) =>
+    {
+        if (point2 != null)
+        {
+            var (xdiff, ydiff) = (point1.X - point2.Value.X, point1.Y - point2.Value.Y);
+            left += xdiff * scale;
+            top += ydiff * scale;
+            Console.WriteLine($"Dragging by {xdiff}/{ydiff}.");
+        }
     };
 }
 
@@ -187,7 +201,7 @@ while (!abort)
     if (bmp != null)
     {
         bmp.Mutate(x => x.Resize((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
-        var pt = new Point(left, top);
+        var pt = new Point((int)left, (int)top);
         var rect = new Rectangle(0, 0, ili9341.ScreenWidth, ili9341.ScreenHeight);
         Converters.AdjustImageDestination(bmp, ref pt, ref rect);
         left = pt.X;

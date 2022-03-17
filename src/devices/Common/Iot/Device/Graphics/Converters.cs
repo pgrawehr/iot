@@ -65,15 +65,11 @@ namespace Iot.Device.Graphics
         public static void ColorTransform<T>(Image<T> image, Func<int, int, T, T> transformFunc)
             where T : unmanaged, IPixel<T>
         {
-            image.ProcessPixelRows(x =>
+            Parallel.For(0, image.Height, j =>
             {
-                for (int j = 0; j < image.Height; j++)
+                for (int i = 0; i < image.Width; i++)
                 {
-                    var span = x.GetRowSpan(j);
-                    for (int i = 0; i < image.Width; i++)
-                    {
-                        span[i] = transformFunc(i, j, span[i]);
-                    }
+                    image[i, j] = transformFunc(i, j, image[i, j]);
                 }
             });
         }

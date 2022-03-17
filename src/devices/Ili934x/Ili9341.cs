@@ -151,7 +151,8 @@ namespace Iot.Device.Ili934x
         /// <param name="y">The y co-ordinate of the point to start the rectangle at in pixels.</param>
         /// <param name="w">The width of the rectangle in pixels.</param>
         /// <param name="h">The height of the rectangle in pixels.</param>
-        public void FillRect(Rgba32 color, int x, int y, int w, int h)
+        /// <param name="doRefresh">True to immediately update the screen, false to only update the back buffer</param>
+        public void FillRect(Rgba32 color, int x, int y, int w, int h, bool doRefresh = true)
         {
             Span<byte> colourBytes = stackalloc byte[2]; // create a short span that holds the colour data to be sent to the display
 
@@ -168,13 +169,10 @@ namespace Iot.Device.Ili934x
                 }
             }
 
-            ////// specify a location for the rows and columns on the display where the data is to be written
-            ////SetWindow(x, y, x + w - 1, y + h - 1);
-
-            ////// write out the pixel data
-            ////SendData(_screenBuffer);
-
-            DrawFrame();
+            if (doRefresh)
+            {
+                DrawFrame();
+            }
         }
 
         /// <summary>

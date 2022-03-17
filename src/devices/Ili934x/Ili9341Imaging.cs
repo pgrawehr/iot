@@ -148,7 +148,12 @@ namespace Iot.Device.Ili934x
                 SendSPI(partialSpan);
             }
 
-            (_screenBuffer, _previousBuffer) = (_previousBuffer, _screenBuffer);
+            if (!_previousBuffer.DangerousTryGetSinglePixelMemory(out var previousMemoryBuffer))
+            {
+                throw new NotSupportedException("Unable to retrieve background cache data for update");
+            }
+
+            _screenBuffer.CopyPixelDataTo(previousMemoryBuffer.Span);
         }
 
         /// <summary>

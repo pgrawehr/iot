@@ -30,10 +30,10 @@ namespace Iot.Device.Ili934x
 
         private bool _wasRead;
 
-        private DateTime _lastRead;
         private TimeSpan _interval;
 
         private Point[] _lastPoints;
+        private Point _initialTouchPoint;
         private Point[] _points;
         private int _point0finger;
 
@@ -56,7 +56,8 @@ namespace Iot.Device.Ili934x
 
         /// <summary>
         /// This event is fired repeatedly when the user drags over the screen
-        /// Call <see cref="EnableEvents"/> to use event handling
+        /// Call <see cref="EnableEvents"/> to use event handling.
+        /// The second point is null when the drag has ended.
         /// </summary>
         public event Action<object, Point, Point?>? Dragging;
 
@@ -64,11 +65,13 @@ namespace Iot.Device.Ili934x
         /// Create a controller from the given I2C device
         /// </summary>
         /// <param name="device">An I2C device</param>
+        /// <param name="screenSize">Size of the screen. Used to filter out invalid readings</param>"/>
         /// <param name="interruptPin">The interrupt pin to use, -1 to disable</param>
         /// <param name="gpioController">The gpio controller the interrupt pin is attached to</param>
         /// <param name="shouldDispose">True to dispose the gpio controller on close</param>
-        public Chsc6440(I2cDevice device, int interruptPin = -1, GpioController? gpioController = null, bool shouldDispose = true)
+        public Chsc6440(I2cDevice device, Size screenSize, int interruptPin = -1, GpioController? gpioController = null, bool shouldDispose = true)
         {
+            ScreenSize = screenSize;
             _i2c = device;
             _interruptPin = interruptPin;
             _gpioController = gpioController;
@@ -77,7 +80,7 @@ namespace Iot.Device.Ili934x
             _point0finger = 0;
             _points = new Point[2];
             _lastPoints = new Point[2];
-            _lastRead = DateTime.MinValue;
+            _initialTouchPoint = Point.Empty;
             _activeTouches = 0;
             _lastActiveTouches = 0;
             _dragging = false;
@@ -85,6 +88,7 @@ namespace Iot.Device.Ili934x
             _updateThread = null;
             _lock = new object();
             _updateEvent = new AutoResetEvent(false);
+            TouchSize = new Size(10, 10);
 
             Span<byte> initData = stackalloc byte[2]
             {
@@ -104,6 +108,11 @@ namespace Iot.Device.Ili934x
         }
 
         /// <summary>
+        /// Size of the screen
+        /// </summary>
+        public Size ScreenSize { get; }
+
+        /// <summary>
         /// Sets the background thread update interval. Low values can impact performance, but increase the responsiveness.
         /// </summary>
         public TimeSpan UpdateInterval
@@ -116,6 +125,15 @@ namespace Iot.Device.Ili934x
             {
                 _interval = value;
             }
+        }
+
+        /// <summary>
+        /// The size of the rectangle that is considered a "touch". When the position changes more than this, it is considered a drag.
+        /// </summary>
+        public Size TouchSize
+        {
+            get;
+            set;
         }
 
         private void OnInterrupt(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
@@ -163,16 +181,6 @@ namespace Iot.Device.Ili934x
                 // true if real read, not a "come back later"
                 _wasRead = false;
 
-                // Return immediately if read() is called more frequently than the
-                // touch sensor updates. This prevents unnecessary I2C reads, and the
-                // data can also get corrupted if reads are too close together.
-                if (DateTime.UtcNow - _lastRead < _interval)
-                {
-                    return;
-                }
-
-                _lastRead = DateTime.UtcNow;
-
                 Span<Point> p = stackalloc Point[2];
                 byte pts = 0;
                 int p0f = 0;
@@ -184,7 +192,15 @@ namespace Iot.Device.Ili934x
                 if (IsPressed())
                 {
                     Span<byte> data = stackalloc byte[11];
-                    _i2c.WriteRead(register, data);
+                    try
+                    {
+                        _i2c.WriteRead(register, data);
+                    }
+                    catch (TimeoutException)
+                    {
+                        // Try again next time
+                        return;
+                    }
 
                     pts = data[0];
                     if (pts > 2)
@@ -206,6 +222,12 @@ namespace Iot.Device.Ili934x
                             p[1].Y = ((data[9] << 8) | data[10]) & 0x0fff;
                         }
                     }
+                }
+
+                if (p[0].X < 0 || p[0].X >= ScreenSize.Width || p[0].Y < 0 || p[1].Y >= ScreenSize.Height)
+                {
+                    // Drop invalid positions
+                    _activeTouches = 0;
                 }
 
                 if (p[0] != _points[0] || p[1] != _points[1])
@@ -279,11 +301,17 @@ namespace Iot.Device.Ili934x
                     else if (_activeTouches == 0)
                     {
                         _dragging = false;
+                        Dragging?.Invoke(this, _points[0], null);
+                    }
+
+                    if (_activeTouches == 1 && _lastActiveTouches == 0)
+                    {
+                        _initialTouchPoint = _points[0];
                     }
 
                     if (_activeTouches == 1 && _lastActiveTouches == 1)
                     {
-                        if (_dragging || (Math.Abs(_lastPoints[0].X - _points[0].X) > 10 && Math.Abs(_lastPoints[0].Y - _points[0].Y) > 10))
+                        if (_dragging || Math.Abs(_initialTouchPoint.X - _points[0].X) > TouchSize.Width || Math.Abs(_initialTouchPoint.Y - _points[0].Y) > TouchSize.Height)
                         {
                             _dragging = true;
                             Dragging?.Invoke(this, _lastPoints[0], _points[0]);
