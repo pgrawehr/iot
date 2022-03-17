@@ -62,6 +62,15 @@ namespace Iot.Device.Ili934x
         public event Action<object, Point, Point?>? Dragging;
 
         /// <summary>
+        /// The event that is fired when the user zooms (using two fingers)
+        /// Call <see cref="EnableEvents"/> to use event handling.
+        /// The second argument is the list of touch points (always 2 when this function is called), the third and fourth
+        /// argument are the old and the new distance between the points. So if the value decreases, zooming out is intended.
+        /// The values are always &gt; 0
+        /// </summary>
+        public event Action<object, Point[], int, int>? Zooming;
+
+        /// <summary>
         /// Create a controller from the given I2C device
         /// </summary>
         /// <param name="device">An I2C device</param>
@@ -88,7 +97,7 @@ namespace Iot.Device.Ili934x
             _updateThread = null;
             _lock = new object();
             _updateEvent = new AutoResetEvent(false);
-            TouchSize = new Size(10, 10);
+            TouchSize = new Size(5, 5);
 
             Span<byte> initData = stackalloc byte[2]
             {
@@ -315,6 +324,21 @@ namespace Iot.Device.Ili934x
                         {
                             _dragging = true;
                             Dragging?.Invoke(this, _lastPoints[0], _points[0]);
+                        }
+                    }
+
+                    if (_activeTouches == 2 && _lastActiveTouches == 2)
+                    {
+                        int oldXDiff = _lastPoints[0].X - _lastPoints[1].X;
+                        int oldYDiff = _lastPoints[0].Y - _lastPoints[1].Y;
+                        int oldDiff = (int)Math.Sqrt(oldYDiff * oldYDiff + oldXDiff * oldXDiff);
+
+                        int newXDiff = _points[0].X - _points[1].X;
+                        int newYDiff = _points[0].Y - _points[1].Y;
+                        int newDiff = (int)Math.Sqrt(newXDiff * newXDiff + newYDiff * newYDiff);
+                        if (oldDiff != 0 || newDiff != 0)
+                        {
+                            Zooming?.Invoke(this, _points, oldDiff, newDiff);
                         }
                     }
 

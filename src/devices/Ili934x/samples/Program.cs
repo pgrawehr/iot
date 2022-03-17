@@ -69,7 +69,7 @@ else if (isArduino)
 
     gpio = board.CreateGpioController();
     displaySPI = board.CreateSpiDevice(new SpiConnectionSettings(0, 5) { ClockFrequency = 50_000_000 });
-    spiBufferSize = 200000; // requires extended Firmata firmware, default is 25
+    spiBufferSize = 200; // requires extended Firmata firmware, default is 25
     powerControl = new M5ToughPowerControl(board);
     powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
 }
@@ -145,7 +145,16 @@ if (touch != null)
             var (xdiff, ydiff) = (point1.X - point2.Value.X, point1.Y - point2.Value.Y);
             left += xdiff * scale;
             top += ydiff * scale;
-            Console.WriteLine($"Dragging by {xdiff}/{ydiff}.");
+            Console.WriteLine($"Dragging at {point1.X}/{point1.Y} by {xdiff}/{ydiff}.");
+        }
+    };
+
+    touch.Zooming += (o, points, oldDiff, newDiff) =>
+    {
+        float scaleChange = (float)oldDiff / newDiff;
+        if (scaleChange != 0)
+        {
+            scale = scale / scaleChange;
         }
     };
 }
@@ -200,6 +209,7 @@ while (!abort)
     var bmp = capture.GetScreenContents();
     if (bmp != null)
     {
+        ili9341.FillRect(Color.Black, 0, 0, ili9341.ScreenWidth, ili9341.ScreenHeight, false);
         bmp.Mutate(x => x.Resize((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
         var pt = new Point((int)left, (int)top);
         var rect = new Rectangle(0, 0, ili9341.ScreenWidth, ili9341.ScreenHeight);
@@ -217,25 +227,7 @@ while (!abort)
         bmp.Dispose();
     }
 
-    ////if (touch != null)
-    ////{
-    ////    if (touch.IsPressed())
-    ////    {
-    ////        Console.WriteLine("Oh, you're touching me");
-    ////    }
-    ////    else
-    ////    {
-    ////        Console.WriteLine("Touch me!");
-    ////    }
-
-    ////    var pt = touch.GetPrimaryTouchPoint();
-    ////    if (pt != null)
-    ////    {
-    ////        Console.WriteLine($"Touch point: {pt.Value.X}/{pt.Value.Y}");
-    ////    }
-    ////}
-
-    Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
+    // Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
 }
 
 touch?.Dispose();
