@@ -70,10 +70,10 @@ namespace Iot.Device.Common
         /// </summary>
         /// <param name="currentTrack">First angle, actual direction</param>
         /// <param name="destinationTrack">Second angle, desired direction</param>
-        /// <returns>The difference</returns>
+        /// <returns>The normalized result of <paramref name="currentTrack"/>-<paramref name="destinationTrack"/>. The value is negative if
+        /// the current track is to port (left) of the the desired track and positive otherwise</returns>
         public static Angle Difference(Angle currentTrack, Angle destinationTrack)
         {
-            currentTrack = currentTrack.Normalize(true);
             double val = currentTrack.Radians - destinationTrack.Radians;
             return Angle.FromRadians(val).ToUnit(currentTrack.Unit).Normalize(false);
         }
@@ -84,7 +84,7 @@ namespace Iot.Device.Common
         /// <param name="angleTrue">Course relative to true north</param>
         /// <param name="variation">Variation. Positive for east</param>
         /// <returns>The magnetic course</returns>
-        /// <remarks>From true to false with the wrong sign</remarks>
+        /// <remarks>Remember: From true to false with the wrong sign</remarks>
         public static Angle TrueToMagnetic(this Angle angleTrue, Angle variation)
         {
             return (angleTrue - variation).Normalize(true);

@@ -101,13 +101,13 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <param name="bearingTrueToWayPoint">Bearing to next waypoint, in degrees true</param>
         /// <param name="bearingMagneticToWayPoint">Bearing to next waypoint, in degrees magnetic</param>
         public BearingAndDistanceToWayPoint(
-            DateTimeOffset? dateTime,
+            DateTimeOffset dateTime,
             string nextWayPointName,
             GeographicPosition nextWayPoint,
             Length distanceToWayPoint,
             Angle bearingTrueToWayPoint,
             Angle bearingMagneticToWayPoint)
-        : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
+        : base(OwnTalkerId, Id, dateTime)
         {
             NextWayPointName = nextWayPointName;
             NextWayPoint = nextWayPoint ?? throw new ArgumentNullException(nameof(nextWayPoint));
@@ -163,13 +163,13 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <inheritdoc />
-        public override string ToNmeaMessage()
+        public override string ToNmeaParameterList()
         {
             if (Valid)
             {
                 StringBuilder b = new StringBuilder(256);
 
-                string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
+                string time = DateTime.ToString("HHmmss.fff", CultureInfo.InvariantCulture);
                 b.Append(time + ",");
                 double? degrees;
                 CardinalDirection? direction;

@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -74,7 +75,26 @@ namespace Iot.Device.Nmea0183
             }
 
             _server = new UdpClient(_port);
-            _server.DontFragment = true;
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                // This is unsupported on MacOS (https://github.com/dotnet/runtime/issues/27653), but this shouldn't
+                // hurt, since true is the default.
+                try
+                {
+                    _server.DontFragment = true;
+                }
+                catch (Exception x) when (x is NotSupportedException || x is SocketException)
+                {
+                    // Ignore
+                }
+            }
+            else
+            {
+                // On MacOs, instead we need to set up a timeout, or we end in a deadlock when terminating
+                _server.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 1000);
+            }
+
             _clientStream = new UdpClientStream(_server, _port, this);
             _parser = new NmeaParser($"{InterfaceName} (Port {_port})", _clientStream, _clientStream);
             _parser.OnNewSequence += OnSentenceReceivedFromClient;
@@ -144,8 +164,12 @@ namespace Iot.Device.Nmea0183
             private readonly NmeaUdpServer _parent;
             private readonly Queue<byte> _data;
 
+            private object _disposalLock = new object();
+
             private Stopwatch _lastUnsuccessfulSend;
             private Dictionary<IPAddress, bool> _knownSenders;
+            private CancellationTokenSource _cancellationSource;
+            private CancellationToken _cancellationToken;
 
             public UdpClientStream(UdpClient client, int port, NmeaUdpServer parent)
             {
@@ -155,6 +179,8 @@ namespace Iot.Device.Nmea0183
                 _data = new Queue<byte>();
                 _knownSenders = new();
                 _lastUnsuccessfulSend = new Stopwatch();
+                _cancellationSource = new CancellationTokenSource();
+                _cancellationToken = _cancellationSource.Token;
             }
 
             public override void Flush()
@@ -178,16 +204,39 @@ namespace Iot.Device.Nmea0183
                 }
 
                 IPEndPoint pt;
-                byte[] datagram;
+                byte[]? datagram = null;
                 bool isself;
-                while (true)
+                while (!_cancellationSource.IsCancellationRequested)
                 {
                     pt = new IPEndPoint(IPAddress.Any, _port);
                     try
                     {
-                        datagram = _client.Receive(ref pt);
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                        {
+#if NET6_O_OR_GREATER
+                            var result = _client.ReceiveAsync(_cancellationToken).GetAwaiter().GetResult();
+                            datagram = result.Buffer;
+#else
+                            var result = _client.ReceiveAsync().GetAwaiter().GetResult();
+                            datagram = result.Buffer;
+#endif
+                        }
+                        else
+                        {
+                            datagram = _client.Receive(ref pt);
+                        }
                     }
                     catch (SocketException x)
+                    {
+                        if (x.SocketErrorCode == SocketError.TimedOut)
+                        {
+                            continue;
+                        }
+
+                        _parent.FireOnParserError($"Udp server error: {x.Message}", NmeaError.PortClosed);
+                        return 0;
+                    }
+                    catch (ObjectDisposedException x)
                     {
                         _parent.FireOnParserError($"Udp server error: {x.Message}", NmeaError.PortClosed);
                         return 0;
@@ -215,6 +264,11 @@ namespace Iot.Device.Nmea0183
                     {
                         _knownSenders.Add(pt.Address, false);
                     }
+                }
+
+                if (_cancellationSource.IsCancellationRequested || datagram == null)
+                {
+                    return 0;
                 }
 
                 // Does the whole message fit in the buffer?
@@ -256,25 +310,33 @@ namespace Iot.Device.Nmea0183
                     return;
                 }
 
-                byte[] tempBuf = buffer;
-                if (offset != 0)
+                lock (_disposalLock)
                 {
-                    tempBuf = new byte[count];
-                    Array.Copy(buffer, offset, tempBuf, 0, count);
-                }
+                    if (_client == null)
+                    {
+                        throw new ObjectDisposedException("Udp Server is disposed");
+                    }
 
-                try
-                {
-                    IPEndPoint pt = new IPEndPoint(IPAddress.Broadcast, _port);
-                    _client.Send(tempBuf, count, pt);
-                    _lastUnsuccessfulSend.Stop();
-                }
-                catch (SocketException x)
-                {
-                    // This is normal if no network connection is available.
-                    _parent.FireOnParserError($"Udp server send error: {x.Message}", NmeaError.None);
-                    _lastUnsuccessfulSend.Reset();
-                    _lastUnsuccessfulSend.Start();
+                    byte[] tempBuf = buffer;
+                    if (offset != 0)
+                    {
+                        tempBuf = new byte[count];
+                        Array.Copy(buffer, offset, tempBuf, 0, count);
+                    }
+
+                    try
+                    {
+                        IPEndPoint pt = new IPEndPoint(IPAddress.Broadcast, _port);
+                        _client.Send(tempBuf, count, pt);
+                        _lastUnsuccessfulSend.Stop();
+                    }
+                    catch (SocketException x)
+                    {
+                        // This is normal if no network connection is available.
+                        _parent.FireOnParserError($"Udp server send error: {x.Message}", NmeaError.None);
+                        _lastUnsuccessfulSend.Reset();
+                        _lastUnsuccessfulSend.Start();
+                    }
                 }
             }
 
@@ -288,7 +350,16 @@ namespace Iot.Device.Nmea0183
             {
                 if (disposing)
                 {
-                    _client.Dispose();
+                    lock (_disposalLock)
+                    {
+                        if (!_cancellationToken.IsCancellationRequested)
+                        {
+                            _cancellationSource.Cancel();
+                        }
+
+                        _client.Dispose();
+                        _cancellationSource.Dispose();
+                    }
                 }
 
                 base.Dispose(disposing);

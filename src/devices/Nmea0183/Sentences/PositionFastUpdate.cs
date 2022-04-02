@@ -117,11 +117,10 @@ namespace Iot.Device.Nmea0183.Sentences
         /// See <see cref="NmeaSentence"/> for constructor usage
         /// </summary>
         public PositionFastUpdate(
-        DateTimeOffset? dateTime, GeographicPosition position)
-        : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
+        DateTimeOffset dateTime, GeographicPosition position)
+        : base(OwnTalkerId, Id, dateTime)
         {
-            DateTime = dateTime;
-            position = position.NormalizeAngleTo180();
+            position = position.NormalizeLongitudeTo180Degrees();
             (_latitude, _latitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Latitude, true);
             (_longitude, _longitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Longitude, false);
             Position = position;
@@ -134,14 +133,14 @@ namespace Iot.Device.Nmea0183.Sentences
         public override bool ReplacesOlderInstance => true;
 
         /// <inheritdoc />
-        public override string ToNmeaMessage()
+        public override string ToNmeaParameterList()
         {
             // seems nullable don't interpolate well
             string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : String.Empty;
             string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : String.Empty;
             string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : String.Empty;
             string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : String.Empty;
-            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : String.Empty;
+            string time = Valid ? DateTime.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : String.Empty;
 
             return FormattableString.Invariant($"{lat},{latTurn},{lon},{lonTurn},{time},A,D");
         }

@@ -38,6 +38,7 @@ namespace Iot.Device.Nmea0183
         private ConcurrentQueue<NmeaSentence> _outQueue;
         private AutoResetEvent _outEvent;
         private Exception? _ioExceptionOnSend;
+        private DateTimeOffset _lastPacketTime;
 
         /// <summary>
         /// Creates a new instance of the NmeaParser, taking an input and an output stream
@@ -58,12 +59,39 @@ namespace Iot.Device.Nmea0183
             _outEvent = new AutoResetEvent(false);
             ExclusiveTalkerId = TalkerId.Any;
             _ioExceptionOnSend = null;
+            SuppressOutdatedMessages = true;
+            LastPacketTime = DateTimeOffset.UtcNow;
         }
 
         /// <summary>
         /// Set this to anything other than <see cref="TalkerId.Any"/> to receive only that specific ID from this parser
         /// </summary>
         public TalkerId ExclusiveTalkerId
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Time the last packet was received.
+        /// This is writable to configure the initial value (defaults to current system time)
+        /// </summary>
+        public DateTimeOffset LastPacketTime
+        {
+            get => _lastPacketTime;
+            set => _lastPacketTime = value;
+        }
+
+        /// <summary>
+        /// True (the default) to suppress forwarding messages when a newer message with the same <see cref="SentenceId"/> and <see cref="TalkerId"/>
+        /// is already in the outgoing queue. Only affects messages that have <see cref="NmeaSentence.ReplacesOlderInstance"/> set to true.
+        /// Set to false to forward all messages.
+        /// </summary>
+        /// <remarks>
+        /// Setting this to false may overflow send queues when more messages should be sent per time than the outgoing interface permits. This will result
+        /// in massive message delivery delays and eventually a low memory situation.
+        /// </remarks>
+        public bool SuppressOutdatedMessages
         {
             get;
             set;
@@ -141,7 +169,7 @@ namespace Iot.Device.Nmea0183
                     continue;
                 }
 
-                NmeaSentence? typed = sentence.TryGetTypedValue();
+                NmeaSentence? typed = sentence.TryGetTypedValue(ref _lastPacketTime);
                 // Only test the messages that actually bring their own time, otherwise a wrong clock will cause this to get worse.
                 if (typed != null && typed.Age > TimeSpan.FromSeconds(5) && (typed is TimeDate || typed is GlobalPositioningSystemFixData))
                 {
@@ -153,7 +181,7 @@ namespace Iot.Device.Nmea0183
                 if (!(typed is RawSentence))
                 {
                     // If we didn't dispatch it as raw sentence, do this as well
-                    RawSentence raw = sentence.GetAsRawSentence();
+                    RawSentence raw = sentence.GetAsRawSentence(ref _lastPacketTime);
                     DispatchSentenceEvents(raw);
                 }
             }
@@ -165,7 +193,7 @@ namespace Iot.Device.Nmea0183
             {
                 if (_outQueue.TryDequeue(out var sentenceToSend))
                 {
-                    if (sentenceToSend.ReplacesOlderInstance)
+                    if (sentenceToSend.ReplacesOlderInstance && SuppressOutdatedMessages)
                     {
                         // If there are other instances of the same message in the queue, we drop the current one (as it's not the newest)
                         // and continue processing.
@@ -179,11 +207,6 @@ namespace Iot.Device.Nmea0183
                     TalkerSentence ts = new TalkerSentence(sentenceToSend);
                     string dataToSend = ts.ToString() + "\r\n";
                     byte[] buffer = _encoding.GetBytes(dataToSend);
-
-                    ////if (InterfaceName == "Handheld")
-                    ////{
-                    ////    Console.Write($"--> {InterfaceName} ({_outQueue.Count}): {dataToSend}");
-                    ////}
 
                     try
                     {

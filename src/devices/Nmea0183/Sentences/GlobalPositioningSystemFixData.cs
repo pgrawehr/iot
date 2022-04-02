@@ -105,10 +105,10 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <inheritdoc />
-        public override string ToNmeaMessage()
+        public override string ToNmeaParameterList()
         {
             // seems nullable don't interpolate well
-            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
+            string time = Valid ? DateTime.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
             string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : string.Empty;
             string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : String.Empty;
             string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : String.Empty;
@@ -213,17 +213,16 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <param name="hdop">HDOP</param>
         /// <param name="numberOfSatellites">The number of satellites visible</param>
         public GlobalPositioningSystemFixData(
-            DateTimeOffset? dateTime,
+            DateTimeOffset dateTime,
             GpsQuality status,
             GeographicPosition position,
             double? geoidAltitude,
             double hdop,
             int numberOfSatellites)
-        : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
+        : base(OwnTalkerId, Id, dateTime)
         {
-            DateTime = dateTime;
             Status = status;
-            position = position.NormalizeAngleTo180();
+            position = position.NormalizeLongitudeTo180Degrees();
             (_latitude, _latitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Latitude, true);
             (_longitude, _longitudeTurn) = RecommendedMinimumNavigationInformation.DegreesToNmea0183(position.Longitude, false);
             EllipsoidAltitude = position.EllipsoidalHeight;

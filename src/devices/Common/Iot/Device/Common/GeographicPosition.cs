@@ -12,9 +12,10 @@ namespace Iot.Device.Common
     /// Represents a position in WGS84 coordinates. This is the standard coordinate format for most GNSS receivers currently available.
     /// An instance with Latitude = Longitude = Height = 0 is considered invalid. A real GNSS receiver will never output this exact value
     /// and that position is far out in the ocean.
-    ///
-    /// This object stores ellipsoidal height, depending on the GNSS receiver and the application, this needs to be transformed to geoidal height.
     /// </summary>
+    /// <remarks>
+    /// This object stores ellipsoidal height, depending on the GNSS receiver and the application, this needs to be transformed to geoidal height.
+    /// </remarks>
     [Serializable]
     public sealed class GeographicPosition : ICloneable, IEquatable<GeographicPosition>
     {
@@ -103,7 +104,7 @@ namespace Iot.Device.Common
         /// <param name="seconds">Seconds including requested number of digits</param>
         public static void GetDegreesMinutesSeconds(double angle, int secDigits, out double normalizedVal, out double degrees, out double minutes, out double seconds)
         {
-            angle = PositionExtensions.NormalizeAngleTo180(angle);
+            angle = GeographicPositionExtensions.NormalizeAngleTo180Degrees(angle);
             normalizedVal = angle;
             angle = Math.Abs(angle);
             degrees = Math.Floor(angle);
@@ -131,6 +132,43 @@ namespace Iot.Device.Common
             }
         }
 
+        /// <summary>
+        /// Equality operator. See <see cref="Equals(GeographicPosition?)"/>
+        /// </summary>
+        /// <param name="a">First instance to compare</param>
+        /// <param name="b">Second instance to compare</param>
+        /// <returns>True on equality, false otherwise</returns>
+        public static bool operator ==(GeographicPosition? a, GeographicPosition? b)
+        {
+            if (ReferenceEquals(a, b))
+            {
+                return true;
+            }
+
+            if (ReferenceEquals(a, null))
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(b, null))
+            {
+                return false;
+            }
+
+            return a.Equals(b);
+        }
+
+        /// <summary>
+        /// Inequality operator. See <see cref="Equals(GeographicPosition?)"/>
+        /// </summary>
+        /// <param name="a">First instance to compare</param>
+        /// <param name="b">Second instance to compare</param>
+        /// <returns>True on inequality, false otherwise</returns>
+        public static bool operator !=(GeographicPosition? a, GeographicPosition? b)
+        {
+            return !(a == b);
+        }
+
         private static string GetEastOrWest(double sign)
         {
             if (sign >= 0 && sign <= 180)
@@ -141,48 +179,22 @@ namespace Iot.Device.Common
             return "W";
         }
 
-        private static string GetNorthOrSouth(double sign)
-        {
-            if (sign >= 0)
-            {
-                return "N";
-            }
-
-            return "S";
-        }
+        private static string GetNorthOrSouth(double sign) => sign >= 0 ? "N" : "S";
 
         private static string GetLongitudeString(double longitude)
         {
-            object[] args = new object[7];
             GetDegreesMinutesSeconds(longitude, 2, out var normalizedVal, out var deg, out var min, out var sec);
             string strEastOrWest = GetEastOrWest(normalizedVal);
 
-            args[0] = deg;
-            args[1] = DegreesSymbol;
-            args[2] = min;
-            args[3] = MinutesSymbol;
-            args[4] = sec.ToString("00.00");
-            args[5] = SecondsSymbol;
-            args[6] = strEastOrWest;
-            string strLonRet = string.Format(CultureInfo.InvariantCulture, "{0}{1} {2:00}{3} {4}{5}{6}", args);
-            return strLonRet;
+            return FormattableString.Invariant($"{deg}{DegreesSymbol} {min:00}{MinutesSymbol} {sec:00.00}{SecondsSymbol}{strEastOrWest}");
         }
 
         private static string GetLatitudeString(double latitude)
         {
-            object[] args = new object[7];
-
             GetDegreesMinutesSeconds(latitude, 2, out var normalizedVal, out var deg, out var min, out var sec);
             string strNorthOrSouth = GetNorthOrSouth(normalizedVal);
 
-            args[0] = deg;
-            args[1] = DegreesSymbol;
-            args[2] = min;
-            args[3] = MinutesSymbol;
-            args[4] = sec.ToString("00.00");
-            args[5] = SecondsSymbol;
-            args[6] = strNorthOrSouth;
-            string strLatRet = string.Format(CultureInfo.InvariantCulture, "{0}{1} {2:00}{3} {4}{5}{6}", args);
+            string strLatRet = FormattableString.Invariant($"{deg}{DegreesSymbol} {min:00}{MinutesSymbol} {sec:00.00}{SecondsSymbol}{strNorthOrSouth}");
             return strLatRet;
         }
 
@@ -230,25 +242,18 @@ namespace Iot.Device.Common
         /// Returns true if the two positions are (almost) equal. This ignores the altitude.
         /// </summary>
         /// <param name="position">Position to compare with</param>
-        /// <returns>True if the two positions are closer than about 1cm</returns>
-        public bool EqualPosition(GeographicPosition position)
+        /// <param name="delta">Allowed delta, in degrees</param>
+        /// <returns>True if the two positions are closer than the delta. The default value is around 1cm</returns>
+        /// <remarks>This does a simple comparison based on the floating point values, it should not be used with large deltas.
+        /// To get the distance between two positions, use <see cref="GeographicPositionExtensions.DistanceTo"/> instead.</remarks>
+        public bool EqualPosition(GeographicPosition position, double delta = ComparisonEpsilon)
         {
-            if (position == null)
+            if (ReferenceEquals(position, null))
             {
-                return false;
+                throw new ArgumentNullException(nameof(position));
             }
 
-            bool ret;
-            if ((Math.Abs((position.Longitude - Longitude)) < ComparisonEpsilon) && (Math.Abs(position.Latitude - Latitude) < ComparisonEpsilon))
-            {
-                ret = true;
-            }
-            else
-            {
-                ret = false;
-            }
-
-            return ret;
+            return (Math.Abs((position.Longitude - Longitude)) < delta) && (Math.Abs(position.Latitude - Latitude) < delta);
         }
 
         /// <summary>
@@ -260,7 +265,7 @@ namespace Iot.Device.Common
         {
             GeographicPosition? position = obj as GeographicPosition;
 
-            if (position == null)
+            if (ReferenceEquals(position, null))
             {
                 return false;
             }
@@ -284,7 +289,7 @@ namespace Iot.Device.Common
         /// <returns>True if the two positions are almost identical</returns>
         public bool Equals(GeographicPosition? position)
         {
-            if (position == null)
+            if (ReferenceEquals(position, null))
             {
                 return false;
             }
@@ -305,7 +310,6 @@ namespace Iot.Device.Common
         /// Returns a string representation of this position.
         /// </summary>
         /// <returns>A string representation in degrees, minutes and seconds for both latitude and longitude</returns>
-        // TODO: Add different formatting options and add parsing feature
         public override string ToString()
         {
             if (Double.IsNaN(Latitude) || Double.IsNaN(Longitude))
@@ -316,19 +320,18 @@ namespace Iot.Device.Common
             if (Double.IsInfinity(Latitude) || Double.IsInfinity(Longitude))
             {
                 return "Infinity";
-
             }
 
             var strLatRet = GetLatitudeString(Latitude);
             var strLonRet = GetLongitudeString(Longitude);
 
-            return string.Concat(strLatRet, " / ", strLonRet, " Ellipsoidal Height: ", EllipsoidalHeight.ToString("F0"));
+            return $"{strLatRet} / {strLonRet} Ellipsoidal Height {EllipsoidalHeight:F0}m";
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
-            return Latitude.GetHashCode() ^ Longitude.GetHashCode() ^ EllipsoidalHeight.GetHashCode() ^ 0x7a2b;
+            return HashCode.Combine(Latitude, Longitude, EllipsoidalHeight);
         }
     }
 }

@@ -84,11 +84,11 @@ namespace Iot.Device.Nmea0183.Sentences
         public NavigationStatus? Status2 { get; private set; }
 
         /// <inheritdoc />
-        public override string ToNmeaMessage()
+        public override string ToNmeaParameterList()
         {
             // seems nullable don't interpolate well
             StringBuilder b = new StringBuilder();
-            string time = DateTime.HasValue ? DateTime.Value.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
+            string time = Valid ? DateTime.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
             b.AppendFormat($"{time},");
             string status = Status.HasValue ? $"{(char)Status}" : "V";
             b.AppendFormat($"{status},");
@@ -118,7 +118,7 @@ namespace Iot.Device.Nmea0183.Sentences
             b.Append($"{speed},");
             string track = TrackMadeGoodInDegreesTrue.Value.ToString("0.000", CultureInfo.InvariantCulture);
             b.Append($"{track},");
-            string date = DateTime.HasValue ? DateTime.Value.ToString("ddMMyy", CultureInfo.InvariantCulture) : string.Empty;
+            string date = Valid ? DateTime.ToString("ddMMyy", CultureInfo.InvariantCulture) : string.Empty;
             b.Append($"{date},");
             if (MagneticVariationInDegrees.HasValue)
             {
@@ -228,15 +228,14 @@ namespace Iot.Device.Nmea0183.Sentences
         /// See <see cref="NmeaSentence"/> for constructor usage
         /// </summary>
         public RecommendedMinimumNavigationInformation(
-            DateTimeOffset? dateTime,
+            DateTimeOffset dateTime,
             NavigationStatus? status,
             GeographicPosition position,
             Speed speedOverGround,
             Angle trackMadeGoodInDegreesTrue,
             Angle? magneticVariationInDegrees)
-        : base(OwnTalkerId, Id, dateTime.GetValueOrDefault(DateTimeOffset.UtcNow))
+        : base(OwnTalkerId, Id, dateTime)
         {
-            DateTime = dateTime;
             Status = status;
             Position = position;
             SpeedOverGround = speedOverGround;
@@ -312,22 +311,6 @@ namespace Iot.Device.Nmea0183.Sentences
             // ddddmm.mm
             double? degreesMinutes = integerDegrees * 100 + minutes;
             return (degreesMinutes, direction);
-        }
-
-        /// <summary>
-        /// Navigation status enum
-        /// </summary>
-        public enum NavigationStatus : byte
-        {
-            /// <summary>
-            /// Valid is represented with an "A"
-            /// </summary>
-            Valid = (byte)'A',
-
-            /// <summary>
-            /// A warning is represented by a "V"
-            /// </summary>
-            NavigationReceiverWarning = (byte)'V',
         }
     }
 }

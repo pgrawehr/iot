@@ -54,17 +54,6 @@ namespace Iot.Device.Nmea0183
         static TalkerSentence()
         {
             s_registeredSentences = GetKnownSentences();
-            LastMessageTime = DateTimeOffset.UtcNow; // In case the messages contain no date, we have to assume the computer is right
-        }
-
-        /// <summary>
-        /// The date/time when the last message was seen.
-        /// Used to assign the incoming messages a timespan if they don't provide their own (or if they only provide the time but not the date)
-        /// </summary>
-        public static DateTimeOffset LastMessageTime
-        {
-            get;
-            private set;
         }
 
         /// <summary>
@@ -116,7 +105,7 @@ namespace Iot.Device.Nmea0183
         {
             TalkerId = sentence.TalkerId;
             Id = sentence.SentenceId;
-            var content = sentence.ToNmeaMessage();
+            var content = sentence.ToNmeaParameterList();
             if (string.IsNullOrWhiteSpace(content) || sentence.Valid == false)
             {
                 throw new InvalidOperationException("Input sentence not valid or cannot be encoded");
@@ -148,8 +137,8 @@ namespace Iot.Device.Nmea0183
         /// <remarks><paramref name="sentence"/> does not include new line characters</remarks>
         public static TalkerSentence? FromSentenceString(string sentence, TalkerId expectedTalkerId, out NmeaError errorCode)
         {
-            // $XXYYY, ...
-            const int SentenceHeaderLength = 7;
+            // $XXY, ...
+            const int sentenceHeaderMinLength = 4;
 
             // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf page 2
             // defines this as 80 + 1 (for $), but we don't really care if it is something within a reasonable limit.
@@ -160,7 +149,7 @@ namespace Iot.Device.Nmea0183
                 throw new ArgumentNullException(nameof(sentence));
             }
 
-            if (sentence.Length < SentenceHeaderLength)
+            if (sentence.Length < sentenceHeaderMinLength)
             {
                 errorCode = NmeaError.MessageToShort;
                 return null;
@@ -186,9 +175,18 @@ namespace Iot.Device.Nmea0183
                 return null;
             }
 
-            SentenceId sentenceId = new SentenceId(sentence[3], sentence[4], sentence[5]);
+            int firstComma = sentence.IndexOf(',', 1);
+            if (firstComma == -1)
+            {
+                errorCode = NmeaError.MessageToShort;
+                return null;
+            }
 
-            string[] fields = sentence.Substring(SentenceHeaderLength).Split(',');
+            string sentenceIdString = sentence.Substring(3, firstComma - 3);
+
+            SentenceId sentenceId = new SentenceId(sentenceIdString);
+
+            string[] fields = sentence.Substring(firstComma + 1).Split(',');
             int lastFieldIdx = fields.Length - 1;
             // This returns null as the checksum if there was none, or a very big number if the checksum couldn't be parsed
             (int? checksum, string lastField) = GetChecksumAndLastField(fields[lastFieldIdx]);
@@ -212,7 +210,7 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Registers sentence identifier as known. Registered sentences are used by <see cref="TryGetTypedValue()"/>.
+        /// Registers sentence identifier as known. Registered sentences are used by <see cref="TryGetTypedValue"/>.
         /// </summary>
         /// <param name="id">NMEA0183 sentence identifier</param>
         /// <param name="producer">Function which produces typed object given <see cref="TalkerSentence"/>.</param>
@@ -256,6 +254,16 @@ namespace Iot.Device.Nmea0183
             return 0xFFFF; // Will later fail with "invalid checksum"
         }
 
+        /// <summary>
+        /// Calculates the NMEA checksum from a sentence (that includes everything except the checksum)
+        /// </summary>
+        /// <param name="messageWithoutChecksum">The message, including the leading $ letter</param>
+        /// <returns>The checksum as a byte</returns>
+        public static byte CalculateChecksum(string messageWithoutChecksum)
+        {
+            return CalculateChecksum(messageWithoutChecksum.AsSpan(1));
+        }
+
         private static byte CalculateChecksumFromSentenceString(ReadOnlySpan<char> sentenceString)
         {
             // remove leading $ (1 char) and checksum (3 chars)
@@ -285,26 +293,35 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-         /// Compares sentence identifier with all known identifiers.
-         /// If found returns typed object corresponding to the identifier.
-         /// If not found returns null.
-         /// </summary>
-         /// <returns>Object corresponding to the identifier</returns>
-        public NmeaSentence? TryGetTypedValue()
+        /// Compares sentence identifier with all known identifiers.
+        /// If found returns typed object corresponding to the identifier.
+        /// If not found returns a raw sentence instead. Also returns a raw sentence on a parser error (e.g. invalid date/time field)
+        /// </summary>
+        /// <param name="lastMessageTime">The date/time the last packet was seen. Used to time-tag packets that do not provide
+        /// their own time or only a time but not a date</param>
+        /// <returns>Object corresponding to the identifier</returns>
+        public NmeaSentence? TryGetTypedValue(ref DateTimeOffset lastMessageTime)
         {
             NmeaSentence? retVal = null;
             if (s_registeredSentences.TryGetValue(Id, out Func<TalkerSentence, DateTimeOffset, NmeaSentence>? producer))
             {
-                retVal = producer(this, LastMessageTime);
+                try
+                {
+                    retVal = producer(this, lastMessageTime);
+                }
+                catch (Exception x) when (x is ArgumentException || x is ArgumentOutOfRangeException || x is FormatException)
+                {
+                    return new RawSentence(TalkerId, Id, Fields, lastMessageTime);
+                }
             }
             else
             {
-                retVal = new RawSentence(TalkerId, Id, Fields, LastMessageTime);
+                retVal = new RawSentence(TalkerId, Id, Fields, lastMessageTime);
             }
 
-            if (retVal?.DateTime != null)
+            if (retVal.Valid && retVal.DateTime != DateTimeOffset.MinValue)
             {
-                LastMessageTime = retVal.DateTime.Value;
+                lastMessageTime = retVal.DateTime;
             }
 
             return retVal;
@@ -314,9 +331,9 @@ namespace Iot.Device.Nmea0183
         /// Returns this sentence without parsing its contents
         /// </summary>
         /// <returns>A raw sentence</returns>
-        public RawSentence GetAsRawSentence()
+        public RawSentence GetAsRawSentence(ref DateTimeOffset lastMessageTime)
         {
-            return new RawSentence(TalkerId, Id, Fields, LastMessageTime);
+            return new RawSentence(TalkerId, Id, Fields, lastMessageTime);
         }
     }
 }

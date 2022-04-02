@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using Moq;
 using UnitsNet;
@@ -100,7 +101,7 @@ namespace Iot.Device.Nmea0183.Tests
                     int index = 0;
                     foreach (var msg in outputSentence)
                     {
-                        string txt = msg.ToNmeaMessage();
+                        string txt = msg.ToNmeaParameterList();
                         txt = $"${TalkerId.GlobalPositioningSystem}{msg.SentenceId},{txt}";
                         Assert.Equal(expectedOutput[index], txt);
                         index++;
@@ -151,7 +152,7 @@ namespace Iot.Device.Nmea0183.Tests
                     int index = 0;
                     foreach (var msg in outputSentence)
                     {
-                        string txt = msg.ToNmeaMessage();
+                        string txt = msg.ToNmeaParameterList();
                         txt = $"${TalkerId.GlobalPositioningSystem}{msg.SentenceId},{txt}";
                         Assert.Equal(expectedOutput[index], txt);
                         index++;
@@ -164,12 +165,13 @@ namespace Iot.Device.Nmea0183.Tests
 
         private void ParseSequencesAndAddToCache(IEnumerable<string> inputSequences)
         {
+            DateTimeOffset now = DateTimeOffset.Now;
             foreach (var seq in inputSequences)
             {
                 var decoded = TalkerSentence.FromSentenceString(seq, out var error)!;
                 Assert.Equal(NmeaError.None, error);
                 Assert.NotNull(decoded);
-                var s = decoded.TryGetTypedValue()!;
+                var s = decoded.TryGetTypedValue(ref now)!;
                 _autopilot.SentenceCache.Add(s);
             }
         }
@@ -218,7 +220,7 @@ namespace Iot.Device.Nmea0183.Tests
 
         private void SetPositionAndTrack(GeographicPosition position, Angle track)
         {
-            _autopilot.SentenceCache.Add(new RecommendedMinimumNavigationInformation(null, RecommendedMinimumNavigationInformation.NavigationStatus.Valid,
+            _autopilot.SentenceCache.Add(new RecommendedMinimumNavigationInformation(DateTimeOffset.Now, NavigationStatus.Valid,
                 position, Speed.FromMetersPerSecond(10), track, Angle.FromDegrees(-2)));
         }
     }

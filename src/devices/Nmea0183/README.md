@@ -4,27 +4,22 @@
 
 NMEA stands for `National Marine Electronics Associations`.
 
-NMEA 0183 is an industry standard first released in 1983 and has been updated several times since then. It is used as a standard protocol 
+NMEA 0183 is an industry standard first released in 1983 and has been updated several times since then. It is used as a standard protocol
 for communication between different sensors and devices on a boat, but has been adapted for other uses as well. Most GNSS receivers
-support some variant of the NMEA protocol as output. Other sensors that support the protocol on boats are wind sensors, depth transducers
+support some variant of the NMEA protocol as output. On a boat, other sensors that support the protocol include wind sensors, depth transducers
 or electronic compasses. The data is interpreted and combined by displays, chart plotters or autopilots.
 
 On the physical layer, NMEA uses a serial protocol on an RS-232 interface. Historically, the baud rate is limited to 4800 baud, however
 most recent devices support configuring higher baud rates. Since RS-232 only supports point-to-point connections, message routers are
-required to combine multiple data sources.
+required to combine multiple data sources. Chart plotters for NMEA 0183 have several inputs for different sensors.
 
-NMEA 0183 has been superseeded by NMEA 2000, which uses a CAN-Bus protocol and can therefore run a large number of sensors on a single cable.
+NMEA 0183 has been superseeded by NMEA 2000, which uses a CAN-Bus protocol and hardware layer and can therefore run a large number of sensors on a single cable.
 Since NMEA 0183 is much simpler to parse and does not require specific electronic components, it is still in wide use. Bi-directional convertes
 from NMEA 0183 to NMEA 2000 are available from different vendors.
 
-In NMEA 0183 a device is either a talker or a listener. There are multiple types of sentences (or messages) which can be sent:
-- talker sentence (`TalkerSentence` class) - most common message
-- query sentence (`QuerySentence` class) - almost never used by existing devices
-- propertiary sentence (not available here)
-
+In NMEA 0183 a device is either a talker or a listener. There are multiple types of sentences (or messages) which can be sent or received.
 Each message has a talker identifier (see `TalkerIdentifier`), sentence identifier (see `SentenceId`), fields and optional checksum.
 
-An NMEA system typically consists of several devices 
 The following sentence ids are currently supported:
 
 - BOD: Bearing origin to destination
@@ -53,14 +48,72 @@ The following sentence ids are currently supported:
 All supported messages can both be parsed as well as sent out. Therefore it's possible to recieve GNSS data from a NMEA 2000 network and
 send temperature data from an attached DHT11 sensor back to the network.
 
-A `MessageRouter` class is available that can be used to route messages between different interfaces (the Raspberry Pi 4 supports up to 
+A `MessageRouter` class is available that can be used to route messages between different interfaces (the Raspberry Pi 4 supports up to
 6 RS-232 interfaces, not including USB-to-Serial adapters).
 Unsupported messages can still be routed around, e.g. AIS data (AIVDM messages)
 
+## References
+
+The NMEA 0183 Standard was never publicly published. The NMEA standard committee makes it available on its website only for a considerable fee.
+However, several websites have information about how to decode the different messages. In some special cases,
+the available documentation is ambiguous or contradictory, though.
+
+- [Official NMEA Website](https://www.nmea.org/)
+- [NMEA Command documentation (one of several available on the web)](http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf)
+
 ## Samples
 
-See [NEO-M8 sample](../NEO-M8/README.md) for a simple parser example using synchronous message decoding.
-See the [samples directory](samples/) for a simple NMEA simulator (generates sentences for a trip along a path)
+This demonstrates a simple, synchronous parser for a simple receiver:
+
+```csharp
+DateTimeOffset lastMessageTime = DateTimeOffset.UtcNow;
+using (var sp = new SerialPort("/dev/ttyS0"))
+{
+    sp.NewLine = "\r\n";
+    sp.Open();
+
+    // Device streams continuously and therefore most of the time we would end up in the middle of the line
+    // therefore ignore first line so that we align correctly
+    sp.ReadLine();
+
+    bool gotRmc = false;
+    while (!gotRmc)
+    {
+        string line = sp.ReadLine();
+        TalkerSentence? sentence = TalkerSentence.FromSentenceString(line, out _);
+
+        if (sentence == null)
+        {
+            continue;
+        }
+
+        object? typed = sentence.TryGetTypedValue(ref lastMessageTime);
+        if (typed == null)
+        {
+            Console.WriteLine($"Sentence identifier `{sentence.Id}` is not known.");
+        }
+        else if (typed is RecommendedMinimumNavigationInformation rmc)
+        {
+            gotRmc = true;
+
+            if (rmc.Position.ContainsValidPosition())
+            {
+                Console.WriteLine($"Your location: {rmc.Position}");
+            }
+            else
+            {
+                Console.WriteLine($"You cannot be located.");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"Sentence of type `{typed.GetType().FullName}` not handled.");
+        }
+    }
+}
+```
+
+See the [samples directory](samples/NmeaSimulator) for a simple NMEA simulator (generates sentences for a trip along a path)
 
 For asynchronous message processing (the recommended use) several "message sources or sinks" are available. The default
 interface is `NmeaParser`. It is used as follows:
@@ -107,7 +160,7 @@ _router.AddEndPoint(_signalkServer);
 _router.AddEndPoint(_clockSynchronizer);
 _router.AddEndPoint(_udpServer);
 
-// When using the router, only its `OnNewSequence` event should be used for local processing. 
+// When using the router, only the router's `OnNewSequence` event should be used for local processing. 
 // This is known as the "local" sink.
 _router.OnNewSequence += ParserOnNewSequence;
 foreach (var rule in ConstructRules())
@@ -178,7 +231,7 @@ Filter rules are used to tell the router which messages from which source need t
 The Raspberry Pi 4 has up to 6 UART interfaces that can be enabled. UART0 on GPIO pins 14 and 15 is enabled by default, the others can be
 enabled using overlays configured in `/boot/config.txt`. The following entries add UARTS 2 and 3 on GPIO Pins 0/1 and 4/5 respectively:
 
-```
+```text
 enable_uart=1
 dtoverlay=UART2
 dtoverlay=UART3
@@ -186,15 +239,16 @@ dtoverlay=UART3
 
 Pins 0 and 1 are normally reserved for Pi HATs with an EPROM, but you can freely use these two pins if you don't use a HAT.
 
-All of the pins use 3.3V TTL logic. The RS-232 dates back to the 1960ies when much higher voltages were used in communication equipment. 
+> Important: All of the pins use 3.3V TTL logic. The RS-232 standard dates back to the 1960ies, when much higher voltages were used in communication equipment.
 The standard uses logic levels between -15 and +15V. While most devices will understand levels around 5V, any input should be able to
 accept at least 15V. Therefore, to avoid frying your Pi, extra electronics is required for level adjustment. There are special breakout
 boards available for the Pi for this purpose, but I have found them to be unreliable and error-prone (e.g. they cause local echo).
 
-The following diagram shows two alternative approaches using a level shifter or just a simple inverter. The SN74HC is actually a 4 Port NAND gate,
-but used as inverter here. (To convert from TTL logic to RS-232 logic, the voltage has to be increased and the signal needs to be inverted.) One can use
-any kind of inverting logic gate, as long as it is a piece that can accept input voltages in excess of VDD. The data sheet will say something like
-"The input and output voltage ratings may be exceeded if the input and output current ratings are observed" under the "Absolute maximum ratings" section.
+The following diagram shows two alternative approaches using a level shifter or just a simple inverter. The SN74HC is actually a
+4 Port NAND gate, but used as inverter here. (To convert from TTL logic to RS-232 logic, the voltage has to be increased and the
+signal needs to be inverted.) One can use any kind of inverting logic gate, as long as it is a piece that can accept input voltages
+in excess of VDD. The data sheet will say something like "The input and output voltage ratings may be exceeded if the input and output
+current ratings are observed" under the "Absolute maximum ratings" section.
 
 ![Schematic](SerialPortInterfaces_schema.png)
 
@@ -202,12 +256,3 @@ any kind of inverting logic gate, as long as it is a piece that can accept input
 
 - Base a new sentence identifier on [RMC sentence](Sentences/RecommendedMinimumNavigationInformation.cs)
 - Modify `GetKnownSentences` in [TalkerSentence.cs](TalkerSentence.cs) or call `TalkerSentence.RegisterSentence` in the beginning of your `Main` method
-
-## References 
-
-The NMEA 0183 Standard was never publicly published. The NMEA standard committee makes it available on its website only for a considerable fee.
-However, several websites have information about how to decode the different messages. In some special cases, the available documentation is ambiguous
-or contradictory, though.
-
-- https://www.nmea.org/
-- http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf

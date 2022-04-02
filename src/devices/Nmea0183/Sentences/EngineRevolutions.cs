@@ -10,27 +10,6 @@ using UnitsNet;
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
-    /// Source for the revolution data
-    /// </summary>
-    public enum RotationSource
-    {
-        /// <summary>
-        /// The source is unknown
-        /// </summary>
-        Unknown,
-
-        /// <summary>
-        /// Engine revolutions
-        /// </summary>
-        Engine,
-
-        /// <summary>
-        /// Shaft revolutions
-        /// </summary>
-        Shaft
-    }
-
-    /// <summary>
     /// Engine revolutions (RPM) sentence.
     /// Note: This is superseeded by NMEA2000 commands, which provide a lot more details for engine parameters
     /// </summary>
@@ -168,7 +147,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Presents this message as output
         /// </summary>
-        public override string ToNmeaMessage()
+        public override string ToNmeaParameterList()
         {
             if (Valid)
             {

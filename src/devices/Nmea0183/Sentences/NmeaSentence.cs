@@ -31,7 +31,7 @@ namespace Iot.Device.Nmea0183.Sentences
         protected static Calendar gregorianCalendar = new GregorianCalendar(GregorianCalendarTypes.USEnglish);
 
         private static TalkerId _ownTalkerId = DefaultTalkerId;
-        private DateTimeOffset? _dateTime;
+        private DateTimeOffset _dateTime;
 
         /// <summary>
         /// Our own talker ID (default when we send messages ourselves)
@@ -80,7 +80,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// The time tag on this message
         /// </summary>
-        public DateTimeOffset? DateTime
+        public DateTimeOffset DateTime
         {
             get
             {
@@ -88,15 +88,6 @@ namespace Iot.Device.Nmea0183.Sentences
             }
             protected set
             {
-                if (value.HasValue)
-                {
-                    if (value.Value.Offset != TimeSpan.Zero)
-                    {
-                        // ?????
-                        throw new InvalidOperationException();
-                    }
-                }
-
                 _dateTime = value;
             }
         }
@@ -118,12 +109,12 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             get
             {
-                if (!Valid || !DateTime.HasValue)
+                if (!Valid)
                 {
                     return TimeSpan.Zero;
                 }
 
-                return DateTimeOffset.UtcNow - DateTime.Value;
+                return DateTimeOffset.UtcNow - DateTime;
             }
         }
 
@@ -179,10 +170,10 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (time.Length != 0)
             {
-                int hour = int.Parse(time.Substring(0, 2));
-                int minute = int.Parse(time.Substring(2, 2));
-                int seconds = int.Parse(time.Substring(4, 2));
-                double millis = double.Parse("0" + time.Substring(6)) * 1000;
+                int hour = int.Parse(time.Substring(0, 2), CultureInfo.InvariantCulture);
+                int minute = int.Parse(time.Substring(2, 2), CultureInfo.InvariantCulture);
+                int seconds = int.Parse(time.Substring(4, 2), CultureInfo.InvariantCulture);
+                double millis = double.Parse("0" + time.Substring(6), CultureInfo.InvariantCulture) * 1000;
                 dateTime = new DateTimeOffset(lastSeenDate.Year, lastSeenDate.Month, lastSeenDate.Day,
                                hour, minute, seconds, (int)millis, gregorianCalendar, TimeSpan.Zero);
             }
@@ -253,12 +244,24 @@ namespace Iot.Device.Nmea0183.Sentences
         /// without <see cref="TalkerId"/>, <see cref="SentenceId"/> and checksum.
         /// </summary>
         /// <returns>The NMEA sentence string for this message</returns>
-        public abstract string ToNmeaMessage();
+        public abstract string ToNmeaParameterList();
 
         /// <summary>
         /// Gets an user-readable string about this message
         /// </summary>
         public abstract string ToReadableContent();
+
+        /// <summary>
+        /// Translates the properties of this instance into an NMEA message
+        /// </summary>
+        /// <returns>A complete NMEA message</returns>
+        public virtual string ToNmeaMessage()
+        {
+            string start = TalkerId == TalkerId.Ais ? "!" : "$";
+            string msg = $"{start}{TalkerId}{SentenceId},{ToNmeaParameterList()}";
+            byte checksum = TalkerSentence.CalculateChecksum(msg);
+            return msg + "*" + checksum.ToString("X2");
+        }
 
         /// <summary>
         /// Generates a readable instance of this string.
