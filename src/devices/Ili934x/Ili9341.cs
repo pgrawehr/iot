@@ -171,24 +171,24 @@ namespace Iot.Device.Ili934x
 
             if (doRefresh)
             {
-                DrawFrame();
+                SendFrame();
             }
         }
 
         /// <summary>
         /// Clears screen to a specific color
         /// </summary>
-        public void ClearScreen(Rgba32 color)
+        public void ClearScreen(Rgba32 color, bool doRefresh = false)
         {
-            FillRect(color, 0, 0, ScreenWidth, ScreenHeight);
+            FillRect(color, 0, 0, ScreenWidth, ScreenHeight, doRefresh);
         }
 
         /// <summary>
         /// Clears screen
         /// </summary>
-        public void ClearScreen()
+        public void ClearScreen(bool doRefresh = false)
         {
-            FillRect(new Rgba32(0, 0, 0), 0, 0, ScreenWidth, ScreenHeight);
+            FillRect(new Rgba32(0, 0, 0), 0, 0, ScreenWidth, ScreenHeight, doRefresh);
         }
 
         /// <summary>

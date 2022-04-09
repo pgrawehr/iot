@@ -598,23 +598,23 @@ namespace Iot.Device.Arduino
             }
 
             error = CommandError.None;
-                if (_firmataStream == null)
-                {
-                    throw new ObjectDisposedException(nameof(FirmataDevice));
-                }
+            if (_firmataStream == null)
+            {
+                throw new ObjectDisposedException(nameof(FirmataDevice));
+            }
 
             Dictionary<FirmataCommandSequence, bool> sequencesWithAck = new();
             foreach (var s in sequences)
-                {
+            {
                 sequencesWithAck.Add(s, false);
                 _firmataStream.Write(s.InternalSequence, 0, s.Length);
-                }
+            }
 
-                _firmataStream.Flush();
+            _firmataStream.Flush();
 
             byte[]? response;
             do
-                {
+            {
                 foreach (var s2 in sequencesWithAck)
                 {
                     if (_pendingResponses.TryRemoveElement(x => isMatchingAck(s2.Key, x!), timeout, out response))
@@ -623,15 +623,15 @@ namespace Iot.Device.Arduino
                         if (response == null)
                         {
                             error = CommandError.Aborted;
-                }
+                        }
                         else if (_lastCommandError != CommandError.None)
                         {
-                error = _lastCommandError;
-            }
+                            error = _lastCommandError;
+                        }
                         else if ((e = errorFunc(s2.Key, response)) != CommandError.None)
                         {
                             error = e;
-        }
+                        }
 
                         sequencesWithAck[s2.Key] = true;
                         break;
@@ -746,10 +746,10 @@ namespace Iot.Device.Arduino
                     if (!InputThreadShouldExit)
                     {
                         _logger.LogError(ex, $"Error in parser: {ex.Message}");
-                    OnError?.Invoke($"Firmata protocol error: Parser exception {ex.Message}", ex);
+                        OnError?.Invoke($"Firmata protocol error: Parser exception {ex.Message}", ex);
+                    }
                 }
             }
-        }
         }
 
         public Version QueryFirmataVersion()

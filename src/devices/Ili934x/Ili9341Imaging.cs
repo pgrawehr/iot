@@ -17,7 +17,7 @@ namespace Iot.Device.Ili934x
         /// Send a bitmap to the Ili9341 display.
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
-        public void SendBitmap(Image<Rgba32> bm)
+        public void DrawBitmap(Image<Rgba32> bm)
         {
             int width = (int)ScreenWidth;
             if (width > bm.Width)
@@ -31,7 +31,7 @@ namespace Iot.Device.Ili934x
                 height = bm.Height;
             }
 
-            SendBitmap(bm, new Point(0, 0), new Rectangle(0, 0, width, height));
+            DrawBitmap(bm, new Point(0, 0), new Rectangle(0, 0, width, height));
         }
 
         /// <summary>
@@ -39,9 +39,9 @@ namespace Iot.Device.Ili934x
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="updateRect">A rectangle that defines where in the display the bitmap is written. Note that no scaling is done.</param>
-        public void SendBitmap(Image<Rgba32> bm, Rectangle updateRect)
+        public void DrawBitmap(Image<Rgba32> bm, Rectangle updateRect)
         {
-            SendBitmap(bm, new Point(updateRect.X, updateRect.Y), updateRect);
+            DrawBitmap(bm, new Point(updateRect.X, updateRect.Y), updateRect);
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace Iot.Device.Ili934x
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="sourcePoint">A coordinate point in the source bitmap where copying starts from.</param>
         /// <param name="destinationRect">A rectangle that defines where in the display the bitmap is written. Note that no scaling is done.</param>
-        public void SendBitmap(Image<Rgba32> bm, Point sourcePoint, Rectangle destinationRect)
+        public void DrawBitmap(Image<Rgba32> bm, Point sourcePoint, Rectangle destinationRect)
         {
             if (bm is null)
             {
@@ -62,9 +62,6 @@ namespace Iot.Device.Ili934x
                 throw new ArgumentException($"Pixel format {bm.PixelFormat.ToString()} not supported.", nameof(bm));
             }
 
-            // get the pixel data and send it to the display
-            // SendBitmapPixelData(GetBitmapPixelData(bm, new Rectangle(sourcePoint.X, sourcePoint.Y, destinationRect.Width, destinationRect.Height)), destinationRect);
-            DrawFrame();
         }
 
         private void FillBackBufferFromImage(Image<Rgba32> image, Point sourcePoint, Rectangle destinationRect)
@@ -95,7 +92,7 @@ namespace Iot.Device.Ili934x
         /// Updates the display with the current screen buffer.
         /// <param name="forceFull">Forces a full update, otherwise only changed screen contents are updated</param>
         /// </summary>
-        public void DrawFrame(bool forceFull = false)
+        public void SendFrame(bool forceFull = false)
         {
             if (!_screenBuffer.DangerousTryGetSinglePixelMemory(out var memory))
             {

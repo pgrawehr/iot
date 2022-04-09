@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.I2c;
@@ -57,9 +60,8 @@ namespace Iot.Device.Ili934x
         /// <summary>
         /// This event is fired repeatedly when the user drags over the screen
         /// Call <see cref="EnableEvents"/> to use event handling.
-        /// The second point is null when the drag has ended.
         /// </summary>
-        public event Action<object, Point, Point?>? Dragging;
+        public event Action<object, DragEventArgs>? Dragging;
 
         /// <summary>
         /// The event that is fired when the user zooms (using two fingers)
@@ -310,7 +312,10 @@ namespace Iot.Device.Ili934x
                     else if (_activeTouches == 0)
                     {
                         _dragging = false;
-                        Dragging?.Invoke(this, _points[0], null);
+                        if (_lastActiveTouches == 1)
+                        {
+                            Dragging?.Invoke(this, new DragEventArgs(false, true, _lastPoints[0], _lastPoints[0]));
+                        }
                     }
 
                     if (_activeTouches == 1 && _lastActiveTouches == 0)
@@ -322,8 +327,8 @@ namespace Iot.Device.Ili934x
                     {
                         if (_dragging || Math.Abs(_initialTouchPoint.X - _points[0].X) > TouchSize.Width || Math.Abs(_initialTouchPoint.Y - _points[0].Y) > TouchSize.Height)
                         {
+                            Dragging?.Invoke(this, new DragEventArgs(!_dragging, false, _lastPoints[0], _points[0]));
                             _dragging = true;
-                            Dragging?.Invoke(this, _lastPoints[0], _points[0]);
                         }
                     }
 
