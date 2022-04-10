@@ -323,6 +323,15 @@ namespace Iot.Device.Ili934x
             while (index < data.Length); // repeat until all data sent.
         }
 
+        /// <summary>
+        /// Creates an image with the correct size and color depth to be sent to the screen
+        /// </summary>
+        /// <returns>An image instance</returns>
+        public virtual Image<Rgba32> CreateBackBuffer()
+        {
+            return new Image<Rgba32>((int)ScreenWidth, (int)ScreenWidth, new Rgba32(0, 0, 0));
+        }
+
         /// <inheritdoc cref="Dispose()"/>
         protected virtual void Dispose(bool disposing)
         {

@@ -25,10 +25,15 @@ namespace Iot.Device.Ili934x.Samples
     {
         // Note: Owner of these is the outer class
         private readonly Chsc6440? _touch;
-        private readonly Ili9342 _ili9341;
+        private readonly Ili9341 _ili9341;
         private readonly M5ToughPowerControl? _powerControl;
 
         private bool _menuMode;
+        private float _left;
+        private float _top;
+        private float _scale;
+        private ElectricPotential _backLight;
+        private ScreenMode _screenMode;
 
         public RemoteControl(Chsc6440? touch, Ili9342 ili9341, M5ToughPowerControl? powerControl)
         {
@@ -36,34 +41,68 @@ namespace Iot.Device.Ili934x.Samples
             _ili9341 = ili9341;
             _powerControl = powerControl;
             _menuMode = false;
+            _left = 0;
+            _top = 0;
+            _scale = 1.0f;
+            _screenMode = ScreenMode.Mirror;
+            _backLight = ElectricPotential.FromMillivolts(3000);
+        }
+
+        private void OnTouched(object o, Point point)
+        {
+            Console.WriteLine($"Touched screen at {point}");
+            // For the coordinates here, see the MenuBar.png file
+            if (_menuMode && point.Y < 100)
+            {
+                if (point.X > 222)
+                {
+                    _menuMode = false;
+                    _screenMode = ScreenMode.Mirror;
+                }
+                else if (point.Y < 50 && point.X > 100 && point.Y < 160)
+                {
+                    _screenMode = ScreenMode.Battery;
+                    _menuMode = false;
+                }
+            }
+        }
+
+        public void IncreaseBrightness()
+        {
+            _backLight = _backLight + ElectricPotential.FromMillivolts(200);
+            if (_powerControl != null)
+            {
+                _powerControl.SetLcdVoltage(_backLight);
+            }
+        }
+
+        public void DecreaseBrightness()
+        {
+            _backLight = _backLight - ElectricPotential.FromMillivolts(200);
+            if (_powerControl != null)
+            {
+                _powerControl.SetLcdVoltage(_backLight);
+            }
         }
 
         public void DisplayFeatures()
         {
             DemoMode();
 
-            float left = 0;
-            float top = 0;
-            float scale = 1.0f;
             bool abort = false;
             Point? lastTouchPoint = null;
             using ScreenCapture capture = new ScreenCapture();
-            ElectricPotential backLight = ElectricPotential.FromMillivolts(3000);
             Point dragBegin = Point.Empty;
 
             if (_touch != null)
             {
-                _touch.Touched += (o, point) =>
-                {
-                    lastTouchPoint = point;
-                    Console.WriteLine($"Touched screen at {point}");
-                };
+                _touch.Touched += OnTouched;
 
                 _touch.Dragging += (o, e) =>
                 {
                     var (xdiff, ydiff) = (e.LastPoint.X - e.CurrentPoint.X, e.LastPoint.Y - e.CurrentPoint.Y);
-                    left += xdiff * scale;
-                    top += ydiff * scale;
+                    _left += xdiff * _scale;
+                    _top += ydiff * _scale;
                     Console.WriteLine($"Dragging at {e.CurrentPoint.X}/{e.CurrentPoint.Y} by {xdiff}/{ydiff}.");
                     if (e.IsDragBegin)
                     {
@@ -82,69 +121,78 @@ namespace Iot.Device.Ili934x.Samples
                     float scaleChange = (float)oldDiff / newDiff;
                     if (scaleChange != 0)
                     {
-                        scale = scale / scaleChange;
+                        _scale = _scale / scaleChange;
                     }
                 };
             }
 
             while (!abort)
             {
-                bool backLightChanged = false;
                 Stopwatch sw = Stopwatch.StartNew();
-                if (Console.KeyAvailable)
+                KeyboardControl(ref abort);
+
+                switch (_screenMode)
                 {
-                    var key = Console.ReadKey(true).Key;
-                    switch (key)
-                    {
-                        case ConsoleKey.Escape:
-                            abort = true;
-                            break;
-                        case ConsoleKey.RightArrow:
-                            left += 10;
-                            break;
-                        case ConsoleKey.DownArrow:
-                            top += 10;
-                            break;
-                        case ConsoleKey.LeftArrow:
-                            left -= 10;
-                            break;
-                        case ConsoleKey.UpArrow:
-                            top -= 10;
-                            break;
-                        case ConsoleKey.Add:
-                            scale *= 1.1f;
-                            break;
-                        case ConsoleKey.Subtract:
-                            scale /= 1.1f;
-                            break;
-                        case ConsoleKey.Insert:
-                            backLight = backLight + ElectricPotential.FromMillivolts(200);
-                            backLightChanged = true;
-                            break;
-                        case ConsoleKey.Delete:
-                            backLight = backLight - ElectricPotential.FromMillivolts(200);
-                            backLightChanged = true;
-                            break;
-                    }
+                    case ScreenMode.Mirror:
+                        DrawScreenContents(capture, _scale, ref _left, ref _top, lastTouchPoint);
+                        break;
+                    case ScreenMode.Battery:
+                        DrawPowerStatus();
+                        break;
+                    default:
+                        _ili9341.ClearScreen();
+                        break;
                 }
 
-                if (_powerControl != null && backLightChanged)
-                {
-                    _powerControl.SetLcdVoltage(backLight);
-                }
-
-                DrawScreenContents(capture, scale, ref left, ref top, lastTouchPoint);
                 lastTouchPoint = null;
 
                 if (_menuMode)
                 {
-                    _ili9341.FillRect(new Rgba32(0, 0, 200), 0, 0, _ili9341.ScreenWidth, _ili9341.ScreenWidth);
-                    _ili9341.FillRect(new Rgba32(0, 0, 0), 2, 2, _ili9341.ScreenWidth - 4, _ili9341.ScreenWidth - 4);
+                    using var bm = Image<Rgba32>.Load<Rgba32>("images/MenuBar.png");
+                    _ili9341.DrawBitmap(bm, new Point(0, 0), new Rectangle(0, 0, bm.Width, bm.Height));
                 }
 
                 _ili9341.SendFrame();
 
                 Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
+            }
+        }
+
+        private void KeyboardControl(ref bool abort)
+        {
+            if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(true).Key;
+                switch (key)
+                {
+                    case ConsoleKey.Escape:
+                        abort = true;
+                        break;
+                    case ConsoleKey.RightArrow:
+                        _left += 10;
+                        break;
+                    case ConsoleKey.DownArrow:
+                        _top += 10;
+                        break;
+                    case ConsoleKey.LeftArrow:
+                        _left -= 10;
+                        break;
+                    case ConsoleKey.UpArrow:
+                        _top -= 10;
+                        break;
+                    case ConsoleKey.Add:
+                        _scale *= 1.1f;
+                        break;
+                    case ConsoleKey.Subtract:
+                        _scale /= 1.1f;
+                        break;
+                    case ConsoleKey.Insert:
+                        IncreaseBrightness();
+                        break;
+                    case ConsoleKey.Delete:
+                        DecreaseBrightness();
+                        break;
+                }
             }
         }
 
