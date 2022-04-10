@@ -119,6 +119,12 @@ namespace Iot.Device.Ili934x.Samples
             RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl);
             ctrol.DisplayFeatures();
 
+            ili9341.ClearScreen(true);
+            if (powerControl != null)
+            {
+                powerControl.SetLcdVoltage(ElectricPotential.Zero);
+            }
+
             touch?.Dispose();
 
             ili9341.Dispose();

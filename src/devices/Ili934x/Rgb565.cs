@@ -30,6 +30,12 @@ namespace Iot.Device.Ili934x
             InitFrom(r, g, b);
         }
 
+        public int R => (Swap(_value) >> 8) | 0x7;
+
+        public int G => ((Swap(_value) & 0x7E0) >> 3) | 0x7;
+
+        public int B => ((Swap(_value) & 0x1F) << 3) | 0x7;
+
         private void InitFrom(ushort r, ushort g, ushort b)
         {
             UInt16 retval = (UInt16)(r >> 3);
@@ -75,8 +81,10 @@ namespace Iot.Device.Ili934x
             // combine with the 6 MSB if the red or blue value
             retval |= (UInt16)(color.B >> 3);
 
-            return new Rgb565((ushort)(retval >> 8 | retval << 8));
+            return new Rgb565(Swap(retval));
         }
+
+        private static ushort Swap(ushort val) => (ushort)(val >> 8 | val << 8);
 
         public ushort PackedValue
         {
@@ -208,6 +216,39 @@ namespace Iot.Device.Ili934x
         public static bool operator !=(Rgb565 left, Rgb565 right)
         {
             return !left.Equals(right);
+        }
+
+        /// <summary>
+        /// Returns true if the two colors are almost equal
+        /// </summary>
+        /// <param name="a">First color</param>
+        /// <param name="b">Second color</param>
+        /// <param name="delta">The allowed delta, in visible bits</param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public static bool AlmostEqual(Rgb565 a, Rgb565 b, int delta)
+        {
+            if (a.PackedValue == b.PackedValue)
+            {
+                return true;
+            }
+
+            if (Math.Abs(a.R - b.R) > (delta << 3))
+            {
+                return false;
+            }
+
+            if (Math.Abs(a.G - b.G) > (delta << 2))
+            {
+                return false;
+            }
+
+            if (Math.Abs(a.B - b.B) > (delta << 3))
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

@@ -80,8 +80,8 @@ namespace Iot.Device.Ili934x
                     var row = x.GetRowSpan(y);
                     for (int i = destinationRect.X; i < destinationRect.Width + destinationRect.X; i++)
                     {
-                        int xSource = sourcePoint.X + i;
-                        int ySource = sourcePoint.Y + y;
+                        int xSource = sourcePoint.X + i - destinationRect.X;
+                        int ySource = sourcePoint.Y + y - destinationRect.Y;
                         row[i] = Rgb565.FromRgba32(image[xSource, ySource]);
                     }
                 }
@@ -112,7 +112,7 @@ namespace Iot.Device.Ili934x
                 {
                     for (int x = 0; x < _screenBuffer.Width; x++)
                     {
-                        if (_screenBuffer[x, y] != _previousBuffer[x, y])
+                        if (!Rgb565.AlmostEqual(_screenBuffer[x, y], _previousBuffer[x, y], 2))
                         {
                             topRow = y;
                             goto reverse;
@@ -129,7 +129,7 @@ namespace Iot.Device.Ili934x
                 {
                     for (int x = 0; x < _screenBuffer.Width; x++)
                     {
-                        if (_screenBuffer[x, y] != _previousBuffer[x, y])
+                        if (!Rgb565.AlmostEqual(_screenBuffer[x, y], _previousBuffer[x, y], 2))
                         {
                             bottomRow = y;
                             goto end;
