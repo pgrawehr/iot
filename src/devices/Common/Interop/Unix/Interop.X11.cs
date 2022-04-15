@@ -23,6 +23,15 @@ partial class Interop
     internal static UInt32 XYPixmap = 1; /* depth == drawable depth */
     internal static UInt32 ZPixmap = 2; /* depth == drawable depth */
 
+    internal static int KeyPress = 2;
+    internal static int KeyReleae = 3;
+    internal static int ButtonPress = 4;
+    internal static int ButtonRelease = 5;
+
+    internal static int PointerWindow = 0;
+    internal static int ButtonPressMask = (1 << 2);
+    internal static int ButtonReleaseMask = (1 << 3);
+
     /// <summary>
     /// Opens the display and returns an image pointer
     /// </summary>
@@ -36,12 +45,12 @@ partial class Interop
     internal static extern unsafe void XCloseDisplay(IntPtr display);
 
     [DllImport(X11)]
-    internal static extern unsafe IntPtr XDefaultRootWindow(IntPtr display);
+    internal static extern unsafe Window XDefaultRootWindow(IntPtr display);
 
     [DllImport(X11)]
     internal static extern int XGetWindowAttributes(
         IntPtr display,
-        IntPtr w,
+        Window w,
         ref XWindowAttributes window_attributes_return);
 
     [DllImport(X11)]
@@ -61,13 +70,64 @@ partial class Interop
     [DllImport(X11)]
     internal static extern IntPtr XGetImage(
         IntPtr display,
-        IntPtr d, // Window
+        Window d, // Window
         int x,
         int y,
         UInt32 width,
         UInt32 height,
         UInt32 plane_mask,
         UInt32 format);
+
+    [DllImport(X11)]
+    internal static extern bool XQueryPointer(
+        IntPtr display,          /* display */
+        Window wm,               /* w */
+        [In, Out] ref Window root_return,  /* root_return */
+        [In, Out] ref Window child_return, /* child_return */
+        [In, Out] ref int root_x_return,   /* root_x_return */
+        [In, Out] ref int root_y_return,   /* root_y_return */
+        [In, Out] ref int win_x_return,    /* win_x_return */
+        [In, Out] ref int win_y_return,    /* win_y_return */
+        [In, Out] ref uint mask_return);    /* mask_return */
+
+    [DllImport(X11)]
+    internal static extern int XSendEvent(
+        IntPtr display,        /* display */
+        Window w,              /* w */
+        bool propagate,        /* propagate */
+        int event_mask,       /* event_mask */
+        [In, Out] ref XButtonEvent event_send); /* event_send */
+
+    [DllImport(X11)]
+    internal static extern int XFlush(IntPtr display);
+
+    [DllImport(X11)]
+    internal static extern int XWindowEvent(
+        IntPtr display,
+        Window w,
+        int event_mask,
+        ref XButtonEvent event_return);
+
+    [DllImport(X11)]
+    internal static extern Window XCreateSimpleWindow(
+        IntPtr display,
+        Window parent,
+        int x,
+        int y,
+        uint width,
+        uint height,
+        uint border_width,
+        Int32 border,
+        Int32 background);
+
+    [DllImport(X11)]
+    internal static extern int XSelectInput(
+        IntPtr display,
+        Window w,
+        int event_mask);
+
+    [DllImport(X11)]
+    internal static extern void XMapWindow(IntPtr display, Window w);
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct XWindowAttributes
@@ -139,5 +199,70 @@ partial class Interop
         public PutPixel putPixel;
         public SubImage subImage;
         public AddPixel addPixel;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct Time
+    {
+        public UInt32 time;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct Window : IEquatable<Window>
+    {
+        public static readonly Window Zero = new Window();
+
+        /// <summary>
+        /// This must be the first and only non-static member of this class!
+        /// </summary>
+        public IntPtr handle;
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is Window w)
+            {
+                return Equals(w);
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return handle.GetHashCode();
+        }
+
+        public bool Equals(Window other)
+        {
+            return handle == other.handle;
+        }
+
+        public static bool operator ==(Window a, Window b)
+        {
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(Window a, Window b)
+        {
+            return !a.Equals(b);
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct XButtonEvent
+    {
+        public int type;       /* ButtonPress or ButtonRelease */
+        public uint serial;   /* # of last request processed by server */
+        public bool send_event;    /* true if this came from a SendEvent request */
+        public IntPtr display;   /* Display the event was read from */
+        public Window window;      /* ``event'' window it is reported relative to */
+        public Window root;        /* root window that the event occurred on */
+        public Window subwindow;   /* child window */
+        public Time time;      /* milliseconds */
+        public int x, y;       /* pointer x, y coordinates in event window */
+        public int x_root, y_root; /* coordinates relative to root */
+        public uint state; /* key or button mask */
+        public uint button;    /* detail */
+        public bool same_screen;   /* same screen flag */
     }
 }

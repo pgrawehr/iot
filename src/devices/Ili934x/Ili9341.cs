@@ -96,7 +96,9 @@ namespace Iot.Device.Ili934x
             Thread.Sleep(100);
             SendCommand(Ili9341Command.MemoryWrite);
 
-            Configuration imageConfiguration = Configuration.Default.Clone();
+            var cfg = Configuration.Default;
+
+            Configuration imageConfiguration = cfg.Clone();
             imageConfiguration.PreferContiguousImageBuffers = true;
             _screenBuffer = new Image<Rgb565>(imageConfiguration, ScreenWidth, ScreenHeight, new Rgb565(0, 0, 0));
             _previousBuffer = new Image<Rgb565>(imageConfiguration, ScreenWidth, ScreenHeight, new Rgb565(0, 0, 0));

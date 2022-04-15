@@ -58,6 +58,15 @@ namespace Iot.Device.Ili934x.Samples
                     isArduino = true;
                     address = IPAddress.Parse(args[1]);
                 }
+
+                if (args.Any(x => x.Equals("--debug", StringComparison.OrdinalIgnoreCase)))
+                {
+                    Console.WriteLine("Waiting for debugger...");
+                    while (!Debugger.IsAttached)
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
             }
 
             int pinDC = isFt4222 ? 1 : 23;

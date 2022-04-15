@@ -7,19 +7,31 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SixLabors.ImageSharp;
+using static Interop;
 
 namespace Iot.Device.Graphics
 {
     /// <summary>
     /// This class provides an operating-system independent way of simulating mouse clicks
     /// </summary>
-    public class MouseClickSimulator
+    public partial class MouseClickSimulator
     {
         /// <summary>
         /// Creates a new instance of <see cref="MouseClickSimulator"/>
         /// </summary>
         public MouseClickSimulator()
         {
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                unsafe
+                {
+                    _display = XOpenDisplay(null);
+                    if (_display == IntPtr.Zero)
+                    {
+                        throw new NotSupportedException("Unable to open display - XOpenDisplay failed");
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -31,26 +43,14 @@ namespace Iot.Device.Graphics
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                var mpt = new Interop.MousePoint(pt.X, pt.Y);
-                Interop.SetCursorPosition(mpt);
-                if ((buttons & MouseButtonMode.Left) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.LeftDown | Interop.MouseEventFlags.Absolute);
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.LeftUp | Interop.MouseEventFlags.Absolute);
-                }
+                PerformClickWindows(pt, buttons);
+                return;
+            }
 
-                if ((buttons & MouseButtonMode.Right) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.RightDown | Interop.MouseEventFlags.Absolute);
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.RightUp | Interop.MouseEventFlags.Absolute);
-                }
-
-                if ((buttons & MouseButtonMode.Middle) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.MiddleDown | Interop.MouseEventFlags.Absolute);
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.MiddleUp | Interop.MouseEventFlags.Absolute);
-                }
-
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                // DoSomeWindowing();
+                PerformMouseClickLinux(buttons);
                 return;
             }
 
@@ -66,22 +66,7 @@ namespace Iot.Device.Graphics
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                var mpt = new Interop.MousePoint(pt.X, pt.Y);
-                Interop.SetCursorPosition(mpt);
-                if ((buttons & MouseButtonMode.Left) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.LeftDown | Interop.MouseEventFlags.Absolute);
-                }
-
-                if ((buttons & MouseButtonMode.Right) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.RightDown | Interop.MouseEventFlags.Absolute);
-                }
-
-                if ((buttons & MouseButtonMode.Middle) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.MiddleDown | Interop.MouseEventFlags.Absolute);
-                }
+                MouseDownWindows(pt, buttons);
 
                 return;
             }
@@ -98,22 +83,7 @@ namespace Iot.Device.Graphics
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                var mpt = new Interop.MousePoint(pt.X, pt.Y);
-                Interop.SetCursorPosition(mpt);
-                if ((buttons & MouseButtonMode.Left) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.LeftUp | Interop.MouseEventFlags.Absolute);
-                }
-
-                if ((buttons & MouseButtonMode.Right) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.RightUp | Interop.MouseEventFlags.Absolute);
-                }
-
-                if ((buttons & MouseButtonMode.Middle) != MouseButtonMode.None)
-                {
-                    Interop.MouseEvent(mpt, Interop.MouseEventFlags.MiddleUp | Interop.MouseEventFlags.Absolute);
-                }
+                MouseUpWindows(pt, buttons);
 
                 return;
             }
@@ -130,8 +100,7 @@ namespace Iot.Device.Graphics
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                var mpt = new Interop.MousePoint(pt.X, pt.Y);
-                Interop.SetCursorPosition(mpt);
+                MouseMoveWindows(pt);
                 return;
             }
 
