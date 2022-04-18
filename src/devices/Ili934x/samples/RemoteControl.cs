@@ -112,9 +112,9 @@ namespace Iot.Device.Ili934x.Samples
                     _menuMode = true;
                 }
 
-                if (_mouseEnabled == MouseButtonMode.Left)
+                if (_mouseEnabled != MouseButtonMode.None)
                 {
-                    _clickSimulator.PerformClick(ToAbsoluteScreenPosition(point), MouseButtonMode.Left);
+                    _clickSimulator.PerformClick(ToAbsoluteScreenPosition(point), _mouseEnabled);
                 }
             }
         }

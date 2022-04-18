@@ -30,6 +30,8 @@ namespace Iot.Device.Ili934x.Samples
 {
     internal class Program
     {
+        private static LowLevelX11Window? _window = null;
+
         public static int Main(string[] args)
         {
             bool isFt4222 = false;
@@ -68,6 +70,8 @@ namespace Iot.Device.Ili934x.Samples
                     }
                 }
             }
+
+            TestWindowing();
 
             int pinDC = isFt4222 ? 1 : 23;
             int pinReset = isFt4222 ? 0 : 24;
@@ -138,8 +142,10 @@ namespace Iot.Device.Ili934x.Samples
 
             ili9341.Dispose();
 
-            board?.Dispose();
             powerControl?.Dispose();
+            board?.Dispose();
+
+            _window?.Dispose();
 
             return 0;
         }
@@ -163,6 +169,16 @@ namespace Iot.Device.Ili934x.Samples
             {
                 ClockFrequency = Ili9341.DefaultSpiClockFrequency, Mode = Ili9341.DefaultSpiMode
             });
+        }
+
+        private static void TestWindowing()
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                _window = new LowLevelX11Window();
+                _window.CreateWindow(10, 20, 200, 100);
+                _window.StartMessageLoop();
+            }
         }
     }
 }

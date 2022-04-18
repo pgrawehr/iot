@@ -27,10 +27,36 @@ partial class Interop
     internal static int KeyReleae = 3;
     internal static int ButtonPress = 4;
     internal static int ButtonRelease = 5;
+    internal static int MotionNotify = 6;
 
     internal static int PointerWindow = 0;
+
+    internal static int NoEventMask = 0;
+    internal static int KeyPressMask = (1 << 0);
+    internal static int KeyReleaseMask = (1 << 1);
     internal static int ButtonPressMask = (1 << 2);
     internal static int ButtonReleaseMask = (1 << 3);
+    internal static int EnterWindowMask = (1 << 4);
+    internal static int LeaveWindowMask = (1 << 5);
+    internal static int PointerMotionMask = (1 << 6);
+    internal static int PointerMotionHintMask = (1 << 7);
+    internal static int Button1MotionMask = (1 << 8);
+    internal static int Button2MotionMask = (1 << 9);
+    internal static int Button3MotionMask = (1 << 10);
+    internal static int Button4MotionMask = (1 << 11);
+    internal static int Button5MotionMask = (1 << 12);
+    internal static int ButtonMotionMask = (1 << 13);
+    internal static int KeymapStateMask = (1 << 14);
+    internal static int ExposureMask = (1 << 15);
+    internal static int VisibilityChangeMask = (1 << 16);
+    internal static int StructureNotifyMask = (1 << 17);
+    internal static int ResizeRedirectMask = (1 << 18);
+    internal static int SubstructureNotifyMask = (1 << 19);
+    internal static int SubstructureRedirectMask = (1 << 20);
+    internal static int FocusChangeMask = (1 << 21);
+    internal static int PropertyChangeMask = (1 << 22);
+    internal static int ColormapChangeMask = (1 << 23);
+    internal static int OwnerGrabButtonMask = (1 << 24);
 
     /// <summary>
     /// Opens the display and returns an image pointer
@@ -40,6 +66,14 @@ partial class Interop
     /// in the call to <see cref="XDestroyImage"/></returns>
     [DllImport(X11, CharSet = CharSet.Ansi)]
     internal static extern unsafe IntPtr XOpenDisplay(char* displayName);
+
+    internal static IntPtr XOpenDisplay()
+    {
+        unsafe
+        {
+            return XOpenDisplay(null);
+        }
+    }
 
     [DllImport(X11)]
     internal static extern unsafe void XCloseDisplay(IntPtr display);
@@ -99,6 +133,14 @@ partial class Interop
         [In, Out] ref XButtonEvent event_send); /* event_send */
 
     [DllImport(X11)]
+    internal static extern int XSendEvent(
+        IntPtr display,        /* display */
+        Window w,              /* w */
+        bool propagate,        /* propagate */
+        int event_mask,       /* event_mask */
+        [In, Out] ref XMotionEvent event_send); /* event_send */
+
+    [DllImport(X11)]
     internal static extern int XFlush(IntPtr display);
 
     [DllImport(X11)]
@@ -107,6 +149,13 @@ partial class Interop
         Window w,
         int event_mask,
         ref XButtonEvent event_return);
+
+    [DllImport(X11)]
+    internal static extern int XWindowEvent(
+        IntPtr display,
+        Window w,
+        int event_mask,
+        ref XMotionEvent event_return);
 
     [DllImport(X11)]
     internal static extern Window XCreateSimpleWindow(
@@ -128,6 +177,29 @@ partial class Interop
 
     [DllImport(X11)]
     internal static extern void XMapWindow(IntPtr display, Window w);
+
+    [DllImport(X11)]
+    internal static extern int XWarpPointer(
+        IntPtr display,
+        Window src_w,
+        Window dest_w,
+        int src_x,
+        int src_y,
+        uint src_width,
+        uint src_height,
+        int dest_x,
+        int dest_y);
+
+    [DllImport(X11)]
+    internal static extern int XPeekEvent(IntPtr display, [In, Out]ref XEvent event_return);
+
+    [DllImport(X11)]
+    internal static extern int XUnmapWindow(
+        IntPtr display,
+        Window w);
+
+    [DllImport(X11)]
+    internal static extern int XDestroyWindow(IntPtr display, Window w);
 
     [StructLayout(LayoutKind.Sequential)]
     internal struct XWindowAttributes
@@ -264,5 +336,37 @@ partial class Interop
         public uint state; /* key or button mask */
         public uint button;    /* detail */
         public bool same_screen;   /* same screen flag */
+    }
+
+    internal struct XMotionEvent
+    {
+        public int type; /* MotionNotify */
+        public uint serial; /* # of last request processed by server */
+        public bool send_event; /* true if this came from a SendEvent request */
+        public IntPtr display; /* Display the event was read from */
+        public Window window; /* ``event'' window reported relative to */
+        public Window root; /* root window that the event occurred on */
+        public Window subwindow; /* child window */
+        public Time time; /* milliseconds */
+        public int x, y; /* pointer x, y coordinates in event window */
+        public int x_root, y_root; /* coordinates relative to root */
+        public uint state; /* key or button mask */
+        public bool is_hint; /* detail */
+        public bool same_screen; /* same screen flag */
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    internal unsafe struct XEvent
+    {
+        [FieldOffset(0)]
+        public int type;
+        [FieldOffset(0)]
+        public XButtonEvent xbutton;
+
+        [FieldOffset(0)]
+        public XMotionEvent xmotion;
+
+        [FieldOffset(0)]
+        public fixed long pad[24];
     }
 }

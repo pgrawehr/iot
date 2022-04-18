@@ -50,7 +50,7 @@ namespace Iot.Device.Graphics
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 // DoSomeWindowing();
-                PerformMouseClickLinux(buttons);
+                PerformMouseClickLinux(pt, buttons, true, true);
                 return;
             }
 
@@ -71,6 +71,13 @@ namespace Iot.Device.Graphics
                 return;
             }
 
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                // DoSomeWindowing();
+                PerformMouseClickLinux(pt, buttons, true, false);
+                return;
+            }
+
             throw new PlatformNotSupportedException();
         }
 
@@ -88,6 +95,13 @@ namespace Iot.Device.Graphics
                 return;
             }
 
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                // DoSomeWindowing();
+                PerformMouseClickLinux(pt, buttons, false, true);
+                return;
+            }
+
             throw new PlatformNotSupportedException();
         }
 
@@ -101,6 +115,13 @@ namespace Iot.Device.Graphics
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
                 MouseMoveWindows(pt);
+                return;
+            }
+
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                // DoSomeWindowing();
+                MoveMouseTo(pt);
                 return;
             }
 

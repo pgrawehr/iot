@@ -2,11 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using SixLabors.ImageSharp;
 using static Interop;
 
 namespace Iot.Device.Graphics
@@ -15,67 +12,144 @@ namespace Iot.Device.Graphics
     public partial class MouseClickSimulator
     {
         private IntPtr _display;
+        private MouseButtonMode _currentButtons;
 
-        private MouseButtonMode GetButtonEvent(Window w)
+        private static XButtonEvent GetState(uint button, XButtonEvent ev1)
         {
-            XButtonEvent ev = new XButtonEvent();
-            XWindowEvent(_display, w, -1, ref ev);
-            if (ev.button != 0)
+            // The state is the bitmask of the buttons just prior to the event
+            // Therefore it is 0 on a buttonDown event and non-zero on drag and up events
+            ev1.state = 0;
+            if (button == 1)
             {
-                Console.WriteLine("Button was pressed");
-                return MouseButtonMode.Left;
+                ev1.state = 256;
+            }
+            else if (button == 2)
+            {
+                ev1.state = 512;
+            }
+            else if (button == 3)
+            {
+                ev1.state = 1024;
             }
 
-            return MouseButtonMode.None;
+            return ev1;
         }
 
-        private Window CreateWindow(int x, int y, int width, int height)
+        private void PerformMouseClickLinux(Point pt, MouseButtonMode buttons, bool down, bool up)
         {
-            return XCreateSimpleWindow(_display, XDefaultRootWindow(_display), 0, 0, 100, 200, 2, 0x0FEEDDCC, 0x0FAA0020);
-        }
-
-        private void DoSomeWindowing()
-        {
-            Window w = CreateWindow(20, 30, 100, 200);
-            XMapWindow(_display, w);
-            XSelectInput(_display, w, ButtonPressMask);
-            while (w != Window.Zero)
-            {
-                XButtonEvent ev = default;
-                XWindowEvent(_display, w, ButtonPressMask, ref ev);
-                if (ev.type == 4)
-                {
-                    Console.WriteLine($"Clicked at {ev.x}, {ev.y}");
-                }
-            }
-        }
-
-        private void PerformMouseClickLinux(MouseButtonMode buttons)
-        {
-            // Todo: Move mouse
+            MoveMouseTo(pt);
             if ((buttons & MouseButtonMode.Left) != MouseButtonMode.None)
             {
-                PerformMouseClickLinux(1);
+                PerformMouseClickLinux(1, down, up);
             }
 
             if ((buttons & MouseButtonMode.Right) != MouseButtonMode.None)
             {
-                PerformMouseClickLinux(2);
+                PerformMouseClickLinux(3, down, up);
             }
 
             if ((buttons & MouseButtonMode.Middle) != MouseButtonMode.None)
             {
-                PerformMouseClickLinux(3);
+                PerformMouseClickLinux(2, down, up);
+            }
+
+            if (down && !up)
+            {
+                _currentButtons = buttons;
+            }
+
+            if (up)
+            {
+                _currentButtons = MouseButtonMode.None;
             }
         }
 
-        private void PerformMouseClickLinux(uint button)
+        private MouseButtonMode GetMouseCoordinates(out Point pt)
+        {
+            XButtonEvent ev = default;
+            XQueryPointer(_display, XDefaultRootWindow(_display),
+                ref ev.root, ref ev.window,
+                ref ev.x_root, ref ev.y_root,
+                ref ev.x, ref ev.y,
+                ref ev.state);
+
+            pt = default;
+            pt.X = ev.x;
+            pt.Y = ev.y;
+
+            MouseButtonMode mode = MouseButtonMode.None;
+
+            if ((ev.state & 1) != 0)
+            {
+                mode |= MouseButtonMode.Left;
+            }
+
+            if ((ev.state & 2) != 0)
+            {
+                mode |= MouseButtonMode.Right;
+            }
+
+            if ((ev.state & 3) != 0)
+            {
+                mode |= MouseButtonMode.Middle;
+            }
+
+            return mode;
+        }
+
+        private void MoveMouseTo(Point pt)
+        {
+            MoveMouseTo(pt.X, pt.Y);
+        }
+
+        private void MoveMouseTo(int x, int y)
+        {
+            GetMouseCoordinates(out Point pt);
+            // XWarpPointer(_display, Window.Zero, Window.Zero, 0, 0, 0, 0, -pt.X, -pt.Y);
+            // XWarpPointer(_display, Window.Zero, Window.Zero, 0, 0, 0, 0, x, y);
+            // XWarpPointer moves the mouse relative, therefore offset the movement with the current position
+            XWarpPointer(_display, Window.Zero, Window.Zero, 0, 0, 0, 0, x - pt.X, y - pt.Y);
+
+            XMotionEvent ev1 = default;
+            ev1.type = MotionNotify;
+            while (ev1.subwindow != Window.Zero)
+            {
+                ev1.window = ev1.subwindow;
+                XQueryPointer(_display, ev1.window,
+                    ref ev1.root, ref ev1.subwindow,
+                    ref ev1.x_root, ref ev1.y_root,
+                    ref ev1.x, ref ev1.y,
+                    ref ev1.state);
+            }
+
+            ev1.state = 0;
+            ev1.is_hint = false;
+            if ((_currentButtons & MouseButtonMode.Left) != MouseButtonMode.None)
+            {
+                ev1.state = 256;
+            }
+
+            if ((_currentButtons & MouseButtonMode.Right) != MouseButtonMode.None)
+            {
+                ev1.state = 1024;
+            }
+
+            if ((_currentButtons & MouseButtonMode.Middle) != MouseButtonMode.None)
+            {
+                ev1.state = 512;
+            }
+
+            XSendEvent(_display, ev1.window, true, PointerMotionMask | PointerMotionHintMask | ButtonMotionMask, ref ev1);
+        }
+
+        private void PerformMouseClickLinux(uint button, bool down, bool up)
         {
             // Create and setting up the event
             Interop.XButtonEvent ev1 = default;
 
             ev1.button = button;
             ev1.same_screen = true;
+            ev1.send_event = true;
             ev1.subwindow = XDefaultRootWindow(_display);
             while (ev1.subwindow != Window.Zero)
             {
@@ -88,26 +162,35 @@ namespace Iot.Device.Graphics
             }
 
             // Press
-            ev1.type = ButtonPress;
-            Console.WriteLine($"Mouse is at position {ev1.x}, {ev1.y} of window {ev1.window}");
-            if (XSendEvent(_display, Window.Zero /* PointerWindow */, true, ButtonPressMask, ref ev1) == 0)
+            if (down)
             {
-                throw new InvalidOperationException("Error sending mouse press event");
+                ev1.type = ButtonPress;
+                GetState(0, ev1);
+                Console.WriteLine($"Mouse is at position {ev1.x}, {ev1.y} of window {ev1.window}");
+                if (XSendEvent(_display, Window.Zero /* PointerWindow */, true, ButtonPressMask, ref ev1) == 0)
+                {
+                    throw new InvalidOperationException("Error sending mouse press event");
+                }
+
+                Console.WriteLine("Press event sent");
+                XFlush(_display);
+                Thread.Sleep(10);
             }
 
-            Console.WriteLine("Press event sent");
-            XFlush(_display);
-            Thread.Sleep(1);
-
-            // Release
-            ev1.type = ButtonRelease;
-            if (XSendEvent(_display, Window.Zero, true, ButtonReleaseMask, ref ev1) == 0)
+            if (up)
             {
-                throw new InvalidOperationException("Error sending mouse release event");
-            }
+                // Release
+                ev1.type = ButtonRelease;
+                ev1 = GetState(button, ev1);
 
-            Console.WriteLine("Press release event sent");
-            XFlush(_display);
+                if (XSendEvent(_display, Window.Zero, true, ButtonReleaseMask, ref ev1) == 0)
+                {
+                    throw new InvalidOperationException("Error sending mouse release event");
+                }
+
+                Console.WriteLine("Press release event sent");
+                XFlush(_display);
+            }
         }
     }
 }

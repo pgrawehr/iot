@@ -193,6 +193,8 @@ namespace Iot.Device.Ili934x
                 _wasRead = false;
 
                 Span<Point> p = stackalloc Point[2];
+                p[0] = default;
+                p[1] = default;
                 byte pts = 0;
                 int p0f = 0;
                 Span<byte> register = stackalloc byte[1]
@@ -232,6 +234,13 @@ namespace Iot.Device.Ili934x
                             p[1].X = ((data[7] << 8) | data[8]) & 0x0fff;
                             p[1].Y = ((data[9] << 8) | data[10]) & 0x0fff;
                         }
+                    }
+
+                    if (p[0].X > ScreenSize.Width || p[0].X < 0 || p[0].Y > ScreenSize.Height || p[0].Y < 0
+                        || p[1].X > ScreenSize.Width || p[1].X < 0 || p[1].Y > ScreenSize.Height || p[1].Y < 0)
+                    {
+                        // Invalid data
+                        return;
                     }
                 }
 
