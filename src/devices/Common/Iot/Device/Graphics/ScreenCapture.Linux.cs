@@ -47,19 +47,19 @@ namespace Iot.Device.Graphics
 
             resultImage.DangerousTryGetSinglePixelMemory(out var memory);
 
-            uint red_mask = image.red_mask;
-            uint green_mask = image.green_mask;
-            uint blue_mask = image.blue_mask;
+            nuint red_mask = image.red_mask;
+            nuint green_mask = image.green_mask;
+            nuint blue_mask = image.blue_mask;
 
             for (int x = 0; x < area.Width; x++)
             {
                 for (int y = 0; y < area.Height; y++)
                 {
-                    UInt32 pixel = XGetPixel(image, x, y);
+                    UInt32 pixel = XGetPixel(rawImage, x, y);
 
-                    UInt32 blue = pixel & blue_mask;
-                    UInt32 green = (pixel & green_mask) >> 8;
-                    UInt32 red = (pixel & red_mask) >> 16;
+                    nuint blue = pixel & blue_mask;
+                    nuint green = (pixel & green_mask) >> 8;
+                    nuint red = (pixel & red_mask) >> 16;
 
                     var color = new Rgba32((byte)red, (byte)green, (byte)blue);
                     memory.Span[area.Width * y + x] = color;

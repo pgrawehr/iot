@@ -117,7 +117,7 @@ partial class Interop
         ref XWindowAttributes window_attributes_return);
 
     [DllImport(X11)]
-    internal static extern UInt32 XGetPixel(XImage image, int x, int y);
+    internal static extern UInt32 XGetPixel(IntPtr image, int x, int y);
 
     /// <summary>
     /// Free the image.
@@ -283,11 +283,15 @@ partial class Interop
         public int depth;          /* depth of image */
         public int bytes_per_line;     /* accelarator to next line */
         public int bits_per_pixel;     /* bits per pixel (ZPixmap) */
-        public UInt32 red_mask; /* bits in z arrangment */
-        public UInt32 green_mask;
-        public UInt32 blue_mask;
+        public nuint red_mask; /* bits in z arrangment */
+        public nuint green_mask;
+        public nuint blue_mask;
         public IntPtr obdata;        /* hook for the object routines to hang on */
-        public ImageFuncs funcs;
+        /*public ImageFuncs funcs;
+        public UInt64 pad1;
+        public UInt64 pad2;
+        public UInt64 pad3;
+        public UInt64 pad4;*/
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -352,9 +356,9 @@ partial class Interop
     [StructLayout(LayoutKind.Sequential)]
     internal struct XButtonEvent
     {
-        public int type;       /* ButtonPress or ButtonRelease */
-        public uint serial;   /* # of last request processed by server */
-        public bool send_event;    /* true if this came from a SendEvent request */
+        public nint type;       /* ButtonPress or ButtonRelease */
+        public nuint serial;   /* # of last request processed by server */
+        public nuint send_event;    /* true if this came from a SendEvent request */
         public IntPtr display;   /* Display the event was read from */
         public Window window;      /* ``event'' window it is reported relative to */
         public Window root;        /* root window that the event occurred on */
