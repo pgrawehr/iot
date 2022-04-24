@@ -112,6 +112,7 @@ namespace Iot.Device.Graphics
 
             XMotionEvent ev1 = default;
             ev1.type = MotionNotify;
+            ev1.subwindow = XDefaultRootWindow(_display);
             while (ev1.subwindow != Window.Zero)
             {
                 ev1.window = ev1.subwindow;
@@ -139,6 +140,7 @@ namespace Iot.Device.Graphics
                 ev1.state = 512;
             }
 
+            Console.WriteLine($"Mouse moving to {ev1.x}, {ev1.y}");
             XSendEvent(_display, ev1.window, true, PointerMotionMask | PointerMotionHintMask | ButtonMotionMask, ref ev1);
         }
 
@@ -149,8 +151,8 @@ namespace Iot.Device.Graphics
 
             ev1.button = button;
             ev1.same_screen = true;
-            ev1.send_event = true;
-            ev1.subwindow = XDefaultRootWindow(_display);
+            ev1.send_event = 1;
+            ev1.subwindow = ev1.window = XDefaultRootWindow(_display);
             while (ev1.subwindow != Window.Zero)
             {
                 ev1.window = ev1.subwindow;
@@ -167,7 +169,7 @@ namespace Iot.Device.Graphics
                 ev1.type = ButtonPress;
                 GetState(0, ev1);
                 Console.WriteLine($"Mouse is at position {ev1.x}, {ev1.y} of window {ev1.window}");
-                if (XSendEvent(_display, Window.Zero /* PointerWindow */, true, ButtonPressMask, ref ev1) == 0)
+                if (XSendEvent(_display, ev1.window /* PointerWindow */, true, 0, ref ev1) == 0)
                 {
                     throw new InvalidOperationException("Error sending mouse press event");
                 }
@@ -183,7 +185,7 @@ namespace Iot.Device.Graphics
                 ev1.type = ButtonRelease;
                 ev1 = GetState(button, ev1);
 
-                if (XSendEvent(_display, Window.Zero, true, ButtonReleaseMask, ref ev1) == 0)
+                if (XSendEvent(_display, ev1.window, true, 0, ref ev1) == 0)
                 {
                     throw new InvalidOperationException("Error sending mouse release event");
                 }
