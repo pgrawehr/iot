@@ -12,7 +12,8 @@ using static Interop;
 namespace Iot.Device.Graphics
 {
     /// <summary>
-    /// This class provides an operating-system independent way of simulating mouse clicks
+    /// This class provides an operating-system independent way of simulating mouse clicks.
+    /// For this to work on X11-based window managers (e.g. on linux), the package libX11-dev must be installed.
     /// </summary>
     public partial class MouseClickSimulator
     {
@@ -25,7 +26,7 @@ namespace Iot.Device.Graphics
             {
                 unsafe
                 {
-                    _display = XOpenDisplay(null);
+                    _display = XOpenDisplay();
                     if (_display == IntPtr.Zero)
                     {
                         throw new NotSupportedException("Unable to open display - XOpenDisplay failed");

@@ -65,13 +65,42 @@ partial class Interop
     /// <returns>The raw image pointer. To get the image data, use <see cref="Marshal.PtrToStructure{XImage}(IntPtr)"/>. The raw pointer is required
     /// in the call to <see cref="XDestroyImage"/></returns>
     [DllImport(X11, CharSet = CharSet.Ansi)]
-    internal static extern unsafe IntPtr XOpenDisplay(char* displayName);
+    private static extern unsafe IntPtr XOpenDisplay(byte* displayName);
+
+    /// <summary>
+    /// Opens a named display
+    /// </summary>
+    /// <param name="displayName">Display name, or null for the default display</param>
+    /// <returns>A display handle</returns>
+    internal static unsafe IntPtr XOpenDisplay(string displayName)
+    {
+        var bytes = Encoding.ASCII.GetBytes(displayName);
+        try
+        {
+            fixed (char* p = displayName)
+            {
+                return XOpenDisplay((byte*)p);
+            }
+        }
+        catch (DllNotFoundException x)
+        {
+            throw new DllNotFoundException($"Could not open required library {X11}. Try installing the package libX11-dev.", x);
+        }
+    }
 
     internal static IntPtr XOpenDisplay()
     {
-        unsafe
+        try
         {
-            return XOpenDisplay(null);
+            unsafe
+            {
+                return XOpenDisplay((byte*)null);
+            }
+        }
+        catch (DllNotFoundException x)
+        {
+            // Wrap with additional information.
+            throw new DllNotFoundException($"Could not open required library {X11}. Try installing the package libX11-dev.", x);
         }
     }
 
@@ -276,7 +305,7 @@ partial class Interop
     [StructLayout(LayoutKind.Sequential)]
     internal struct Time
     {
-        public UInt32 time;
+        public nint time;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -287,7 +316,7 @@ partial class Interop
         /// <summary>
         /// This must be the first and only non-static member of this class!
         /// </summary>
-        public IntPtr handle;
+        public nint handle;
 
         public override bool Equals(object? obj)
         {
@@ -340,9 +369,9 @@ partial class Interop
 
     internal struct XMotionEvent
     {
-        public int type; /* MotionNotify */
-        public uint serial; /* # of last request processed by server */
-        public bool send_event; /* true if this came from a SendEvent request */
+        public nint type; /* MotionNotify */
+        public nuint serial; /* # of last request processed by server */
+        public nuint send_event; /* true if this came from a SendEvent request */
         public IntPtr display; /* Display the event was read from */
         public Window window; /* ``event'' window reported relative to */
         public Window root; /* root window that the event occurred on */
@@ -351,8 +380,8 @@ partial class Interop
         public int x, y; /* pointer x, y coordinates in event window */
         public int x_root, y_root; /* coordinates relative to root */
         public uint state; /* key or button mask */
-        public bool is_hint; /* detail */
-        public bool same_screen; /* same screen flag */
+        public uint is_hint; /* detail */
+        public uint same_screen; /* same screen flag */
     }
 
     [StructLayout(LayoutKind.Explicit)]

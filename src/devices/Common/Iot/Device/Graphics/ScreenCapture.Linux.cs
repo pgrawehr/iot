@@ -21,7 +21,7 @@ namespace Iot.Device.Graphics
 
         private unsafe void InitLinux()
         {
-            _display = XOpenDisplay(null);
+            _display = XOpenDisplay();
             _imageConfiguration = Configuration.Default.Clone();
             _imageConfiguration.PreferContiguousImageBuffers = true;
             if (_display == IntPtr.Zero)

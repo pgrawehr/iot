@@ -123,7 +123,7 @@ namespace Iot.Device.Graphics
             }
 
             ev1.state = 0;
-            ev1.is_hint = false;
+            ev1.is_hint = 0;
             if ((_currentButtons & MouseButtonMode.Left) != MouseButtonMode.None)
             {
                 ev1.state = 256;
