@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using SixLabors.ImageSharp;
 using static Interop;
@@ -51,7 +52,9 @@ namespace Iot.Device.Graphics
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 // DoSomeWindowing();
-                PerformMouseClickLinux(pt, buttons, true, true);
+                PerformMouseClickLinux(pt, buttons, true, false);
+                Thread.Sleep(20);
+                PerformMouseClickLinux(pt, buttons, false, true);
                 return;
             }
 
@@ -75,7 +78,7 @@ namespace Iot.Device.Graphics
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 // DoSomeWindowing();
-                PerformMouseClickLinux(pt, buttons, true, false);
+                // PerformMouseClickLinux(pt, buttons, true, false);
                 return;
             }
 
@@ -99,7 +102,7 @@ namespace Iot.Device.Graphics
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 // DoSomeWindowing();
-                PerformMouseClickLinux(pt, buttons, false, true);
+                // PerformMouseClickLinux(pt, buttons, false, true);
                 return;
             }
 

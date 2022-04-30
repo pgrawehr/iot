@@ -178,7 +178,7 @@ namespace Iot.Device.Ili934x.Samples
 
         public void DisplayFeatures()
         {
-            DemoMode();
+            //// DemoMode();
 
             bool abort = false;
             using ScreenCapture capture = new ScreenCapture();

@@ -8,7 +8,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-#pragma warning disable SA1132 // Every member should be declared on its own line
 #pragma warning disable SA1307 // 'x' should start with an upper-case letter
 
 partial class Interop
@@ -28,6 +27,10 @@ partial class Interop
     internal static int ButtonPress = 4;
     internal static int ButtonRelease = 5;
     internal static int MotionNotify = 6;
+    internal static int EnterNotify = 7;
+    internal static int LeaveNotify = 8;
+    internal static int FocusIn = 9;
+    internal static int FocusOut = 10;
 
     internal static int PointerWindow = 0;
 
@@ -115,6 +118,14 @@ partial class Interop
         IntPtr display,
         Window w,
         ref XWindowAttributes window_attributes_return);
+
+    internal static string GetWindowDescription(IntPtr display, Window w)
+    {
+        XWindowAttributes attr = default;
+        XGetWindowAttributes(display, w, ref attr);
+
+        return $"Window {w}: Location {attr.x}/{attr.y} Size {attr.width}/{attr.height}";
+    }
 
     [DllImport(X11)]
     internal static extern UInt32 XGetPixel(IntPtr image, int x, int y);
@@ -233,8 +244,10 @@ partial class Interop
     [StructLayout(LayoutKind.Sequential)]
     internal struct XWindowAttributes
     {
-        public int x, y;           /* location of window */
-        public int width, height;      /* width and height of window */
+        public int x;           /* location of window */
+        public int y;           /* location of window */
+        public int width;      /* width and height of window */
+        public int height;      /* width and height of window */
         public int border_width;       /* border width of window */
         public int depth;              /* depth of window */
         public IntPtr visual;     /* the associated visual structure */
@@ -272,7 +285,8 @@ partial class Interop
     [StructLayout(LayoutKind.Sequential)]
     internal class XImage
     {
-        public int width, height;      /* size of image */
+        public int width;      /* size of image */
+        public int height;      /* size of image */
         public int xoffset;        /* number of pixels offset in X direction */
         public int format;         /* XYBitmap, XYPixmap, ZPixmap */
         public IntPtr data;         /* pointer to image data */
@@ -351,6 +365,11 @@ partial class Interop
         {
             return !a.Equals(b);
         }
+
+        public override string ToString()
+        {
+            return $"0x{handle:X8}";
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -364,13 +383,16 @@ partial class Interop
         public Window root;        /* root window that the event occurred on */
         public Window subwindow;   /* child window */
         public Time time;      /* milliseconds */
-        public int x, y;       /* pointer x, y coordinates in event window */
-        public int x_root, y_root; /* coordinates relative to root */
+        public int x;       /* pointer x, y coordinates in event window */
+        public int y;       /* pointer x, y coordinates in event window */
+        public int x_root; /* coordinates relative to root */
+        public int y_root; /* coordinates relative to root */
         public uint state; /* key or button mask */
         public uint button;    /* detail */
         public bool same_screen;   /* same screen flag */
     }
 
+    [StructLayout(LayoutKind.Sequential)]
     internal struct XMotionEvent
     {
         public nint type; /* MotionNotify */
@@ -381,8 +403,10 @@ partial class Interop
         public Window root; /* root window that the event occurred on */
         public Window subwindow; /* child window */
         public Time time; /* milliseconds */
-        public int x, y; /* pointer x, y coordinates in event window */
-        public int x_root, y_root; /* coordinates relative to root */
+        public int x; /* pointer x, y coordinates in event window */
+        public int y; /* pointer x, y coordinates in event window */
+        public int x_root; /* coordinates relative to root */
+        public int y_root; /* coordinates relative to root */
         public uint state; /* key or button mask */
         public uint is_hint; /* detail */
         public uint same_screen; /* same screen flag */

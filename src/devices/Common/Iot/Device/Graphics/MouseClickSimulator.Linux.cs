@@ -140,7 +140,7 @@ namespace Iot.Device.Graphics
                 ev1.state = 512;
             }
 
-            Console.WriteLine($"Mouse moving to {ev1.x}, {ev1.y}, state {ev1.state}");
+            // Console.WriteLine($"Mouse moving to {ev1.x}, {ev1.y}, state {ev1.state}");
             XSendEvent(_display, ev1.window, true, PointerMotionMask | PointerMotionHintMask | ButtonMotionMask, ref ev1);
         }
 
@@ -152,7 +152,8 @@ namespace Iot.Device.Graphics
             ev1.button = button;
             ev1.same_screen = true;
             ev1.send_event = 1;
-            ev1.subwindow = ev1.window = XDefaultRootWindow(_display);
+            ev1.root = ev1.subwindow = ev1.window = XDefaultRootWindow(_display);
+            Console.WriteLine($"Root window is {GetWindowDescription(_display, ev1.root)}");
             while (ev1.subwindow != Window.Zero)
             {
                 ev1.window = ev1.subwindow;
@@ -168,15 +169,14 @@ namespace Iot.Device.Graphics
             {
                 ev1.type = ButtonPress;
                 ev1 = GetState(0, ev1);
-                Console.WriteLine($"Mouse is at position {ev1.x}, {ev1.y} of window {ev1.window}");
+                Console.WriteLine($"{Environment.TickCount} Mouse down at position {ev1.x}, {ev1.y} state {ev1.state} of window {GetWindowDescription(_display, ev1.window)}");
                 if (XSendEvent(_display, ev1.window /* PointerWindow */, true, 0, ref ev1) == 0)
                 {
                     throw new InvalidOperationException("Error sending mouse press event");
                 }
 
-                Console.WriteLine($"Press event sent. State {ev1.state}");
                 XFlush(_display);
-                Thread.Sleep(10);
+                Thread.Sleep(100);
             }
 
             if (up)
@@ -185,12 +185,12 @@ namespace Iot.Device.Graphics
                 ev1.type = ButtonRelease;
                 ev1 = GetState(button, ev1);
 
+                Console.WriteLine($"{Environment.TickCount} Mouse up at position {ev1.x}, {ev1.y} state {ev1.state} of window {GetWindowDescription(_display, ev1.window)}");
                 if (XSendEvent(_display, ev1.window, true, 0, ref ev1) == 0)
                 {
                     throw new InvalidOperationException("Error sending mouse release event");
                 }
 
-                Console.WriteLine($"Press release event sent. State {ev1.state}");
                 XFlush(_display);
             }
         }
