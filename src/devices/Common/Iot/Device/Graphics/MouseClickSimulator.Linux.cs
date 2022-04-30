@@ -140,7 +140,7 @@ namespace Iot.Device.Graphics
                 ev1.state = 512;
             }
 
-            Console.WriteLine($"Mouse moving to {ev1.x}, {ev1.y}");
+            Console.WriteLine($"Mouse moving to {ev1.x}, {ev1.y}, state {ev1.state}");
             XSendEvent(_display, ev1.window, true, PointerMotionMask | PointerMotionHintMask | ButtonMotionMask, ref ev1);
         }
 
@@ -167,14 +167,14 @@ namespace Iot.Device.Graphics
             if (down)
             {
                 ev1.type = ButtonPress;
-                GetState(0, ev1);
+                ev1 = GetState(0, ev1);
                 Console.WriteLine($"Mouse is at position {ev1.x}, {ev1.y} of window {ev1.window}");
                 if (XSendEvent(_display, ev1.window /* PointerWindow */, true, 0, ref ev1) == 0)
                 {
                     throw new InvalidOperationException("Error sending mouse press event");
                 }
 
-                Console.WriteLine("Press event sent");
+                Console.WriteLine($"Press event sent. State {ev1.state}");
                 XFlush(_display);
                 Thread.Sleep(10);
             }
@@ -190,7 +190,7 @@ namespace Iot.Device.Graphics
                     throw new InvalidOperationException("Error sending mouse release event");
                 }
 
-                Console.WriteLine("Press release event sent");
+                Console.WriteLine($"Press release event sent. State {ev1.state}");
                 XFlush(_display);
             }
         }
