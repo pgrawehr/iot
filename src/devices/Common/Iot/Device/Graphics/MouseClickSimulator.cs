@@ -41,7 +41,7 @@ namespace Iot.Device.Graphics
         /// </summary>
         /// <param name="pt">Point, in screen coordinates</param>
         /// <param name="buttons">The button(s) to click</param>
-        public void PerformClick(Point pt, MouseButtonMode buttons)
+        public void PerformClick(Point pt, MouseButton buttons)
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
@@ -66,7 +66,7 @@ namespace Iot.Device.Graphics
         /// </summary>
         /// <param name="pt">Current mouse position</param>
         /// <param name="buttons">Buttons to press</param>
-        public void MouseDown(Point pt, MouseButtonMode buttons)
+        public void MouseDown(Point pt, MouseButton buttons)
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
@@ -90,7 +90,7 @@ namespace Iot.Device.Graphics
         /// </summary>
         /// <param name="pt">Current mouse position</param>
         /// <param name="buttons">Buttons to release</param>
-        public void MouseUp(Point pt, MouseButtonMode buttons)
+        public void MouseUp(Point pt, MouseButton buttons)
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {

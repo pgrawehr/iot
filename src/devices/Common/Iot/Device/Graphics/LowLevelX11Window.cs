@@ -34,24 +34,24 @@ namespace Iot.Device.Graphics
             }
         }
 
-        public event Action<object, Point, MouseButtonMode>? MouseStateChanged;
+        public event Action<object, Point, MouseButton>? MouseStateChanged;
 
         ~LowLevelX11Window()
         {
             Dispose(false);
         }
 
-        private MouseButtonMode GetButtonEvent(Window w)
+        private MouseButton GetButtonEvent(Window w)
         {
             XButtonEvent ev = new XButtonEvent();
             XWindowEvent(_display, w, -1, ref ev);
             if (ev.button != 0)
             {
                 Console.WriteLine("Button was pressed");
-                return MouseButtonMode.Left;
+                return MouseButton.Left;
             }
 
-            return MouseButtonMode.None;
+            return MouseButton.None;
         }
 
         private Window CreateWindowInternal(int x, int y, int width, int height)
@@ -90,7 +90,7 @@ namespace Iot.Device.Graphics
                     XButtonEvent ev2 = default;
                     XWindowEvent(_display, _rootWindow, ButtonPressMask | ButtonReleaseMask, ref ev2);
                     Console.WriteLine($"Mouse event at {ev2.x}, {ev2.y}: New mask {ev2.button} state {ev2.state}");
-                    MouseStateChanged?.Invoke(this, new Point(ev2.x, ev2.y), MouseButtonMode.None); // Todo: Map mouse buttons
+                    MouseStateChanged?.Invoke(this, new Point(ev2.x, ev2.y), MouseButton.None); // Todo: Map mouse buttons
                 }
                 else if (ev1.type == MotionNotify)
                 {

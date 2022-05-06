@@ -12,7 +12,7 @@ namespace Iot.Device.Graphics
     public partial class MouseClickSimulator
     {
         private IntPtr _display;
-        private MouseButtonMode _currentButtons;
+        private MouseButton _currentButtons;
 
         private static XButtonEvent GetState(uint button, XButtonEvent ev1)
         {
@@ -35,20 +35,20 @@ namespace Iot.Device.Graphics
             return ev1;
         }
 
-        private void PerformMouseClickLinux(Point pt, MouseButtonMode buttons, bool down, bool up)
+        private void PerformMouseClickLinux(Point pt, MouseButton buttons, bool down, bool up)
         {
             MoveMouseTo(pt);
-            if ((buttons & MouseButtonMode.Left) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Left) != MouseButton.None)
             {
                 PerformMouseClickLinux(1, down, up);
             }
 
-            if ((buttons & MouseButtonMode.Right) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Right) != MouseButton.None)
             {
                 PerformMouseClickLinux(3, down, up);
             }
 
-            if ((buttons & MouseButtonMode.Middle) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Middle) != MouseButton.None)
             {
                 PerformMouseClickLinux(2, down, up);
             }
@@ -60,11 +60,11 @@ namespace Iot.Device.Graphics
 
             if (up)
             {
-                _currentButtons = MouseButtonMode.None;
+                _currentButtons = MouseButton.None;
             }
         }
 
-        private MouseButtonMode GetMouseCoordinates(out Point pt)
+        private MouseButton GetMouseCoordinates(out Point pt)
         {
             XButtonEvent ev = default;
             XQueryPointer(_display, XDefaultRootWindow(_display),
@@ -77,21 +77,21 @@ namespace Iot.Device.Graphics
             pt.X = ev.x;
             pt.Y = ev.y;
 
-            MouseButtonMode mode = MouseButtonMode.None;
+            MouseButton mode = MouseButton.None;
 
             if ((ev.state & 1) != 0)
             {
-                mode |= MouseButtonMode.Left;
+                mode |= MouseButton.Left;
             }
 
             if ((ev.state & 2) != 0)
             {
-                mode |= MouseButtonMode.Right;
+                mode |= MouseButton.Right;
             }
 
             if ((ev.state & 3) != 0)
             {
-                mode |= MouseButtonMode.Middle;
+                mode |= MouseButton.Middle;
             }
 
             return mode;
@@ -125,23 +125,26 @@ namespace Iot.Device.Graphics
 
             ev1.state = 0;
             ev1.is_hint = 0;
-            if ((_currentButtons & MouseButtonMode.Left) != MouseButtonMode.None)
+            if ((_currentButtons & MouseButton.Left) != MouseButton.None)
             {
                 ev1.state = 256;
             }
 
-            if ((_currentButtons & MouseButtonMode.Right) != MouseButtonMode.None)
+            if ((_currentButtons & MouseButton.Right) != MouseButton.None)
             {
                 ev1.state = 1024;
             }
 
-            if ((_currentButtons & MouseButtonMode.Middle) != MouseButtonMode.None)
+            if ((_currentButtons & MouseButton.Middle) != MouseButton.None)
             {
                 ev1.state = 512;
             }
 
             // Console.WriteLine($"Mouse moving to {ev1.x}, {ev1.y}, state {ev1.state}");
             XSendEvent(_display, ev1.window, true, PointerMotionMask | PointerMotionHintMask | ButtonMotionMask, ref ev1);
+
+            XFlush(_display);
+            Thread.Sleep(100);
         }
 
         private void PerformMouseClickLinux(uint button, bool down, bool up)
@@ -170,7 +173,7 @@ namespace Iot.Device.Graphics
                 ev1.type = ButtonPress;
                 ev1 = GetState(0, ev1);
                 Console.WriteLine($"{Environment.TickCount} Mouse down at position {ev1.x}, {ev1.y} state {ev1.state} of window {GetWindowDescription(_display, ev1.window)}");
-                if (XSendEvent(_display, ev1.window /* PointerWindow */, true, 0, ref ev1) == 0)
+                if (XSendEvent(_display, Window.Zero, true, 0, ref ev1) == 0)
                 {
                     throw new InvalidOperationException("Error sending mouse press event");
                 }
@@ -186,12 +189,13 @@ namespace Iot.Device.Graphics
                 ev1 = GetState(button, ev1);
 
                 Console.WriteLine($"{Environment.TickCount} Mouse up at position {ev1.x}, {ev1.y} state {ev1.state} of window {GetWindowDescription(_display, ev1.window)}");
-                if (XSendEvent(_display, ev1.window, true, 0, ref ev1) == 0)
+                if (XSendEvent(_display, Window.Zero, true, 0, ref ev1) == 0)
                 {
                     throw new InvalidOperationException("Error sending mouse release event");
                 }
 
                 XFlush(_display);
+                Thread.Sleep(100);
             }
         }
     }

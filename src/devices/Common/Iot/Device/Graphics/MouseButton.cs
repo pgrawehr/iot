@@ -13,7 +13,7 @@ namespace Iot.Device.Graphics
     /// Mouse buttons
     /// </summary>
     [Flags]
-    public enum MouseButtonMode
+    public enum MouseButton
     {
         /// <summary>
         /// No button pressed

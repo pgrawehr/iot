@@ -12,64 +12,64 @@ namespace Iot.Device.Graphics
 {
     public partial class MouseClickSimulator
     {
-        private static void PerformClickWindows(Point pt, MouseButtonMode buttons)
+        private static void PerformClickWindows(Point pt, MouseButton buttons)
         {
             var mpt = new Interop.MousePoint(pt.X, pt.Y);
             Interop.SetCursorPosition(mpt);
-            if ((buttons & MouseButtonMode.Left) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Left) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.LeftDown | Interop.MouseEventFlags.Absolute);
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.LeftUp | Interop.MouseEventFlags.Absolute);
             }
 
-            if ((buttons & MouseButtonMode.Right) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Right) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.RightDown | Interop.MouseEventFlags.Absolute);
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.RightUp | Interop.MouseEventFlags.Absolute);
             }
 
-            if ((buttons & MouseButtonMode.Middle) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Middle) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.MiddleDown | Interop.MouseEventFlags.Absolute);
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.MiddleUp | Interop.MouseEventFlags.Absolute);
             }
         }
 
-        private static void MouseDownWindows(Point pt, MouseButtonMode buttons)
+        private static void MouseDownWindows(Point pt, MouseButton buttons)
         {
             var mpt = new Interop.MousePoint(pt.X, pt.Y);
             Interop.SetCursorPosition(mpt);
-            if ((buttons & MouseButtonMode.Left) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Left) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.LeftDown | Interop.MouseEventFlags.Absolute);
             }
 
-            if ((buttons & MouseButtonMode.Right) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Right) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.RightDown | Interop.MouseEventFlags.Absolute);
             }
 
-            if ((buttons & MouseButtonMode.Middle) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Middle) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.MiddleDown | Interop.MouseEventFlags.Absolute);
             }
         }
 
-        private static void MouseUpWindows(Point pt, MouseButtonMode buttons)
+        private static void MouseUpWindows(Point pt, MouseButton buttons)
         {
             var mpt = new Interop.MousePoint(pt.X, pt.Y);
             Interop.SetCursorPosition(mpt);
-            if ((buttons & MouseButtonMode.Left) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Left) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.LeftUp | Interop.MouseEventFlags.Absolute);
             }
 
-            if ((buttons & MouseButtonMode.Right) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Right) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.RightUp | Interop.MouseEventFlags.Absolute);
             }
 
-            if ((buttons & MouseButtonMode.Middle) != MouseButtonMode.None)
+            if ((buttons & MouseButton.Middle) != MouseButton.None)
             {
                 Interop.MouseEvent(mpt, Interop.MouseEventFlags.MiddleUp | Interop.MouseEventFlags.Absolute);
             }
