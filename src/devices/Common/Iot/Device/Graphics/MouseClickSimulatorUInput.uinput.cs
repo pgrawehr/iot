@@ -40,6 +40,8 @@ fix this, create a file '/etc/udev/rules.d/98-input.rules' with content 'SUBSYST
             /* enable mouse button left and relative events */
             ioctlv(_fd, UI_SET_EVBIT, EV_KEY);
             ioctlv(_fd, UI_SET_KEYBIT, BTN_LEFT);
+            ioctlv(_fd, UI_SET_KEYBIT, BTN_MIDDLE);
+            ioctlv(_fd, UI_SET_KEYBIT, BTN_RIGHT);
 
             ioctlv(_fd, UI_SET_EVBIT, EV_ABS);
             ioctlv(_fd, UI_SET_ABSBIT, ABS_X);
@@ -127,18 +129,51 @@ fix this, create a file '/etc/udev/rules.d/98-input.rules' with content 'SUBSYST
         public void Click(int x, int y, MouseButton button)
         {
             MoveTo(x, y);
+            int btn = GetButtonKeyCode(button);
+
+            Emit(_fd, EV_KEY, btn, 1);
+            Emit(_fd, EV_SYN, SYN_REPORT, 0);
+            Emit(_fd, EV_KEY, btn, 0);
+            Emit(_fd, EV_SYN, SYN_REPORT, 0);
+        }
+
+        private static int GetButtonKeyCode(MouseButton button)
+        {
             int btn = 0;
             switch (button)
             {
-                case MouseButton.Left: btn = BTN_LEFT; break;
-                case MouseButton.Right: btn = BTN_RIGHT; break;
-                case MouseButton.Middle: btn = BTN_MIDDLE; break;
+                case MouseButton.Left:
+                    btn = BTN_LEFT;
+                    break;
+                case MouseButton.Right:
+                    btn = BTN_RIGHT;
+                    break;
+                case MouseButton.Middle:
+                    btn = BTN_MIDDLE;
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(button));
             }
 
+            return btn;
+        }
+
+        /// <inheritdoc />
+        public void ButtonDown(int x, int y, MouseButton button)
+        {
+            MoveTo(x, y);
+            int btn = GetButtonKeyCode(button);
+
             Emit(_fd, EV_KEY, btn, 1);
             Emit(_fd, EV_SYN, SYN_REPORT, 0);
+        }
+
+        /// <inheritdoc />
+        public void ButtonUp(int x, int y, MouseButton button)
+        {
+            MoveTo(x, y);
+            int btn = GetButtonKeyCode(button);
+
             Emit(_fd, EV_KEY, btn, 0);
             Emit(_fd, EV_SYN, SYN_REPORT, 0);
         }

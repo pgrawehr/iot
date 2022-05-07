@@ -40,9 +40,8 @@ namespace Iot.Device.Ili934x.Samples
         private ElectricPotential _backLight;
         private ScreenMode _screenMode;
         private MouseButton _mouseEnabled;
-        private MouseClickSimulator _clickSimulator;
         private Point _lastDragBegin;
-        private MouseClickSimulatorUInput _clickSimulatorUInput;
+        private IDeviceSimulator _clickSimulator;
 
         public RemoteControl(Chsc6440? touch, Ili9342 ili9341, M5ToughPowerControl? powerControl)
         {
@@ -56,8 +55,7 @@ namespace Iot.Device.Ili934x.Samples
             _screenMode = ScreenMode.Mirror;
             _backLight = ElectricPotential.FromMillivolts(3000);
             _mouseEnabled = MouseButton.None;
-            _clickSimulator = new MouseClickSimulator();
-            _clickSimulatorUInput = new MouseClickSimulatorUInput(1024, 600);
+            _clickSimulator = new MouseClickSimulatorUInput(1024, 600);
 
             _leftMouseMenuBar = Image.Load<Rgba32>("images/MenuBarLeftMouse.png");
             _rightMouseMenuBar = Image.Load<Rgba32>("images/MenuBarRightMouse.png");
@@ -120,7 +118,7 @@ namespace Iot.Device.Ili934x.Samples
                     //// _clickSimulator.PerformClick(ToAbsoluteScreenPosition(point), _mouseEnabled);
 
                     var pt = ToAbsoluteScreenPosition(point);
-                    _clickSimulatorUInput.Click(pt.X, pt.Y, _mouseEnabled);
+                    _clickSimulator.Click(pt.X, pt.Y, _mouseEnabled);
                 }
             }
         }
@@ -132,23 +130,24 @@ namespace Iot.Device.Ili934x.Samples
 
         private void OnDragging(object o, DragEventArgs e)
         {
-            ////if (_mouseEnabled == MouseButtonMode.Left)
-            ////{
-            ////    if (e.IsDragBegin)
-            ////    {
-            ////        _clickSimulator.MouseDown(ToAbsoluteScreenPosition(e.CurrentPoint), MouseButtonMode.Left);
-            ////        _lastDragBegin = e.CurrentPoint;
-            ////    }
+            if (_mouseEnabled == MouseButton.Left)
+            {
+                var pos = ToAbsoluteScreenPosition(e.CurrentPoint);
+                if (e.IsDragBegin)
+                {
+                    _clickSimulator.ButtonDown(pos.X, pos.Y, _mouseEnabled);
+                    _lastDragBegin = e.CurrentPoint;
+                }
 
-            ////    _clickSimulator.MouseMove(ToAbsoluteScreenPosition(e.CurrentPoint));
-            ////    if (e.IsDragEnd)
-            ////    {
-            ////        _clickSimulator.MouseUp(ToAbsoluteScreenPosition(e.CurrentPoint), MouseButtonMode.Left);
-            ////        _lastDragBegin = new Point(99999, 99999); // Outside
-            ////    }
+                _clickSimulator.MoveTo(pos.X, pos.Y);
+                if (e.IsDragEnd)
+                {
+                    _clickSimulator.ButtonUp(pos.X, pos.Y, _mouseEnabled);
+                    _lastDragBegin = new Point(99999, 99999); // Outside
+                }
 
-            ////    return;
-            ////}
+                return;
+            }
 
             var (xdiff, ydiff) = (e.LastPoint.X - e.CurrentPoint.X, e.LastPoint.Y - e.CurrentPoint.Y);
             _left += xdiff * _scale;

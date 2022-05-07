@@ -41,5 +41,21 @@ namespace Iot.Device.Graphics
         /// Returns the current position (always absolute)
         /// </summary>
         (int X, int Y) GetPosition();
+
+        /// <summary>
+        /// Press (and start holding) the button at the given position
+        /// </summary>
+        /// <param name="x">X position</param>
+        /// <param name="y">Y position</param>
+        /// <param name="button">Button to press</param>
+        void ButtonDown(int x, int y, MouseButton button);
+
+        /// <summary>
+        /// Release the button at the given position
+        /// </summary>
+        /// <param name="x">X position</param>
+        /// <param name="y">Y position</param>
+        /// <param name="button">Button to press</param>
+        void ButtonUp(int x, int y, MouseButton button);
     }
 }
