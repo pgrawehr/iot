@@ -331,13 +331,29 @@ namespace Iot.Device.Ili934x.Samples
             }
         }
 
+        private Font GetSmallFont()
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                FontFamily family = SystemFonts.Get("Arial");
+                Font font = new Font(family, 20);
+                return font;
+            }
+            else
+            {
+                FontFamily family = SystemFonts.Get("Liberation Sans");
+                Font font = new Font(family, 20);
+                return font;
+            }
+        }
+
         private void DrawPowerStatus()
         {
             if (_powerControl != null)
             {
                 var pc = _powerControl.GetPowerControlData();
                 using Image<Rgba32> bmp = _screen.CreateBackBuffer();
-                FontFamily family = SystemFonts.Get("Arial");
+                FontFamily family = SystemFonts.Get("Liberation Sans");
                 Font font = new Font(family, 20);
                 bmp.Mutate(x => x.DrawText(pc.ToString(), font, SixLabors.ImageSharp.Color.Blue, new PointF(0, 10)));
                 _screen.DrawBitmap(bmp);
