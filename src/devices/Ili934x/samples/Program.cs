@@ -71,7 +71,7 @@ namespace Iot.Device.Ili934x.Samples
                 }
             }
 
-            TestWindowing();
+            //// TestWindowing();
 
             int pinDC = isFt4222 ? 1 : 23;
             int pinReset = isFt4222 ? 0 : 24;

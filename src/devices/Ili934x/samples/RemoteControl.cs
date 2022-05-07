@@ -43,10 +43,10 @@ namespace Iot.Device.Ili934x.Samples
         private Point _lastDragBegin;
         private IDeviceSimulator _clickSimulator;
 
-        public RemoteControl(Chsc6440? touch, Ili9342 ili9341, M5ToughPowerControl? powerControl)
+        public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl)
         {
             _touch = touch;
-            _screen = ili9341;
+            _screen = screen;
             _powerControl = powerControl;
             _menuMode = false;
             _left = 0;
@@ -74,16 +74,16 @@ namespace Iot.Device.Ili934x.Samples
                     _menuMode = false;
                     _screenMode = ScreenMode.Mirror;
                 }
-                else if (point.Y < 50 && point.X > 100 && point.Y < 160)
+                else if (point.Y < 50 && point.X > 100 && point.X < 160)
                 {
                     _screenMode = ScreenMode.Battery;
                     _menuMode = false;
                 }
-                else if (point.Y > 50 && point.X > 100 && point.Y < 160)
+                else if (point.Y > 50 && point.X > 100 && point.X < 160)
                 {
                     _scale /= 1.1f;
                 }
-                else if (point.Y > 50 && point.X > 160 && point.Y < 220)
+                else if (point.Y > 50 && point.X > 160 && point.X < 220)
                 {
                     _scale *= 1.1f;
                 }
@@ -115,8 +115,6 @@ namespace Iot.Device.Ili934x.Samples
 
                 if (_mouseEnabled != MouseButton.None)
                 {
-                    //// _clickSimulator.PerformClick(ToAbsoluteScreenPosition(point), _mouseEnabled);
-
                     var pt = ToAbsoluteScreenPosition(point);
                     _clickSimulator.Click(pt.X, pt.Y, _mouseEnabled);
                 }

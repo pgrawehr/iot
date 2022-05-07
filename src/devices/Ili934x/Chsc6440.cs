@@ -156,7 +156,6 @@ namespace Iot.Device.Ili934x
                 return;
             }
 
-            Console.WriteLine("Touché...");
             _isPressed = pinValueChangedEventArgs.ChangeType == PinEventTypes.Falling;
             _updateEvent.Set();
         }
