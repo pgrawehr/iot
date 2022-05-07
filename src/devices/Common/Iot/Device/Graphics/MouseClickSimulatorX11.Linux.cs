@@ -8,11 +8,37 @@ using static Interop;
 
 namespace Iot.Device.Graphics
 {
-    // Code borrowed from https://gist.github.com/pioz/726474
-    public partial class MouseClickSimulator
+    /// <summary>
+    /// A mouse simulator that uses the X11 framework.
+    /// Not currently working reliably
+    /// </summary>
+    /// <remarks>Code borrowed from https://gist.github.com/pioz/726474</remarks>
+    public class MouseClickSimulatorX11 : IDeviceSimulator
     {
         private IntPtr _display;
         private MouseButton _currentButtons;
+
+        /// <summary>
+        /// Create an instance of this class.
+        /// </summary>
+        public MouseClickSimulatorX11()
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Unix)
+            {
+                _display = XOpenDisplay();
+                if (_display == IntPtr.Zero)
+                {
+                    throw new NotSupportedException("Unable to open display - XOpenDisplay failed");
+                }
+            }
+
+            throw new PlatformNotSupportedException("This simulator requires an X11 compatible system");
+        }
+
+        /// <summary>
+        /// Returns true
+        /// </summary>
+        public bool AbsoluteCoordinates => true;
 
         private static XButtonEvent GetState(uint button, XButtonEvent ev1)
         {
@@ -197,6 +223,38 @@ namespace Iot.Device.Graphics
                 XFlush(_display);
                 Thread.Sleep(100);
             }
+        }
+
+        /// <inheritdoc />
+        public void MoveTo(int x, int y)
+        {
+            MoveMouseTo(x, y);
+        }
+
+        /// <inheritdoc />
+        public void Click(int x, int y, MouseButton button)
+        {
+            MoveMouseTo(x, y);
+            PerformMouseClickLinux(new Point(x, y), button, true, true);
+        }
+
+        /// <inheritdoc />
+        public (int X, int Y) GetPosition()
+        {
+            GetMouseCoordinates(out var pt);
+            return (pt.X, pt.Y);
+        }
+
+        /// <inheritdoc />
+        public void ButtonDown(int x, int y, MouseButton button)
+        {
+            PerformMouseClickLinux(new Point(x, y), button, true, false);
+        }
+
+        /// <inheritdoc />
+        public void ButtonUp(int x, int y, MouseButton button)
+        {
+            PerformMouseClickLinux(new Point(x, y), button, false, true);
         }
     }
 }

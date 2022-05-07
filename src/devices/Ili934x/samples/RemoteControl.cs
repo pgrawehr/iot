@@ -33,6 +33,8 @@ namespace Iot.Device.Ili934x.Samples
         private readonly Image<Rgba32> _rightMouseMenuBar;
         private readonly Image<Rgba32> _openMenu;
 
+        private readonly ScreenCapture _capture;
+
         private bool _menuMode;
         private float _left;
         private float _top;
@@ -43,7 +45,7 @@ namespace Iot.Device.Ili934x.Samples
         private Point _lastDragBegin;
         private IDeviceSimulator _clickSimulator;
 
-        public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl)
+        public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IDeviceSimulator deviceSimulator, ScreenCapture capture)
         {
             _touch = touch;
             _screen = screen;
@@ -55,7 +57,8 @@ namespace Iot.Device.Ili934x.Samples
             _screenMode = ScreenMode.Mirror;
             _backLight = ElectricPotential.FromMillivolts(3000);
             _mouseEnabled = MouseButton.None;
-            _clickSimulator = new MouseClickSimulatorUInput(1024, 600);
+            _clickSimulator = deviceSimulator ?? throw new ArgumentNullException(nameof(deviceSimulator));
+            _capture = capture;
 
             _leftMouseMenuBar = Image.Load<Rgba32>("images/MenuBarLeftMouse.png");
             _rightMouseMenuBar = Image.Load<Rgba32>("images/MenuBarRightMouse.png");
@@ -184,7 +187,6 @@ namespace Iot.Device.Ili934x.Samples
             //// DemoMode();
 
             bool abort = false;
-            using ScreenCapture capture = new ScreenCapture();
             Point dragBegin = Point.Empty;
 
             if (_touch != null)
@@ -211,7 +213,7 @@ namespace Iot.Device.Ili934x.Samples
                 switch (_screenMode)
                 {
                     case ScreenMode.Mirror:
-                        DrawScreenContents(capture, _scale, ref _left, ref _top);
+                        DrawScreenContents(_capture, _scale, ref _left, ref _top);
                         break;
                     case ScreenMode.Battery:
                         DrawPowerStatus();
@@ -353,8 +355,7 @@ namespace Iot.Device.Ili934x.Samples
             {
                 var pc = _powerControl.GetPowerControlData();
                 using Image<Rgba32> bmp = _screen.CreateBackBuffer();
-                FontFamily family = SystemFonts.Get("Liberation Sans");
-                Font font = new Font(family, 20);
+                Font font = GetSmallFont();
                 bmp.Mutate(x => x.DrawText(pc.ToString(), font, SixLabors.ImageSharp.Color.Blue, new PointF(0, 10)));
                 _screen.DrawBitmap(bmp);
             }

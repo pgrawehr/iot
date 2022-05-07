@@ -10,8 +10,16 @@ using SixLabors.ImageSharp;
 
 namespace Iot.Device.Graphics
 {
-    public partial class MouseClickSimulator
+    /// <summary>
+    /// Simulates a touch device on Windows
+    /// </summary>
+    public class WindowsTouchSimulator : IDeviceSimulator
     {
+        /// <summary>
+        /// Returns true for this device
+        /// </summary>
+        public bool AbsoluteCoordinates => true;
+
         private static void PerformClickWindows(Point pt, MouseButton buttons)
         {
             var mpt = new Interop.MousePoint(pt.X, pt.Y);
@@ -75,10 +83,37 @@ namespace Iot.Device.Graphics
             }
         }
 
-        private static void MouseMoveWindows(Point pt)
+        /// <inheritdoc />
+        public void MoveTo(int x, int y)
         {
-            var mpt = new Interop.MousePoint(pt.X, pt.Y);
+            var mpt = new Interop.MousePoint(x, y);
             Interop.SetCursorPosition(mpt);
+        }
+
+        /// <inheritdoc />
+        public void Click(int x, int y, MouseButton button)
+        {
+            MouseDownWindows(new Point(x, y), button);
+            MouseUpWindows(new Point(x, y), button);
+        }
+
+        /// <inheritdoc />
+        public (int X, int Y) GetPosition()
+        {
+            var pt = Interop.GetCursorPosition();
+            return (pt.X, pt.Y);
+        }
+
+        /// <inheritdoc />
+        public void ButtonDown(int x, int y, MouseButton button)
+        {
+            MouseDownWindows(new Point(x, y), button);
+        }
+
+        /// <inheritdoc />
+        public void ButtonUp(int x, int y, MouseButton button)
+        {
+            MouseUpWindows(new Point(x, y), button);
         }
     }
 }

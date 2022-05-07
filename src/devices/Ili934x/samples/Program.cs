@@ -129,7 +129,19 @@ namespace Iot.Device.Ili934x.Samples
                 touch.EnableEvents();
             }
 
-            RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl);
+            IDeviceSimulator touchSimulator;
+
+            using ScreenCapture screenCapture = new ScreenCapture();
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                touchSimulator = new WindowsTouchSimulator();
+            }
+            else
+            {
+                touchSimulator = new MouseClickSimulatorUInput(screenCapture.ScreenSize().Width, screenCapture.ScreenSize().Height);
+            }
+
+            RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl, touchSimulator, screenCapture);
             ctrol.DisplayFeatures();
 
             ili9341.ClearScreen(true);
