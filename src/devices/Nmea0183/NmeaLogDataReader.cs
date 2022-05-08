@@ -20,6 +20,8 @@ namespace Iot.Device.Nmea0183
         private readonly IEnumerable<string> _filesToRead;
         private DateTimeOffset? _referenceTimeInLog;
         private DateTimeOffset? _referenceTimeNow;
+        private NmeaParser? _internalParser;
+        private ManualResetEvent? _doneEvent;
 
         /// <summary>
         /// Reads a log file and uses it as a source
@@ -30,6 +32,7 @@ namespace Iot.Device.Nmea0183
             : base(interfaceName)
         {
             _filesToRead = filesToRead;
+            _doneEvent = new ManualResetEvent(false);
         }
 
         /// <summary>
@@ -44,6 +47,8 @@ namespace Iot.Device.Nmea0183
             {
                 fileToRead
             };
+
+            _doneEvent = new ManualResetEvent(false);
         }
 
         /// <summary>
@@ -90,29 +95,26 @@ namespace Iot.Device.Nmea0183
             }
 
             ms.Position = 0;
-            ManualResetEvent ev = new ManualResetEvent(false);
-            var parser = new NmeaParser(InterfaceName, ms, null);
-            parser.SuppressOutdatedMessages = false; // parse all incoming messages, ignoring any timing
+            _doneEvent = new ManualResetEvent(false);
+            _internalParser = new NmeaParser(InterfaceName, ms, null);
+            _internalParser.SuppressOutdatedMessages = false; // parse all incoming messages, ignoring any timing
             if (DecodeInRealtime)
             {
-                parser.OnNewSequence += ForwardDecodedRealTime;
+                _internalParser.OnNewSequence += ForwardDecodedRealTime;
             }
             else
             {
-                parser.OnNewSequence += ForwardDecoded;
+                _internalParser.OnNewSequence += ForwardDecoded;
             }
 
-            parser.OnParserError += (source, s, error) =>
+            _internalParser.OnParserError += (source, s, error) =>
             {
                 if (error == NmeaError.PortClosed)
                 {
-                    ev.Set();
+                    _doneEvent.Set();
                 }
             };
-            parser.StartDecode();
-            ev.WaitOne(); // Wait for end of file
-            parser.StopDecode();
-            ms.Dispose();
+            _internalParser.StartDecode();
         }
 
         private void ForwardDecoded(NmeaSinkAndSource source, NmeaSentence sentence)
@@ -160,6 +162,33 @@ namespace Iot.Device.Nmea0183
         /// <inheritdoc />
         public override void StopDecode()
         {
+            // If this is false, wait for the end of the file
+            if (!DecodeInRealtime)
+            {
+                _doneEvent?.WaitOne(); // Wait for end of file
+            }
+
+            _internalParser?.StopDecode();
+            _internalParser?.Dispose();
+            _internalParser = null;
+        }
+
+        /// <inheritdoc />
+        protected override void Dispose(bool disposing)
+        {
+            // Don't wait any more
+            if (_doneEvent != null)
+            {
+                _doneEvent.Dispose();
+                _doneEvent = null;
+            }
+
+            if (disposing)
+            {
+                StopDecode();
+            }
+
+            base.Dispose(disposing);
         }
     }
 }
