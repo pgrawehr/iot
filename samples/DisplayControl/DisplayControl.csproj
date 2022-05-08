@@ -36,7 +36,7 @@
     <ProjectReference Include="..\..\src\devices\Ads1115\Ads1115.csproj" />
     <ProjectReference Include="..\..\src\devices\Arduino\Arduino.csproj" />
     <ProjectReference Include="..\..\src\devices\Bmxx80\Bmxx80.csproj" />
-    <ProjectReference Include="..\..\src\devices\Common\CommonHelpers.csproj" />
+    <ProjectReference Include="..\..\src\devices\Common\Common.csproj" />
     <ProjectReference Include="..\..\src\devices\CpuTemperature\CpuTemperature.csproj" />
     <ProjectReference Include="..\..\src\devices\Dhtxx\Dhtxx.csproj" />
     <ProjectReference Include="..\..\src\devices\IG-500A\IG-500A.csproj" />

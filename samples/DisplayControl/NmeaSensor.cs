@@ -479,8 +479,8 @@ namespace DisplayControl
                         }
                     }
                     break;
-                case TimeDate zda when zda.Valid && zda.DateTime.HasValue:
-                    _manager.UpdateValue(SensorMeasurement.UtcTime, zda.DateTime.Value.UtcDateTime);
+                case TimeDate zda:
+                    _manager.UpdateValue(SensorMeasurement.UtcTime, zda.DateTime.UtcDateTime);
                     break;
                 case SatellitesInView gsv when gsv.Valid && gsv.Sequence == gsv.TotalSequences:
                     var sats = _cache.GetSatellitesInView(out int totalSats);

@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisplayControl", "DisplayCo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "System.Device.Gpio", "..\..\src\System.Device.Gpio\System.Device.Gpio.csproj", "{F2410F4C-A544-41D2-A75C-638C2C9DF4EB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommonHelpers", "..\..\src\devices\Common\CommonHelpers.csproj", "{38F0D166-44E4-4466-8B18-B25D840342FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common", "..\..\src\devices\Common\Common.csproj", "{38F0D166-44E4-4466-8B18-B25D840342FE}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nmea0183", "..\..\src\devices\Nmea0183\Nmea0183.csproj", "{12CD0DCA-C394-42B6-B178-724900656626}"
 EndProject
