@@ -86,7 +86,7 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 return _dateTime;
             }
-            protected set
+            set
             {
                 _dateTime = value;
             }

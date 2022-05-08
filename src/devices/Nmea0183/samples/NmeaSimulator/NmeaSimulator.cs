@@ -26,11 +26,29 @@ namespace Nmea.Simulator
         public Simulator()
         {
             _activeData = new SimulatorData();
+            ReplayFile = string.Empty;
+        }
+
+        public string ReplayFile
+        {
+            get;
+            set;
         }
 
         public static void Main(string[] args)
         {
+            Console.WriteLine("Simple GNSS simulator");
+            Console.WriteLine("Usage: NmeaSimulator [options]");
+
+            Console.WriteLine("Options are:");
+            Console.WriteLine("--replay file    Plays back the given NMEA log file in real time (only with shifted timestamps)");
+            Console.WriteLine();
             var sim = new Simulator();
+            if (args.Length >= 2 && args[0] == "--replay")
+            {
+                sim.ReplayFile = args[1];
+            }
+
             sim.StartServer();
         }
 
@@ -43,8 +61,17 @@ namespace Nmea.Simulator
                 NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
 
                 _terminate = false;
+                if (string.IsNullOrWhiteSpace(ReplayFile))
+                {
                 _simulatorThread = new Thread(MainSimulator);
                 _simulatorThread.Start();
+                }
+                else
+                {
+                    _simulatorThread = new Thread(FilePlayback);
+                    _simulatorThread.Start();
+                }
+
                 _tcpServer = new NmeaTcpServer("TcpServer");
                 _tcpServer.StartDecode();
                 _tcpServer.OnNewSequence += OnNewSequenceFromServer;
@@ -149,6 +176,22 @@ namespace Nmea.Simulator
                 SendNewData();
                 Thread.Sleep(UpdateRate);
             }
+        }
+
+        private void FilePlayback()
+        {
+            NmeaLogDataReader rd = new NmeaLogDataReader("LogDataReader", ReplayFile);
+            rd.DecodeInRealtime = true;
+            rd.OnNewSequence += (source, sentence) => SendSentence(sentence);
+            rd.StartDecode();
+            // Dummy thread, to keep code flow similar to standard case
+            while (!_terminate)
+            {
+                Thread.Sleep(200);
+            }
+
+            rd.StopDecode();
+            rd.Dispose();
         }
 
         private sealed class ParserData : IDisposable

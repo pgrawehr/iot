@@ -12,11 +12,14 @@ namespace Iot.Device.Nmea0183
 {
     /// <summary>
     /// This source can be used to play back a recorded log file.
-    /// The playback currently happens as fast as possible, the time stamp in the log is ignored.
+    /// If <see cref="DecodeInRealtime"/> is false (the default), the file will be read as fast as possible. Otherwise messages
+    /// will be generated at the speed of the original data.
     /// </summary>
     public class NmeaLogDataReader : NmeaSinkAndSource
     {
         private readonly IEnumerable<string> _filesToRead;
+        private DateTimeOffset? _referenceTimeInLog;
+        private DateTimeOffset? _referenceTimeNow;
 
         /// <summary>
         /// Reads a log file and uses it as a source
@@ -43,12 +46,24 @@ namespace Iot.Device.Nmea0183
             };
         }
 
+        /// <summary>
+        /// Set to true to replay a message stream in real time. The reader will generate
+        /// messages with the same time difference as they originally had. The timestamp of the
+        /// messages will be updated to the present.
+        /// </summary>
+        public bool DecodeInRealtime
+        {
+            get;
+            set;
+        }
+
         /// <inheritdoc />
         public override void StartDecode()
         {
             // TODO: This is a bit memory hungry, because all data gets read in first, but the implementation is only suited for statistical analysis now and
             // not for replaying large data sets. Can be improved later.
             MemoryStream ms = new MemoryStream();
+            _referenceTimeInLog = null;
             foreach (var fileToRead in _filesToRead)
             {
                 using (StreamReader sr = File.OpenText(fileToRead))
@@ -78,7 +93,15 @@ namespace Iot.Device.Nmea0183
             ManualResetEvent ev = new ManualResetEvent(false);
             var parser = new NmeaParser(InterfaceName, ms, null);
             parser.SuppressOutdatedMessages = false; // parse all incoming messages, ignoring any timing
-            parser.OnNewSequence += ForwardDecoded;
+            if (DecodeInRealtime)
+            {
+                parser.OnNewSequence += ForwardDecodedRealTime;
+            }
+            else
+            {
+                parser.OnNewSequence += ForwardDecoded;
+            }
+
             parser.OnParserError += (source, s, error) =>
             {
                 if (error == NmeaError.PortClosed)
@@ -94,6 +117,38 @@ namespace Iot.Device.Nmea0183
 
         private void ForwardDecoded(NmeaSinkAndSource source, NmeaSentence sentence)
         {
+            DispatchSentenceEvents(sentence);
+        }
+
+        private void ForwardDecodedRealTime(NmeaSinkAndSource source, NmeaSentence sentence)
+        {
+            var now = DateTimeOffset.UtcNow;
+            if (_referenceTimeInLog == null)
+            {
+                if (sentence.SentenceId != TimeDate.Id || sentence.Valid == false)
+                {
+                    // We need a GPZDA sentence to start
+                    return;
+                }
+
+                _referenceTimeInLog = sentence.DateTime;
+                _referenceTimeNow = now;
+            }
+
+            // var timeThatHasPassedNow = DateTimeOffset.UtcNow - _referenceTimeNow;
+            var timeThatHasPassedInLog = sentence.DateTime - _referenceTimeInLog;
+            DateTimeOffset? timeMessageNeedsToBeSent = _referenceTimeNow + timeThatHasPassedInLog;
+
+            // This is positive if the message shall be sent in the future.
+            TimeSpan? waitTime = timeMessageNeedsToBeSent - now;
+            if (waitTime > TimeSpan.Zero)
+            {
+                // Just block until the time is reached.
+                Thread.Sleep(waitTime.Value);
+            }
+
+            sentence.DateTime = now;
+
             DispatchSentenceEvents(sentence);
         }
 
