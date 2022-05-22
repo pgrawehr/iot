@@ -113,6 +113,7 @@ namespace Iot.Device.Ili934x.Samples
                 spiBufferSize = 200; // requires extended Firmata firmware, default is 25
                 powerControl = new M5ToughPowerControl(board);
                 powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
+                powerControl.Sleep(false);
             }
             else
             {
@@ -148,6 +149,7 @@ namespace Iot.Device.Ili934x.Samples
             if (powerControl != null)
             {
                 powerControl.SetLcdVoltage(ElectricPotential.Zero);
+                powerControl.Sleep(true);
             }
 
             touch?.Dispose();

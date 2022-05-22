@@ -52,6 +52,9 @@ namespace Iot.Device.Axp192
             _logger.LogInformation("axp: VBus limit off");
 
             // Configure GPIO outputs
+            // GPIO 0: Bus power enable
+            _axp.SetGPIO0(Gpio0Behavior.NmosLeakOpenOutput);
+            _axp.WriteGpioValue(0, PinValue.High);
             // GPIO 1: Touch pad reset
             _axp.SetGPIO1(GpioBehavior.NmosLeakOpenOutput);
             // GPIO 2: Speaker enable
@@ -114,6 +117,18 @@ namespace Iot.Device.Axp192
 
             _axp.SetLdoOutput(3, voltage);
             _logger.LogInformation($"LCD voltage set to {voltage}");
+        }
+
+        /// <summary>
+        /// Enter and leave low-power mode.
+        /// The physical power button that is normally used to recover the AXP from sleep mode is not accessible on the M5Tough when the case is closed.
+        /// Therefore the CPU must be kept running and the screen interrupt is used to wake up the device.
+        /// </summary>
+        /// <param name="enterSleep">True to enter sleep, false to recover from sleep.</param>
+        /// <remarks>After recovering from sleep mode, some peripheral devices might need to be restarted (such as the display controller)</remarks>
+        public void Sleep(bool enterSleep)
+        {
+            _axp.SetSleep(enterSleep, false);
         }
 
         public PowerControlData GetPowerControlData()

@@ -22,6 +22,7 @@ namespace Iot.Device.Axp192
 
         private I2cDevice _i2c;
         private byte[] _writeBuffer = new byte[2];
+        private AdcPinEnabled _adcPinEnabledBeforeSleep;
 
         /// <summary>
         /// Creates an AXP192
@@ -30,6 +31,7 @@ namespace Iot.Device.Axp192
         public Axp192(I2cDevice i2c)
         {
             _i2c = i2c ?? throw new ArgumentNullException(nameof(i2c));
+            _adcPinEnabledBeforeSleep = AdcPinEnabled.All;
         }
 
         /// <summary>
@@ -316,14 +318,47 @@ namespace Iot.Device.Axp192
         }
 
         /// <summary>
-        /// Sets the sleep mode.
+        /// Enters sleep mode for the AXP and the peripherals, leaving the CPU running
         /// </summary>
         public void SetSleep()
         {
-            I2cWrite(Register.VoltageSettingOff, (byte)(I2cRead(Register.VoltageSettingOff) | (1 << 3))); // Turn on short press to wake up
-            I2cWrite(Register.ControlGpio0, (byte)(I2cRead(Register.ControlGpio0) | 0x07)); // GPIO0 floating
-            I2cWrite(Register.AdcPin1, 0x00); // Disable ADCs
-            I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, (byte)(I2cRead(Register.SwitchControleDcDc1_3LDO2_3) & 0xA1)); // Disable all outputs but DCDC1
+            SetSleep(true, false);
+        }
+
+        /// <summary>
+        /// Set or recover from sleep. If the CPU is also switched off, it can only be restarted trough an external
+        /// interrupt on AXP input PWRON (typically wired to a hardware key)
+        /// </summary>
+        /// <param name="enterSleep">True to enter sleep, false to recover from it</param>
+        /// <param name="includingCpu">True to also switch off the CPU</param>
+        public void SetSleep(bool enterSleep, bool includingCpu)
+        {
+            if (enterSleep)
+            {
+                _adcPinEnabledBeforeSleep = AdcPinEnabled;
+                I2cWrite(Register.VoltageSettingOff, (byte)(I2cRead(Register.VoltageSettingOff) | (1 << 3))); // Turn on short press to wake up
+                I2cWrite(Register.ControlGpio0, (byte)(I2cRead(Register.ControlGpio0) | 0x07)); // GPIO0 floating
+                I2cWrite(Register.AdcPin1, 0x00); // Disable ADCs
+
+                // Disable all outputs but DCDC1 (CPU main power)
+                byte filter = 0xA1;
+                if (includingCpu)
+                {
+                    // If we clear bit 0, the CPU is also switched off.
+                    filter = 0xA0;
+                }
+
+                I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, (byte)(I2cRead(Register.SwitchControleDcDc1_3LDO2_3) & filter));
+            }
+            else
+            {
+                I2cWrite(Register.VoltageSettingOff, (byte)(I2cRead(Register.VoltageSettingOff) & 4)); // Disable sleep mode
+                SetGPIO0(Gpio0Behavior.NmosLeakOpenOutput);
+                WriteGpioValue(0, PinValue.High);
+                AdcPinEnabled = _adcPinEnabledBeforeSleep; // Enable ADCs
+
+                I2cWrite(Register.SwitchControleDcDc1_3LDO2_3, (byte)(I2cRead(Register.SwitchControleDcDc1_3LDO2_3) | 0x5F)); // Enable everything
+            }
         }
 
         /// <summary>
@@ -459,15 +494,9 @@ namespace Iot.Device.Axp192
         /// Sets GPIO0 state
         /// </summary>
         /// <param name="state">The GPIO0 behavior</param>
-        /// <param name="currentSink">The current sink from 0 to 31 mA.</param>
-        public void SetGPIO0(Gpio0Behavior state, byte currentSink)
+        public void SetGPIO0(Gpio0Behavior state)
         {
-            if (currentSink > 31)
-            {
-                currentSink = 31;
-            }
-
-            I2cWrite(Register.ControlGpio0, (byte)((byte)state | currentSink));
+            I2cWrite(Register.ControlGpio0, (byte)state);
         }
 
         /// <summary>

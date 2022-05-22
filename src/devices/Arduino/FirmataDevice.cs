@@ -1187,9 +1187,9 @@ namespace Iot.Device.Arduino
             }
             else
             {
-            var command = SpiWrite(csPin, FirmataSpiCommand.SPI_WRITE, writeBytes, out _);
-            SendCommand(command);
-        }
+                var command = SpiWrite(csPin, FirmataSpiCommand.SPI_WRITE, writeBytes, out _);
+                SendCommand(command);
+            }
         }
 
         public void SpiTransfer(int csPin, ReadOnlySpan<byte> writeBytes, Span<byte> readBytes)

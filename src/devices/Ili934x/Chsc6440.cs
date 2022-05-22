@@ -163,7 +163,7 @@ namespace Iot.Device.Ili934x
         /// <summary>
         /// Returns true if the interrupt pin is set, meaning something is touching the display
         /// </summary>
-        /// <returns>True if something presses the display, false if not. Null if no interrupt pin is defined</returns>
+        /// <returns>True if something presses the display, false if not. This queries the interrupt pin if available. Otherwise, an I2C request to the controller is required.</returns>
         public bool IsPressed()
         {
             if (_gpioController != null)
