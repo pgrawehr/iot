@@ -150,6 +150,18 @@ namespace Iot.Device.Ili934x.Samples
             {
                 powerControl.SetLcdVoltage(ElectricPotential.Zero);
                 powerControl.Sleep(true);
+                if (board != null)
+                {
+                    Esp32Sleep? sleepMode = board.GetCommandHandler<Esp32Sleep>();
+                    if (sleepMode != null)
+                    {
+                        sleepMode.EnterSleepMode(1);
+                    }
+                    else
+                    {
+                        Console.WriteLine("ESP32 will not enter deep sleep mode - command handler not found");
+                    }
+                }
             }
 
             touch?.Dispose();

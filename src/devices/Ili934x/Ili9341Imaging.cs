@@ -57,11 +57,7 @@ namespace Iot.Device.Ili934x
                 throw new ArgumentNullException(nameof(bm));
             }
 
-            if (bm.PixelFormat != PixelFormat.Format32bppArgb)
-            {
-                throw new ArgumentException($"Pixel format {bm.PixelFormat.ToString()} not supported.", nameof(bm));
-            }
-
+            FillBackBufferFromImage(bm, sourcePoint, destinationRect);
         }
 
         private void FillBackBufferFromImage(Image<Rgba32> image, Point sourcePoint, Rectangle destinationRect)
@@ -171,12 +167,12 @@ namespace Iot.Device.Ili934x
 
             if (bm.Width < sourceRect.Left + sourceRect.Width)
             {
-                throw new ArgumentException($"Pixel format {bm.PixelFormat.ToString()} not supported.", nameof(bm));
+                throw new ArgumentOutOfRangeException(nameof(sourceRect), "Rectangle exceeds width of image");
             }
 
             if (bm.Height < sourceRect.Top + sourceRect.Height)
             {
-                throw new ArgumentOutOfRangeException(nameof(sourceRect), "Rectangle exceeds size of image");
+                throw new ArgumentOutOfRangeException(nameof(sourceRect), "Rectangle exceeds height of image");
             }
 
             // allocate the working arrays.
