@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183
@@ -65,38 +66,10 @@ namespace Iot.Device.Nmea0183
         /// <inheritdoc />
         public override void StartDecode()
         {
-            // TODO: This is a bit memory hungry, because all data gets read in first, but the implementation is only suited for statistical analysis now and
-            // not for replaying large data sets. Can be improved later.
-            MemoryStream ms = new MemoryStream();
-            _referenceTimeInLog = null;
-            foreach (var fileToRead in _filesToRead)
-            {
-                using (StreamReader sr = File.OpenText(fileToRead))
-                {
-                    string? line = sr.ReadLine();
-                    Encoding raw = new Raw8BitEncoding();
-                    while (line != null)
-                    {
-                        if (line.Contains("|"))
-                        {
-                            var splits = line.Split(new char[]
-                            {
-                                '|'
-                            }, StringSplitOptions.None);
-                            line = splits[2]; // Raw message
-                        }
-
-                        // Pack data into memory stream, from which the parser will get it again
-                        byte[] bytes = raw.GetBytes(line + "\r\n");
-                        ms.Write(bytes, 0, bytes.Length);
-                        line = sr.ReadLine();
-                    }
-                }
-            }
-
-            ms.Position = 0;
+            var ms = new FileSetStream(_filesToRead);
             _doneEvent = new ManualResetEvent(false);
             _internalParser = new NmeaParser(InterfaceName, ms, null);
+            _internalParser.SupportLogReading = true;
             _internalParser.SuppressOutdatedMessages = false; // parse all incoming messages, ignoring any timing
             if (DecodeInRealtime)
             {

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using Iot.Device.Common;
@@ -25,13 +26,12 @@ namespace Nmea.Simulator
         public Simulator()
         {
             _activeData = new SimulatorData();
-            ReplayFile = string.Empty;
+            ReplayFiles = new List<string>();
         }
 
-        public string ReplayFile
+        private List<string> ReplayFiles
         {
             get;
-            set;
         }
 
         public static void Main(string[] args)
@@ -40,12 +40,15 @@ namespace Nmea.Simulator
             Console.WriteLine("Usage: NmeaSimulator [options]");
 
             Console.WriteLine("Options are:");
-            Console.WriteLine("--replay file    Plays back the given NMEA log file in real time (only with shifted timestamps)");
+            Console.WriteLine("--replay files    Plays back the given NMEA log file in real time (only with shifted timestamps). Wildcards supported.");
             Console.WriteLine();
             var sim = new Simulator();
             if (args.Length >= 2 && args[0] == "--replay")
             {
-                sim.ReplayFile = args[1];
+                var wildCards = args[1];
+                FileInfo fi = new FileInfo(wildCards);
+                string path = fi.DirectoryName ?? string.Empty;
+                sim.ReplayFiles.AddRange(Directory.GetFiles(path, fi.Name));
             }
 
             sim.StartServer();
@@ -59,7 +62,7 @@ namespace Nmea.Simulator
                 NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
 
                 _terminate = false;
-                if (string.IsNullOrWhiteSpace(ReplayFile))
+                if (!ReplayFiles.Any())
                 {
                     _simulatorThread = new Thread(MainSimulator);
                     _simulatorThread.Start();
@@ -162,7 +165,7 @@ namespace Nmea.Simulator
 
         private void FilePlayback()
         {
-            NmeaLogDataReader rd = new NmeaLogDataReader("LogDataReader", ReplayFile);
+            NmeaLogDataReader rd = new NmeaLogDataReader("LogDataReader", ReplayFiles);
             rd.DecodeInRealtime = true;
             rd.OnNewSequence += (source, sentence) => SendSentence(sentence);
             rd.StartDecode();
