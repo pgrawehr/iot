@@ -97,6 +97,15 @@ namespace Iot.Device.Nmea0183
             set;
         }
 
+        /// <summary>
+        /// If true, the parser also accepts sentences in a log format (prefixed with a date and separated by |)
+        /// </summary>
+        public bool SupportLogReading
+        {
+            get;
+            set;
+        }
+
         /// <inheritdoc />
         public override void StartDecode()
         {
@@ -155,6 +164,22 @@ namespace Iot.Device.Nmea0183
 
                     Thread.Sleep(10); // to prevent busy-waiting
                     continue; // Probably because the stream was closed.
+                }
+
+                if (SupportLogReading)
+                {
+                    if (currentLine.Contains("|"))
+                    {
+                        var splits = currentLine.Split(new char[]
+                        {
+                                '|'
+                        }, StringSplitOptions.None);
+                        if (splits.Length >= 3)
+                        {
+                            // The first column is the date, the second column the (original) data source
+                            currentLine = splits[2]; // Raw message
+                        }
+                    }
                 }
 
                 TalkerSentence? sentence = TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out var error);
