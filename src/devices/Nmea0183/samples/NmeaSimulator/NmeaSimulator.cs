@@ -20,7 +20,8 @@ namespace Nmea.Simulator
         private Thread? _simulatorThread;
         private bool _terminate;
         private SimulatorData _activeData;
-        private NmeaTcpServer? _server;
+        private NmeaTcpServer? _tcpServer;
+        private NmeaUdpServer? _udpServer;
 
         public Simulator()
         {
@@ -35,7 +36,8 @@ namespace Nmea.Simulator
 
         private void StartServer()
         {
-            _server = null;
+            _tcpServer = null;
+            _udpServer = null;
             try
             {
                 NmeaSentence.OwnTalkerId = new TalkerId('G', 'P');
@@ -43,15 +45,15 @@ namespace Nmea.Simulator
                 _terminate = false;
                 _simulatorThread = new Thread(MainSimulator);
                 _simulatorThread.Start();
-                _server = new NmeaTcpServer("Server");
-                _server.StartDecode();
-                _server.OnNewSequence += (source, sentence) =>
-                {
-                    if (sentence is RawSentence)
-                    {
-                        Console.WriteLine($"Received message: {sentence.ToReadableContent()}");
-                    }
-                };
+                _tcpServer = new NmeaTcpServer("TcpServer");
+                _tcpServer.StartDecode();
+                _tcpServer.OnNewSequence += OnNewSequenceFromServer;
+
+                // Outgoing port is 10110, the incoming port is irrelevant (but we choose it differently here, so that a
+                // receiver can bind to 10110 on the same computer)
+                _udpServer = new NmeaUdpServer("UdpServer", 10111, 10110);
+                _udpServer.StartDecode();
+                _udpServer.OnNewSequence += OnNewSequenceFromServer;
 
                 Console.WriteLine("Waiting for connections. Press x to quit");
                 while (true)
@@ -74,14 +76,25 @@ namespace Nmea.Simulator
             }
             finally
             {
-                _server?.StopDecode();
+                _tcpServer?.StopDecode();
+                _udpServer?.StopDecode();
                 if (_simulatorThread != null)
                 {
                     _terminate = true;
                     _simulatorThread?.Join();
                 }
 
-                _server?.Dispose();
+                _tcpServer?.Dispose();
+                _udpServer?.Dispose();
+            }
+        }
+
+        // We're not really expecting input here.
+        private void OnNewSequenceFromServer(NmeaSinkAndSource source, NmeaSentence sentence)
+        {
+            if (sentence is RawSentence)
+            {
+                Console.WriteLine($"Received message: {sentence.ToReadableContent()} from {source.InterfaceName}");
             }
         }
 
@@ -111,10 +124,15 @@ namespace Nmea.Simulator
 
         private void SendSentence(NmeaSentence sentence)
         {
-            if (_server != null)
+            if (_tcpServer != null)
             {
                 Console.WriteLine($"Sending {sentence.ToReadableContent()}");
-                _server.SendSentence(sentence);
+                _tcpServer.SendSentence(sentence);
+            }
+
+            if (_udpServer != null)
+            {
+                _udpServer.SendSentence(sentence);
             }
         }
 

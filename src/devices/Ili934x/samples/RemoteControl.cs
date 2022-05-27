@@ -6,12 +6,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Axp192;
 using Iot.Device.Graphics;
 using Iot.Device.Ili934x;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
@@ -21,7 +24,7 @@ using UnitsNet;
 
 namespace Iot.Device.Ili934x.Samples
 {
-    internal class RemoteControl
+    internal sealed class RemoteControl : IDisposable
     {
         // Note: Owner of these is the outer class
         private readonly Chsc6440? _touch;
@@ -44,6 +47,8 @@ namespace Iot.Device.Ili934x.Samples
         private MouseButton _mouseEnabled;
         private Point _lastDragBegin;
         private IDeviceSimulator _clickSimulator;
+        private NmeaUdpServer _udpClient;
+        private SentenceCache _cache;
 
         public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IDeviceSimulator deviceSimulator, ScreenCapture capture)
         {
@@ -64,6 +69,16 @@ namespace Iot.Device.Ili934x.Samples
             _rightMouseMenuBar = Image.Load<Rgba32>("images/MenuBarRightMouse.png");
             _defaultMenuBar = Image.Load<Rgba32>("images/MenuBar.png");
             _openMenu = Image.Load<Rgba32>("images/OpenMenu.png");
+
+            _udpClient = new NmeaUdpServer("NmeaUdpReceiver", 10110, 10111);
+            _udpClient.OnNewSequence += OnNewSequence;
+            _cache = new SentenceCache(_udpClient);
+            _udpClient.StartDecode();
+        }
+
+        private void OnNewSequence(NmeaSinkAndSource nmeaSinkAndSource, NmeaSentence nmeaSentence)
+        {
+            Console.WriteLine($"Received sentence: {nmeaSentence.ToString()}");
         }
 
         private void OnTouched(object o, Point point)
@@ -359,6 +374,12 @@ namespace Iot.Device.Ili934x.Samples
                 bmp.Mutate(x => x.DrawText(pc.ToString(), font, SixLabors.ImageSharp.Color.Blue, new PointF(0, 10)));
                 _screen.DrawBitmap(bmp);
             }
+        }
+
+        public void Dispose()
+        {
+            _udpClient.StopDecode();
+            _udpClient.Dispose();
         }
     }
 }

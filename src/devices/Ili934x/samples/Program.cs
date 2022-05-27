@@ -142,7 +142,7 @@ namespace Iot.Device.Ili934x.Samples
                 touchSimulator = new MouseClickSimulatorUInput(screenCapture.ScreenSize().Width, screenCapture.ScreenSize().Height);
             }
 
-            RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl, touchSimulator, screenCapture);
+            using RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl, touchSimulator, screenCapture);
             ctrol.DisplayFeatures();
 
             ili9341.ClearScreen(true);
