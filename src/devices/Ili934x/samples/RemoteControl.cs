@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -21,6 +22,7 @@ using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using UnitsNet;
+using UnitsNet.Units;
 
 namespace Iot.Device.Ili934x.Samples
 {
@@ -50,6 +52,9 @@ namespace Iot.Device.Ili934x.Samples
         private NmeaUdpServer _udpClient;
         private SentenceCache _cache;
 
+        private List<NmeaDataSet> _dataSets;
+        private int _selectedDataSet;
+
         public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IDeviceSimulator deviceSimulator, ScreenCapture capture)
         {
             _touch = touch;
@@ -64,7 +69,59 @@ namespace Iot.Device.Ili934x.Samples
             _mouseEnabled = MouseButton.None;
             _clickSimulator = deviceSimulator ?? throw new ArgumentNullException(nameof(deviceSimulator));
             _capture = capture;
+            _dataSets = new List<NmeaDataSet>();
 
+            _dataSets.Add(new NmeaValueDataSet("Speed over Ground", s =>
+            {
+                if (s.TryGetCurrentPosition(out _, out _, out Speed sog, out _))
+                {
+                    return sog.ToUnit(SpeedUnit.Knot);
+                }
+
+                return null;
+            }));
+
+            _dataSets.Add(new NmeaValueDataSet("Speed trough water", s =>
+            {
+                if (s.TryGetLastSentence(WaterSpeedAndAngle.Id, out WaterSpeedAndAngle sentence))
+                {
+                    return sentence.Speed.ToUnit(SpeedUnit.Knot);
+                }
+
+                return null;
+            }));
+
+            _dataSets.Add(new NmeaValueDataSet("Course over Ground", s =>
+            {
+                if (s.TryGetCurrentPosition(out _, out Angle track, out _, out _))
+                {
+                    return track;
+                }
+
+                return null;
+            }, "F1"));
+
+            _dataSets.Add(new NmeaValueDataSet("Heading", s =>
+            {
+                if (s.TryGetLastSentence(HeadingTrue.Id, out HeadingTrue sentence))
+                {
+                    return sentence.Angle;
+                }
+
+                return null;
+            }, "F1"));
+
+            _dataSets.Add(new NmeaValueDataSet("Depth below Surface", s =>
+            {
+                if (s.TryGetLastSentence(DepthBelowSurface.Id, out DepthBelowSurface sentence))
+                {
+                    return sentence.Depth.ToUnit(LengthUnit.Meter);
+                }
+
+                return null;
+            }));
+
+            _selectedDataSet = 0;
             _leftMouseMenuBar = Image.Load<Rgba32>("images/MenuBarLeftMouse.png");
             _rightMouseMenuBar = Image.Load<Rgba32>("images/MenuBarRightMouse.png");
             _defaultMenuBar = Image.Load<Rgba32>("images/MenuBar.png");
@@ -95,6 +152,13 @@ namespace Iot.Device.Ili934x.Samples
                 else if (point.Y < 50 && point.X > 100 && point.X < 160)
                 {
                     _screenMode = ScreenMode.Battery;
+                    _mouseEnabled = MouseButton.None;
+                    _menuMode = false;
+                }
+                else if (point.Y < 50 && point.X >= 160 && point.X < 220)
+                {
+                    _screenMode = ScreenMode.NmeaValue;
+                    _mouseEnabled = MouseButton.None;
                     _menuMode = false;
                 }
                 else if (point.Y > 50 && point.X > 100 && point.X < 160)
@@ -131,10 +195,17 @@ namespace Iot.Device.Ili934x.Samples
                     return;
                 }
 
-                if (_mouseEnabled != MouseButton.None)
+                if (_screenMode == ScreenMode.Mirror)
                 {
-                    var pt = ToAbsoluteScreenPosition(point);
-                    _clickSimulator.Click(pt.X, pt.Y, _mouseEnabled);
+                    if (_mouseEnabled != MouseButton.None)
+                    {
+                        var pt = ToAbsoluteScreenPosition(point);
+                        _clickSimulator.Click(pt.X, pt.Y, _mouseEnabled);
+                    }
+                }
+                else if (_screenMode == ScreenMode.NmeaValue)
+                {
+                    _selectedDataSet = (_selectedDataSet + 1) % _dataSets.Count;
                 }
             }
         }
@@ -146,6 +217,11 @@ namespace Iot.Device.Ili934x.Samples
 
         private void OnDragging(object o, DragEventArgs e)
         {
+            if (_screenMode != ScreenMode.Mirror)
+            {
+                return;
+            }
+
             if (_mouseEnabled == MouseButton.Left)
             {
                 var pos = ToAbsoluteScreenPosition(e.CurrentPoint);
@@ -232,6 +308,9 @@ namespace Iot.Device.Ili934x.Samples
                         break;
                     case ScreenMode.Battery:
                         DrawPowerStatus();
+                        break;
+                    case ScreenMode.NmeaValue:
+                        DrawNmeaValue();
                         break;
                     default:
                         _screen.ClearScreen();
@@ -320,6 +399,23 @@ namespace Iot.Device.Ili934x.Samples
             }
         }
 
+        private void DrawNmeaValue()
+        {
+            _screen.ClearScreen(Color.White);
+            if (_cache.TryGetCurrentPosition(out var position, true, out Angle track, out Speed sog, out Angle? heading))
+            {
+                using Image<Rgba32> bmp = _screen.CreateBackBuffer();
+                Font font = GetFont(110);
+                Font smallFont = GetFont(30);
+                var data = _dataSets[_selectedDataSet];
+                data.Update(_cache);
+                bmp.Mutate(x => x.DrawText(data.Value, font, SixLabors.ImageSharp.Color.Blue, new PointF(20, 30)));
+                bmp.Mutate(x => x.DrawText(data.Name, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(10, 5)));
+                bmp.Mutate(x => x.DrawText(data.Unit, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(_screen.ScreenWidth / 2, _screen.ScreenHeight - 33)));
+                _screen.DrawBitmap(bmp);
+            }
+        }
+
         private void DemoMode()
         {
             while (!Console.KeyAvailable && (_touch != null && !_touch.IsPressed()))
@@ -348,18 +444,18 @@ namespace Iot.Device.Ili934x.Samples
             }
         }
 
-        private Font GetSmallFont()
+        private Font GetFont(float size)
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
                 FontFamily family = SystemFonts.Get("Arial");
-                Font font = new Font(family, 20);
+                Font font = new Font(family, size);
                 return font;
             }
             else
             {
                 FontFamily family = SystemFonts.Get("Liberation Sans");
-                Font font = new Font(family, 20);
+                Font font = new Font(family, size);
                 return font;
             }
         }
@@ -370,7 +466,7 @@ namespace Iot.Device.Ili934x.Samples
             {
                 var pc = _powerControl.GetPowerControlData();
                 using Image<Rgba32> bmp = _screen.CreateBackBuffer();
-                Font font = GetSmallFont();
+                Font font = GetFont(20);
                 bmp.Mutate(x => x.DrawText(pc.ToString(), font, SixLabors.ImageSharp.Color.Blue, new PointF(0, 10)));
                 _screen.DrawBitmap(bmp);
             }

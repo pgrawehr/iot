@@ -66,8 +66,8 @@ namespace Nmea.Simulator
                 _terminate = false;
                 if (!ReplayFiles.Any())
                 {
-                _simulatorThread = new Thread(MainSimulator);
-                _simulatorThread.Start();
+                    _simulatorThread = new Thread(MainSimulator);
+                    _simulatorThread.Start();
                 }
                 else
                 {
