@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Mcp23xxx;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 using UnitsNet.Units;
