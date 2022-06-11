@@ -86,7 +86,7 @@ namespace Iot.Device.Common
             {
                 if (value < TimeSpan.Zero)
                 {
-                    throw new ArgumentOutOfRangeException("Save interval must be positive");
+                    throw new ArgumentOutOfRangeException(nameof(value), "Save interval must be positive");
                 }
 
                 _saveInterval = value;
