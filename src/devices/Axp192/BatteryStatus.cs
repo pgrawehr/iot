@@ -11,8 +11,13 @@ namespace Iot.Device.Axp192
     [Flags]
     public enum BatteryStatus
     {
-        /// <summary>Overwinered</summary>
-        Overwinered = 0b1000_000,
+        /// <summary>
+        /// Empty value
+        /// </summary>
+        None = 0,
+
+        /// <summary>AXP192 is overheated</summary>
+        Overheated = 0b1000_000,
 
         /// <summary>Charging</summary>
         Charging = 0b0100_0000,

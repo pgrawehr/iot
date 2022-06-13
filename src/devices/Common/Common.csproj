@@ -2,8 +2,7 @@
   <PropertyGroup>
     <TargetFrameworks>$(DefaultBindingTfms)</TargetFrameworks>
     <EnableDefaultItems>false</EnableDefaultItems>
-    <RootNamespace>
-    </RootNamespace>
+    <RootNamespace></RootNamespace>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- SA1205: Partial elements should declare access modifier (allows adjusting class visibility in a single source file)-->
@@ -21,6 +20,7 @@
     <Compile Include="System/Device/Spi/*.cs" />
     <Compile Include="Interop/**/*.cs" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingPackageVersion)" />
+    <PackageReference Include="System.Drawing.Common" Version="$(SystemDrawingCommonPackageVersion)" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
     <Compile Include="FrameworkCompatibilityExtensions.cs" />

@@ -546,12 +546,12 @@ namespace Iot.Device.Arduino
             if (!sequence.Validate())
             {
                 throw new ArgumentException("The command sequence is invalid", nameof(sequence));
-            }
+        }
 
             if (_firmataStream == null)
-            {
+        {
                 throw new ObjectDisposedException(nameof(FirmataDevice));
-            }
+        }
 
             _firmataStream.Write(sequence.Sequence.ToArray(), 0, sequence.Sequence.Count);
             _bytesTransmitted += sequence.Sequence.Count;
