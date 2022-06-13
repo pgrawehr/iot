@@ -346,7 +346,7 @@ namespace DisplayControl
                 engineTemp = Temperature.FromKelvins(0);
             }
 
-            var msg = new EngineData(0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100),
+            var msg = new EngineData((int)now, 0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100),
                 _engineOperatingTime.Value, engineTemp); // Pitch unknown so far
             DataChanged?.Invoke(msg);
         }
