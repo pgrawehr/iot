@@ -23,12 +23,16 @@ namespace DisplayControl
         private SensorMeasurement _frequencyMeasurement;
         private GpioController _gpioController;
         private bool _tankSensorIsOn;
+        private HysteresisFilter _tankSensorEnableFilter;
 
         public ArduinoSensors(MeasurementManager manager, EngineSurveillance engine) : base(manager,
             TimeSpan.FromSeconds(1))
         {
             _engine = engine;
             _logger = this.GetCurrentClassLogger();
+            _tankSensorEnableFilter = new HysteresisFilter(false);
+            _tankSensorEnableFilter.RisingDelayTime = TimeSpan.FromSeconds(2);
+            _tankSensorEnableFilter.FallingDelayTime = TimeSpan.FromSeconds(30);
             ForceTankSensorEnable = false;
             _tankSensorIsOn = false;
         }
@@ -73,8 +77,10 @@ namespace DisplayControl
             freq = freq / _engine.EngineRpmCorrectionFactor;
             _frequencyMeasurement.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
 
-            var engOn = (CustomData<bool>)SensorMeasurement.Engine0On;
-            bool newSensorValue = ForceTankSensorEnable || engOn.Value;
+            var engOnV = (CustomData<bool>)SensorMeasurement.Engine0On;
+            bool engOn = engOnV.Value;
+            _tankSensorEnableFilter.Update(engOn);
+            bool newSensorValue = ForceTankSensorEnable || _tankSensorEnableFilter.Output;
 
             if (newSensorValue != _tankSensorIsOn)
             {
