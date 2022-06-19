@@ -233,13 +233,14 @@ namespace DisplayControl
             _nmeaSensor = new NmeaSensor(_sensorManager);
             _nmeaSensor.Initialize(_fusionEngine, _imuSensor);
 
-            WriteLineToConsoleAndDisplay("Arduino...");
-            _arduino = new ArduinoSensors(_sensorManager);
-            _arduino.Init(Controller);
-
             WriteLineToConsoleAndDisplay("Motor...");
             _engine = new EngineSurveillance(_sensorManager, 9);
             _engine.Init(Controller);
+
+            WriteLineToConsoleAndDisplay("Arduino...");
+            _arduino = new ArduinoSensors(_sensorManager, _engine);
+            _arduino.Init(Controller);
+
             _engine.DataChanged += NewEngineData;
 
             _sensorManager.AnyMeasurementChanged += OnSensorValueChanged;

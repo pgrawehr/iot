@@ -14,6 +14,7 @@ namespace DisplayControl
 {
     public class ArduinoSensors : PollingSensorBase
     {
+        private readonly EngineSurveillance _engine;
         const int RpmSensorPin = 2;
         const int TankSensorRelaisPin = 7;
         private ArduinoBoard _board;
@@ -23,9 +24,10 @@ namespace DisplayControl
         private GpioController _gpioController;
         private bool _tankSensorIsOn;
 
-        public ArduinoSensors(MeasurementManager manager) : base(manager,
+        public ArduinoSensors(MeasurementManager manager, EngineSurveillance engine) : base(manager,
             TimeSpan.FromSeconds(1))
         {
+            _engine = engine;
             _logger = this.GetCurrentClassLogger();
             ForceTankSensorEnable = false;
             _tankSensorIsOn = false;
@@ -68,7 +70,7 @@ namespace DisplayControl
         protected override void UpdateSensors()
         {
             var freq = _frequencySensor.GetMeasuredFrequency();
-            freq = freq / EngineSurveillance.TicksPerRevolution;
+            freq = freq / _engine.EngineRpmCorrectionFactor;
             _frequencyMeasurement.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
 
             var engOn = (CustomData<bool>)SensorMeasurement.Engine0On;

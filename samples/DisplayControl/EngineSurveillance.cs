@@ -40,12 +40,12 @@ namespace DisplayControl
         private const int InterruptPin = 21;
         private static readonly TimeSpan MaxIdleTime = TimeSpan.FromSeconds(8);
         private static readonly TimeSpan AveragingTime = TimeSpan.FromSeconds(3);
-        public const double TicksPerRevolution = 1.48; // Because our sensor sits on the smaller wheel from the alternator
         private int _maxCounterValue;
         private Queue<CounterEvent> _lastEvents;
         private bool _engineOn;
         private PersistentTimeSpan _engineOperatingTime;
         private PersistentTimeSpan _engineOperatingTimeAtLastRefill;
+        private PersistentDouble _engineRpmFactor;
         private long _lastTickForUpdate;
         private PersistenceFile _enginePersistenceFile;
         private I2cDevice _device;
@@ -82,6 +82,7 @@ namespace DisplayControl
             _enginePersistenceFile = new PersistenceFile("/home/pi/projects/ShipLogs/Engine.txt");
             _engineOperatingTime = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours", TimeSpan.Zero, TimeSpan.FromMinutes(1));
             _engineOperatingTimeAtLastRefill = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours at last refill", new TimeSpan(0, 15, 33, 0), TimeSpan.Zero);
+            _engineRpmFactor = new PersistentDouble(_enginePersistenceFile, "Engine RPM correction factor", 1.87, TimeSpan.Zero);
         }
 
         // Todo: Better interface (maybe some generic data provider interface)
@@ -91,6 +92,14 @@ namespace DisplayControl
         {
             get;
             private set;
+        }
+
+        public double EngineRpmCorrectionFactor
+        {
+            get
+            {
+                return _engineRpmFactor.Value;
+            }
         }
 
         public override void Init(GpioController gpioController)
@@ -311,7 +320,7 @@ namespace DisplayControl
                 if (deltaTime > 0)
                 {
                     // revs per ms
-                    umin = (revolutions / TicksPerRevolution) / deltaTime;
+                    umin = (revolutions / _engineRpmFactor.Value) / deltaTime;
                     // revs per minute
                     umin = umin * 1000 * 60;
                 }
