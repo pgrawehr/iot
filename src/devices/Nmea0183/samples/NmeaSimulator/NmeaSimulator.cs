@@ -75,14 +75,6 @@ namespace Nmea.Simulator
                     _simulatorThread.Start();
                 }
 
-                _server = new NmeaTcpServer("Server");
-                _server.StartDecode();
-                _server.OnNewSequence += (source, sentence) =>
-                {
-                    _simulatorThread = new Thread(FilePlayback);
-                    _simulatorThread.Start();
-                    }
-
                 _tcpServer = new NmeaTcpServer("TcpServer");
                 _tcpServer.StartDecode();
                 _tcpServer.OnNewSequence += OnNewSequenceFromServer;
