@@ -72,6 +72,15 @@ namespace Iot.Device.Arduino
         /// </summary>
         public override int AdcResolutionBits => 10;
 
+        /// <summary>
+        /// Reads the analog raw value from a given pin.
+        /// </summary>
+        /// <returns>The analog raw value of the given pin</returns>
+        /// <remarks>
+        /// This returns the last cached value from the board. The board sends regular updates when a value changes,
+        /// but this does not request an update before returning a value, so that the read value might be incorrect
+        /// if the analog pin has just been opened.
+        /// </remarks>
         public override uint ReadRaw()
         {
             return _board.Firmata.GetAnalogRawValue(PinNumber);

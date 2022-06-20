@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Device.Analog;
 using System.Device.Gpio;
 using System.IO.Ports;
 using System.Linq;
@@ -21,9 +22,12 @@ namespace DisplayControl
         private ILogger _logger;
         private FrequencySensor _frequencySensor;
         private SensorMeasurement _frequencyMeasurement;
+        private SensorMeasurement _tankFillLevel;
         private GpioController _gpioController;
         private bool _tankSensorIsOn;
         private HysteresisFilter _tankSensorEnableFilter;
+        private AnalogController _analogController;
+        private AnalogInputPin _tankSensorValuePin;
 
         public ArduinoSensors(MeasurementManager manager, EngineSurveillance engine) : base(manager,
             TimeSpan.FromSeconds(1))
@@ -68,6 +72,14 @@ namespace DisplayControl
             _frequencyMeasurement = new SensorMeasurement("Alternate RPM sensor", RotationalSpeed.Zero, SensorSource.Engine, 2,
                 TimeSpan.FromSeconds(3));
             Manager.AddMeasurement(_frequencyMeasurement);
+
+            // Todo: Change to percentage
+            _tankFillLevel = new SensorMeasurement("Fuel tank raw value", ElectricPotential.Zero, SensorSource.Engine);
+            Manager.AddMeasurement(_tankFillLevel);
+
+            _analogController = _board.CreateAnalogController(0);
+            _tankSensorValuePin = _analogController.OpenPin(18); // A4
+
             base.Init(gpioController);
         }
 
@@ -87,6 +99,10 @@ namespace DisplayControl
                 _tankSensorIsOn = newSensorValue;
                 _gpioController.Write(TankSensorRelaisPin, _tankSensorIsOn);
             }
+
+            
+            var voltage = _tankSensorValuePin.ReadVoltage();
+            _tankFillLevel.UpdateValue(voltage, SensorMeasurementStatus.None, false);
         }
 
         protected override void Dispose(bool disposing)
@@ -96,6 +112,10 @@ namespace DisplayControl
                 StopThread();
 
                 _gpioController.Write(TankSensorRelaisPin, PinValue.Low);
+                _tankSensorValuePin.Dispose();
+                _analogController.Dispose();
+                _tankSensorValuePin = null;
+                _analogController = null;
                 _board?.Dispose();
                 _board = null;
             }
