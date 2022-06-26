@@ -15,12 +15,17 @@ namespace Iot.Device.Nmea0183.Sentences
     /// An extended engine data message, using a PCDIN sequence (supported by some NMEA0183 to NMEA2000 bridges)
     /// This message mostly provides the RPM value and can be sent with a high frequency.
     /// </summary>
-    public class SeaSmartEngineFastMessage : ProprietaryMessage
+    public class SeaSmartEngineFast : ProprietaryMessage
     {
+        /// <summary>
+        /// The NMEA2000 Sentence identifier for this message
+        /// </summary>
+        public static string Identifier = "01F200";
+
         /// <summary>
         /// Constructs a new sentence
         /// </summary>
-        public SeaSmartEngineFastMessage(RotationalSpeed speed, int engineNumber, Ratio pitch)
+        public SeaSmartEngineFast(RotationalSpeed speed, int engineNumber, Ratio pitch)
             : base()
         {
             RotationalSpeed = speed;
@@ -33,12 +38,69 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs a new sentence
         /// </summary>
-        public SeaSmartEngineFastMessage(EngineData data)
+        public SeaSmartEngineFast(EngineData data)
         {
             RotationalSpeed = data.Revolutions;
             EngineNumber = data.EngineNo;
             PropellerPitch = data.Pitch;
             MessageTimeStamp = data.MessageTimeStamp;
+            Valid = true;
+        }
+
+        /// <summary>
+        /// Create a message object from a sentence
+        /// </summary>
+        /// <param name="sentence">The sentence</param>
+        /// <param name="time">The current time</param>
+        public SeaSmartEngineFast(TalkerSentence sentence, DateTimeOffset time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+        {
+        }
+
+        /// <summary>
+        /// Creates a message object from a decoded sentence
+        /// </summary>
+        /// <param name="talkerId">The source talker id</param>
+        /// <param name="fields">The parameters</param>
+        /// <param name="time">The current time</param>
+        public SeaSmartEngineFast(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
+        {
+            IEnumerator<string> field = fields.GetEnumerator();
+
+            string subMessage = ReadString(field);
+            if (!subMessage.Equals(Identifier, StringComparison.OrdinalIgnoreCase))
+            {
+                Valid = false;
+                return;
+            }
+
+            string timeStamp = ReadString(field);
+
+            if (Int32.TryParse(timeStamp, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int time1))
+            {
+                MessageTimeStamp = time1;
+            }
+
+            ReadString(field); // Ignore next field
+
+            string data = ReadString(field);
+
+            if (ReadFromHexString(data, 0, 2, false, out int engineNo))
+            {
+                EngineNumber = engineNo;
+            }
+
+            if (ReadFromHexString(data, 2, 4, false, out int rpm))
+            {
+                RotationalSpeed = RotationalSpeed.FromRevolutionsPerMinute(rpm * 64);
+            }
+
+            if (ReadFromHexString(data, 10, 2, false, out int pitch))
+            {
+                PropellerPitch = Ratio.FromPercent(pitch);
+            }
+
             Valid = true;
         }
 

@@ -13,7 +13,8 @@ namespace Iot.Device.Nmea0183.Sentences
     /// <summary>
     /// A helper DTO to transfer engine data in one blob
     /// </summary>
-    public class EngineData
+    [Serializable]
+    public record EngineData
     {
         /// <summary>
         /// Constructs an instance containing all relevant data
@@ -26,6 +27,24 @@ namespace Iot.Device.Nmea0183.Sentences
             Pitch = pitch;
             OperatingTime = operatingTime;
             EngineTemperature = engineTemperature;
+        }
+
+        /// <summary>
+        /// Constructs an <see cref="EngineData"/> instance from the two relevant messages
+        /// </summary>
+        /// <param name="fast">The fast-updating engine message</param>
+        /// <param name="detail">The slow updating engine message</param>
+        /// <returns>An <see cref="EngineData"/> instance</returns>
+        /// <exception cref="InvalidOperationException">The two messages are not from the same engine.</exception>
+        public static EngineData FromMessages(SeaSmartEngineFast fast, SeaSmartEngineDetail detail)
+        {
+            if (fast.EngineNumber != detail.EngineNumber)
+            {
+                throw new InvalidOperationException("The two messages are not for the same engine");
+            }
+
+            return new EngineData(fast.MessageTimeStamp, fast.EngineNumber, fast.RotationalSpeed, fast.PropellerPitch,
+                detail.OperatingTime, detail.Temperature);
         }
 
         /// <summary>

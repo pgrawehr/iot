@@ -23,13 +23,16 @@ namespace Iot.Device.Nmea0183
         private Queue<RoutePart> _lastRouteSentences;
         private Dictionary<string, Waypoint> _wayPoints;
         private Queue<SatellitesInView> _lastSatelliteInfos;
+        private Dictionary<string, TransducerDataSet> _xdrData;
 
         private SentenceId[] _groupSentences = new SentenceId[]
         {
-            // These sentences come in groups
+            // These sentences come in groups or carry multiple different data sets
             new SentenceId("GSV"),
             new SentenceId("RTE"),
             new SentenceId("WPL"),
+            new SentenceId("DIN"),
+            new SentenceId("XDR"),
         };
 
         /// <summary>
@@ -44,6 +47,7 @@ namespace Iot.Device.Nmea0183
             _lastRouteSentences = new Queue<RoutePart>();
             _lastSatelliteInfos = new Queue<SatellitesInView>();
             _wayPoints = new Dictionary<string, Waypoint>();
+            _xdrData = new Dictionary<string, TransducerDataSet>();
             StoreRawSentences = false;
             _source.OnNewSequence += OnNewSequence;
         }
@@ -477,6 +481,13 @@ namespace Iot.Device.Nmea0183
                     {
                         // Throw away old entry
                         _lastSatelliteInfos.Dequeue();
+                    }
+                }
+                else if (sentence.SentenceId == TransducerMeasurement.Id && (sentence is TransducerMeasurement xdr))
+                {
+                    foreach (var measurement in xdr.DataSets)
+                    {
+                        _xdrData[measurement.DataName] = measurement;
                     }
                 }
             }

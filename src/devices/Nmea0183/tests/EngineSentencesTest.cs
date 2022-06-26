@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using Moq;
 using UnitsNet;
@@ -73,7 +74,7 @@ $PCDIN,01F201,00002AF8,02,000000FFFF477C0005000018150000FFFF000000000000007F7F*5
         {
             EngineRevolutions rv = new EngineRevolutions(TalkerId.ElectronicChartDisplayAndInformationSystem, RotationSource.Engine, engineData.Revolutions, engineData.EngineNo + 1, engineData.Pitch);
             _router.SendSentence(rv);
-            SeaSmartEngineFastMessage fast = new SeaSmartEngineFastMessage(engineData);
+            SeaSmartEngineFast fast = new SeaSmartEngineFast(engineData);
             _router.SendSentence(fast);
             SeaSmartEngineDetail detail = new SeaSmartEngineDetail(engineData);
             _router.SendSentence(detail);
@@ -146,6 +147,44 @@ $PCDIN,01F201,00002AF8,02,000000FFFF477C0005000018150000FFFF000000000000007F7F*5
                 engineNoText + "0000FFFF" + engineTempString + "00050000" + swappedString + "FFFF000000" + statusString + "00007F7F"
             }, DateTimeOffset.UtcNow);
             _router.SendSentence(rs);
+        }
+
+        [Fact]
+        public void EngineEncodeDecode()
+        {
+            NmeaSentence.OwnTalkerId = TalkerId.GlobalPositioningSystem;
+            var engineData = new EngineData(1000, 0,
+                RotationalSpeed.FromRevolutionsPerMinute(2240), // Value must be dividable by 64 to be round-trip capable
+                Ratio.FromPercent(100),
+                TimeSpan.FromDays(20), Temperature.FromDegreesCelsius(35));
+
+            // Encode and decode the two messages separately
+            var fast = new SeaSmartEngineFast(engineData);
+            Assert.True(fast.Valid);
+            string msgFast = fast.ToNmeaMessage();
+
+            Assert.StartsWith("$PCDIN,01F200", msgFast, StringComparison.InvariantCulture);
+            var decoded = TalkerSentence.FromSentenceString(msgFast, out var error);
+            Assert.NotNull(decoded);
+            DateTimeOffset o = default;
+            var decodedAndTypedFast = (SeaSmartEngineFast?)decoded!.TryGetTypedValue(ref o);
+            Assert.NotNull(decodedAndTypedFast);
+
+            var detail = new SeaSmartEngineDetail(engineData);
+            Assert.True(detail.Valid);
+            string msgDetail = detail.ToNmeaMessage();
+
+            Assert.StartsWith("$PCDIN,01F201", msgDetail, StringComparison.InvariantCulture);
+            decoded = TalkerSentence.FromSentenceString(msgDetail, out error);
+            Assert.NotNull(decoded);
+            o = default;
+            var decodedAndTypedDetail = (SeaSmartEngineDetail?)decoded!.TryGetTypedValue(ref o);
+            Assert.NotNull(decodedAndTypedDetail);
+
+            // And recombine the two
+            EngineData final = EngineData.FromMessages(decodedAndTypedFast!, decodedAndTypedDetail!);
+            Assert.NotNull(final);
+            Assert.Equal(engineData, final);
         }
     }
 }

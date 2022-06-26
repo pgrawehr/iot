@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnitsNet;
+using UnitsNet.Units;
 
 namespace Iot.Device.Nmea0183.Sentences
 {
@@ -17,6 +18,11 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public class SeaSmartEngineDetail : ProprietaryMessage
     {
+        /// <summary>
+        /// The NMEA2000 Sentence identifier for this message
+        /// </summary>
+        public static string Identifier = "01F201";
+
         /// <summary>
         /// Constructs a new sentence
         /// </summary>
@@ -41,6 +47,68 @@ namespace Iot.Device.Nmea0183.Sentences
             Temperature = data.EngineTemperature;
             EngineNumber = data.EngineNo;
             MessageTimeStamp = data.MessageTimeStamp;
+            Valid = true;
+        }
+
+        /// <summary>
+        /// Create a message object from a sentence
+        /// </summary>
+        /// <param name="sentence">The sentence</param>
+        /// <param name="time">The current time</param>
+        public SeaSmartEngineDetail(TalkerSentence sentence, DateTimeOffset time)
+            : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
+        {
+        }
+
+        /// <summary>
+        /// Creates a message object from a decoded sentence
+        /// </summary>
+        /// <param name="talkerId">The source talker id</param>
+        /// <param name="fields">The parameters</param>
+        /// <param name="time">The current time</param>
+        public SeaSmartEngineDetail(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+            : base(talkerId, Id, time)
+        {
+            IEnumerator<string> field = fields.GetEnumerator();
+
+            string subMessage = ReadString(field);
+            if (!subMessage.Equals(Identifier, StringComparison.OrdinalIgnoreCase))
+            {
+                Valid = false;
+                return;
+            }
+
+            string timeStamp = ReadString(field);
+
+            if (Int32.TryParse(timeStamp, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int time1))
+            {
+                MessageTimeStamp = time1;
+            }
+
+            ReadString(field); // Ignore next field
+
+            string data = ReadString(field);
+
+            if (ReadFromHexString(data, 0, 2, false, out int engineNo))
+            {
+                EngineNumber = engineNo;
+            }
+
+            if (ReadFromHexString(data, 10, 4, true, out int temp))
+            {
+                Temperature = Temperature.FromKelvins(temp / 100.0).ToUnit(TemperatureUnit.DegreeCelsius);
+            }
+
+            if (ReadFromHexString(data, 22, 8, true, out int operatingTime))
+            {
+                OperatingTime = TimeSpan.FromSeconds(operatingTime);
+            }
+
+            if (ReadFromHexString(data, 40, 4, true, out int status))
+            {
+                Status = status == 0;
+            }
+
             Valid = true;
         }
 

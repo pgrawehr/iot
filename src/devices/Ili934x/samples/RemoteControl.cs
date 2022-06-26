@@ -121,6 +121,16 @@ namespace Iot.Device.Ili934x.Samples
                 return null;
             }));
 
+            _dataSets.Add(new NmeaValueDataSet("Engine RPM", s =>
+            {
+                if (s.TryGetLastSentence(ProprietaryMessage.Id, SeaSmartEngineFastMessage.Identifier, out SeaSmartEngineFastMessage sentence))
+                {
+                    return sentence.RotationalSpeed.ToUnit(RotationalSpeedUnit.RevolutionPerMinute);
+                }
+
+                return null;
+            }));
+
             _selectedDataSet = 0;
             _leftMouseMenuBar = Image.Load<Rgba32>("images/MenuBarLeftMouse.png");
             _rightMouseMenuBar = Image.Load<Rgba32>("images/MenuBarRightMouse.png");
@@ -402,7 +412,7 @@ namespace Iot.Device.Ili934x.Samples
         private void DrawNmeaValue()
         {
             _screen.ClearScreen(Color.White);
-            if (_cache.TryGetCurrentPosition(out var position, true, out Angle track, out Speed sog, out Angle? heading))
+            // if (_cache.TryGetCurrentPosition(out var position, true, out Angle track, out Speed sog, out Angle? heading))
             {
                 using Image<Rgba32> bmp = _screen.CreateBackBuffer();
                 Font font = GetFont(110);
@@ -411,7 +421,7 @@ namespace Iot.Device.Ili934x.Samples
                 data.Update(_cache);
                 bmp.Mutate(x => x.DrawText(data.Value, font, SixLabors.ImageSharp.Color.Blue, new PointF(20, 30)));
                 bmp.Mutate(x => x.DrawText(data.Name, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(10, 5)));
-                bmp.Mutate(x => x.DrawText(data.Unit, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(_screen.ScreenWidth / 2, _screen.ScreenHeight - 33)));
+                bmp.Mutate(x => x.DrawText(data.Unit, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(_screen.ScreenWidth / 2.0f, _screen.ScreenHeight - 33)));
                 _screen.DrawBitmap(bmp);
             }
         }
