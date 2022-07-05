@@ -28,6 +28,7 @@ namespace DisplayControl
         private const string SignalKOut = "SignalKOut";
         private const string SignalKIn = "SignalK";
         private const string Udp = "Udp";
+        private const string AuxilaryGps = "AusilaryGps";
         
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -53,6 +54,11 @@ namespace DisplayControl
         /// Udp datagram server
         /// </summary>
         private NmeaUdpServer _udpServer;
+
+        /// <summary>
+        /// Secondary (forward) GPS antenna
+        /// </summary>
+        private NmeaParser _auxilaryGps;
 
         private SystemClockSynchronizer _clockSynchronizer;
         
@@ -80,6 +86,8 @@ namespace DisplayControl
 
         private ILogger _logger;
         private ImuSensor _imu;
+        private CustomData<GeographicPosition> _forwardPosition;
+        private CustomData<GeographicPosition> _rearPosition;
 
         public NmeaSensor(MeasurementManager manager)
         {
@@ -91,6 +99,10 @@ namespace DisplayControl
             _numSatellites = new CustomData<int>("Number of Sats in view", 0, SensorSource.Position) { CustomFormatOperation = x => x.ToString(CultureInfo.CurrentCulture) };
             _satStatus = new CustomData<string>("Satellites in View", string.Empty, SensorSource.Position);
             _hdgFromHandheld = new SensorMeasurement("Handheld heading", Angle.Zero, SensorSource.Compass, 2, TimeSpan.FromSeconds(20));
+            _forwardPosition = new CustomData<GeographicPosition>("Forward antenna position", new GeographicPosition(),
+                SensorSource.Position);
+            _rearPosition = new CustomData<GeographicPosition>("Rear antenna position", new GeographicPosition(),
+                SensorSource.Position);
             _logger = this.GetCurrentClassLogger();
         }
 
@@ -105,8 +117,8 @@ namespace DisplayControl
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
-            // GGA messages from the ship are discarded (the ones from the handheld shall be used instead)
-            rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>(), false, false));
+            // GGA messages from the ship are normally discarded, but the cache shall decide (may use a fallback)
+            rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>() { MessageRouter.LocalMessageSource }, false, false));
             // Same applies for this. For some reason, this also gets a different value for the magnetic variation
             rules.Add(new FilterRule("*", yd, new SentenceId("RMC"), new List<string>(), false, false));
             // And these.
@@ -402,6 +414,11 @@ namespace DisplayControl
                             break;
                         }
 
+                        if (gga.TalkerId != TalkerId.GlobalPositioningSystem)
+                        {
+                            _logger.LogDebug($"Skipping GGA message from {gga.TalkerId}");
+                        }
+
                         _lastGgaMessage = gga;
                         _position.UpdateValue(gga.Position);
                         _manager.UpdateValues(new[] { SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid },
@@ -504,7 +521,7 @@ namespace DisplayControl
                     _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
                         rmb.DistanceToWayPoint.HasValue ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData);
                     if (rmb.DistanceToWayPoint.HasValue &&
-                        _cache.TryGetCurrentPosition(out var position, out var track, out var sog, out var heading))
+                        _cache.TryGetCurrentPosition(out var position, TalkerId.GlobalPositioningSystem, false, out var track, out var sog, out var heading))
                     {
                         if (sog.MetersPerSecond < 0.01)
                         {

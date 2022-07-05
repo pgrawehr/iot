@@ -19,7 +19,11 @@ namespace Iot.Device.Nmea0183
     {
         private readonly NmeaSinkAndSource _source;
         private readonly object _lock;
-        private Dictionary<SentenceId, NmeaSentence> _sentences;
+
+        private readonly Dictionary<int, NmeaSentence> _dinData;
+        private readonly Dictionary<SentenceId, NmeaSentence> _sentences;
+        private readonly Dictionary<TalkerId, Dictionary<SentenceId, NmeaSentence>> _sentencesBySource;
+
         private Queue<RoutePart> _lastRouteSentences;
         private Dictionary<string, Waypoint> _wayPoints;
         private Queue<SatellitesInView> _lastSatelliteInfos;
@@ -44,10 +48,12 @@ namespace Iot.Device.Nmea0183
             _source = source;
             _lock = new object();
             _sentences = new Dictionary<SentenceId, NmeaSentence>();
+            _sentencesBySource = new Dictionary<TalkerId, Dictionary<SentenceId, NmeaSentence>>();
             _lastRouteSentences = new Queue<RoutePart>();
             _lastSatelliteInfos = new Queue<SatellitesInView>();
             _wayPoints = new Dictionary<string, Waypoint>();
             _xdrData = new Dictionary<string, TransducerDataSet>();
+            _dinData = new Dictionary<int, NmeaSentence>();
             StoreRawSentences = false;
             _source.OnNewSequence += OnNewSequence;
         }
@@ -73,6 +79,7 @@ namespace Iot.Device.Nmea0183
                 _lastRouteSentences.Clear();
                 _wayPoints.Clear();
                 _lastSatelliteInfos.Clear();
+                _sentencesBySource.Clear();
             }
         }
 
@@ -87,7 +94,7 @@ namespace Iot.Device.Nmea0183
         /// <returns>True if a valid position is returned</returns>
         public bool TryGetCurrentPosition(out GeographicPosition? position, out Angle track, out Speed sog, out Angle? heading)
         {
-            return TryGetCurrentPosition(out position, false, out track, out sog, out heading);
+            return TryGetCurrentPosition(out position, null, false, out track, out sog, out heading);
         }
 
         /// <summary>
@@ -101,14 +108,32 @@ namespace Iot.Device.Nmea0183
         /// <param name="sog">Speed over ground</param>
         /// <param name="heading">Vessel Heading</param>
         /// <returns>True if a valid position is returned</returns>
-        public bool TryGetCurrentPosition(out GeographicPosition? position, bool extrapolate, out Angle track, out Speed sog, out Angle? heading)
+        public bool TryGetCurrentPosition(out GeographicPosition? position, bool extrapolate,
+            out Angle track, out Speed sog, out Angle? heading)
+        {
+            return TryGetCurrentPosition(out position, null, extrapolate, out track, out sog, out heading);
+        }
+
+        /// <summary>
+        /// Get the current position from the latest message containing any of the relevant data parts.
+        /// If <paramref name="extrapolate"></paramref> is true, the speed and direction are used to extrapolate the position (many older
+        /// GNSS receivers only deliver the position at 1Hz or less)
+        /// </summary>
+        /// <param name="position">Current position</param>
+        /// <param name="talker">Only look at this talker ID (otherwise, if multiple sources provide a position, any is used)</param>
+        /// <param name="extrapolate">True to extrapolate the current position using speed and track</param>
+        /// <param name="track">Track (course over ground)</param>
+        /// <param name="sog">Speed over ground</param>
+        /// <param name="heading">Vessel Heading</param>
+        /// <returns>True if a valid position is returned</returns>
+        public bool TryGetCurrentPosition(out GeographicPosition? position, TalkerId? talker, bool extrapolate, out Angle track, out Speed sog, out Angle? heading)
         {
             // Try to get any of the position messages
-            var gll = (PositionFastUpdate?)GetLastSentence(PositionFastUpdate.Id);
-            var gga = (GlobalPositioningSystemFixData?)GetLastSentence(GlobalPositioningSystemFixData.Id);
-            var rmc = (RecommendedMinimumNavigationInformation?)GetLastSentence(RecommendedMinimumNavigationInformation.Id);
-            var vtg = (TrackMadeGood?)GetLastSentence(TrackMadeGood.Id);
-            var hdt = (HeadingTrue?)GetLastSentence(HeadingTrue.Id);
+            var gll = (PositionFastUpdate?)GetLastSentence(talker, PositionFastUpdate.Id);
+            var gga = (GlobalPositioningSystemFixData?)GetLastSentence(talker, GlobalPositioningSystemFixData.Id);
+            var rmc = (RecommendedMinimumNavigationInformation?)GetLastSentence(talker, RecommendedMinimumNavigationInformation.Id);
+            var vtg = (TrackMadeGood?)GetLastSentence(talker, TrackMadeGood.Id);
+            var hdt = (HeadingTrue?)GetLastSentence(talker, HeadingTrue.Id);
             TimeSpan age;
 
             List<(GeographicPosition, TimeSpan)> orderablePositions = new List<(GeographicPosition, TimeSpan)>();
@@ -193,6 +218,33 @@ namespace Iot.Device.Nmea0183
                 if (_sentences.TryGetValue(id, out var sentence))
                 {
                     return sentence;
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the last sentence with the given id from the given talker.
+        /// </summary>
+        /// <param name="talker">Source to query</param>
+        /// <param name="id">Id to query</param>
+        /// <returns>The last sentence of that type and source, null if not found</returns>
+        public NmeaSentence? GetLastSentence(TalkerId? talker, SentenceId id)
+        {
+            if (talker == null)
+            {
+                return GetLastSentence(id);
+            }
+
+            lock (_lock)
+            {
+                if (_sentencesBySource.TryGetValue(talker.Value, out var list))
+                {
+                    if (list.TryGetValue(id, out var sentence))
+                    {
+                        return sentence;
+                    }
                 }
 
                 return null;
@@ -459,6 +511,18 @@ namespace Iot.Device.Nmea0183
                 {
                     // Standalone sequences. Only the last message needs to be kept
                     _sentences[sentence.SentenceId] = sentence;
+
+                    // We already own the lock to do that a bit more complex update.
+                    if (_sentencesBySource.TryGetValue(sentence.TalkerId, out var dict))
+                    {
+                        dict[sentence.SentenceId] = sentence;
+                    }
+                    else
+                    {
+                        var d = new Dictionary<SentenceId, NmeaSentence>();
+                        d[sentence.SentenceId] = sentence;
+                        _sentencesBySource[sentence.TalkerId] = d;
+                    }
                 }
                 else if (sentence.SentenceId == RoutePart.Id && (sentence is RoutePart rte))
                 {

@@ -244,7 +244,7 @@ namespace Iot.Device.Nmea0183
                 _activeDeviation = deviation;
             }
 
-            if (_cache.TryGetCurrentPosition(out var position, out Angle track, out Speed sog, out Angle? heading) && position != null)
+            if (_cache.TryGetCurrentPosition(out var position, TalkerId.GlobalPositioningSystem, false, out Angle track, out Speed sog, out Angle? heading) && position != null)
             {
                 string previousWayPoint = string.Empty;
                 string nextWayPoint = string.Empty;
