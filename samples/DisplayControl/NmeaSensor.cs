@@ -28,7 +28,7 @@ namespace DisplayControl
         private const string SignalKOut = "SignalKOut";
         private const string SignalKIn = "SignalK";
         private const string Udp = "Udp";
-        private const string AuxilaryGps = "AusilaryGps";
+        private const string AuxiliaryGps = "AuxiliaryGps";
         
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -58,7 +58,7 @@ namespace DisplayControl
         /// <summary>
         /// Secondary (forward) GPS antenna
         /// </summary>
-        private NmeaParser _auxilaryGps;
+        private NmeaParser _parserForwardInterface;
 
         private SystemClockSynchronizer _clockSynchronizer;
         
@@ -88,6 +88,9 @@ namespace DisplayControl
         private ImuSensor _imu;
         private CustomData<GeographicPosition> _forwardPosition;
         private CustomData<GeographicPosition> _rearPosition;
+        private SerialPort _serialPortForward;
+        private readonly SensorMeasurement _forwardRearSeparation;
+        private readonly SensorMeasurement _forwardRearAngle;
 
         public NmeaSensor(MeasurementManager manager)
         {
@@ -103,6 +106,10 @@ namespace DisplayControl
                 SensorSource.Position);
             _rearPosition = new CustomData<GeographicPosition>("Rear antenna position", new GeographicPosition(),
                 SensorSource.Position);
+
+            _forwardRearSeparation = new SensorMeasurement("Antenna separation", Length.Zero, SensorSource.Position, 3);
+            _forwardRearAngle = new SensorMeasurement("GNSS derived heading", Angle.Zero, SensorSource.Position, 4);
+
             _logger = this.GetCurrentClassLogger();
         }
 
@@ -111,14 +118,14 @@ namespace DisplayControl
             TalkerId yd = new TalkerId('Y', 'D');
             // Note: Order is important. First ones are checked first
             IList<FilterRule> rules = new List<FilterRule>();
-            // Drop any incoming sentences from this source, they were processed already (no known use case here)
-            // rules.Add(new FilterRule(SignalKIn, TalkerId.Any, SentenceId.Any, new List<string>(), false ));
             // Log just everything, but of course continue processing
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
             // GGA messages from the ship are normally discarded, but the cache shall decide (may use a fallback)
             rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>() { MessageRouter.LocalMessageSource }, false, false));
+            rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, new SentenceId("GGA"), new List<string>() { MessageRouter.LocalMessageSource }, false, false));
+            rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, new SentenceId("RMC"), new List<string>() { MessageRouter.LocalMessageSource }, false, false));
             // Same applies for this. For some reason, this also gets a different value for the magnetic variation
             rules.Add(new FilterRule("*", yd, new SentenceId("RMC"), new List<string>(), false, false));
             // And these.
@@ -291,7 +298,8 @@ namespace DisplayControl
                 _hdgFromHandheld,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint,
-                SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus
+                SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus, _rearPosition, _forwardPosition,
+                _forwardRearSeparation, _forwardRearAngle
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -304,11 +312,19 @@ namespace DisplayControl
             _serialPortHandheld = new SerialPort("/dev/ttyAMA2", 4800);
             _serialPortHandheld.Open();
 
+            _serialPortForward = new SerialPort("/dev/ttyAMA3", 9600);
+            _serialPortForward.Open();
+
             _streamHandheld = _serialPortHandheld.BaseStream;
 
             _parserHandheldInterface = new NmeaParser(HandheldSourceName, _streamHandheld, _streamHandheld);
             _parserHandheldInterface.OnParserError += OnParserError;
             _parserHandheldInterface.StartDecode();
+
+            _parserForwardInterface =
+                new NmeaParser(AuxiliaryGps, _serialPortForward.BaseStream, _serialPortForward.BaseStream);
+            _parserForwardInterface.OnParserError += OnParserError;
+            _parserForwardInterface.StartDecode();
 
             _openCpnServer = new NmeaTcpServer(OpenCpn, IPAddress.Any, 10100);
             _openCpnServer.OnParserError += OnParserError;
@@ -342,6 +358,7 @@ namespace DisplayControl
             _router.AddEndPoint(_signalkServer);
             _router.AddEndPoint(_clockSynchronizer);
             _router.AddEndPoint(_udpServer);
+            _router.AddEndPoint(_parserForwardInterface);
             // _router.AddEndPoint(_signalKClientParser);
 
             _router.OnNewSequence += ParserOnNewSequence;
@@ -407,16 +424,62 @@ namespace DisplayControl
             {
                 case GlobalPositioningSystemFixData gga:
                 {
+                    if (gga.TalkerId == new TalkerId('Y', 'D'))
+                    {
+                        if (gga.Valid)
+                        {
+                            _rearPosition.UpdateValue(gga.Position);
+                            if (_cache.TryGetCurrentPosition(out var forwardPos, TalkerId.GlobalNavigationSatelliteSystem,
+                                    false,
+                                    out _, out _, out _, out var time1) && forwardPos!.ContainsValidPosition())
+                            {
+                                GreatCircle.DistAndDir(gga.Position, forwardPos, out var distance, out var angle);
+                                if (DateTimeOffset.UtcNow - time1 < TimeSpan.FromSeconds(10))
+                                {
+                                    _forwardRearSeparation.UpdateValue(distance);
+                                    _forwardRearAngle.UpdateValue(angle);
+
+                                    if (_imu != null && _hdgFromHandheld != null)
+                                    {
+                                        _logger.LogDebug(
+                                            $"Heading update: Raw main compass: {_imu.RawHeading} From Handheld: {_hdgFromHandheld.Value}, GNSS derived: {angle}, COG: {SensorMeasurement.Track.Value}");
+                                    }
+                                }
+                                else
+                                {
+                                    _forwardRearSeparation.UpdateValue(null, SensorMeasurementStatus.NoData, false);
+                                    _forwardRearAngle.UpdateValue(null, SensorMeasurementStatus.NoData, false);
+                                    _logger.LogWarning("No recent data from forward GNSS receiver");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _rearPosition.UpdateValue(new GeographicPosition(), SensorMeasurementStatus.NoData);
+                        }
+
+                        break;
+                    }
+
+                    if (gga.TalkerId == TalkerId.GlobalNavigationSatelliteSystem)
+                    {
+                        if (gga.Valid)
+                        {
+                            _forwardPosition.UpdateValue(gga.Position);
+                        }
+                        else
+                        {
+                            _forwardPosition.UpdateValue(new GeographicPosition(), SensorMeasurementStatus.NoData);
+                        }
+
+                        break;
+                    }
+
                     if (gga.Valid)
                     {
                         if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(0.5))
                         {
                             break;
-                        }
-
-                        if (gga.TalkerId != TalkerId.GlobalPositioningSystem)
-                        {
-                            _logger.LogDebug($"Skipping GGA message from {gga.TalkerId}");
                         }
 
                         _lastGgaMessage = gga;
@@ -521,7 +584,7 @@ namespace DisplayControl
                     _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
                         rmb.DistanceToWayPoint.HasValue ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData);
                     if (rmb.DistanceToWayPoint.HasValue &&
-                        _cache.TryGetCurrentPosition(out var position, TalkerId.GlobalPositioningSystem, false, out var track, out var sog, out var heading))
+                        _cache.TryGetCurrentPosition(out var position, TalkerId.GlobalPositioningSystem, false, out var track, out var sog, out var heading, out var time))
                     {
                         if (sog.MetersPerSecond < 0.01)
                         {
@@ -600,6 +663,15 @@ namespace DisplayControl
                 _serialPortHandheld.Close();
                 _parserHandheldInterface.Dispose();
                 _serialPortHandheld.Dispose();
+            }
+
+            if (_serialPortForward != null)
+            {
+                _serialPortForward.Close();
+                _parserForwardInterface.Dispose();
+                _serialPortForward.Dispose();
+                _serialPortForward = null;
+                _parserForwardInterface = null;
             }
 
             _openCpnServer?.Dispose();

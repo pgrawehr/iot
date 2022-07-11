@@ -94,7 +94,7 @@ namespace Iot.Device.Nmea0183
         /// <returns>True if a valid position is returned</returns>
         public bool TryGetCurrentPosition(out GeographicPosition? position, out Angle track, out Speed sog, out Angle? heading)
         {
-            return TryGetCurrentPosition(out position, null, false, out track, out sog, out heading);
+            return TryGetCurrentPosition(out position, null, false, out track, out sog, out heading, out _);
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Iot.Device.Nmea0183
         public bool TryGetCurrentPosition(out GeographicPosition? position, bool extrapolate,
             out Angle track, out Speed sog, out Angle? heading)
         {
-            return TryGetCurrentPosition(out position, null, extrapolate, out track, out sog, out heading);
+            return TryGetCurrentPosition(out position, null, extrapolate, out track, out sog, out heading, out _);
         }
 
         /// <summary>
@@ -125,9 +125,11 @@ namespace Iot.Device.Nmea0183
         /// <param name="track">Track (course over ground)</param>
         /// <param name="sog">Speed over ground</param>
         /// <param name="heading">Vessel Heading</param>
+        /// <param name="messageTime">Time of the position report that was used</param>
         /// <returns>True if a valid position is returned</returns>
-        public bool TryGetCurrentPosition(out GeographicPosition? position, TalkerId? talker, bool extrapolate, out Angle track, out Speed sog, out Angle? heading)
+        public bool TryGetCurrentPosition(out GeographicPosition? position, TalkerId? talker, bool extrapolate, out Angle track, out Speed sog, out Angle? heading, out DateTimeOffset messageTime)
         {
+            messageTime = default;
             // Try to get any of the position messages
             var gll = (PositionFastUpdate?)GetLastSentence(talker, PositionFastUpdate.Id);
             var gga = (GlobalPositioningSystemFixData?)GetLastSentence(talker, GlobalPositioningSystemFixData.Id);
@@ -137,19 +139,29 @@ namespace Iot.Device.Nmea0183
             TimeSpan age;
 
             List<(GeographicPosition, TimeSpan)> orderablePositions = new List<(GeographicPosition, TimeSpan)>();
-            if (gll != null && gll.Position != null)
+            if (gll != null && gll.Position.ContainsValidPosition())
             {
                 orderablePositions.Add((gll.Position, gll.Age));
+                messageTime = gll.DateTime;
             }
 
-            if (gga != null && gga.Valid)
+            // Choose the best message we can, but if all of them are new, always use the same type
+            if (gll == null || gll.Age > TimeSpan.FromSeconds(2))
             {
-                orderablePositions.Add((gga.Position, gga.Age));
-            }
+                if (gga != null && gga.Valid)
+                {
+                    orderablePositions.Add((gga.Position, gga.Age));
+                    messageTime = gga.DateTime;
+                }
 
-            if (rmc != null && rmc.Valid)
-            {
-                orderablePositions.Add((rmc.Position, rmc.Age));
+                if (gga == null || gga.Age > TimeSpan.FromSeconds(2))
+                {
+                    if (rmc != null && rmc.Valid)
+                    {
+                        orderablePositions.Add((rmc.Position, rmc.Age));
+                        messageTime = rmc.DateTime;
+                    }
+                }
             }
 
             if (orderablePositions.Count == 0)
@@ -159,6 +171,7 @@ namespace Iot.Device.Nmea0183
                 track = Angle.Zero;
                 sog = Speed.Zero;
                 heading = null;
+                messageTime = DateTimeOffset.MinValue;
                 return false;
             }
 
@@ -185,6 +198,7 @@ namespace Iot.Device.Nmea0183
                 sog = Speed.Zero;
                 track = Angle.Zero;
                 heading = null;
+                messageTime = DateTimeOffset.MinValue;
                 return false;
             }
 

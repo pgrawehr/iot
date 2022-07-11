@@ -33,6 +33,7 @@ namespace DisplayControl
             _lastEulerAngles = new Vector3();
             _imuTemperature = new SensorMeasurement("IMU Temperature", Temperature.Zero, SensorSource.Compass);
             _correctionEnabled = new PersistentBool(file, "DeviationCorrectionEnabled", true);
+            RawHeading = Angle.Zero;
         }
 
         public bool DeviationCorrectionEnabled
@@ -61,6 +62,12 @@ namespace DisplayControl
         {
             get;
             set;
+        }
+
+        public Angle RawHeading
+        {
+            get;
+            private set;
         }
 
         public override void Init(GpioController gpioController)
@@ -153,6 +160,8 @@ namespace DisplayControl
                 Angle.FromDegrees(_lastEulerAngles.Z), Angle.FromDegrees(_lastEulerAngles.Y), 
                 hdg.Normalize(true), hdgUncorrected.Normalize(true), _imu.Temperature
             });
+
+            RawHeading = hdgUncorrected.Normalize(true);
 
             Manager.UpdateValue(SensorMeasurement.Deviation, deviation, DeviationCorrectionEnabled ? SensorMeasurementStatus.None : SensorMeasurementStatus.Warning);
         }

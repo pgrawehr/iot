@@ -7,6 +7,7 @@
     <Nullable>warnings</Nullable>
     <!--We don't want package references, but individual project references-->
     <PreferPackageReference>true</PreferPackageReference>
+    <NoWarn>$(NoWarn);NU1504</NoWarn>
   </PropertyGroup>
 <ItemGroup>
     <Folder Include="Models\" />

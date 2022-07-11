@@ -67,6 +67,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public TalkerId TalkerId
         {
             get;
+            set;
         }
 
         /// <summary>
