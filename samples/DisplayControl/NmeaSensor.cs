@@ -85,6 +85,7 @@ namespace DisplayControl
         private CustomData<string> _satStatus;
 
         private ILogger _logger;
+        private ILogger _valueLogger;
         private ImuSensor _imu;
         private CustomData<GeographicPosition> _forwardPosition;
         private CustomData<GeographicPosition> _rearPosition;
@@ -111,6 +112,10 @@ namespace DisplayControl
             _forwardRearAngle = new SensorMeasurement("GNSS derived heading", Angle.Zero, SensorSource.Position, 4);
 
             _logger = this.GetCurrentClassLogger();
+
+            _valueLogger = LogDispatcher.GetLogger("HeadingRawLogger");
+            // Don't use dashes in the following line, as it makes evaluating in excel more difficult (the dash is used as main separator in the logs)
+            _valueLogger.LogDebug($"Compass | Handheld | Rear to Forward | Rear to Handheld | Handheld to Forward | COG | Dist RF | Dist RH | Dist HF");
         }
 
         public IList<FilterRule> ConstructRules()
@@ -432,18 +437,34 @@ namespace DisplayControl
                             _rearPosition.UpdateValue(gga.Position);
                             if (_cache.TryGetCurrentPosition(out var forwardPos, AuxiliaryGps,
                                     false,
-                                    out _, out _, out _, out var time1) && forwardPos!.ContainsValidPosition())
+                                    out _, out _, out _, out var time1) && forwardPos!.ContainsValidPosition() 
+                                && _cache.TryGetCurrentPosition(out var handheldPosition, HandheldSourceName, false, out _, out _, out _, out _) && handheldPosition.ContainsValidPosition())
                             {
-                                GreatCircle.DistAndDir(gga.Position, forwardPos, out var distance, out var angle);
-                                if (DateTimeOffset.UtcNow - time1 < TimeSpan.FromSeconds(10))
+                                Angle expectedInHarbor = Angle.FromDegrees(251); // For testing: This value is derived from the map
+                                GreatCircle.DistAndDir(gga.Position, forwardPos, out var distance, out var anglerf);
+                                GreatCircle.DistAndDir(gga.Position, handheldPosition, out var distance2, out var anglerh);
+                                GreatCircle.DistAndDir(handheldPosition, forwardPos, out var distance3, out var anglehf);
+                                    if (DateTimeOffset.UtcNow - time1 < TimeSpan.FromSeconds(10))
                                 {
                                     _forwardRearSeparation.UpdateValue(distance);
-                                    _forwardRearAngle.UpdateValue(angle);
+                                    _forwardRearAngle.UpdateValue(anglerf);
 
-                                    if (_imu != null && _hdgFromHandheld != null)
+                                    if (_imu != null && _hdgFromHandheld != null && _hdgFromHandheld.Value != null && _magneticVariation.HasValue)
                                     {
+                                        Angle trueFromCompass =
+                                            _imu.RawHeading.MagneticToTrue(_magneticVariation.Value);
+                                        Angle hdgFromHandheld = Angle.FromDegrees(_hdgFromHandheld.Value.Value);
+                                        Angle trueFromHandheld =
+                                            hdgFromHandheld.MagneticToTrue(_magneticVariation.Value);
                                         _logger.LogDebug(
-                                            $"Heading update: Raw main compass: {_imu.RawHeading} From Handheld: {_hdgFromHandheld.Value}, GNSS derived: {angle}, COG: {SensorMeasurement.Track.Value}");
+                                            $"Heading update: Main compass (true): {trueFromCompass} From Handheld: {trueFromHandheld}, GNSS derived: R-F {anglerf} R-H {anglerh} H-F {anglehf}, COG: {SensorMeasurement.Track.Value}");
+
+                                        _logger.LogDebug($"Distance R-F (expected 5.2m) {distance} R-H (expected 2.6m) {distance2}, H-F (expected 2.6m) {distance3}");
+
+                                        _logger.LogDebug(
+                                            $"Deltas: R-F {AngleExtensions.Difference(anglerf, expectedInHarbor)} R-H {AngleExtensions.Difference(anglerh, expectedInHarbor)} H-F {AngleExtensions.Difference(anglehf, expectedInHarbor)} ");
+
+                                        _valueLogger.LogDebug($"{trueFromCompass.Degrees} | {trueFromHandheld.Degrees} | {anglerf.Degrees} | {anglerh.Degrees} | {anglehf.Degrees} | {SensorMeasurement.Track.Value!.Value} | {distance.Meters} | {distance2.Meters} | {distance3.Meters}");
                                     }
                                 }
                                 else
