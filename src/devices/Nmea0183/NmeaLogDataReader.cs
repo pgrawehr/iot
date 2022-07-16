@@ -92,7 +92,7 @@ namespace Iot.Device.Nmea0183
 
         private void ForwardDecoded(NmeaSinkAndSource source, NmeaSentence sentence)
         {
-            DispatchSentenceEvents(sentence);
+            DispatchSentenceEvents(source, sentence);
         }
 
         private void ForwardDecodedRealTime(NmeaSinkAndSource source, NmeaSentence sentence)
@@ -124,7 +124,7 @@ namespace Iot.Device.Nmea0183
 
             sentence.DateTime = now;
 
-            DispatchSentenceEvents(sentence);
+            DispatchSentenceEvents(source, sentence);
         }
 
         /// <inheritdoc />

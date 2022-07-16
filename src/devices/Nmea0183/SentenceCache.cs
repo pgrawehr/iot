@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
+using Microsoft.Extensions.Logging;
 using UnitsNet;
 
 namespace Iot.Device.Nmea0183
@@ -22,7 +23,9 @@ namespace Iot.Device.Nmea0183
 
         private readonly Dictionary<int, NmeaSentence> _dinData;
         private readonly Dictionary<SentenceId, NmeaSentence> _sentences;
-        private readonly Dictionary<TalkerId, Dictionary<SentenceId, NmeaSentence>> _sentencesBySource;
+        private readonly Dictionary<String, Dictionary<SentenceId, NmeaSentence>> _sentencesBySource;
+
+        private readonly ILogger _logger;
 
         private Queue<RoutePart> _lastRouteSentences;
         private Dictionary<string, Waypoint> _wayPoints;
@@ -48,13 +51,14 @@ namespace Iot.Device.Nmea0183
             _source = source;
             _lock = new object();
             _sentences = new Dictionary<SentenceId, NmeaSentence>();
-            _sentencesBySource = new Dictionary<TalkerId, Dictionary<SentenceId, NmeaSentence>>();
+            _sentencesBySource = new Dictionary<String, Dictionary<SentenceId, NmeaSentence>>();
             _lastRouteSentences = new Queue<RoutePart>();
             _lastSatelliteInfos = new Queue<SatellitesInView>();
             _wayPoints = new Dictionary<string, Waypoint>();
             _xdrData = new Dictionary<string, TransducerDataSet>();
             _dinData = new Dictionary<int, NmeaSentence>();
             StoreRawSentences = false;
+            _logger = this.GetCurrentClassLogger();
             _source.OnNewSequence += OnNewSequence;
         }
 
@@ -120,22 +124,27 @@ namespace Iot.Device.Nmea0183
         /// GNSS receivers only deliver the position at 1Hz or less)
         /// </summary>
         /// <param name="position">Current position</param>
-        /// <param name="talker">Only look at this talker ID (otherwise, if multiple sources provide a position, any is used)</param>
+        /// <param name="source">Only look at this source (otherwise, if multiple sources provide a position, any is used)</param>
         /// <param name="extrapolate">True to extrapolate the current position using speed and track</param>
         /// <param name="track">Track (course over ground)</param>
         /// <param name="sog">Speed over ground</param>
         /// <param name="heading">Vessel Heading</param>
         /// <param name="messageTime">Time of the position report that was used</param>
         /// <returns>True if a valid position is returned</returns>
-        public bool TryGetCurrentPosition(out GeographicPosition? position, TalkerId? talker, bool extrapolate, out Angle track, out Speed sog, out Angle? heading, out DateTimeOffset messageTime)
+        public bool TryGetCurrentPosition(
+#if NET5_0_OR_GREATER
+            [NotNullWhen(true)]
+#endif
+            out GeographicPosition? position,
+            String? source, bool extrapolate, out Angle track, out Speed sog, out Angle? heading, out DateTimeOffset messageTime)
         {
             messageTime = default;
             // Try to get any of the position messages
-            var gll = (PositionFastUpdate?)GetLastSentence(talker, PositionFastUpdate.Id);
-            var gga = (GlobalPositioningSystemFixData?)GetLastSentence(talker, GlobalPositioningSystemFixData.Id);
-            var rmc = (RecommendedMinimumNavigationInformation?)GetLastSentence(talker, RecommendedMinimumNavigationInformation.Id);
-            var vtg = (TrackMadeGood?)GetLastSentence(talker, TrackMadeGood.Id);
-            var hdt = (HeadingTrue?)GetLastSentence(talker, HeadingTrue.Id);
+            var gll = (PositionFastUpdate?)GetLastSentence(source, PositionFastUpdate.Id);
+            var gga = (GlobalPositioningSystemFixData?)GetLastSentence(source, GlobalPositioningSystemFixData.Id);
+            var rmc = (RecommendedMinimumNavigationInformation?)GetLastSentence(source, RecommendedMinimumNavigationInformation.Id);
+            var vtg = (TrackMadeGood?)GetLastSentence(source, TrackMadeGood.Id);
+            var hdt = (HeadingTrue?)GetLastSentence(source, HeadingTrue.Id);
             TimeSpan age;
 
             List<(GeographicPosition, TimeSpan)> orderablePositions = new List<(GeographicPosition, TimeSpan)>();
@@ -241,19 +250,19 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Gets the last sentence with the given id from the given talker.
         /// </summary>
-        /// <param name="talker">Source to query</param>
+        /// <param name="source">Source to query</param>
         /// <param name="id">Id to query</param>
         /// <returns>The last sentence of that type and source, null if not found</returns>
-        public NmeaSentence? GetLastSentence(TalkerId? talker, SentenceId id)
+        public NmeaSentence? GetLastSentence(string? source, SentenceId id)
         {
-            if (talker == null)
+            if (source == null)
             {
                 return GetLastSentence(id);
             }
 
             lock (_lock)
             {
-                if (_sentencesBySource.TryGetValue(talker.Value, out var list))
+                if (_sentencesBySource.TryGetValue(source, out var list))
                 {
                     if (list.TryGetValue(id, out var sentence))
                     {
@@ -519,6 +528,17 @@ namespace Iot.Device.Nmea0183
                 return;
             }
 
+            string sourceName;
+            if (source == null)
+            {
+                sourceName = MessageRouter.LocalMessageSource;
+                _logger.LogWarning($"Cache got message without source: {sentence.ToNmeaMessage()}");
+            }
+            else
+            {
+                sourceName = source.InterfaceName;
+            }
+
             lock (_lock)
             {
                 if (!_groupSentences.Contains(sentence.SentenceId))
@@ -527,7 +547,7 @@ namespace Iot.Device.Nmea0183
                     _sentences[sentence.SentenceId] = sentence;
 
                     // We already own the lock to do that a bit more complex update.
-                    if (_sentencesBySource.TryGetValue(sentence.TalkerId, out var dict))
+                    if (_sentencesBySource.TryGetValue(sourceName, out var dict))
                     {
                         dict[sentence.SentenceId] = sentence;
                     }
@@ -535,7 +555,7 @@ namespace Iot.Device.Nmea0183
                     {
                         var d = new Dictionary<SentenceId, NmeaSentence>();
                         d[sentence.SentenceId] = sentence;
-                        _sentencesBySource[sentence.TalkerId] = d;
+                        _sentencesBySource[sourceName] = d;
                     }
                 }
                 else if (sentence.SentenceId == RoutePart.Id && (sentence is RoutePart rte))

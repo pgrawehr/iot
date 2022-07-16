@@ -241,7 +241,12 @@ namespace Iot.Device.Nmea0183.Sentences
             if (LatitudeDegrees.HasValue && LongitudeDegrees.HasValue && EllipsoidAltitude.HasValue)
             {
                 GeographicPosition position = new GeographicPosition(LatitudeDegrees.Value, LongitudeDegrees.Value, EllipsoidAltitude.Value);
-                return $"Position: {position}";
+                return $"Position with height: {position}";
+            }
+            else if (LatitudeDegrees.HasValue && LongitudeDegrees.HasValue)
+            {
+                GeographicPosition position = new GeographicPosition(LatitudeDegrees.Value, LongitudeDegrees.Value, 0);
+                return $"Position (no valid height): {position}";
             }
 
             return "Position unknown";

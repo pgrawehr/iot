@@ -351,6 +351,7 @@ namespace DisplayControl
 
             _cache = new SentenceCache(_router);
             _autopilot = new AutopilotController(_router, _router, _cache);
+            _autopilot.NmeaSourceName = HandheldSourceName;
 
             _router.AddEndPoint(_parserShipInterface);
             _router.AddEndPoint(_parserHandheldInterface);
@@ -429,7 +430,7 @@ namespace DisplayControl
                         if (gga.Valid)
                         {
                             _rearPosition.UpdateValue(gga.Position);
-                            if (_cache.TryGetCurrentPosition(out var forwardPos, TalkerId.GlobalNavigationSatelliteSystem,
+                            if (_cache.TryGetCurrentPosition(out var forwardPos, AuxiliaryGps,
                                     false,
                                     out _, out _, out _, out var time1) && forwardPos!.ContainsValidPosition())
                             {
@@ -461,7 +462,7 @@ namespace DisplayControl
                         break;
                     }
 
-                    if (gga.TalkerId == TalkerId.GlobalNavigationSatelliteSystem)
+                    if (source == _parserForwardInterface)
                     {
                         if (gga.Valid)
                         {
@@ -584,7 +585,7 @@ namespace DisplayControl
                     _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
                         rmb.DistanceToWayPoint.HasValue ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData);
                     if (rmb.DistanceToWayPoint.HasValue &&
-                        _cache.TryGetCurrentPosition(out var position, TalkerId.GlobalPositioningSystem, false, out var track, out var sog, out var heading, out var time))
+                        _cache.TryGetCurrentPosition(out var position, AuxiliaryGps, false, out var track, out var sog, out var heading, out var time))
                     {
                         if (sog.MetersPerSecond < 0.01)
                         {

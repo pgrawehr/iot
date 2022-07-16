@@ -112,14 +112,24 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Forwards the given sentence to listeners, as needed.
+        /// Forwards the given sentence to listeners, as needed. Use the current instance as source.
         /// </summary>
         /// <param name="typedSequence">The sentences to process</param>
         protected virtual void DispatchSentenceEvents(NmeaSentence? typedSequence)
         {
+            DispatchSentenceEvents(this, typedSequence);
+        }
+
+        /// <summary>
+        /// Forwards the given sentence to listeners, as needed.
+        /// </summary>
+        /// <param name="source">The source from which this event comes (if forwarded)</param>
+        /// <param name="typedSequence">The sentences to process</param>
+        protected virtual void DispatchSentenceEvents(NmeaSinkAndSource source, NmeaSentence? typedSequence)
+        {
             if (typedSequence != null)
             {
-                OnNewSequence?.Invoke(this, typedSequence);
+                OnNewSequence?.Invoke(source, typedSequence);
             }
 
             if (typedSequence is RecommendedMinimumNavigationInformation rmc && rmc.Valid)
