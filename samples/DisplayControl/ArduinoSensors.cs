@@ -74,7 +74,8 @@ namespace DisplayControl
             Manager.AddMeasurement(_frequencyMeasurement);
 
             // Todo: Change to percentage
-            _tankFillLevel = new SensorMeasurement("Fuel tank raw value", ElectricPotential.Zero, SensorSource.Engine);
+            // The value is valid until a new measurement arives (it is kept even if the tank sensor is switched off)
+            _tankFillLevel = new SensorMeasurement("Fuel tank raw value", ElectricPotential.Zero, SensorSource.Engine, 1, TimeSpan.FromDays(100));
             Manager.AddMeasurement(_tankFillLevel);
 
             _analogController = _board.CreateAnalogController(0);
@@ -102,7 +103,10 @@ namespace DisplayControl
 
             
             var voltage = _tankSensorValuePin.ReadVoltage();
-            _tankFillLevel.UpdateValue(voltage, SensorMeasurementStatus.None, false);
+            if (_tankSensorIsOn)
+            {
+                _tankFillLevel.UpdateValue(voltage, SensorMeasurementStatus.None, false);
+            }
         }
 
         protected override void Dispose(bool disposing)
