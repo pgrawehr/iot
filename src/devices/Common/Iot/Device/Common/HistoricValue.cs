@@ -17,7 +17,7 @@ namespace Iot.Device.Common
         /// Constructs an instance of this structure, with a time and a value.
         /// Note: UTC times preferred.
         /// </summary>
-        public HistoricValue(DateTime measurementTime, IQuantity value)
+        public HistoricValue(DateTimeOffset measurementTime, IQuantity value)
         {
             MeasurementTime = measurementTime;
             Value = value;
@@ -26,7 +26,7 @@ namespace Iot.Device.Common
         /// <summary>
         /// Time of measurement, UTC
         /// </summary>
-        public DateTime MeasurementTime
+        public DateTimeOffset MeasurementTime
         {
             get;
         }

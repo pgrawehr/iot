@@ -129,6 +129,11 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement Track = new SensorMeasurement("Track", Angle.FromDegrees(0), SensorSource.Position, 1, TimeSpan.FromSeconds(5));
         public static readonly SensorMeasurement Heading = new SensorMeasurement("Magnetic Heading", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
 
+        public static readonly SensorMeasurement AccelerationXY =
+            new SensorMeasurement("Horizontal acceleration", Acceleration.FromStandardGravity(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
+        public static readonly SensorMeasurement AccelerationZ =
+            new SensorMeasurement("Vertical acceleration", Acceleration.FromStandardGravity(0), SensorSource.Compass, 2, TimeSpan.FromSeconds(5));
+
         public static readonly SensorMeasurement Deviation =
             new SensorMeasurement("Deviation", Angle.FromDegrees(0), SensorSource.Compass, 1);
 

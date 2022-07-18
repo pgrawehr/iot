@@ -205,7 +205,19 @@ namespace Iot.Device.Nmea0183.Sentences
         protected char? ReadChar(IEnumerator<string> field)
         {
             string val = ReadString(field);
-            return string.IsNullOrEmpty(val) ? (char?)null : val.Single();
+            if (string.IsNullOrWhiteSpace(val))
+            {
+                return null;
+            }
+
+            if (val.Length == 1)
+            {
+                return val[0];
+            }
+            else
+            {
+                return null; // Probably also illegal
+            }
         }
 
         /// <summary>

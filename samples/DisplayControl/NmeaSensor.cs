@@ -456,13 +456,14 @@ namespace DisplayControl
                                         Angle hdgFromHandheld = Angle.FromDegrees(_hdgFromHandheld.Value.Value);
                                         Angle trueFromHandheld =
                                             hdgFromHandheld.MagneticToTrue(_magneticVariation.Value);
-                                        _logger.LogDebug(
-                                            $"Heading update: Main compass (true): {trueFromCompass} From Handheld: {trueFromHandheld}, GNSS derived: R-F {anglerf} R-H {anglerh} H-F {anglehf}, COG: {SensorMeasurement.Track.Value}");
 
-                                        _logger.LogDebug($"Distance R-F (expected 5.2m) {distance} R-H (expected 2.6m) {distance2}, H-F (expected 2.6m) {distance3}");
+                                        ////_logger.LogDebug(
+                                        ////    $"Heading update: Main compass (true): {trueFromCompass} From Handheld: {trueFromHandheld}, GNSS derived: R-F {anglerf} R-H {anglerh} H-F {anglehf}, COG: {SensorMeasurement.Track.Value}");
 
-                                        _logger.LogDebug(
-                                            $"Deltas: R-F {AngleExtensions.Difference(anglerf, expectedInHarbor)} R-H {AngleExtensions.Difference(anglerh, expectedInHarbor)} H-F {AngleExtensions.Difference(anglehf, expectedInHarbor)} ");
+                                        ////_logger.LogDebug($"Distance R-F (expected 5.2m) {distance} R-H (expected 2.6m) {distance2}, H-F (expected 2.6m) {distance3}");
+
+                                        ////_logger.LogDebug(
+                                        ////    $"Deltas: R-F {AngleExtensions.Difference(anglerf, expectedInHarbor)} R-H {AngleExtensions.Difference(anglerh, expectedInHarbor)} H-F {AngleExtensions.Difference(anglehf, expectedInHarbor)} ");
 
                                         _valueLogger.LogDebug($"{trueFromCompass.Degrees} | {trueFromHandheld.Degrees} | {anglerf.Degrees} | {anglerh.Degrees} | {anglehf.Degrees} | {SensorMeasurement.Track.Value!.Value} | {distance.Meters} | {distance2.Meters} | {distance3.Meters}");
                                     }
@@ -597,7 +598,7 @@ namespace DisplayControl
                         _manager.UpdateValue(_hdgFromHandheld, decl.HeadingMagnetic);
                         if (_imu != null)
                         {
-                            _imu.ExternalHeading = decl.HeadingMagnetic;
+                            _imu.ExternalHeading = decl;
                         }
                     }
 

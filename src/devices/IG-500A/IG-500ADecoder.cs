@@ -35,7 +35,7 @@ namespace Iot.Device.Imu
         private bool _outputModeReceived;
         private byte _outputMode;
 
-        public event Action<Vector3>? OnNewData;
+        public event Action<Vector3, Vector3, DateTimeOffset>? OnNewData;
 
         private List<OutputDataOffsets> _dataFields = new List<OutputDataOffsets>()
         {
@@ -471,7 +471,7 @@ namespace Iot.Device.Imu
                 Magnetometer = mag;
             }
 
-            OnNewData?.Invoke(Orientation);
+            OnNewData?.Invoke(Orientation, Accelerometer, DateTimeOffset.UtcNow);
         }
 
         private int CalculateOutputOffset(OutputDataSets dataSet)

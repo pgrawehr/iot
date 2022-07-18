@@ -158,7 +158,7 @@ namespace Iot.Device.Common
                 // Now remove all but the first entry withing each interval.
                 // Note that the resulting list may contain gaps in time if the resolution of the history
                 // is less thant the expected interval.
-                DateTime nextIntervalStart = ret.First().MeasurementTime;
+                var nextIntervalStart = ret.First().MeasurementTime;
                 for (int i = 0; i < ret.Count; i++)
                 {
                     // If it's less than where we expect the next value, remove it

@@ -63,5 +63,25 @@ namespace Iot.Device.Common
             var referenceType = dataSet.First().Value;
             return dataSet.Average(x => x.Value, referenceType.Unit);
         }
+
+        /// <summary>
+        /// Removes any entries older than the given age. Assumes the list is sorted from old to new
+        /// </summary>
+        /// <param name="dataSet">The dataset to modify</param>
+        /// <param name="age">The age of the oldest elements to keep</param>
+        /// <param name="minElementsRemaining">Minimum elements to keep (even if they are older than <paramref name="age"/>)</param>
+        public static void RemoveOlderThan(this List<HistoricValue> dataSet, TimeSpan age, int minElementsRemaining = 0)
+        {
+            var now = DateTimeOffset.UtcNow;
+            for (var index = 0; index < dataSet.Count - minElementsRemaining; index++)
+            {
+                var x = dataSet[index];
+                if (now - x.MeasurementTime > age)
+                {
+                    dataSet.RemoveAt(index);
+                    index--;
+                }
+            }
+        }
     }
 }

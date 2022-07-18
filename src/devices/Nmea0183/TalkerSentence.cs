@@ -185,6 +185,13 @@ namespace Iot.Device.Nmea0183
                 return null;
             }
 
+            // There can't be any nonprintable characters in the stream (such as TAB or NULL)
+            if (sentence.Any(x => Char.IsControl(x)))
+            {
+                errorCode = NmeaError.NoSyncByte;
+                return null;
+            }
+
             TalkerId talkerId = new TalkerId(sentence[1], sentence[2]);
             if (expectedTalkerId != TalkerId.Any && expectedTalkerId != talkerId)
             {
