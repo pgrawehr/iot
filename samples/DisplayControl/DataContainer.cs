@@ -961,6 +961,16 @@ namespace DisplayControl
             }
         }
 
+        public bool IsHandheldHeadingEnabled()
+        {
+            if (_imuSensor != null)
+            {
+                return _imuSensor.PreferExternalHeading;
+            }
+
+            return false;
+        }
+
         public void ForceTankSensorEnable(bool enable)
         {
             if (_arduino != null)

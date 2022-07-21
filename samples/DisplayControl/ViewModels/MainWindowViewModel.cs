@@ -48,6 +48,8 @@ namespace DisplayControl.ViewModels
             {
                 m_sensorValueViewModels.Add(new SensorValueViewModel(elem));
             }
+
+            UseHeadingFromHandheld = DataContainer.IsHandheldHeadingEnabled();
         }
 
         public event Action DoClose;
