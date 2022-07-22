@@ -20,7 +20,9 @@ namespace DisplayControl
         public DhtSensors(MeasurementManager manager)
         : base(manager, TimeSpan.FromSeconds(5))
         {
-            _engineHumidity = new SensorMeasurement("Engine room humidity", RelativeHumidity.Zero, SensorSource.Engine); // Just because we have that sensor - not because it's useful
+            _engineHumidity = new SensorMeasurement("Engine room humidity", RelativeHumidity.Zero, SensorSource.Engine, 1, TimeSpan.FromMinutes(2)); // Just because we have that sensor - not because it's useful
+            // A DHT is very slow and often has read errors. So keep the last value longer.
+            SensorMeasurement.Engine0Temperature.MaxMeasurementAge = TimeSpan.FromMinutes(2);
         }
         
         public override void Init(GpioController gpioController)

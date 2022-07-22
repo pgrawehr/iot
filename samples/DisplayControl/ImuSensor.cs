@@ -179,6 +179,7 @@ namespace DisplayControl
             _lastTimeStamp = timeStamp;
             var xyAccel = Math.Sqrt(acceleration.X * acceleration.X + acceleration.Y + acceleration.Y);
 
+            Angle hdg;
             lock (_lock)
             {
                 if (!double.IsNaN(xyAccel))
@@ -192,9 +193,9 @@ namespace DisplayControl
                     _deltaAccelZ.Add(new HistoricValue(timeStamp,
                         Acceleration.FromMetersPerSecondSquared(acceleration.Z)));
                 }
-            }
 
-            GetHeadingAndDeviation(_lastEulerAngles, out Angle hdgUncorrected, out Angle hdg, out Angle deviation);
+                GetHeadingAndDeviation(_lastEulerAngles, out Angle hdgUncorrected, out hdg, out Angle deviation);
+            }
 
             var correctedAngles = new Vector3((float)hdg.Degrees, eulerAngles.Y, eulerAngles.Z);
             OnNewOrientation?.Invoke(correctedAngles);
@@ -202,10 +203,10 @@ namespace DisplayControl
 
         protected override void UpdateSensors()
         {
-            GetHeadingAndDeviation(_lastEulerAngles, out Angle hdgUncorrected, out Angle hdg, out Angle deviation);
-
             lock (_lock)
             {
+                GetHeadingAndDeviation(_lastEulerAngles, out Angle hdgUncorrected, out Angle hdg, out Angle deviation);
+
                 _deltaAccelXY.RemoveOlderThan(TimeSpan.FromSeconds(10));
                 _deltaAccelZ.RemoveOlderThan(TimeSpan.FromSeconds(10));
 
@@ -218,7 +219,7 @@ namespace DisplayControl
                 Acceleration accelz = Acceleration.Zero;
                 if (_deltaAccelZ.Any())
                 {
-                    accelz = ((Acceleration)_deltaAccelZ.MaxValue()).ToUnit(AccelerationUnit.StandardGravity);
+                    accelz = ((Acceleration)_deltaAccelZ.AverageValue()).ToUnit(AccelerationUnit.StandardGravity);
                 }
 
                 Manager.UpdateValues(new List<SensorMeasurement>()
@@ -244,8 +245,7 @@ namespace DisplayControl
 
                 RawHeading = hdgUncorrected.Normalize(true);
 
-                Manager.UpdateValue(SensorMeasurement.Deviation, deviation,
-                    DeviationCorrectionEnabled ? SensorMeasurementStatus.None : SensorMeasurementStatus.Warning);
+                Manager.UpdateValue(SensorMeasurement.Deviation, deviation, SensorMeasurementStatus.None);
             }
         }
 
@@ -285,37 +285,46 @@ namespace DisplayControl
             }
         }
 
+        /// <summary>
+        /// Calculate heading from multiple inputs (currently only two heading sensors)
+        /// </summary>
+        /// <param name="inputs">List of inputs</param>
+        /// <param name="output">Determined heading</param>
+        /// <returns>True on success, false otherwise</returns>
         private bool MangleHeadingAngles(List<(HeadingAndDeclination Heading, double Quality)> inputs, out Angle output)
         {
-            output = Angle.Zero;
-            if (inputs.Count == 0)
+            lock (_lock)
             {
-                return false;
-            }
+                output = Angle.Zero;
+                if (inputs.Count == 0)
+                {
+                    return false;
+                }
 
-            if (inputs.Count == 1 || inputs.Count > 2) // unsupported cases for now
-            {
-                var e = inputs[0].Heading;
-                output = e.HeadingMagnetic.GetValueOrDefault(Angle.Zero);
-                return e.Valid && e.HeadingMagnetic.HasValue;
-            }
+                if (inputs.Count == 1 || inputs.Count > 2) // unsupported cases for now
+                {
+                    var e = inputs[0].Heading;
+                    output = e.HeadingMagnetic.GetValueOrDefault(Angle.Zero);
+                    return e.Valid && e.HeadingMagnetic.HasValue;
+                }
 
-            // exactly two elements
-            var ext = inputs[1].Heading;
-            var imu = inputs[0].Heading;
-            if (ext.Age <= TimeSpan.FromSeconds(2) && ext.HeadingMagnetic.HasValue && imu.HeadingMagnetic.HasValue)
-            {
-                // This will only be the case when the ext data is very new
-                var delta = (ext.HeadingMagnetic.Value - imu.HeadingMagnetic.Value).Normalize(false);
-                _deltaHistory.Add(new HistoricValue(ext.DateTime.DateTime, delta));
-                _deltaHistory.RemoveOlderThan(TimeSpan.FromSeconds(60), 2);
-            }
+                // exactly two elements
+                var ext = inputs[1].Heading;
+                var imu = inputs[0].Heading;
+                if (ext.Age <= TimeSpan.FromSeconds(2) && ext.HeadingMagnetic.HasValue && imu.HeadingMagnetic.HasValue)
+                {
+                    // This will only be the case when the ext data is very new
+                    var delta = (ext.HeadingMagnetic.Value - imu.HeadingMagnetic.Value).Normalize(false);
+                    _deltaHistory.Add(new HistoricValue(ext.DateTime.DateTime, delta));
+                    _deltaHistory.RemoveOlderThan(TimeSpan.FromSeconds(60), 2);
+                }
 
-            var historicDelta = Angle.FromDegrees(_deltaHistory.AverageValue().Value);
-            // Now estimated an average delta between the two. Now use the imu (faster) to compute the real value using that delta
-            var result = (imu.HeadingMagnetic.GetValueOrDefault(Angle.Zero) + historicDelta).Normalize(true);
-            output = result;
-            return true;
+                var historicDelta = Angle.FromDegrees(_deltaHistory.AverageValue().Value);
+                // Now estimated an average delta between the two. Now use the imu (faster) to compute the real value using that delta
+                var result = (imu.HeadingMagnetic.GetValueOrDefault(Angle.Zero) + historicDelta).Normalize(true);
+                output = result;
+                return true;
+            }
         }
 
         protected override void Dispose(bool disposing)

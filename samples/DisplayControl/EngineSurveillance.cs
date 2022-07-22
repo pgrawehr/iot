@@ -143,6 +143,7 @@ namespace DisplayControl
             _controllerUsingMcp.SetPinMode((int)PinUsage.UpDown, PinMode.Output);
             // Set the initial value to something other than 0, so we are sure we're not stuck in reset mode
             int initialValue = 0;
+            bool alreadyRunning = false;
             // Run trough all possible values, to check all bit lines are working
             for (initialValue = _maxCounterValue; initialValue >= 0; initialValue--)
             {
@@ -159,7 +160,13 @@ namespace DisplayControl
                 {
                     string msg = $"Engine revolution counter: Bit error (should be {initialValue} but was {counter}.)";
                     _logger.LogError(msg);
-                    throw new InvalidOperationException(msg);
+                    // Print an obvious message (but don't fail initialization if we have to restart while the engine is running)
+                    for (int i = 0; i < 50; i++)
+                    {
+                        _logger.LogError("Is the engine running??");
+                        Thread.Sleep(50);
+                        alreadyRunning = true;
+                    }
                 }
             }
 
@@ -174,7 +181,10 @@ namespace DisplayControl
             // To ensure the interrupt register is reset (if we missed a previous interrupt, a new one would never trigger)
             ReadCurrentCounterValue();
             _lastTickForUpdate = Environment.TickCount64;
-            PerformExtendedSelfTests();
+            if (alreadyRunning)
+            {
+                PerformExtendedSelfTests();
+            }
 
             _lastTickForUpdate = Environment.TickCount64;
             base.Init(gpioController);

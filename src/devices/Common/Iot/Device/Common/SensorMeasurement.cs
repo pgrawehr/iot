@@ -271,7 +271,7 @@ namespace Iot.Device.Common
         public TimeSpan MaxMeasurementAge
         {
             get;
-            private set;
+            set;
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

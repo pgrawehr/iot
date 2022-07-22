@@ -5,6 +5,7 @@ using System.Device.Gpio;
 using System.IO.Ports;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Arduino;
 using Iot.Device.Common;
@@ -22,6 +23,7 @@ namespace DisplayControl
         private ILogger _logger;
         private FrequencySensor _frequencySensor;
         private SensorMeasurement _frequencyMeasurement;
+        private SensorMeasurement _tankFillLevelRaw;
         private SensorMeasurement _tankFillLevel;
         private GpioController _gpioController;
         private bool _tankSensorIsOn;
@@ -62,20 +64,45 @@ namespace DisplayControl
             }
 
             _gpioController = _board.CreateGpioController();
-            _gpioController.OpenPin(RpmSensorPin, PinMode.Input);
-            _gpioController.ClosePin(RpmSensorPin);
 
-            _gpioController.OpenPin(TankSensorRelaisPin, PinMode.Output);
-            _gpioController.Write(TankSensorRelaisPin, _tankSensorIsOn);
+            int i = 4;
+            while (i-- > 0)
+            {
+                try
+                {
+                    _gpioController.OpenPin(RpmSensorPin, PinMode.Input);
+                    _gpioController.ClosePin(RpmSensorPin);
 
-            _frequencySensor.EnableFrequencyReporting(RpmSensorPin, FrequencyMode.Falling, 1000);
-            _frequencyMeasurement = new SensorMeasurement("Alternate RPM sensor", RotationalSpeed.Zero, SensorSource.Engine, 2,
+                    _gpioController.OpenPin(TankSensorRelaisPin, PinMode.Output);
+                    _gpioController.Write(TankSensorRelaisPin, _tankSensorIsOn);
+
+                    _frequencySensor.EnableFrequencyReporting(RpmSensorPin, FrequencyMode.Falling, 1000);
+                    break;
+                }
+                catch (TimeoutException x)
+                {
+                    if (i <= 0)
+                    {
+                        throw;
+                    }
+
+                    _logger.LogError(x, "Error opening pins. Retrying...");
+                    Thread.Sleep(100);
+                }
+            }
+
+            _frequencyMeasurement = new SensorMeasurement("Alternate RPM sensor", RotationalSpeed.Zero,
+                SensorSource.Engine, 2,
                 TimeSpan.FromSeconds(3));
+
             Manager.AddMeasurement(_frequencyMeasurement);
 
-            // Todo: Change to percentage
             // The value is valid until a new measurement arives (it is kept even if the tank sensor is switched off)
-            _tankFillLevel = new SensorMeasurement("Fuel tank raw value", ElectricPotential.Zero, SensorSource.Engine, 1, TimeSpan.FromDays(100));
+            _tankFillLevelRaw = new SensorMeasurement("Fuel tank raw value", ElectricPotential.Zero, SensorSource.Fuel, 1, TimeSpan.FromDays(100));
+            Manager.AddMeasurement(_tankFillLevelRaw);
+
+            _tankFillLevel = new SensorMeasurement("Fuel tank level", Ratio.Zero, SensorSource.Fuel, 2,
+                TimeSpan.FromDays(100));
             Manager.AddMeasurement(_tankFillLevel);
 
             _analogController = _board.CreateAnalogController(0);
@@ -105,7 +132,35 @@ namespace DisplayControl
             var voltage = _tankSensorValuePin.ReadVoltage();
             if (_tankSensorIsOn)
             {
-                _tankFillLevel.UpdateValue(voltage, SensorMeasurementStatus.None, false);
+                _tankFillLevelRaw.UpdateValue(voltage, SensorMeasurementStatus.None, false);
+                double v = voltage.Volts;
+                double percentage = 0;
+                if (v < 4.9) // If above, the value is invalid (sensor off, broken connection etc)
+                {
+                    // ~2.25V Full, 2.0V 75% 1.3V 20% 0.21V leer
+                    // We use a stepwise linear function, as below. The tank size is not linear from top to bottom
+                    // a and b are the constants for the linear equation between that point and the point above.
+                    // Input   Expected result	a             b
+                    // 2.25    100
+                    // 2       75               100           -125
+                    // 1.3     20               78.57142857   -82.14285714
+                    // 0.21    0                18.34862385   -3.853211009
+                    if (v >= 2.0)
+                    {
+                        percentage = 100 * v + -125;
+                    }
+                    else if (v >= 1.3)
+                    {
+                        percentage = 78.57142857 * v + -82.14285714;
+                    }
+                    else
+                    {
+                        percentage = 18.34862385 + v + -3.853211009;
+                    }
+
+                    // no clamping of percentage, so we would see out-of-bounds values.
+                    _tankFillLevel.UpdateValue(Ratio.FromPercent(percentage), SensorMeasurementStatus.None, false);
+                }
             }
         }
 
