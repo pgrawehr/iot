@@ -123,7 +123,7 @@ namespace Iot.Device.Ili934x.Samples
 
             _dataSets.Add(new NmeaValueDataSet("Engine RPM", s =>
             {
-                if (s.TryGetLastSentence(ProprietaryMessage.Id, SeaSmartEngineFastMessage.Identifier, out SeaSmartEngineFastMessage sentence))
+                if (s.TryGetLastDinSentence(SeaSmartEngineFast.HexId, out SeaSmartEngineFast sentence))
                 {
                     return sentence.RotationalSpeed.ToUnit(RotationalSpeedUnit.RevolutionPerMinute);
                 }

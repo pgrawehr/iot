@@ -19,9 +19,9 @@ namespace Iot.Device.Nmea0183.Sentences
     public class SeaSmartEngineDetail : ProprietaryMessage
     {
         /// <summary>
-        /// The NMEA2000 Sentence identifier for this message
+        /// Hexadecimal identifier for this message
         /// </summary>
-        public static string Identifier = "01F201";
+        public const int HexId = 0x01F201;
 
         /// <summary>
         /// Constructs a new sentence
@@ -72,7 +72,7 @@ namespace Iot.Device.Nmea0183.Sentences
             IEnumerator<string> field = fields.GetEnumerator();
 
             string subMessage = ReadString(field);
-            if (!subMessage.Equals(Identifier, StringComparison.OrdinalIgnoreCase))
+            if (!int.TryParse(subMessage, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int result) || result != Identifier)
             {
                 Valid = false;
                 return;
@@ -111,6 +111,11 @@ namespace Iot.Device.Nmea0183.Sentences
 
             Valid = true;
         }
+
+        /// <summary>
+        /// The NMEA2000 Sentence identifier for this message
+        /// </summary>
+        public override int Identifier => HexId;
 
         /// <summary>
         /// The timestamp for the NMEA 2000 message

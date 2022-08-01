@@ -51,6 +51,14 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// The hex identifier of this message type (first field of a PCDIN message)
+        /// </summary>
+        public abstract int Identifier
+        {
+            get;
+        }
+
+        /// <summary>
         /// Decodes a value from a longer hex string (PRDIN messages contain one blob of stringly-typed hex numbers)
         /// </summary>
         /// <param name="input">Input string</param>

@@ -55,10 +55,28 @@ namespace Iot.Device.Ili934x.Samples
                 {
                     isFt4222 = true;
                 }
-                else if (args[0] == "INET")
+                else if (args[0] == "INET" && args.Length >= 2)
                 {
                     isArduino = true;
-                    address = IPAddress.Parse(args[1]);
+                    IPAddress[] addr = Array.Empty<IPAddress>();
+                    try
+                    {
+                        addr = Dns.GetHostAddresses(args[1]);
+                    }
+                    catch (SocketException)
+                    {
+                        // Ignore, will be handled below
+                    }
+
+                    if (addr.Any())
+                    {
+                        address = addr.First();
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Could not resolve host: {args[1]}");
+                        return 1;
+                    }
                 }
 
                 if (args.Any(x => x.Equals("--debug", StringComparison.OrdinalIgnoreCase)))

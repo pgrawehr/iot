@@ -588,6 +588,10 @@ namespace Iot.Device.Nmea0183
                         _xdrData[measurement.DataName] = measurement;
                     }
                 }
+                else if (sentence.SentenceId == ProprietaryMessage.Id && (sentence is ProprietaryMessage din))
+                {
+                    _dinData[din.Identifier] = din;
+                }
             }
         }
 
@@ -607,6 +611,37 @@ namespace Iot.Device.Nmea0183
         public void Add(NmeaSentence sentence)
         {
             OnNewSequence(null, sentence);
+        }
+
+        /// <summary>
+        /// Tries to get a DIN sentence type
+        /// </summary>
+        /// <typeparam name="T">The type of the sentence to query</typeparam>
+        /// <param name="hexId">The hexadecimal identifier for this sub-message</param>
+        /// <param name="sentence">Receives the sentence, if any was found</param>
+        /// <returns>True on success, false if no such message was received</returns>
+        public bool TryGetLastDinSentence<T>(int hexId,
+#if NET5_0_OR_GREATER
+            [NotNullWhen(true)]
+#endif
+            out T sentence)
+            where T : NmeaSentence
+        {
+            // The second condition should always be true, because this list only contains din messages
+            if (!_dinData.TryGetValue(hexId, out var s) || s.SentenceId != ProprietaryMessage.Id)
+            {
+                sentence = null!;
+                return false;
+            }
+
+            if (s is T)
+            {
+                sentence = (T)s;
+                return true;
+            }
+
+            sentence = null!;
+            return false;
         }
     }
 }

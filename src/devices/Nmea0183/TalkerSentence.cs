@@ -50,13 +50,13 @@ namespace Iot.Device.Nmea0183
             knownSentences[ProprietaryMessage.Id] = (sentence, time) =>
             {
                 var specificMessageId = sentence.Fields.FirstOrDefault();
-                if (specificMessageId != null)
+                if (specificMessageId != null && int.TryParse(specificMessageId, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int msgid))
                 {
-                    if (specificMessageId == SeaSmartEngineFast.Identifier)
+                    if (msgid == SeaSmartEngineFast.HexId)
                     {
                         return new SeaSmartEngineFast(sentence, time);
                     }
-                    else if (specificMessageId == SeaSmartEngineDetail.Identifier)
+                    else if (msgid == SeaSmartEngineDetail.HexId)
                     {
                         return new SeaSmartEngineDetail(sentence, time);
                     }
