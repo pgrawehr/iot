@@ -464,8 +464,11 @@ namespace DisplayControl
 
                                         ////_logger.LogDebug(
                                         ////    $"Deltas: R-F {AngleExtensions.Difference(anglerf, expectedInHarbor)} R-H {AngleExtensions.Difference(anglerh, expectedInHarbor)} H-F {AngleExtensions.Difference(anglehf, expectedInHarbor)} ");
+                                        
+                                        var gnssTrack = SensorMeasurement.Track;
+                                        var trackV = gnssTrack.Value != null ? gnssTrack.Value.Value : 0;
 
-                                        _valueLogger.LogDebug($"{trueFromCompass.Degrees} | {trueFromHandheld.Degrees} | {anglerf.Degrees} | {anglerh.Degrees} | {anglehf.Degrees} | {SensorMeasurement.Track.Value!.Value} | {distance.Meters} | {distance2.Meters} | {distance3.Meters}");
+                                        _valueLogger.LogDebug($"{trueFromCompass.Degrees} | {trueFromHandheld.Degrees} | {anglerf.Degrees} | {anglerh.Degrees} | {anglehf.Degrees} | {trackV} | {distance.Meters} | {distance2.Meters} | {distance3.Meters}");
                                     }
                                 }
                                 else
