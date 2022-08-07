@@ -33,6 +33,23 @@ namespace Iot.Device.Ili934x.Samples
             get;
         }
 
-        public abstract void Update(SentenceCache cache);
+        /// <summary>
+        /// Updates the value from the cache.
+        /// </summary>
+        /// <param name="cache">The data cache</param>
+        /// <param name="tolerance">Allowed data tolerance (for values that will be truncated before display, it's not meaningful
+        /// to refresh them if only the 9th digit has changed)</param>
+        /// <returns>True if the value has changed</returns>
+        public abstract bool Update(SentenceCache cache, double tolerance);
+
+        /// <summary>
+        /// Updates the value from the cache.
+        /// </summary>
+        /// <param name="cache">The data cache</param>
+        /// <returns>True if the value has changed</returns>
+        public bool Update(SentenceCache cache)
+        {
+            return Update(cache, 0);
+        }
     }
 }

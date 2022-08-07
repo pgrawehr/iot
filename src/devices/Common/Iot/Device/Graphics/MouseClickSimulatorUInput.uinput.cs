@@ -16,7 +16,7 @@ namespace Iot.Device.Graphics
     /// <summary>
     /// A mouse click simulator that uses /dev/uinput for simulating a touch screen (basically a mouse, but with absolute coordinates)
     /// </summary>
-    public sealed unsafe class MouseClickSimulatorUInput : IDeviceSimulator, IDisposable
+    public sealed unsafe class MouseClickSimulatorUInput : IInputDeviceSimulator, IDisposable
     {
         private int _fd;
 

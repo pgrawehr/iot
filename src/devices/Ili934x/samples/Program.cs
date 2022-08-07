@@ -37,6 +37,9 @@ namespace Iot.Device.Ili934x.Samples
             bool isFt4222 = false;
             bool isArduino = false;
             IPAddress address = IPAddress.None;
+
+            string nmeaSourceAddress = "localhost";
+
             if (args.Length < 2)
             {
                 Console.WriteLine("Are you using Ft4222? Type 'yes' and press ENTER if so, anything else will be treated as no.");
@@ -87,6 +90,12 @@ namespace Iot.Device.Ili934x.Samples
                         Thread.Sleep(100);
                     }
                 }
+            }
+
+            var idx = Array.IndexOf(args, "--nmeaserver");
+            if (idx >= 0 && args.Length > idx)
+            {
+                nmeaSourceAddress = args[idx + 1];
             }
 
             //// TestWindowing();
@@ -148,7 +157,7 @@ namespace Iot.Device.Ili934x.Samples
                 touch.EnableEvents();
             }
 
-            IDeviceSimulator touchSimulator;
+            IInputDeviceSimulator touchSimulator;
 
             using ScreenCapture screenCapture = new ScreenCapture();
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
@@ -160,7 +169,7 @@ namespace Iot.Device.Ili934x.Samples
                 touchSimulator = new MouseClickSimulatorUInput(screenCapture.ScreenSize().Width, screenCapture.ScreenSize().Height);
             }
 
-            using RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl, touchSimulator, screenCapture);
+            using RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl, touchSimulator, screenCapture, nmeaSourceAddress);
             ctrol.DisplayFeatures();
 
             ili9341.ClearScreen(true);

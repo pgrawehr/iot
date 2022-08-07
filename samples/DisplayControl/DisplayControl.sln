@@ -31,6 +31,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rtc", "..\..\src\devices\Rt
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{25C6F468-399B-46C6-84AF-D33C25135933}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Board", "..\..\src\devices\Board\Board.csproj", "{E66D15C9-468E-4D28-AE68-B77FDCDAF82C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -89,6 +91,10 @@ Global
 		{FE3B8671-308B-4D31-A42C-E728BF6497CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FE3B8671-308B-4D31-A42C-E728BF6497CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FE3B8671-308B-4D31-A42C-E728BF6497CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E66D15C9-468E-4D28-AE68-B77FDCDAF82C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E66D15C9-468E-4D28-AE68-B77FDCDAF82C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E66D15C9-468E-4D28-AE68-B77FDCDAF82C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E66D15C9-468E-4D28-AE68-B77FDCDAF82C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

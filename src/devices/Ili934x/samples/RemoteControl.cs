@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -39,6 +40,7 @@ namespace Iot.Device.Ili934x.Samples
         private readonly Image<Rgba32> _openMenu;
 
         private readonly ScreenCapture _capture;
+        private readonly string _nmeaSourceAddress;
 
         private bool _menuMode;
         private float _left;
@@ -48,14 +50,16 @@ namespace Iot.Device.Ili934x.Samples
         private ScreenMode _screenMode;
         private MouseButton _mouseEnabled;
         private Point _lastDragBegin;
-        private IDeviceSimulator _clickSimulator;
-        private NmeaUdpServer _udpClient;
+        private IInputDeviceSimulator _clickSimulator;
+        private NmeaTcpClient _tcpClient;
         private SentenceCache _cache;
 
         private List<NmeaDataSet> _dataSets;
         private int _selectedDataSet;
 
-        public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IDeviceSimulator deviceSimulator, ScreenCapture capture)
+        private bool _forceUpdate;
+
+        public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IInputDeviceSimulator deviceSimulator, ScreenCapture capture, string nmeaSourceAddress)
         {
             _touch = touch;
             _screen = screen;
@@ -69,7 +73,9 @@ namespace Iot.Device.Ili934x.Samples
             _mouseEnabled = MouseButton.None;
             _clickSimulator = deviceSimulator ?? throw new ArgumentNullException(nameof(deviceSimulator));
             _capture = capture;
+            _nmeaSourceAddress = nmeaSourceAddress;
             _dataSets = new List<NmeaDataSet>();
+            _forceUpdate = true;
 
             _dataSets.Add(new NmeaValueDataSet("Speed over Ground", s =>
             {
@@ -137,15 +143,16 @@ namespace Iot.Device.Ili934x.Samples
             _defaultMenuBar = Image.Load<Rgba32>("images/MenuBar.png");
             _openMenu = Image.Load<Rgba32>("images/OpenMenu.png");
 
-            _udpClient = new NmeaUdpServer("NmeaUdpReceiver", 10110, 10111);
-            _udpClient.OnNewSequence += OnNewSequence;
-            _cache = new SentenceCache(_udpClient);
-            _udpClient.StartDecode();
+            _tcpClient = new NmeaTcpClient("TcpClient", nmeaSourceAddress, 10100);
+            _tcpClient.OnNewSequence += OnNewSequence;
+            _cache = new SentenceCache(_tcpClient);
+            _tcpClient.StartDecode();
         }
 
         private void OnNewSequence(NmeaSinkAndSource nmeaSinkAndSource, NmeaSentence nmeaSentence)
         {
-            Console.WriteLine($"Received sentence: {nmeaSentence.ToString()}");
+            // Nothing to do here, handled by the message cache (doing this floods the output)
+            // Console.WriteLine($"Received sentence: {nmeaSentence.ToString()}");
         }
 
         private void OnTouched(object o, Point point)
@@ -169,6 +176,7 @@ namespace Iot.Device.Ili934x.Samples
                 {
                     _screenMode = ScreenMode.NmeaValue;
                     _mouseEnabled = MouseButton.None;
+                    _forceUpdate = true;
                     _menuMode = false;
                 }
                 else if (point.Y > 50 && point.X > 100 && point.X < 160)
@@ -216,6 +224,7 @@ namespace Iot.Device.Ili934x.Samples
                 else if (_screenMode == ScreenMode.NmeaValue)
                 {
                     _selectedDataSet = (_selectedDataSet + 1) % _dataSets.Count;
+                    _forceUpdate = true;
                 }
             }
         }
@@ -320,7 +329,12 @@ namespace Iot.Device.Ili934x.Samples
                         DrawPowerStatus();
                         break;
                     case ScreenMode.NmeaValue:
-                        DrawNmeaValue();
+                        if (!DrawNmeaValue(_menuMode || _forceUpdate))
+                        {
+                            Thread.Sleep(100);
+                            continue;
+                        }
+
                         break;
                     default:
                         _screen.ClearScreen();
@@ -348,6 +362,13 @@ namespace Iot.Device.Ili934x.Samples
                 }
 
                 _screen.SendFrame();
+                _forceUpdate = false;
+                Console.WriteLine($"\rFPS: {_screen.Fps}");
+                // This typically happens if nothing needs to be done (the screen didn't change)
+                if (_screen.Fps > 10)
+                {
+                    Thread.Sleep(100);
+                }
 
                 // Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
             }
@@ -409,21 +430,26 @@ namespace Iot.Device.Ili934x.Samples
             }
         }
 
-        private void DrawNmeaValue()
+        private bool DrawNmeaValue(bool force)
         {
             _screen.ClearScreen(Color.White);
-            // if (_cache.TryGetCurrentPosition(out var position, true, out Angle track, out Speed sog, out Angle? heading))
+            var data = _dataSets[_selectedDataSet];
+            if (data.Update(_cache, 1E-2) || force)
             {
                 using Image<Rgba32> bmp = _screen.CreateBackBuffer();
                 Font font = GetFont(110);
                 Font smallFont = GetFont(30);
-                var data = _dataSets[_selectedDataSet];
-                data.Update(_cache);
                 bmp.Mutate(x => x.DrawText(data.Value, font, SixLabors.ImageSharp.Color.Blue, new PointF(20, 30)));
-                bmp.Mutate(x => x.DrawText(data.Name, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(10, 5)));
-                bmp.Mutate(x => x.DrawText(data.Unit, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(_screen.ScreenWidth / 2.0f, _screen.ScreenHeight - 33)));
+                bmp.Mutate(
+                    x => x.DrawText(data.Name, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(10, 5)));
+                bmp.Mutate(x => x.DrawText(data.Unit, smallFont, SixLabors.ImageSharp.Color.Blue,
+                    new PointF(_screen.ScreenWidth / 2.0f, _screen.ScreenHeight - 33)));
+
                 _screen.DrawBitmap(bmp);
+                return true;
             }
+
+            return false;
         }
 
         private void DemoMode()
@@ -484,8 +510,8 @@ namespace Iot.Device.Ili934x.Samples
 
         public void Dispose()
         {
-            _udpClient.StopDecode();
-            _udpClient.Dispose();
+            _tcpClient.StopDecode();
+            _tcpClient.Dispose();
         }
     }
 }

@@ -13,7 +13,7 @@ namespace Iot.Device.Graphics
     /// Not currently working reliably
     /// </summary>
     /// <remarks>Code borrowed from https://gist.github.com/pioz/726474</remarks>
-    public class MouseClickSimulatorX11 : IDeviceSimulator
+    public class MouseClickSimulatorX11 : IInputDeviceSimulator
     {
         private IntPtr _display;
         private MouseButton _currentButtons;

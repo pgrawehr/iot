@@ -13,7 +13,7 @@ namespace Iot.Device.Graphics
     /// <summary>
     /// Simulates a touch device on Windows
     /// </summary>
-    public class WindowsTouchSimulator : IDeviceSimulator
+    public class WindowsTouchSimulator : IInputDeviceSimulator
     {
         /// <summary>
         /// Returns true for this device

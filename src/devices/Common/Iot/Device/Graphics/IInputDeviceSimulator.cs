@@ -12,7 +12,7 @@ namespace Iot.Device.Graphics
     /// <summary>
     /// Simulator for an input device
     /// </summary>
-    public interface IDeviceSimulator
+    public interface IInputDeviceSimulator
     {
         /// <summary>
         /// Returns true if this device expects absolute coordinates, false if it requires relative coordinates

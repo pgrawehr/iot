@@ -117,6 +117,7 @@ namespace Iot.Device.Ili934x
                 }
 
                 // if we get here, there were no screen changes
+                UpdateFps();
                 return;
 
                 reverse:
@@ -147,6 +148,20 @@ namespace Iot.Device.Ili934x
             }
 
             _screenBuffer.CopyPixelDataTo(previousMemoryBuffer.Span);
+            UpdateFps();
+        }
+
+        private void UpdateFps()
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            TimeSpan ts = now - _lastUpdate;
+            if (ts <= TimeSpan.FromMilliseconds(1))
+            {
+                ts = TimeSpan.FromMilliseconds(1);
+            }
+
+            _fps = 1.0 / ts.TotalSeconds;
+            _lastUpdate = now;
         }
 
         /// <summary>
@@ -251,6 +266,7 @@ namespace Iot.Device.Ili934x
         {
             SetWindow(destinationRect.X, destinationRect.Y, (destinationRect.Right - 1), (destinationRect.Bottom - 1));   // specifiy a location for the rows and columns on the display where the data is to be written
             SendData(pixelData);
+            UpdateFps();
         }
     }
 }

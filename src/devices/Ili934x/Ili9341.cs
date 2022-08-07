@@ -45,6 +45,9 @@ namespace Iot.Device.Ili934x
         private SixLabors.ImageSharp.Image<Rgb565> _screenBuffer;
         private SixLabors.ImageSharp.Image<Rgb565> _previousBuffer;
 
+        private double _fps;
+        private DateTimeOffset _lastUpdate;
+
         /// <summary>
         /// Initializes new instance of ILI9341 device that will communicate using SPI bus.
         /// </summary>
@@ -69,6 +72,8 @@ namespace Iot.Device.Ili934x
             _backlightPin = backlightPin;
             _gpioDevice = gpioController ?? new GpioController();
             _shouldDispose = shouldDispose || gpioController is null;
+            _fps = 0;
+            _lastUpdate = DateTimeOffset.UtcNow;
 
             _gpioDevice.OpenPin(_dcPinId, PinMode.Output);
             if (_resetPinId >= 0)
@@ -129,6 +134,12 @@ namespace Iot.Device.Ili934x
                 return 320;
             }
         }
+
+        /// <summary>
+        /// Returns the last FPS value (frames per second).
+        /// The value is unfiltered.
+        /// </summary>
+        public double Fps => _fps;
 
         /// <summary>
         /// Configure memory and orientation parameters

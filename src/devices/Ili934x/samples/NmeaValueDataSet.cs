@@ -53,9 +53,25 @@ namespace Iot.Device.Ili934x.Samples
             }
         }
 
-        public override void Update(SentenceCache cache)
+        public override bool Update(SentenceCache cache, double tolerance)
         {
-            _lastValue = _valueFunc.Invoke(cache);
+            var newValue = _valueFunc.Invoke(cache);
+            if (_lastValue != null)
+            {
+                if (newValue == null)
+                {
+                    _lastValue = null;
+                    return true;
+                }
+
+                bool ret = Math.Abs(newValue.Value - _lastValue.Value) > tolerance;
+                _lastValue = newValue;
+
+                return ret;
+            }
+
+            _lastValue = newValue;
+            return newValue != null;
         }
     }
 }
