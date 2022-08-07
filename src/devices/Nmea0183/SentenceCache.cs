@@ -643,5 +643,30 @@ namespace Iot.Device.Nmea0183
             sentence = null!;
             return false;
         }
+
+        /// <summary>
+        /// Gets the last transducer data set (from an XDR sentence, see <see cref="TransducerMeasurement"/>) if one with the given name exists.
+        /// </summary>
+        /// <param name="name">The name of the data set. Case sensitive</param>
+        /// <param name="data">Returns the value if it exists</param>
+        /// <returns>True if a value with the given name was found, false otherwise</returns>
+        public bool TryGetTransducerData(string name,
+#if NET5_0_OR_GREATER
+            [NotNullWhen(true)]
+#endif
+            out TransducerDataSet data)
+        {
+            lock (_lock)
+            {
+                if (_xdrData.TryGetValue(name, out var data1))
+                {
+                    data = data1;
+                    return true;
+                }
+            }
+
+            data = null!;
+            return false;
+        }
     }
 }

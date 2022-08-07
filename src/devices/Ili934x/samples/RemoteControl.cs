@@ -137,6 +137,26 @@ namespace Iot.Device.Ili934x.Samples
                 return null;
             }));
 
+            _dataSets.Add(new NmeaValueDataSet("Pitch", s =>
+            {
+                if (s.TryGetTransducerData("PITCH", out TransducerDataSet set))
+                {
+                    return Angle.FromDegrees(set.Value);
+                }
+
+                return null;
+            }));
+
+            _dataSets.Add(new NmeaValueDataSet("Roll", s =>
+            {
+                if (s.TryGetTransducerData("ROLL", out TransducerDataSet set))
+                {
+                    return Angle.FromDegrees(set.Value);
+                }
+
+                return null;
+            }));
+
             _selectedDataSet = 0;
             _leftMouseMenuBar = Image.Load<Rgba32>("images/MenuBarLeftMouse.png");
             _rightMouseMenuBar = Image.Load<Rgba32>("images/MenuBarRightMouse.png");
@@ -335,6 +355,7 @@ namespace Iot.Device.Ili934x.Samples
                             continue;
                         }
 
+                        _forceUpdate = false;
                         break;
                     default:
                         _screen.ClearScreen();
@@ -362,7 +383,6 @@ namespace Iot.Device.Ili934x.Samples
                 }
 
                 _screen.SendFrame();
-                _forceUpdate = false;
                 Console.WriteLine($"\rFPS: {_screen.Fps}");
                 // This typically happens if nothing needs to be done (the screen didn't change)
                 if (_screen.Fps > 10)
