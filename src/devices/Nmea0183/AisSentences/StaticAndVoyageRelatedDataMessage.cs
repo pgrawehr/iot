@@ -29,6 +29,9 @@ namespace Iot.Device.Nmea0183.AisSentences
         public StaticAndVoyageRelatedDataMessage()
             : base(AisMessageType.StaticAndVoyageRelatedData)
         {
+            CallSign = string.Empty;
+            ShipName = string.Empty;
+            Destination = string.Empty;
         }
 
         public StaticAndVoyageRelatedDataMessage(Payload payload)

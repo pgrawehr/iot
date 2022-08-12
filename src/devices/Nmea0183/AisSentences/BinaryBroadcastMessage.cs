@@ -15,7 +15,7 @@ namespace Iot.Device.Nmea0183.AisSentences
         public BinaryBroadcastMessage()
             : base(AisMessageType.BinaryBroadcastMessage)
         {
-
+            Data = string.Empty;
         }
 
         public BinaryBroadcastMessage(Payload payload)

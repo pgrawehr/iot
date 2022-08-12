@@ -38,7 +38,9 @@ namespace Iot.Device.Nmea0183.AisSentences
         {
             var message = new StaticDataReportMessage(payload);
             if (message.PartNumber == 0)
+            {
                 return new StaticDataReportPartAMessage(message, payload);
+            }
 
             return new StaticDataReportPartBMessage(message, payload);
         }

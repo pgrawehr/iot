@@ -23,6 +23,8 @@ namespace Iot.Device.Nmea0183.AisSentences
         public StaticDataReportPartBMessage()
             : base(1)
         {
+            VendorId = string.Empty;
+            CallSign = string.Empty;
         }
 
         public StaticDataReportPartBMessage(StaticDataReportMessage message, Payload payload)
@@ -35,8 +37,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             CallSign = payload.ReadString(90, 42);
 
             // TODO: handle MMSI auxiliary craft
-            //MothershipMmsi = payload.ReadUInt(132, 30);
-
+            // MothershipMmsi = payload.ReadUInt(132, 30);
             DimensionToBow = payload.ReadUInt(132, 9);
             DimensionToStern = payload.ReadUInt(141, 9);
             DimensionToPort = payload.ReadUInt(150, 6);

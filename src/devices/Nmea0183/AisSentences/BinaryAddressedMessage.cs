@@ -18,10 +18,10 @@ namespace Iot.Device.Nmea0183.AisSentences
         public BinaryAddressedMessage()
             : base(AisMessageType.BinaryAddressedMessage)
         {
-
+            Data = string.Empty;
         }
 
-        public BinaryAddressedMessage(Payload payload)
+        internal BinaryAddressedMessage(Payload payload)
             : base(AisMessageType.BinaryAddressedMessage, payload)
         {
             SequenceNumber = payload.ReadUInt(38, 2);

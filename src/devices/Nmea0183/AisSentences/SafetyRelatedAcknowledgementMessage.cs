@@ -20,7 +20,6 @@ namespace Iot.Device.Nmea0183.AisSentences
         public SafetyRelatedAcknowledgementMessage()
             : base(AisMessageType.SafetyRelatedAcknowledgement)
         {
-
         }
 
         public SafetyRelatedAcknowledgementMessage(Payload payload)

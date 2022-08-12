@@ -1,11 +1,14 @@
-﻿using Shouldly;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Iot.Device.Nmea0183.Ais;
+using Shouldly;
 using Xunit;
 
-namespace AisParserTests
+namespace Iot.Device.Nmea0183.Tests.Ais
 {
     public class ParserTests
     {
-        
         [Fact]
         public void Should_return_null_for_message_with_empty_payload1()
         {

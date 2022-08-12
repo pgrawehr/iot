@@ -5,7 +5,8 @@ namespace Iot.Device.Nmea0183.Ais
 {
     public class AisMessageException : AisException
     {
-        public AisMessageException(string message) : base(message)
+        public AisMessageException(string message)
+            : base(message)
         {
         }
     }

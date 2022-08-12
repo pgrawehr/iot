@@ -1,7 +1,12 @@
-﻿using Shouldly;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Iot.Device.Nmea0183.Ais;
+using Iot.Device.Nmea0183.AisSentences;
+using Shouldly;
 using Xunit;
 
-namespace AisParserTests.MessagesTests
+namespace Iot.Device.Nmea0183.Tests.Ais
 {
     public class UtcAndDateResponseMessageTests : MessageTestBase
     {
@@ -22,8 +27,8 @@ namespace AisParserTests.MessagesTests
             message.Minute.ShouldBe(51u);
             message.Second.ShouldBe(35u);
             message.PositionAccuracy.ShouldBe(PositionAccuracy.Low);
-            message.Longitude.ShouldBe(	0.07035d, 0.000001d);
-            message.Latitude.ShouldBe(	50.517017d, 0.000001d);
+            message.Longitude.ShouldBe(0.07035d, 0.000001d);
+            message.Latitude.ShouldBe(50.517017d, 0.000001d);
             message.PositionFixType.ShouldBe(PositionFixType.Gps);
             message.Spare.ShouldBe(0u);
             message.Raim.ShouldBe(Raim.NotInUse);

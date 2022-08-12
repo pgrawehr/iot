@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Iot.Device.Nmea0183.Ais;
@@ -51,13 +51,29 @@ namespace Iot.Device.Nmea0183.AisSentences
             payload.WriteEnum(AisMessageType.PositionReportClassA, 6);
             base.Encode(payload);
             payload.WriteEnum<NavigationStatus>(NavigationStatus, 4);
-            payload.WriteRateOfTurn((int)RateOfTurn, 8);
+            if (RateOfTurn == null)
+            {
+                payload.WriteRateOfTurn(0x128, 8); // 0x128 is "unknown"
+            }
+            else
+            {
+                payload.WriteRateOfTurn((int)RateOfTurn, 8);
+            }
+
             payload.WriteSpeedOverGround(SpeedOverGround, 10);
             payload.WriteEnum<PositionAccuracy>(PositionAccuracy, 1);
             payload.WriteLongitude(Longitude, 28);
             payload.WriteLatitude(Latitude, 27);
             payload.WriteCourseOverGround(CourseOverGround, 12);
-            payload.WriteTrueHeading((uint)TrueHeading, 9);
+            if (TrueHeading == null)
+            {
+                payload.WriteRateOfTurn(511, 9); // Value indicates "not available"
+            }
+            else
+            {
+                payload.WriteTrueHeading((uint)TrueHeading, 9);
+            }
+
             payload.WriteUInt(Timestamp, 6);
             payload.WriteEnum<ManeuverIndicator>(ManeuverIndicator, 2);
             payload.WriteUInt(Spare, 3);

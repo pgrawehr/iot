@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
@@ -29,9 +30,11 @@ namespace Iot.Device.Nmea0183.AisSentences
         public AidToNavigationReportMessage()
             : base(AisMessageType.AidToNavigationReport)
         {
+            Name = string.Empty;
+            NameExtension = string.Empty;
         }
 
-        public AidToNavigationReportMessage(Payload payload)
+        internal AidToNavigationReportMessage(Payload payload)
             : base(AisMessageType.AidToNavigationReport, payload)
         {
             NavigationalAidType = payload.ReadEnum<NavigationalAidType>(38, 5);

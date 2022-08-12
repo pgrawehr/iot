@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public class InterrogationMessage: AisMessage
+    public class InterrogationMessage : AisMessage
     {
         public uint InterrogatedMmsi { get; set; }
         public AisMessageType FirstMessageType { get; set; }
@@ -18,12 +18,11 @@ namespace Iot.Device.Nmea0183.AisSentences
         public AisMessageType? SecondStationFirstMessageType { get; set; }
         public uint? SecondStationFirstSlotOffset { get; set; }
 
-
         public InterrogationMessage()
             : base(AisMessageType.Interrogation)
         {
         }
-        
+
         public InterrogationMessage(Payload payload)
             : base(AisMessageType.Interrogation, payload)
         {

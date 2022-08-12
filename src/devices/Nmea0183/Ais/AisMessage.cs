@@ -1,7 +1,7 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace AisParser
+namespace Iot.Device.Nmea0183.Ais
 {
     public abstract class AisMessage
     {
@@ -20,6 +20,7 @@ namespace AisParser
             Repeat = payload.ReadUInt(6, 2);
             Mmsi = payload.ReadUInt(8, 30);
         }
+
         public virtual void Encode(Payload payload)
         {
             payload.WriteUInt(Repeat, 2);

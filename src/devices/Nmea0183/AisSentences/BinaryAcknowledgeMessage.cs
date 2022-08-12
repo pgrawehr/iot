@@ -20,10 +20,9 @@ namespace Iot.Device.Nmea0183.AisSentences
         public BinaryAcknowledgeMessage()
             : base(AisMessageType.BinaryAcknowledge)
         {
-
         }
 
-        public BinaryAcknowledgeMessage(Payload payload)
+        internal BinaryAcknowledgeMessage(Payload payload)
             : base(AisMessageType.BinaryAcknowledge, payload)
         {
             Spare = payload.ReadUInt(38, 2);

@@ -31,6 +31,7 @@ namespace Iot.Device.Nmea0183.AisSentences
         public ExtendedClassBCsPositionReportMessage()
             : base(AisMessageType.ExtendedClassBCsPositionReport)
         {
+            Name = string.Empty;
         }
 
         public ExtendedClassBCsPositionReportMessage(Payload payload)

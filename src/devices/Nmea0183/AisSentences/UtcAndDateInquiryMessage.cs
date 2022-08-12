@@ -14,7 +14,6 @@ namespace Iot.Device.Nmea0183.AisSentences
         public UtcAndDateInquiryMessage()
             : base(AisMessageType.UtcAndDateInquiry)
         {
-            
         }
 
         public UtcAndDateInquiryMessage(Payload payload)

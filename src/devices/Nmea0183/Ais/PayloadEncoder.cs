@@ -9,12 +9,14 @@ namespace Iot.Device.Nmea0183.Ais
     {
         public string EncodeSixBitAis(Payload payload)
         {
-            //Consume each 6 bits and making them 8 bits, with some value shifts
+            // Consume each 6 bits and making them 8 bits, with some value shifts
             var value = payload.RawValue;
             if (String.IsNullOrEmpty(value))
+            {
                 return value;
+            }
 
-            string ret = "";
+            string ret = string.Empty;
 
             for (int i = 0; i < value.Length / 6; ++i)
             {
@@ -22,9 +24,13 @@ namespace Iot.Device.Nmea0183.Ais
                 var c = (byte)ConvertBitsToChar(b);
 
                 if (c < 40)
+                {
                     c += 48;
+                }
                 else
+                {
                     c += 56;
+                }
 
                 ret += Convert.ToChar(c);
             }
@@ -37,7 +43,9 @@ namespace Iot.Device.Nmea0183.Ais
             int result = 0;
 
             foreach (Char ch in value)
+            {
                 result = result * 2 + ch - '0';
+            }
 
             return (Char)result;
         }

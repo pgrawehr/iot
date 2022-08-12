@@ -1,7 +1,12 @@
-﻿using Shouldly;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Iot.Device.Nmea0183.Ais;
+using Iot.Device.Nmea0183.AisSentences;
+using Shouldly;
 using Xunit;
 
-namespace AisParserTests.MessagesTests
+namespace Iot.Device.Nmea0183.Tests.Ais
 {
     public class PositionReportForLongRangeApplicationsMessageTest : MessageTestBase
     {
@@ -9,7 +14,7 @@ namespace AisParserTests.MessagesTests
         public void Should_parse_message()
         {
             const string sentence = "!AIVDM,1,1,,B,K77U@48?vMSdNWh@,0*75";
-            
+
             var message = Parser.Parse(sentence) as PositionReportForLongRangeApplicationsMessage;
             message.ShouldNotBeNull();
             message.MessageType.ShouldBe(AisMessageType.PositionReportForLongRangeApplications);

@@ -13,6 +13,7 @@ namespace Iot.Device.Nmea0183.AisSentences
         public StaticDataReportPartAMessage()
             : base(0)
         {
+            ShipName = string.Empty;
         }
 
         public StaticDataReportPartAMessage(StaticDataReportMessage message, Payload payload)

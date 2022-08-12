@@ -1,13 +1,15 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Iot.Device.Nmea0183.AisSentences;
 
 namespace Iot.Device.Nmea0183.Ais
 {
     public class AisMessageFactory
     {
-        public Payload Encode<T>(T message) where T : AisMessage
+        public Payload Encode<T>(T message)
+            where T : AisMessage
         {
             Payload payload = new Payload();
             switch (message)
@@ -16,8 +18,9 @@ namespace Iot.Device.Nmea0183.Ais
                     t1.Encode(payload);
                     break;
                 default:
-                    return null;
+                    throw new NotImplementedException($"Payloads of type {typeof(T)} cannot be encoded.");
             }
+
             return payload;
         }
 
@@ -52,11 +55,8 @@ namespace Iot.Device.Nmea0183.Ais
                     return new AddressedSafetyRelatedMessage(payload);
                 case AisMessageType.SafetyRelatedAcknowledgement:
                     return new SafetyRelatedAcknowledgementMessage(payload);
-                //case AisMessageType.SafetyRelatedBroadcastMessage:
                 case AisMessageType.Interrogation:
                     return new InterrogationMessage(payload);
-                //case AisMessageType.AssignmentModeCommand:
-                //case AisMessageType.DgnssBinaryBroadcastMessage:
                 case AisMessageType.StandardClassBCsPositionReport:
                     return new StandardClassBCsPositionReportMessage(payload);
                 case AisMessageType.ExtendedClassBCsPositionReport:
@@ -65,21 +65,10 @@ namespace Iot.Device.Nmea0183.Ais
                     return new DataLinkManagementMessage(payload);
                 case AisMessageType.AidToNavigationReport:
                     return new AidToNavigationReportMessage(payload);
-                //case AisMessageType.ChannelManagement:
-                //case AisMessageType.GroupAssignmentCommand:
                 case AisMessageType.StaticDataReport:
                     return StaticDataReportMessage.Create(payload);
-                //case AisMessageType.SingleSlotBinaryMessage:
-                //case AisMessageType.MultipleSlotBinaryMessageWithCommunicationsState:
                 case AisMessageType.PositionReportForLongRangeApplications:
                     return new PositionReportForLongRangeApplicationsMessage(payload);
-                //TODO: 30
-                //TODO: 31
-                //TODO: 32
-                //TODO: 40
-                //TODO: 47
-                //TODO: 51
-                //TODO: 57
                 default:
                     throw new AisMessageException($"Unrecognised message type: {payload.MessageType}");
             }
