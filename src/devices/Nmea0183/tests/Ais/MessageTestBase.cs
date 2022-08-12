@@ -1,5 +1,3 @@
-using AisParser;
-
 namespace AisParserTests.MessagesTests
 {
     public abstract class MessageTestBase

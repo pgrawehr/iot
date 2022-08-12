@@ -1,6 +1,4 @@
-﻿using AisParser;
-using AisParser.Messages;
-using Shouldly;
+﻿using Shouldly;
 using Xunit;
 
 namespace AisParserTests.MessagesTests

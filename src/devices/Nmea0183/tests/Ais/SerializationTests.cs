@@ -1,6 +1,4 @@
-﻿using AisParser;
-using AisParser.Messages;
-using Bogus;
+﻿using Bogus;
 using Shouldly;
 using Xunit;
 

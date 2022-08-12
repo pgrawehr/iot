@@ -1,6 +1,4 @@
-﻿using AisParser;
-using AisParser.Messages;
-using JsonSubTypes;
+﻿using JsonSubTypes;
 using Newtonsoft.Json;
 
 namespace AisParserTests

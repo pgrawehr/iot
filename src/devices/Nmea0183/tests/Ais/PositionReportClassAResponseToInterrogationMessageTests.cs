@@ -1,5 +1,3 @@
-using AisParser;
-using AisParser.Messages;
 using Shouldly;
 using Xunit;
 

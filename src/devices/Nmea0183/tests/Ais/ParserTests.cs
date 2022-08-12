@@ -1,5 +1,4 @@
-﻿using AisParser;
-using Shouldly;
+﻿using Shouldly;
 using Xunit;
 
 namespace AisParserTests
