@@ -60,7 +60,7 @@ namespace Iot.Device.Nmea0183
 
         /// <summary>
         /// Send the message to the device.
-        /// For an implementation, this is the input data!
+        /// From the implementation side, this is where the input data comes in (e.g. from the message dispatcher)
         /// </summary>
         /// <param name="source">Source of message</param>
         /// <param name="sentence">Sentence to send</param>

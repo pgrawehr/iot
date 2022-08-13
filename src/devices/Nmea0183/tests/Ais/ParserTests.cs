@@ -14,7 +14,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         {
             const string sentence = "!AIVDM,1,1,,B,,0*25";
 
-            var parser = new Parser();
+            var parser = new AisParser();
 
             var result = parser.Parse(sentence);
             result.ShouldBeNull();
@@ -25,7 +25,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         {
             const string sentence = "!AIVDM,1,1,,A,,0*26";
 
-            var parser = new Parser();
+            var parser = new AisParser();
 
             var result = parser.Parse(sentence);
             result.ShouldBeNull();

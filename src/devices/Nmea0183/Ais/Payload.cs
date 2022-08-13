@@ -5,7 +5,10 @@ using System;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class Payload
+    /// <summary>
+    /// Represents the payload part of an AIS message, in form of a bit-string (a string containing only the values "0" or "1")
+    /// </summary>
+    public sealed class Payload
     {
         public Payload()
         {
@@ -267,9 +270,17 @@ namespace Iot.Device.Nmea0183.Ais
                 return "0";
             }
 
-            return startIndex + length > RawValue.Length
+            string ret = startIndex + length > RawValue.Length
                 ? RawValue.Substring(startIndex)
                 : RawValue.Substring(startIndex, length);
+
+            // The value will typically be fed to Convert.ToInt()
+            if (string.IsNullOrWhiteSpace(ret))
+            {
+                return "0";
+            }
+
+            return ret;
         }
     }
 }

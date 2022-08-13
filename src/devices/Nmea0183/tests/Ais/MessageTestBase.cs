@@ -7,11 +7,11 @@ namespace Iot.Device.Nmea0183.Tests.Ais
 {
     public abstract class MessageTestBase
     {
-        protected readonly Parser Parser;
+        protected readonly AisParser Parser;
 
         protected MessageTestBase()
         {
-            Parser = new Parser();
+            Parser = new AisParser();
         }
     }
 }
