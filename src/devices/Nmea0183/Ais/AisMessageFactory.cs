@@ -24,7 +24,18 @@ namespace Iot.Device.Nmea0183.Ais
             return payload;
         }
 
-        public AisMessage Create(Payload payload)
+        public AisMessage? Create(Payload payload, string transceiverClass, bool throwOnUnknownMessage)
+        {
+            AisMessage? ret = Create(payload, throwOnUnknownMessage);
+            if (ret != null)
+            {
+                ret.TransceiverType = transceiverClass == "B" ? AisTransceiverClass.B : AisTransceiverClass.A;
+            }
+
+            return ret;
+        }
+
+        public AisMessage? Create(Payload payload, bool throwOnUnknownMessage)
         {
             switch (payload.MessageType)
             {
@@ -70,7 +81,14 @@ namespace Iot.Device.Nmea0183.Ais
                 case AisMessageType.PositionReportForLongRangeApplications:
                     return new PositionReportForLongRangeApplicationsMessage(payload);
                 default:
-                    throw new AisMessageException($"Unrecognised message type: {payload.MessageType}");
+                    if (throwOnUnknownMessage)
+                    {
+                        throw new AisMessageException($"Unrecognised message type: {payload.MessageType}");
+                    }
+                    else
+                    {
+                        return null;
+                    }
             }
         }
     }

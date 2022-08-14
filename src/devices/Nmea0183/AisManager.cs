@@ -17,6 +17,7 @@ namespace Iot.Device.Nmea0183
 {
     public class AisManager : NmeaSinkAndSource
     {
+        private readonly bool _throwOnUnknownMessage;
         private AisParser _aisParser;
 
         /// <summary>
@@ -26,15 +27,24 @@ namespace Iot.Device.Nmea0183
 
         private ConcurrentDictionary<uint, Ship> _ships;
 
-        private object _shipLock;
+        private ConcurrentDictionary<uint, BaseStation> _baseStations;
+
+        private object _lock;
 
         public AisManager(string interfaceName)
+        : this(interfaceName, false)
+        {
+        }
+
+        public AisManager(string interfaceName, bool throwOnUnknownMessage)
             : base(interfaceName)
         {
-            _aisParser = new AisParser();
+            _throwOnUnknownMessage = throwOnUnknownMessage;
+            _aisParser = new AisParser(throwOnUnknownMessage);
             _cache = new SentenceCache(this);
             _ships = new ConcurrentDictionary<uint, Ship>();
-            _shipLock = new object();
+            _baseStations = new ConcurrentDictionary<uint, BaseStation>();
+            _lock = new object();
         }
 
         public override void StartDecode()
@@ -47,32 +57,67 @@ namespace Iot.Device.Nmea0183
 #endif
             out Ship? ship)
         {
-            lock (_shipLock)
+            lock (_lock)
             {
                 return _ships.TryGetValue(mmsi, out ship);
             }
         }
 
-        private Ship GetOrCreateShip(uint mmsi)
+        private Ship GetOrCreateShip(uint mmsi, AisTransceiverClass transceiverClass, bool updateLastSeen = true)
         {
-            lock (_shipLock)
+            lock (_lock)
             {
-                if (TryGetShip(mmsi, out Ship? ship))
+                Ship? ship;
+                if (!TryGetShip(mmsi, out ship))
                 {
-                    return ship!;
+                    ship = new Ship(mmsi);
+                    _ships.TryAdd(mmsi, ship);
                 }
 
-                var ret = new Ship(mmsi);
-                _ships.TryAdd(mmsi, ret);
-                return ret;
+                if (updateLastSeen && ship != null)
+                {
+                    ship.LastSeen = DateTimeOffset.UtcNow;
+                    ship.TransceiverClass = transceiverClass;
+                }
+
+                return ship!;
+            }
+        }
+
+        private BaseStation GetOrCreateBaseStation(uint mmsi, AisTransceiverClass transceiverClass, bool updateLastSeen = true)
+        {
+            lock (_lock)
+            {
+                BaseStation? station;
+                if (!_baseStations.TryGetValue(mmsi, out station))
+                {
+                    station = new BaseStation(mmsi);
+                    _baseStations.TryAdd(mmsi, station);
+                }
+
+                if (updateLastSeen && station != null)
+                {
+                    station.LastSeen = DateTimeOffset.UtcNow;
+                    station.TransceiverClass = transceiverClass;
+                }
+
+                return station!;
             }
         }
 
         public IEnumerable<Ship> GetShips()
         {
-            lock (_shipLock)
+            lock (_lock)
             {
                 return _ships.Values;
+            }
+        }
+
+        public IEnumerable<BaseStation> GetBaseStations()
+        {
+            lock (_lock)
+            {
+                return _baseStations.Values;
             }
         }
 
@@ -86,17 +131,128 @@ namespace Iot.Device.Nmea0183
             }
 
             Ship? ship;
-            lock (_shipLock)
+            lock (_lock)
             {
                 switch (msg.MessageType)
                 {
+                    // These contain the same data
                     case AisMessageType.PositionReportClassA:
+                    case AisMessageType.PositionReportClassAAssignedSchedule:
+                    case AisMessageType.PositionReportClassAResponseToInterrogation:
                     {
-                        PositionReportClassAMessage msgPos = (PositionReportClassAMessage)msg;
-                        ship = GetOrCreateShip(msgPos.Mmsi);
+                        PositionReportClassAMessageBase msgPos = (PositionReportClassAMessageBase)msg;
+                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
                         ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
+                        ship.RateOfTurn = msgPos.RateOfTurn;
+                        ship.TrueHeading = msgPos.TrueHeading;
+                        ship.CourseOverGround = msgPos.CourseOverGround;
+                        ship.SpeedOverGround = msgPos.SpeedOverGround;
                         break;
                     }
+
+                    case AisMessageType.StaticDataReport:
+                    {
+                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType);
+                        if (msg is StaticDataReportPartAMessage msgPartA)
+                        {
+                            ship.Name = msgPartA.ShipName;
+                        }
+                        else if (msg is StaticDataReportPartBMessage msgPartB)
+                        {
+                            ship.CallSign = msgPartB.CallSign;
+                            ship.ShipType = msgPartB.ShipType;
+                            ship.DimensionToBow = msgPartB.DimensionToBow;
+                            ship.DimensionToStern = msgPartB.DimensionToStern;
+                            ship.DimensionToPort = msgPartB.DimensionToPort;
+                            ship.DimensionToStarboard = msgPartB.DimensionToStarboard;
+                        }
+
+                        break;
+                    }
+
+                    case AisMessageType.StaticAndVoyageRelatedData:
+                    {
+                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType);
+                        StaticAndVoyageRelatedDataMessage voyage = (StaticAndVoyageRelatedDataMessage)msg;
+                        ship.Destination = voyage.Destination;
+                        ship.Draught = voyage.Draught;
+                        var now = DateTimeOffset.UtcNow;
+                        if (voyage.IsEtaValid())
+                        {
+                            int year = now.Year;
+                            // If we are supposed to arrive on a month less than the current, this probably means "next year".
+                            if (voyage.EtaMonth < now.Month ||
+                                (voyage.EtaMonth == now.Month && voyage.EtaDay < now.Day))
+                            {
+                                year += 1;
+                            }
+
+                            try
+                            {
+                                ship.EstimatedTimeOfArrival = new DateTimeOffset(year, (int)voyage.EtaMonth,
+                                    (int)voyage.EtaDay,
+                                    (int)voyage.EtaHour, (int)voyage.EtaMinute, 0, TimeSpan.Zero);
+                            }
+                            catch (Exception x) when (x is ArgumentException || x is ArgumentOutOfRangeException)
+                            {
+                                // Even when the simple validation above succeeds, the date may still be illegal (e.g. 31 February)
+                                ship.EstimatedTimeOfArrival = null;
+                            }
+                        }
+                        else
+                        {
+                            ship.EstimatedTimeOfArrival = null; // may be deleted by the user
+                        }
+
+                        break;
+                    }
+
+                    case AisMessageType.StandardClassBCsPositionReport:
+                    {
+                        StandardClassBCsPositionReportMessage msgPos = (StandardClassBCsPositionReportMessage)msg;
+                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
+                        ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
+                        ship.RateOfTurn = null;
+                        ship.TrueHeading = msgPos.TrueHeading;
+                        ship.CourseOverGround = msgPos.CourseOverGround;
+                        ship.SpeedOverGround = msgPos.SpeedOverGround;
+                        break;
+                    }
+
+                    case AisMessageType.ExtendedClassBCsPositionReport:
+                    {
+                        ExtendedClassBCsPositionReportMessage msgPos = (ExtendedClassBCsPositionReportMessage)msg;
+                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
+                        ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
+                        ship.RateOfTurn = null;
+                        ship.TrueHeading = msgPos.TrueHeading;
+                        ship.CourseOverGround = msgPos.CourseOverGround;
+                        ship.SpeedOverGround = msgPos.SpeedOverGround;
+                        ship.DimensionToBow = msgPos.DimensionToBow;
+                        ship.DimensionToStern = msgPos.DimensionToStern;
+                        ship.DimensionToPort = msgPos.DimensionToPort;
+                        ship.DimensionToStarboard = msgPos.DimensionToStarboard;
+                        ship.ShipType = msgPos.ShipType;
+                        ship.Name = msgPos.Name;
+                        break;
+                    }
+
+                    case AisMessageType.BaseStationReport:
+                    {
+                        BaseStationReportMessage rpt = (BaseStationReportMessage)msg;
+                        var station = GetOrCreateBaseStation(rpt.Mmsi, rpt.TransceiverType, true);
+                        station.Position = new GeographicPosition(rpt.Latitude, rpt.Longitude, 0);
+                        break;
+                    }
+
+                    default:
+                        if (_throwOnUnknownMessage)
+                        {
+                            throw new AisParserException(
+                                $"Received a message of type {msg.MessageType} which was not handled", sentence.ToNmeaMessage());
+                        }
+
+                        break;
                 }
             }
         }

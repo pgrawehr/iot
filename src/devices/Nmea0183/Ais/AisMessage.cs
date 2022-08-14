@@ -8,6 +8,7 @@ namespace Iot.Device.Nmea0183.Ais
         public AisMessageType MessageType { get; }
         public uint Repeat { get; set; }
         public uint Mmsi { get; set; }
+        public AisTransceiverClass TransceiverType { get; internal set; }
 
         protected AisMessage(AisMessageType messageType)
         {

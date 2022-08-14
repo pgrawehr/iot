@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Iot.Device.Nmea0183.Ais;
 using Shouldly;
 using Xunit;
 
@@ -15,7 +16,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         private AisManager _manager;
         public AisManagerTest()
         {
-            _manager = new AisManager("Test");
+            _manager = new AisManager("Test", true);
         }
 
         [Fact]
@@ -35,12 +36,24 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             Assert.True(ships.All(x => x.Mmsi != 0));
             foreach (var s in ships)
             {
-                Assert.True(s.Position.ContainsValidPosition());
                 // The recording is from somewhere in the baltic, so this is a very broad bounding rectangle.
                 // If this is exceeded, the position decoding was most likely wrong.
-                s.Position.Longitude.ShouldBeInRange(9.0, 10.5);
-                s.Position.Latitude.ShouldBeInRange(56.0, 58.0);
+                if (s.Position.ContainsValidPosition())
+                {
+                    s.Position.Longitude.ShouldBeInRange(9.0, 10.5);
+                    s.Position.Latitude.ShouldBeInRange(56.0, 58.0);
+                }
+
+                if (!string.IsNullOrEmpty(s.Name))
+                {
+                    Assert.True(s.Name.Length <= 20);
+                    Assert.True(s.Name.All(x => x < 0x128 && x >= ' ')); // Only printable ascii letters
+                }
             }
+
+            // Check we have at least one A and B type message that contain name and a valid position
+            Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.A && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
+            Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
         }
     }
 }

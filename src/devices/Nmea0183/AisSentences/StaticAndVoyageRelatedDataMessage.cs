@@ -58,5 +58,13 @@ namespace Iot.Device.Nmea0183.AisSentences
             DataTerminalReady = payload.ReadDataTerminalReady(422, 1);
             Spare = payload.ReadUInt(423, 1);
         }
+
+        public bool IsEtaValid()
+        {
+            return EtaMonth >= 1 && EtaMonth <= 12 &&
+                   EtaDay >= 1 && EtaDay <= 31 &&
+                   EtaHour >= 0 && EtaHour < 24 &&
+                   EtaMinute >= 0 && EtaMinute < 60;
+        }
     }
 }

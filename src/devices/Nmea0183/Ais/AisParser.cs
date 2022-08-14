@@ -13,6 +13,7 @@ namespace Iot.Device.Nmea0183.Ais
 {
     public class AisParser
     {
+        public bool ThrowOnUnknownMessage { get; }
         public static SentenceId VdoId = new SentenceId("VDO");
         public static SentenceId VdmId = new SentenceId("VDM");
 
@@ -22,12 +23,18 @@ namespace Iot.Device.Nmea0183.Ais
         private readonly IDictionary<int, List<string>> _fragments = new Dictionary<int, List<string>>();
 
         public AisParser()
-            : this(new PayloadDecoder(), new AisMessageFactory(), new PayloadEncoder())
+            : this(false)
         {
         }
 
-        public AisParser(PayloadDecoder payloadDecoder, AisMessageFactory messageFactory, PayloadEncoder payloadEncoder)
+        public AisParser(bool throwOnUnknownMessage)
+            : this(new PayloadDecoder(), new AisMessageFactory(), new PayloadEncoder(), throwOnUnknownMessage)
         {
+        }
+
+        public AisParser(PayloadDecoder payloadDecoder, AisMessageFactory messageFactory, PayloadEncoder payloadEncoder, bool throwOnUnknownMessage)
+        {
+            ThrowOnUnknownMessage = throwOnUnknownMessage;
             _payloadDecoder = payloadDecoder;
             _messageFactory = messageFactory;
             _payloadEncoder = payloadEncoder;
@@ -86,7 +93,7 @@ namespace Iot.Device.Nmea0183.Ais
 
             var payload = DecodePayload(encodedPayload, Convert.ToInt32(sentenceParts[1]), Convert.ToInt32(sentenceParts[2]),
                 Convert.ToInt32(sentenceParts[3]), Convert.ToInt32(sentenceParts[6]));
-            return payload == null ? null : _messageFactory.Create(payload);
+            return payload == null ? null : _messageFactory.Create(payload, ThrowOnUnknownMessage);
         }
 
         public AisMessage? Parse(NmeaSentence sentence)
@@ -112,7 +119,7 @@ namespace Iot.Device.Nmea0183.Ais
                     {
                         var payload = DecodePayload(encodedPayload, numFragments, fragmentNumber, messageId, numFillBits);
 
-                        return payload == null ? null : _messageFactory.Create(payload);
+                        return payload == null ? null : _messageFactory.Create(payload, rs.Fields[3], ThrowOnUnknownMessage);
                     }
                 }
             }
