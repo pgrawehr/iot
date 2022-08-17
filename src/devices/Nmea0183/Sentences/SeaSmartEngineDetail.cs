@@ -96,7 +96,14 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (ReadFromHexString(data, 10, 4, true, out int temp))
             {
-                Temperature = Temperature.FromKelvins(temp / 100.0).ToUnit(TemperatureUnit.DegreeCelsius);
+                if (temp > 0 && temp < 0xFFFF)
+                {
+                    Temperature = UnitsNet.Temperature.FromKelvins(temp / 100.0).ToUnit(TemperatureUnit.DegreeCelsius);
+                }
+                else
+                {
+                    Temperature = null;
+                }
             }
 
             if (ReadFromHexString(data, 22, 8, true, out int operatingTime))
@@ -147,7 +154,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Engine temperature
         /// </summary>
-        public Temperature Temperature
+        public Temperature? Temperature
         {
             get;
             private set;
@@ -199,7 +206,16 @@ namespace Iot.Device.Nmea0183.Sentences
                 // Status = 0 is ok, anything else seems to indicate a fault
                 int status = Status ? 0 : 1;
                 string statusString = status.ToString("X4", CultureInfo.InvariantCulture);
-                int engineTempKelvin = (int)Math.Round(Temperature.Kelvins * 100.0, 1);
+                int engineTempKelvin;
+                if (Temperature != null)
+                {
+                    engineTempKelvin = (int)Math.Round(Temperature.Value.Kelvins * 100.0, 1);
+                }
+                else
+                {
+                    engineTempKelvin = 0xFFFF;
+                }
+
                 string engineTempString = engineTempKelvin.ToString("X4", CultureInfo.InvariantCulture);
                 // Seems to require a little endian conversion as well
                 engineTempString = engineTempString.Substring(2, 2) + engineTempString.Substring(0, 2);
@@ -215,7 +231,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"Engine {EngineNumber} Status: {(Status ? "Running" : "Off")} Temperature {Temperature.DegreesCelsius} °C";
+                return $"Engine {EngineNumber} Status: {(Status ? "Running" : "Off")} Temperature {Temperature.GetValueOrDefault(UnitsNet.Temperature.Zero).DegreesCelsius} °C";
             }
 
             return "No valid data (or engine off)";

@@ -54,6 +54,8 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             // Check we have at least one A and B type message that contain name and a valid position
             Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.A && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
             Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
+
+            _manager.GetBaseStations().ShouldNotBeEmpty();
         }
     }
 }

@@ -135,7 +135,7 @@ $PCDIN,01F201,00002AF8,02,000000FFFF477C0005000018150000FFFF000000000000007F7F*5
             // Status = 0 is ok, anything else seems to indicate a fault
             int status = rpm != 0 ? 0 : 1;
             string statusString = status.ToString("X4", CultureInfo.InvariantCulture);
-            int engineTempKelvin = (int)Math.Round(engineData.EngineTemperature.Kelvins * 100.0, 1);
+            int engineTempKelvin = (int)Math.Round(engineData.EngineTemperature!.Value.Kelvins * 100.0, 1);
             string engineTempString = engineTempKelvin.ToString("X4", CultureInfo.InvariantCulture);
             // Seems to require a little endian conversion as well
             engineTempString = engineTempString.Substring(2, 2) + engineTempString.Substring(0, 2);

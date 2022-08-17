@@ -19,7 +19,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs an instance containing all relevant data
         /// </summary>
-        public EngineData(int messageTimeStamp, int engineNo, RotationalSpeed revolutions, Ratio pitch, TimeSpan operatingTime, Temperature engineTemperature)
+        public EngineData(int messageTimeStamp, int engineNo, RotationalSpeed revolutions, Ratio pitch, TimeSpan operatingTime, Temperature? engineTemperature)
         {
             MessageTimeStamp = messageTimeStamp;
             EngineNo = engineNo;
@@ -90,7 +90,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Engine temperature
         /// </summary>
-        public Temperature EngineTemperature
+        public Temperature? EngineTemperature
         {
             get;
         }
