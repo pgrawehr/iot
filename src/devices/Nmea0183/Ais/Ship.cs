@@ -105,5 +105,69 @@ namespace Iot.Device.Nmea0183.Ais
 
             return m;
         }
+
+        public MmsiType IdentifyMmsiType()
+        {
+            // We need to look at the first few digits. That's easiest in string format.
+            string asString = FormatMmsi();
+
+            if (asString.StartsWith("00", StringComparison.Ordinal))
+            {
+                return MmsiType.Group;
+            }
+
+            if (asString.StartsWith("0", StringComparison.Ordinal))
+            {
+                return MmsiType.Group;
+            }
+
+            if (asString.StartsWith("111", StringComparison.Ordinal))
+            {
+                return MmsiType.SarAircraft;
+            }
+
+            if (asString.StartsWith("99", StringComparison.Ordinal))
+            {
+                return MmsiType.AtoN;
+            }
+
+            if (asString.StartsWith("98", StringComparison.Ordinal))
+            {
+                return MmsiType.Auxiliary;
+            }
+
+            if (asString.StartsWith("970", StringComparison.Ordinal))
+            {
+                return MmsiType.AisSart;
+            }
+
+            if (asString.StartsWith("972", StringComparison.Ordinal))
+            {
+                return MmsiType.Mob;
+            }
+
+            if (asString.StartsWith("974", StringComparison.Ordinal))
+            {
+                return MmsiType.Epirb;
+            }
+
+            // Anything using an 1 or 9 and not handled in the cases above, is not defined.
+            if (asString.StartsWith("1", StringComparison.Ordinal))
+            {
+                return MmsiType.Unknown;
+            }
+
+            if (asString.StartsWith("9", StringComparison.Ordinal))
+            {
+                return MmsiType.Unknown;
+            }
+
+            if (asString.StartsWith("8", StringComparison.Ordinal))
+            {
+                return MmsiType.DiversRadio;
+            }
+
+            return MmsiType.Ship;
+        }
     }
 }
