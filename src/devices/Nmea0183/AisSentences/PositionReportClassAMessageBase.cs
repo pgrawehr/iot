@@ -33,6 +33,12 @@ namespace Iot.Device.Nmea0183.AisSentences
             Mmsi = payload.ReadUInt(8, 30);
             NavigationStatus = payload.ReadEnum<NavigationStatus>(38, 4);
             RateOfTurn = payload.ReadRateOfTurn(42, 8);
+            if (RateOfTurn == 0x80)
+            {
+                // Not defined
+                RateOfTurn = null;
+            }
+
             SpeedOverGround = payload.ReadSpeedOverGround(50, 10);
             PositionAccuracy = payload.ReadEnum<PositionAccuracy>(60, 1);
             Longitude = payload.ReadLongitude(61, 28);
@@ -53,7 +59,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             payload.WriteEnum<NavigationStatus>(NavigationStatus, 4);
             if (RateOfTurn == null)
             {
-                payload.WriteRateOfTurn(0x128, 8); // 0x128 is "unknown"
+                payload.WriteRateOfTurn(0x80, 8); // 0x80 is "unknown"
             }
             else
             {

@@ -12,6 +12,7 @@ using Iot.Device.Common;
 using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.AisSentences;
 using Iot.Device.Nmea0183.Sentences;
+using UnitsNet;
 
 namespace Iot.Device.Nmea0183
 {
@@ -143,10 +144,28 @@ namespace Iot.Device.Nmea0183
                         PositionReportClassAMessageBase msgPos = (PositionReportClassAMessageBase)msg;
                         ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
                         ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
-                        ship.RateOfTurn = msgPos.RateOfTurn;
-                        ship.TrueHeading = msgPos.TrueHeading;
-                        ship.CourseOverGround = msgPos.CourseOverGround;
-                        ship.SpeedOverGround = msgPos.SpeedOverGround;
+                        if (msgPos.RateOfTurn.HasValue)
+                        {
+                            // See the cheat sheet at https://gpsd.gitlab.io/gpsd/AIVDM.html
+                            double v = msgPos.RateOfTurn.Value / 4.733;
+                            ship.RateOfTurn = RotationalSpeed.FromDegreesPerMinute(Math.Sign(v) * v * v); // Square value, keep sign
+                        }
+                        else
+                        {
+                            ship.RateOfTurn = null;
+                        }
+
+                        if (msgPos.TrueHeading.HasValue)
+                        {
+                            ship.TrueHeading = Angle.FromDegrees(msgPos.TrueHeading.Value);
+                        }
+                        else
+                        {
+                            ship.TrueHeading = null;
+                        }
+
+                        ship.CourseOverGround = Angle.FromDegrees(msgPos.CourseOverGround);
+                        ship.SpeedOverGround = Speed.FromKnots(msgPos.SpeedOverGround);
                         break;
                     }
 
@@ -161,10 +180,10 @@ namespace Iot.Device.Nmea0183
                         {
                             ship.CallSign = msgPartB.CallSign;
                             ship.ShipType = msgPartB.ShipType;
-                            ship.DimensionToBow = msgPartB.DimensionToBow;
-                            ship.DimensionToStern = msgPartB.DimensionToStern;
-                            ship.DimensionToPort = msgPartB.DimensionToPort;
-                            ship.DimensionToStarboard = msgPartB.DimensionToStarboard;
+                            ship.DimensionToBow = Length.FromMeters(msgPartB.DimensionToBow);
+                            ship.DimensionToStern = Length.FromMeters(msgPartB.DimensionToStern);
+                            ship.DimensionToPort = Length.FromMeters(msgPartB.DimensionToPort);
+                            ship.DimensionToStarboard = Length.FromMeters(msgPartB.DimensionToStarboard);
                         }
 
                         break;
@@ -175,7 +194,7 @@ namespace Iot.Device.Nmea0183
                         ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType);
                         StaticAndVoyageRelatedDataMessage voyage = (StaticAndVoyageRelatedDataMessage)msg;
                         ship.Destination = voyage.Destination;
-                        ship.Draught = voyage.Draught;
+                        ship.Draught = Length.FromMeters(voyage.Draught);
                         var now = DateTimeOffset.UtcNow;
                         if (voyage.IsEtaValid())
                         {
@@ -213,9 +232,17 @@ namespace Iot.Device.Nmea0183
                         ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
                         ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
                         ship.RateOfTurn = null;
-                        ship.TrueHeading = msgPos.TrueHeading;
-                        ship.CourseOverGround = msgPos.CourseOverGround;
-                        ship.SpeedOverGround = msgPos.SpeedOverGround;
+                        if (msgPos.TrueHeading.HasValue)
+                        {
+                            ship.TrueHeading = Angle.FromDegrees(msgPos.TrueHeading.Value);
+                        }
+                        else
+                        {
+                            ship.TrueHeading = null;
+                        }
+
+                        ship.CourseOverGround = Angle.FromDegrees(msgPos.CourseOverGround);
+                        ship.SpeedOverGround = Speed.FromKnots(msgPos.SpeedOverGround);
                         break;
                     }
 
@@ -225,13 +252,21 @@ namespace Iot.Device.Nmea0183
                         ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
                         ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
                         ship.RateOfTurn = null;
-                        ship.TrueHeading = msgPos.TrueHeading;
-                        ship.CourseOverGround = msgPos.CourseOverGround;
-                        ship.SpeedOverGround = msgPos.SpeedOverGround;
-                        ship.DimensionToBow = msgPos.DimensionToBow;
-                        ship.DimensionToStern = msgPos.DimensionToStern;
-                        ship.DimensionToPort = msgPos.DimensionToPort;
-                        ship.DimensionToStarboard = msgPos.DimensionToStarboard;
+                        if (msgPos.TrueHeading.HasValue)
+                        {
+                            ship.TrueHeading = Angle.FromDegrees(msgPos.TrueHeading.Value);
+                        }
+                        else
+                        {
+                            ship.TrueHeading = null;
+                        }
+
+                        ship.CourseOverGround = Angle.FromDegrees(msgPos.CourseOverGround);
+                        ship.SpeedOverGround = Speed.FromKnots(msgPos.SpeedOverGround);
+                        ship.DimensionToBow = Length.FromMeters(msgPos.DimensionToBow);
+                        ship.DimensionToStern = Length.FromMeters(msgPos.DimensionToStern);
+                        ship.DimensionToPort = Length.FromMeters(msgPos.DimensionToPort);
+                        ship.DimensionToStarboard = Length.FromMeters(msgPos.DimensionToStarboard);
                         ship.ShipType = msgPos.ShipType;
                         ship.Name = msgPos.Name;
                         break;

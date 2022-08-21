@@ -4,6 +4,7 @@
 using System;
 using System.Globalization;
 using Iot.Device.Common;
+using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Ais
 {
@@ -42,25 +43,25 @@ namespace Iot.Device.Nmea0183.Ais
             set;
         }
 
-        public int? RateOfTurn { get; set; }
-        public uint? TrueHeading { get; set; }
-        public double CourseOverGround { get; set; }
-        public double SpeedOverGround { get; set; }
+        public RotationalSpeed? RateOfTurn { get; set; }
+        public Angle? TrueHeading { get; set; }
+        public Angle CourseOverGround { get; set; }
+        public Speed SpeedOverGround { get; set; }
         public string CallSign { get; set; }
         public ShipType ShipType { get; set; }
-        public uint DimensionToBow { get; set; }
-        public uint DimensionToStern { get; set; }
-        public uint DimensionToPort { get; set; }
-        public uint DimensionToStarboard { get; set; }
+        public Length DimensionToBow { get; set; }
+        public Length DimensionToStern { get; set; }
+        public Length DimensionToPort { get; set; }
+        public Length DimensionToStarboard { get; set; }
 
         public AisTransceiverClass TransceiverClass { get; set; }
 
-        public uint Length => DimensionToBow + DimensionToStern;
+        public Length Length => DimensionToBow + DimensionToStern;
 
-        public uint Beam => DimensionToPort + DimensionToStarboard;
+        public Length Beam => DimensionToPort + DimensionToStarboard;
         public DateTimeOffset? EstimatedTimeOfArrival { get; set; }
         public string Destination { get; set; }
-        public double? Draught { get; set; }
+        public Length? Draught { get; set; }
 
         public override string ToString()
         {
