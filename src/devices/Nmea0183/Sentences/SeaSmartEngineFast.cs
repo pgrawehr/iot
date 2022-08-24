@@ -148,9 +148,9 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Returns true for this message
+        /// Returns false for this message, as PCDIN messages can mean different things
         /// </summary>
-        public override bool ReplacesOlderInstance => true;
+        public override bool ReplacesOlderInstance => false;
 
         /// <inheritdoc />
         public override string ToNmeaParameterList()

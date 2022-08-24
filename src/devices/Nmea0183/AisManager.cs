@@ -81,7 +81,12 @@ namespace Iot.Device.Nmea0183
                 if (updateLastSeen && ship != null)
                 {
                     ship.LastSeen = DateTimeOffset.UtcNow;
-                    ship.TransceiverClass = transceiverClass;
+
+                    // The transceiver type is derived from the message type (a PositionReportClassA message is obviously only sent by class A equipment)
+                    if (transceiverClass != AisTransceiverClass.Unknown)
+                    {
+                        ship.TransceiverClass = transceiverClass;
+                    }
                 }
 
                 return ship!;
@@ -204,6 +209,8 @@ namespace Iot.Device.Nmea0183
                     {
                         ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType);
                         StaticAndVoyageRelatedDataMessage voyage = (StaticAndVoyageRelatedDataMessage)msg;
+                        ship.Name = voyage.ShipName;
+                        ship.CallSign = voyage.CallSign;
                         ship.Destination = voyage.Destination;
                         ship.Draught = Length.FromMeters(voyage.Draught);
                         var now = DateTimeOffset.UtcNow;

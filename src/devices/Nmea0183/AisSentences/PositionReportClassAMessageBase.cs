@@ -52,6 +52,8 @@ namespace Iot.Device.Nmea0183.AisSentences
             RadioStatus = payload.ReadUInt(149, 19);
         }
 
+        public override AisTransceiverClass TransceiverType => AisTransceiverClass.A;
+
         public override void Encode(Payload payload)
         {
             payload.WriteEnum(AisMessageType.PositionReportClassA, 6);

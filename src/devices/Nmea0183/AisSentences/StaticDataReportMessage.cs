@@ -34,6 +34,8 @@ namespace Iot.Device.Nmea0183.AisSentences
             PartNumber = payload.ReadUInt(38, 2);
         }
 
+        public override AisTransceiverClass TransceiverType => AisTransceiverClass.B;
+
         public static AisMessage Create(Payload payload)
         {
             var message = new StaticDataReportMessage(payload);

@@ -35,8 +35,7 @@ namespace Iot.Device.Nmea0183
         private StreamReader _reader;
         private Raw8BitEncoding _encoding;
         private Thread? _sendQueueThread;
-        private ConcurrentQueue<NmeaSentence> _outQueue;
-        private AutoResetEvent _outEvent;
+        private BlockingCollection<NmeaSentence> _outQueue;
         private Exception? _ioExceptionOnSend;
         private DateTimeOffset _lastPacketTime;
 
@@ -56,7 +55,6 @@ namespace Iot.Device.Nmea0183
             _dataSink = dataSink;
             _lock = new object();
             _outQueue = new();
-            _outEvent = new AutoResetEvent(false);
             ExclusiveTalkerId = TalkerId.Any;
             _ioExceptionOnSend = null;
             SuppressOutdatedMessages = true;
@@ -162,9 +160,13 @@ namespace Iot.Device.Nmea0183
                         // Ignore here (already reported above)
                     }
 
-                    Thread.Sleep(10); // to prevent busy-waiting
                     continue; // Probably because the stream was closed.
                 }
+
+                //// if (currentLine.IndexOf("AIVDM", StringComparison.Ordinal) > 0)
+                //// {
+                ////    FireOnParserError($"{currentLine}", NmeaError.None);
+                //// }
 
                 if (SupportLogReading)
                 {
@@ -216,7 +218,7 @@ namespace Iot.Device.Nmea0183
         {
             while (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
-                if (_outQueue.TryDequeue(out var sentenceToSend))
+                if (_outQueue.TryTake(out var sentenceToSend, TimeSpan.FromSeconds(10)))
                 {
                     if (sentenceToSend.ReplacesOlderInstance && SuppressOutdatedMessages)
                     {
@@ -225,7 +227,7 @@ namespace Iot.Device.Nmea0183
                         var newerInstance = _outQueue.FirstOrDefault(x => x.SentenceId == sentenceToSend.SentenceId && x.TalkerId == sentenceToSend.TalkerId);
                         if (newerInstance != null)
                         {
-                            FireOnParserError($"Message with type {sentenceToSend.TalkerId}{sentenceToSend.SentenceId} dropped because it's outdated.", NmeaError.MessageDropped);
+                            // FireOnParserError($"Message with type {sentenceToSend.TalkerId}{sentenceToSend.SentenceId} dropped because it's outdated.", NmeaError.MessageDropped);
                             continue;
                         }
                     }
@@ -248,11 +250,6 @@ namespace Iot.Device.Nmea0183
                         // Probably going to close the port any moment
                     }
                 }
-
-                if (_outQueue.IsEmpty)
-                {
-                    WaitHandle.WaitAny(new WaitHandle[] { _outEvent, _cancellationTokenSource.Token.WaitHandle });
-                }
             }
         }
 
@@ -265,8 +262,15 @@ namespace Iot.Device.Nmea0183
                 throw _ioExceptionOnSend;
             }
 
-            _outQueue.Enqueue(sentence);
-            _outEvent?.Set();
+            try
+            {
+                _outQueue.Add(sentence);
+            }
+            catch (InvalidOperationException x)
+            {
+                // the queue is closed
+                FireOnParserError($"{x.Message}", NmeaError.PortClosed);
+            }
         }
 
         /// <inheritdoc />
@@ -276,6 +280,7 @@ namespace Iot.Device.Nmea0183
             {
                 if (_parserThread != null && _parserThread.IsAlive && _cancellationTokenSource != null)
                 {
+                    _outQueue.CompleteAdding();
                     _cancellationTokenSource.Cancel();
                     _dataSource.Dispose();
                     _dataSink?.Dispose();
@@ -284,14 +289,12 @@ namespace Iot.Device.Nmea0183
 
                     _sendQueueThread?.Join();
                     _cancellationTokenSource = null;
-                    _outEvent.Dispose();
 
                     _parserThread = null;
                     _dataSource = null!;
                     _dataSink = null!;
                     _reader = null!;
                     _sendQueueThread = null;
-                    _outEvent = null!;
                 }
             }
         }

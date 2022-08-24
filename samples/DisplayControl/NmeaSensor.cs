@@ -622,7 +622,11 @@ namespace DisplayControl
 
         private void OnParserError(NmeaSinkAndSource source, string error, NmeaError errorCode)
         {
-            _logger.LogError($"Nmea error from {source.InterfaceName}: {error}");
+            // Ignore drops while sending to the autopilot. Since that interface is very slow, it happens constantly.
+            if (!((source.InterfaceName == HandheldSourceName) && errorCode == NmeaError.MessageDropped))
+            {
+                _logger.LogError($"Nmea error from {source.InterfaceName}: {error}");
+            }
         }
 
         public void SendImuData(Vector3 value)

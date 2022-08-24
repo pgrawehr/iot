@@ -119,7 +119,7 @@ namespace Iot.Device.Nmea0183.Ais
                     {
                         var payload = DecodePayload(encodedPayload, numFragments, fragmentNumber, messageId, numFillBits);
 
-                        return payload == null ? null : _messageFactory.Create(payload, rs.Fields[3], ThrowOnUnknownMessage);
+                        return payload == null ? null : _messageFactory.Create(payload, ThrowOnUnknownMessage);
                     }
                 }
             }

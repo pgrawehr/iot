@@ -59,6 +59,8 @@ namespace Iot.Device.Nmea0183.AisSentences
             Spare = payload.ReadUInt(423, 1);
         }
 
+        public override AisTransceiverClass TransceiverType => AisTransceiverClass.A;
+
         public bool IsEtaValid()
         {
             return EtaMonth >= 1 && EtaMonth <= 12 &&

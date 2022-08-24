@@ -166,6 +166,20 @@ namespace Iot.Device.Nmea0183
                 throw new ArgumentNullException(nameof(sentence));
             }
 
+            int idx = sentence.IndexOfAny(new char[] { '!', '$' });
+            if (idx < 0 || idx > 6)
+            {
+                // Valid sentences start with $ or ! (for the AIS sentences)
+                errorCode = NmeaError.NoSyncByte;
+                return null;
+            }
+
+            if (idx != 0)
+            {
+                // When the index of the $ is larger than 0 but less than a small amount, try to decode the remainder of the line
+                sentence = sentence.Remove(idx);
+            }
+
             if (sentence.Length < sentenceHeaderMinLength)
             {
                 errorCode = NmeaError.MessageToShort;
@@ -175,13 +189,6 @@ namespace Iot.Device.Nmea0183
             if (sentence.Length > MaxSentenceLength)
             {
                 errorCode = NmeaError.MessageToLong;
-                return null;
-            }
-
-            if (sentence[0] != '$' && sentence[0] != '!')
-            {
-                // Valid sentences start with $ or ! (for the AIS sentences)
-                errorCode = NmeaError.NoSyncByte;
                 return null;
             }
 

@@ -8,7 +8,6 @@ namespace Iot.Device.Nmea0183.Ais
         public AisMessageType MessageType { get; }
         public uint Repeat { get; set; }
         public uint Mmsi { get; set; }
-        public AisTransceiverClass TransceiverType { get; internal set; }
 
         protected AisMessage(AisMessageType messageType)
         {
@@ -20,6 +19,14 @@ namespace Iot.Device.Nmea0183.Ais
         {
             Repeat = payload.ReadUInt(6, 2);
             Mmsi = payload.ReadUInt(8, 30);
+        }
+
+        public virtual AisTransceiverClass TransceiverType
+        {
+            get
+            {
+                return AisTransceiverClass.Unknown;
+            }
         }
 
         public virtual void Encode(Payload payload)

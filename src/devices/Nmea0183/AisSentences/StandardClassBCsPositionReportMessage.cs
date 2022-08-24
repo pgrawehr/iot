@@ -51,5 +51,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             Raim = payload.ReadEnum<Raim>(147, 1);
             RadioStatus = payload.ReadUInt(148, 20);
         }
+
+        public override AisTransceiverClass TransceiverType => AisTransceiverClass.B;
     }
 }

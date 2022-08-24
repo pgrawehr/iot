@@ -64,7 +64,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         public void CheckAtoNTargetDecode()
         {
             // This file contains virtual Aid-to-navigation targets (but only few ships)
-            var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-23\\", "*.txt", SearchOption.TopDirectoryOnly);
+            var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-24\\", "Nmea-2022-08-24-15-19.txt", SearchOption.TopDirectoryOnly);
             using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", files);
             int messagesParsed = 0;
             reader.OnNewSequence += (source, msg) =>

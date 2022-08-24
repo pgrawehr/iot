@@ -58,5 +58,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             Assigned = payload.ReadBoolean(307, 1);
             Spare = payload.ReadUInt(308, 4);
         }
+
+        public override AisTransceiverClass TransceiverType => AisTransceiverClass.B;
     }
 }

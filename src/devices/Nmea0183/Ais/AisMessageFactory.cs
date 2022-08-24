@@ -24,17 +24,6 @@ namespace Iot.Device.Nmea0183.Ais
             return payload;
         }
 
-        public AisMessage? Create(Payload payload, string transceiverClass, bool throwOnUnknownMessage)
-        {
-            AisMessage? ret = Create(payload, throwOnUnknownMessage);
-            if (ret != null)
-            {
-                ret.TransceiverType = transceiverClass == "B" ? AisTransceiverClass.B : AisTransceiverClass.A;
-            }
-
-            return ret;
-        }
-
         public AisMessage? Create(Payload payload, bool throwOnUnknownMessage)
         {
             switch (payload.MessageType)
