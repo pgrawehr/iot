@@ -225,6 +225,7 @@ namespace Iot.Device.Nmea0183
                         var newerInstance = _outQueue.FirstOrDefault(x => x.SentenceId == sentenceToSend.SentenceId && x.TalkerId == sentenceToSend.TalkerId);
                         if (newerInstance != null)
                         {
+                            FireOnParserError($"Message with type {sentenceToSend.TalkerId}{sentenceToSend.SentenceId} dropped because it's outdated.", NmeaError.MessageDropped);
                             continue;
                         }
                     }

@@ -30,6 +30,8 @@ namespace Iot.Device.Nmea0183
 
         private ConcurrentDictionary<uint, BaseStation> _baseStations;
 
+        private ConcurrentDictionary<uint, AidToNavigation> _aidToNavigationTargets;
+
         private object _lock;
 
         public AisManager(string interfaceName)
@@ -45,6 +47,7 @@ namespace Iot.Device.Nmea0183
             _cache = new SentenceCache(this);
             _ships = new ConcurrentDictionary<uint, Ship>();
             _baseStations = new ConcurrentDictionary<uint, BaseStation>();
+            _aidToNavigationTargets = new ConcurrentDictionary<uint, AidToNavigation>();
             _lock = new object();
         }
 
@@ -119,6 +122,14 @@ namespace Iot.Device.Nmea0183
             lock (_lock)
             {
                 return _baseStations.Values;
+            }
+        }
+
+        public List<AidToNavigation> GetAtoNTargets()
+        {
+            lock (_lock)
+            {
+                return _aidToNavigationTargets.Values.ToList();
             }
         }
 
@@ -277,6 +288,12 @@ namespace Iot.Device.Nmea0183
                         BaseStationReportMessage rpt = (BaseStationReportMessage)msg;
                         var station = GetOrCreateBaseStation(rpt.Mmsi, rpt.TransceiverType, true);
                         station.Position = new GeographicPosition(rpt.Latitude, rpt.Longitude, 0);
+                        break;
+                    }
+
+                    case AisMessageType.StandardSarAircraftPositionReport:
+                    {
+                        // Todo
                         break;
                     }
 

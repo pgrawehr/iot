@@ -352,7 +352,7 @@ namespace DisplayControl
             _clockSynchronizer = new SystemClockSynchronizer();
             _clockSynchronizer.StartDecode();
 
-            _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/ShipLogs", MaxFileSize = 1024 * 1024 * 5 , SortByDate = true });
+            _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/ShipLogs", MaxFileSize = 1024 * 1024 * 10 , SortByDate = true });
 
             _cache = new SentenceCache(_router);
             _autopilot = new AutopilotController(_router, _router, _cache);
@@ -787,66 +787,11 @@ namespace DisplayControl
             EngineRevolutions rv = new EngineRevolutions(RotationSource.Engine, engineData.Revolutions, engineData.EngineNo + 1, engineData.Pitch);
             _router.SendSentence(rv);
 
-            // Example data set: (bad example from the docs, since the engine is just not running here)
-            // $PCDIN,01F200,000C7A4F,02,000000FFFF7FFFFF*21
-            int rpm = (int)engineData.Revolutions.RevolutionsPerMinute;
-            rpm = rpm / 64; // Some trying shows that the last 6 bits are shifted out
-            if (rpm > short.MaxValue)
-            {
-                rpm = short.MaxValue;
-            }
-
-            string engineNoText = engineData.EngineNo.ToString("X2", CultureInfo.InvariantCulture);
-            string rpmText = rpm.ToString("X4", CultureInfo.InvariantCulture);
-            int pitchPercent = (int)engineData.Pitch.Percent;
-            string pitchText = pitchPercent.ToString("X2", CultureInfo.InvariantCulture);
-            string timeStampText = Environment.TickCount.ToString("X8", CultureInfo.InvariantCulture);
-            var rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
-            {
-                "01F200",
-                timeStampText,
-                "02",
-                engineNoText + rpmText + "FFFF" /*Boost*/ + pitchText + "FFFF"
-            }, DateTimeOffset.UtcNow);
-            _router.SendSentence(rs);
-
-            // $PCDIN,01F201,000C7E1B,02,000000FFFF407F0005000000000000FFFF000000000000007F7F*24
-            //                           1-2---3---4---5---6---7-------8---9---1011--12--1314
-            // 1) Engine no. 0: Cntr/Single
-            // 2) Oil pressure
-            // 3) Oil temp
-            // 4) Engine Temp
-            // 5) Alternator voltage
-            // 6) Fuel rate
-            // 7) Engine operating time (seconds)
-            // 8) Coolant pressure
-            // 9) Fuel pressure
-            // 10) Reserved
-            // 11) Status
-            // 12) Status
-            // 13) Load percent
-            // 14) Torque percent
-            int operatingTimeSeconds = (int)engineData.OperatingTime.TotalSeconds;
-            string operatingTimeString = operatingTimeSeconds.ToString("X8", CultureInfo.InvariantCulture);
-            // For whatever reason, this expects this as little endian (all the other way round)
-            string swappedString = operatingTimeString.Substring(6, 2) + operatingTimeString.Substring(4, 2) +
-                                   operatingTimeString.Substring(2, 2) + operatingTimeString.Substring(0, 2);
-
-            // Status = 0 is ok, anything else seems to indicate a fault
-            int status = rpm != 0 ? 0 : 1;
-            string statusString = status.ToString("X4", CultureInfo.InvariantCulture);
-            int engineTempKelvin = (int)Math.Round(engineData.EngineTemperature.Kelvins * 100.0, 1);
-            string engineTempString = engineTempKelvin.ToString("X4", CultureInfo.InvariantCulture);
-            // Seems to require a little endian conversion as well
-            engineTempString = engineTempString.Substring(2, 2) + engineTempString.Substring(0, 2);
-            rs = new RawSentence(new TalkerId('P', 'C'), new SentenceId("DIN"), new string[]
-            {
-                "01F201",
-                timeStampText,
-                "02",
-                engineNoText + "0000FFFF" + engineTempString + "00050000" + swappedString + "FFFF000000" + statusString + "00007F7F"
-            }, DateTimeOffset.UtcNow);
-            _router.SendSentence(rs);
+            // We're sending both with the same frequency here - doesn't really matter.
+            var fast = new SeaSmartEngineFast(engineData);
+            _router.SendSentence(fast);
+            var slow = new SeaSmartEngineDetail(engineData);
+            _router.SendSentence(slow);
         }
     }
 }

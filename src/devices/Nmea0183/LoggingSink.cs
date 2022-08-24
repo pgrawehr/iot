@@ -99,7 +99,8 @@ namespace Iot.Device.Nmea0183
                 {
                     // If talker and ID are the same and the current message is a raw, assume it's the same message again
                     // (Avoids logging the same message as raw and decoded)
-                    if ((_lastSentence.SentenceId != sentence.SentenceId && _lastSentence.TalkerId != sentence.TalkerId) || !(sentence is RawSentence))
+                    // But log all AIS messages, they come as raw only
+                    if ((_lastSentence.SentenceId != sentence.SentenceId && _lastSentence.TalkerId != sentence.TalkerId) || !(sentence is RawSentence) || sentence.TalkerId == TalkerId.Ais)
                     {
                         string msg = FormattableString.Invariant(
                             $"{DateTime.UtcNow:s}|{source.InterfaceName}|${sentence.TalkerId}{sentence.SentenceId},{sentence.ToNmeaParameterList()}|{sentence.ToReadableContent()}");
