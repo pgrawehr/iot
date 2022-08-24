@@ -25,8 +25,6 @@ namespace DisplayControl
         private const string ShipSourceName = "Ship";
         private const string HandheldSourceName = "Handheld";
         private const string OpenCpn = "OpenCpn";
-        private const string SignalKOut = "SignalKOut";
-        private const string SignalKIn = "SignalK";
         private const string Udp = "Udp";
         private const string AuxiliaryGps = "AuxiliaryGps";
         
@@ -44,11 +42,6 @@ namespace DisplayControl
         /// OpenCPN is supposed to connect here
         /// </summary>
         private NmeaTcpServer _openCpnServer;
-
-        /// <summary>
-        /// Server instance for signal-k
-        /// </summary>
-        private NmeaTcpServer _signalkServer;
 
         /// <summary>
         /// Udp datagram server
@@ -144,17 +137,14 @@ namespace DisplayControl
             // We're instead reconstructing this message - but in that case, don't send it back to the ship, as this causes confusion
             // for the wind displays
             rules.Add(new FilterRule("*", yd, WindDirectionWithRespectToNorth.Id, new List<string>(), false, false));
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.ElectronicChartDisplayAndInformationSystem, WindDirectionWithRespectToNorth.Id, new List<string>() { OpenCpn, SignalKOut, Udp }, false, false));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.ElectronicChartDisplayAndInformationSystem, WindDirectionWithRespectToNorth.Id, new List<string>() { OpenCpn, Udp }, false, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, SignalKOut, Udp }, false, true));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, Udp }, false, true));
 
-            // Anything from SignalK is currently discarded (maybe there are some computed sentences that are useful)
-            // Note: This source does not normally generate any data. Input from SignalK is on SignalKIn
-            rules.Add(new FilterRule(SignalKOut, TalkerId.Any, SentenceId.Any, new List<string>()));
             // Anything from OpenCpn is distributed everywhere
-            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { SignalKOut, ShipSourceName, HandheldSourceName }));
+            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { ShipSourceName, HandheldSourceName }));
             // Anything from the ship is sent locally
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, SignalKOut, MessageRouter.LocalMessageSource, Udp }, false, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, MessageRouter.LocalMessageSource, Udp }, false, true));
             // Anything from the handheld is sent to our processor
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
@@ -166,7 +156,7 @@ namespace DisplayControl
 
             foreach (var gpsSequence in gpsSequences)
             {
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { OpenCpn, ShipSourceName, SignalKOut, Udp }, true, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { OpenCpn, ShipSourceName, Udp }, true, true));
             }
 
             string[] navigationSentences = new string[]
@@ -178,7 +168,7 @@ namespace DisplayControl
             {
                 // Send these from handheld to the nav software, so that this picks up the current destination.
                 // signalK is able to do this, OpenCPN is not
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { SignalKOut, OpenCpn, Udp }, RemoveNonAsciiFromMessageForSignalk, false, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { OpenCpn, Udp }, RemoveNonAsciiFromMessageForSignalk, false, true));
                 // And send the result of that nav operation to the ship 
                 // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
                 // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
@@ -308,6 +298,7 @@ namespace DisplayControl
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
+            _serialPortShip.ReadBufferSize = 16 * 1024;
             _serialPortShip.Open();
             _streamShip = _serialPortShip.BaseStream;
             _parserShipInterface = new NmeaParser(ShipSourceName, _streamShip, _streamShip);
@@ -335,10 +326,6 @@ namespace DisplayControl
             _openCpnServer.OnParserError += OnParserError;
             _openCpnServer.StartDecode();
 
-            _signalkServer = new NmeaTcpServer(SignalKOut, IPAddress.Any, 10101);
-            _signalkServer.OnParserError += OnParserError;
-            _signalkServer.StartDecode();
-
             // TODO: This source is probably not required
             //_signalKClient = new TcpClient("127.0.0.1", 10110);
             //_signalKClientParser = new NmeaParser(SignalKIn, _signalKClient.GetStream(), _signalKClient.GetStream());
@@ -361,7 +348,6 @@ namespace DisplayControl
             _router.AddEndPoint(_parserShipInterface);
             _router.AddEndPoint(_parserHandheldInterface);
             _router.AddEndPoint(_openCpnServer);
-            _router.AddEndPoint(_signalkServer);
             _router.AddEndPoint(_clockSynchronizer);
             _router.AddEndPoint(_udpServer);
             _router.AddEndPoint(_parserForwardInterface);
@@ -702,9 +688,6 @@ namespace DisplayControl
 
             _openCpnServer?.Dispose();
             _openCpnServer = null;
-
-            _signalkServer?.Dispose();
-            _signalkServer = null;
 
             _udpServer?.Dispose();
             _udpServer = null;
