@@ -26,11 +26,7 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         private SentenceCache _cache;
 
-        private ConcurrentDictionary<uint, Ship> _ships;
-
-        private ConcurrentDictionary<uint, BaseStation> _baseStations;
-
-        private ConcurrentDictionary<uint, AidToNavigation> _aidToNavigationTargets;
+        private ConcurrentDictionary<uint, AisTarget> _targets;
 
         private object _lock;
 
@@ -45,9 +41,7 @@ namespace Iot.Device.Nmea0183
             _throwOnUnknownMessage = throwOnUnknownMessage;
             _aisParser = new AisParser(throwOnUnknownMessage);
             _cache = new SentenceCache(this);
-            _ships = new ConcurrentDictionary<uint, Ship>();
-            _baseStations = new ConcurrentDictionary<uint, BaseStation>();
-            _aidToNavigationTargets = new ConcurrentDictionary<uint, AidToNavigation>();
+            _targets = new ConcurrentDictionary<uint, AisTarget>();
             _lock = new object();
         }
 
@@ -55,15 +49,18 @@ namespace Iot.Device.Nmea0183
         {
         }
 
-        public bool TryGetShip(uint mmsi,
+        public bool TryGetTarget(uint mmsi,
 #if NET5_0_OR_GREATER
             [NotNullWhen(true)]
 #endif
-            out Ship? ship)
+            out AisTarget target)
         {
             lock (_lock)
             {
-                return _ships.TryGetValue(mmsi, out ship);
+                AisTarget? tgt;
+                bool ret = _targets.TryGetValue(mmsi, out tgt);
+                target = tgt!;
+                return ret;
             }
         }
 
@@ -71,22 +68,41 @@ namespace Iot.Device.Nmea0183
         {
             lock (_lock)
             {
-                Ship? ship;
-                if (!TryGetShip(mmsi, out ship))
+                var ship = GetOrCreateTarget<Ship>(mmsi, x => new Ship(x), updateLastSeen);
+
+                // The transceiver type is derived from the message type (a PositionReportClassA message is obviously only sent by class A equipment)
+                if (transceiverClass != AisTransceiverClass.Unknown)
                 {
-                    ship = new Ship(mmsi);
-                    _ships.TryAdd(mmsi, ship);
+                    ship.TransceiverClass = transceiverClass;
+                }
+
+                return ship!;
+            }
+        }
+
+        private T GetOrCreateTarget<T>(uint mmsi, Func<uint, T> constructor, bool updateLastSeen = true)
+        where T : AisTarget
+        {
+            lock (_lock)
+            {
+                AisTarget? target;
+                T? ship;
+                if (TryGetTarget(mmsi, out target) && target is Ship)
+                {
+                    ship = target as T;
+                }
+                else
+                {
+                    // Remove the existing key (this is for the rare case where the same MMSI suddenly changes type from ship to base station or similar.
+                    // That should not normally happen, but we need to be robust about it.
+                    _targets.TryRemove(mmsi, out _);
+                    ship = constructor(mmsi);
+                    _targets.TryAdd(mmsi, ship);
                 }
 
                 if (updateLastSeen && ship != null)
                 {
                     ship.LastSeen = DateTimeOffset.UtcNow;
-
-                    // The transceiver type is derived from the message type (a PositionReportClassA message is obviously only sent by class A equipment)
-                    if (transceiverClass != AisTransceiverClass.Unknown)
-                    {
-                        ship.TransceiverClass = transceiverClass;
-                    }
                 }
 
                 return ship!;
@@ -95,46 +111,28 @@ namespace Iot.Device.Nmea0183
 
         private BaseStation GetOrCreateBaseStation(uint mmsi, AisTransceiverClass transceiverClass, bool updateLastSeen = true)
         {
-            lock (_lock)
-            {
-                BaseStation? station;
-                if (!_baseStations.TryGetValue(mmsi, out station))
-                {
-                    station = new BaseStation(mmsi);
-                    _baseStations.TryAdd(mmsi, station);
-                }
-
-                if (updateLastSeen && station != null)
-                {
-                    station.LastSeen = DateTimeOffset.UtcNow;
-                    station.TransceiverClass = transceiverClass;
-                }
-
-                return station!;
-            }
+            return GetOrCreateTarget<BaseStation>(mmsi, x => new BaseStation(mmsi), updateLastSeen);
         }
 
-        public IEnumerable<Ship> GetShips()
+        private SarAircraft GetOrCreateSarAircraft(uint mmsi, bool updateLastSeen = true)
+        {
+            return GetOrCreateTarget<SarAircraft>(mmsi, x => new SarAircraft(mmsi), updateLastSeen);
+        }
+
+        public IEnumerable<AisTarget> GetTargets()
         {
             lock (_lock)
             {
-                return _ships.Values;
+                return _targets.Values;
             }
         }
 
-        public IEnumerable<BaseStation> GetBaseStations()
+        public IEnumerable<T> GetSpecificTargets<T>()
+        where T : AisTarget
         {
             lock (_lock)
             {
-                return _baseStations.Values;
-            }
-        }
-
-        public List<AidToNavigation> GetAtoNTargets()
-        {
-            lock (_lock)
-            {
-                return _aidToNavigationTargets.Values.ToList();
+                return _targets.Values.Where(x => x is T).Cast<T>();
             }
         }
 
@@ -300,7 +298,8 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.StandardSarAircraftPositionReport:
                     {
-                        // Todo
+                        StandardSarAircraftPositionReportMessage sar = (StandardSarAircraftPositionReportMessage)msg;
+                        var sarAircraft = GetOrCreateSarAircraft(sar.Mmsi);
                         break;
                     }
 

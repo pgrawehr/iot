@@ -5,7 +5,7 @@ namespace Iot.Device.Nmea0183.Ais
 {
     /// <summary>
     /// Returned when trying to identify the type of MMSI. A normal 9-digit MMSI is a ship, one that starts
-    /// with a 0 is a special group code, one starting with 00 is a base station. See <see cref="Ship.IdentifyMmsiType"/> for details.
+    /// with a 0 is a special group code, one starting with 00 is a base station. See <see cref="AisTarget.IdentifyMmsiType"/> for details.
     /// </summary>
     /// <remarks>
     /// Any system that uses AIS-Sart, MOB or Epirb type is only activated in case of an emergency. When receiving any message from such

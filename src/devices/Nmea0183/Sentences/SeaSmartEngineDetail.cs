@@ -170,7 +170,7 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-§        /// Returns false for this message (because PCDIN messages are identified based on their inner message)
+        /// Returns false for this message (because PCDIN messages are identified based on their inner message)
         /// </summary>
         public override bool ReplacesOlderInstance => false;
 

@@ -5,19 +5,12 @@ using Iot.Device.Common;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class AidToNavigation
+    public class AidToNavigation : AisTarget
     {
         public AidToNavigation(uint mmsi)
+        : base(mmsi)
         {
-            Mmsi = mmsi;
-            Name = string.Empty;
             Position = new GeographicPosition();
         }
-
-        public uint Mmsi { get; }
-
-        public string Name { get; set; }
-
-        public GeographicPosition Position { get; set; }
     }
 }

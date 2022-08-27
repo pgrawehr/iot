@@ -6,17 +6,32 @@ using Iot.Device.Common;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class BaseStation
+    public class BaseStation : AisTarget
     {
+        /// <summary>
+        ///  Base stations have no name in their data (just the country identifier)
+        /// </summary>
+        private const string BaseStationName = "Base Station";
+
         public BaseStation(uint mmsi)
+        : base(mmsi)
         {
-            Mmsi = mmsi;
             Position = new GeographicPosition();
+            Name = BaseStationName;
         }
 
-        public uint Mmsi { get; }
-        public DateTimeOffset LastSeen { get; set; }
         public AisTransceiverClass TransceiverClass { get; set; }
-        public GeographicPosition Position { get; set; }
+
+        public override string ToString()
+        {
+            string s = FormatMmsi() + $"({Name})";
+
+            if (Position.ContainsValidPosition())
+            {
+                s += $" {Position}";
+            }
+
+            return s;
+        }
     }
 }

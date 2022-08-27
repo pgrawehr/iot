@@ -8,39 +8,14 @@ using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class Ship
+    public class Ship : AisTarget
     {
         public Ship(uint mmsi)
+        : base(mmsi)
         {
-            Mmsi = mmsi;
             LastSeen = DateTimeOffset.UtcNow;
-            Position = new GeographicPosition();
-            Name = string.Empty;
             CallSign = string.Empty;
             Destination = string.Empty;
-        }
-
-        public uint Mmsi
-        {
-            get;
-        }
-
-        public DateTimeOffset LastSeen
-        {
-            get;
-            set;
-        }
-
-        public string Name
-        {
-            get;
-            set;
-        }
-
-        public GeographicPosition Position
-        {
-            get;
-            set;
         }
 
         public RotationalSpeed? RateOfTurn { get; set; }
@@ -54,6 +29,9 @@ namespace Iot.Device.Nmea0183.Ais
         public Length DimensionToPort { get; set; }
         public Length DimensionToStarboard { get; set; }
 
+        /// <summary>
+        /// The transceiver type this target uses.
+        /// </summary>
         public AisTransceiverClass TransceiverClass { get; set; }
 
         public Length Length => DimensionToBow + DimensionToStern;
@@ -65,7 +43,7 @@ namespace Iot.Device.Nmea0183.Ais
 
         public override string ToString()
         {
-            string s = Name;
+            string s = Name ?? string.Empty;
             if (string.IsNullOrWhiteSpace(s))
             {
                 s = FormatMmsi();
@@ -86,89 +64,6 @@ namespace Iot.Device.Nmea0183.Ais
             }
 
             return s;
-        }
-
-        /// <summary>
-        /// Returns the MMSI in user-readable format (always 9 digits)
-        /// </summary>
-        /// <returns>The MMSI as string</returns>
-        public string FormatMmsi()
-        {
-            string m = Mmsi.ToString(CultureInfo.InvariantCulture);
-            if (m.Length == 7)
-            {
-                m = "00" + m; // base station id
-            }
-            else if (m.Length == 8)
-            {
-                m = "0" + m; // group id (very rare)
-            }
-
-            return m;
-        }
-
-        public MmsiType IdentifyMmsiType()
-        {
-            // We need to look at the first few digits. That's easiest in string format.
-            string asString = FormatMmsi();
-
-            if (asString.StartsWith("00", StringComparison.Ordinal))
-            {
-                return MmsiType.Group;
-            }
-
-            if (asString.StartsWith("0", StringComparison.Ordinal))
-            {
-                return MmsiType.Group;
-            }
-
-            if (asString.StartsWith("111", StringComparison.Ordinal))
-            {
-                return MmsiType.SarAircraft;
-            }
-
-            if (asString.StartsWith("99", StringComparison.Ordinal))
-            {
-                return MmsiType.AtoN;
-            }
-
-            if (asString.StartsWith("98", StringComparison.Ordinal))
-            {
-                return MmsiType.Auxiliary;
-            }
-
-            if (asString.StartsWith("970", StringComparison.Ordinal))
-            {
-                return MmsiType.AisSart;
-            }
-
-            if (asString.StartsWith("972", StringComparison.Ordinal))
-            {
-                return MmsiType.Mob;
-            }
-
-            if (asString.StartsWith("974", StringComparison.Ordinal))
-            {
-                return MmsiType.Epirb;
-            }
-
-            // Anything using an 1 or 9 and not handled in the cases above, is not defined.
-            if (asString.StartsWith("1", StringComparison.Ordinal))
-            {
-                return MmsiType.Unknown;
-            }
-
-            if (asString.StartsWith("9", StringComparison.Ordinal))
-            {
-                return MmsiType.Unknown;
-            }
-
-            if (asString.StartsWith("8", StringComparison.Ordinal))
-            {
-                return MmsiType.DiversRadio;
-            }
-
-            return MmsiType.Ship;
         }
     }
 }

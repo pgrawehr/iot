@@ -33,7 +33,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             reader.StartDecode();
             reader.StopDecode();
 
-            var ships = _manager.GetShips();
+            var ships = _manager.GetSpecificTargets<Ship>();
             ships.ShouldNotBeEmpty();
             Assert.True(ships.All(x => x.Mmsi != 0));
             foreach (var s in ships)
@@ -57,15 +57,15 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.A && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
             Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
 
-            _manager.GetBaseStations().ShouldNotBeEmpty();
+            _manager.GetSpecificTargets<BaseStation>().ShouldNotBeEmpty();
         }
 
         [Fact]
-        public void CheckAtoNTargetDecode()
+        public void CheckSpecialTargetDecode()
         {
             // This file contains virtual Aid-to-navigation targets (but only few ships)
-            var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-24\\", "Nmea-2022-08-24-15-19.txt", SearchOption.TopDirectoryOnly);
-            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", files);
+            // var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-24\\", "Nmea-2022-08-24-15-19.txt", SearchOption.TopDirectoryOnly);
+            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-AisSpecialTargets.txt");
             int messagesParsed = 0;
             reader.OnNewSequence += (source, msg) =>
             {
@@ -81,31 +81,17 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             ////_manager.SendSentence(reader, sentence);
             reader.StopDecode();
 
-            var ships = _manager.GetShips();
-            ships.ShouldNotBeEmpty();
+            var ships = _manager.GetSpecificTargets<Ship>();
+            ships.ShouldBeEmpty();
             // There are some very strange "group" MMSI targets in this data set. Not sure what they are about.
             Assert.True(ships.All(x => x.Mmsi != 0));
             messagesParsed.ShouldBeGreaterThanOrEqualTo(50000); // A single file has around 44000 messages
 
-            var aton = _manager.GetAtoNTargets();
-            aton.ShouldNotBeEmpty();
+            Assert.True(_manager.TryGetTarget(1234, out AisTarget tgt));
 
-            foreach (var aidToNavigation in aton)
-            {
-                // The recording is from somewhere in the baltic, so this is a very broad bounding rectangle.
-                // If this is exceeded, the position decoding was most likely wrong.
-                if (aidToNavigation.Position.ContainsValidPosition())
-                {
-                    aidToNavigation.Position.Longitude.ShouldBeInRange(8.0, 8.1);
-                    aidToNavigation.Position.Latitude.ShouldBeInRange(56.5, 57.0);
-                }
-
-                var n = aidToNavigation.Name;
-                n.ShouldNotBeEmpty();
-                Assert.True(n.Length <=
-                            34); // This can be longer than ship names (it consists of two fields, so must be combined correctly)
-                Assert.True(n.All(x => x < 0x128 && x >= ' ')); // Only printable ascii letters
-            }
+            var aton = (AidToNavigation)tgt;
+            Assert.True(aton.Position.ContainsValidPosition());
+            aton.Name.ShouldBeEquivalentTo("Blah");
         }
     }
 }
