@@ -324,6 +324,17 @@ namespace Iot.Device.Nmea0183
                         break;
                     }
 
+                    case AisMessageType.Interrogation:
+                    {
+                        // Currently nothing to do with these
+                        InterrogationMessage interrogation = (InterrogationMessage)msg;
+                        break;
+                    }
+
+                    case AisMessageType.DataLinkManagement:
+                        // not interesting.
+                        break;
+
                     default:
                         if (_throwOnUnknownMessage)
                         {
