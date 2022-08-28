@@ -31,7 +31,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             FirstMessageType = payload.ReadEnum<AisMessageType>(70, 6);
             FirstSlotOffset = payload.ReadUInt(76, 12);
 
-            var length = payload.RawValue.Length;
+            var length = payload.Length;
             if (length > 88)
             {
                 // spare 88, 2

@@ -13,6 +13,8 @@ namespace Iot.Device.Nmea0183.Ais
 {
     public class AisParser
     {
+        private const int MaxPayloadLength = 56; // Characters
+
         public bool ThrowOnUnknownMessage { get; }
         public static SentenceId VdoId = new SentenceId("VDO");
         public static SentenceId VdmId = new SentenceId("VDM");
@@ -21,6 +23,7 @@ namespace Iot.Device.Nmea0183.Ais
         private readonly AisMessageFactory _messageFactory;
         private readonly PayloadEncoder _payloadEncoder;
         private readonly IDictionary<int, List<string>> _fragments = new Dictionary<int, List<string>>();
+        private int _nextFragmentedMessageId;
 
         public AisParser()
             : this(false)
@@ -38,6 +41,7 @@ namespace Iot.Device.Nmea0183.Ais
             _payloadDecoder = payloadDecoder;
             _messageFactory = messageFactory;
             _payloadEncoder = payloadEncoder;
+            _nextFragmentedMessageId = 1;
         }
 
         /// <summary>
@@ -134,6 +138,60 @@ namespace Iot.Device.Nmea0183.Ais
             return null;
         }
 
+        public List<NmeaSentence> ToSentence(AisMessage message)
+        {
+            List<NmeaSentence> ret = new();
+            Payload payLoad = _messageFactory.Encode(message);
+            if (payLoad.Length <= 38) // Only the values of the base class where encoded.
+            {
+                throw new NotSupportedException(
+                    $"Encoding messages of type {message.GetType()} is currently not supported");
+            }
+
+            string fullData = _payloadEncoder.EncodeSixBitAis(payLoad, out int paddedBits);
+            int numBlocks = (int)Math.Ceiling(fullData.Length / (double)MaxPayloadLength);
+            int blockNumber = 1;
+            string fragmentId = string.Empty;
+            if (numBlocks > 1)
+            {
+                fragmentId = _nextFragmentedMessageId.ToString(CultureInfo.InvariantCulture);
+                _nextFragmentedMessageId++;
+                if (_nextFragmentedMessageId > 9)
+                {
+                    _nextFragmentedMessageId = 1;
+                }
+            }
+
+            while (fullData.Length > 0)
+            {
+                List<string> parts = new List<string>();
+
+                parts.Add(numBlocks.ToString(CultureInfo.InvariantCulture));
+                parts.Add(blockNumber.ToString(CultureInfo.InvariantCulture));
+                parts.Add(fragmentId); // may be empty, see above
+                parts.Add("A"); // Doesn't really matter (determined by the transceiver), but must be "A" or "B"
+                int thisMessageLength = Math.Min(fullData.Length, MaxPayloadLength);
+                string thisMessagePayLoad = fullData.Substring(0, thisMessageLength);
+                fullData = fullData.Remove(0, thisMessageLength);
+                parts.Add(thisMessagePayLoad);
+                // Only the last block of a multi-part message needs padding
+                if (blockNumber == numBlocks)
+                {
+                    parts.Add(paddedBits.ToString(CultureInfo.InvariantCulture));
+                }
+                else
+                {
+                    parts.Add("0");
+                }
+
+                RawSentence rs = new RawSentence(TalkerId.Ais, new SentenceId("VDM"), parts, DateTimeOffset.UtcNow);
+                ret.Add(rs);
+                blockNumber++;
+            }
+
+            return ret;
+        }
+
         private bool IsValidAisSentence(RawSentence rs)
         {
             return rs.Valid && rs.Fields.Length == 6 && (rs.SentenceId == VdoId || rs.SentenceId == VdmId) &&
@@ -159,8 +217,8 @@ namespace Iot.Device.Nmea0183.Ais
             string radioChannel = "A";
             int boundaryPadding = 0;
 
-            Payload payload = _messageFactory.Encode<T>(aisMessage);
-            var payloadEncoded = _payloadEncoder.EncodeSixBitAis(payload);
+            Payload payload = _messageFactory.Encode(aisMessage);
+            var payloadEncoded = _payloadEncoder.EncodeSixBitAis(payload, out _);
 
             // Build the full sentence
             sentence += "!";

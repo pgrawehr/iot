@@ -56,7 +56,6 @@ namespace Iot.Device.Nmea0183.AisSentences
 
         public override void Encode(Payload payload)
         {
-            payload.WriteEnum(AisMessageType.PositionReportClassA, 6);
             base.Encode(payload);
             payload.WriteEnum<NavigationStatus>(NavigationStatus, 4);
             if (RateOfTurn == null)

@@ -7,20 +7,39 @@ namespace Iot.Device.Nmea0183.Ais
 {
     public class PayloadEncoder
     {
-        public string EncodeSixBitAis(Payload payload)
+        public string EncodeSixBitAis(Payload payload, out int paddedBits)
         {
             // Consume each 6 bits and making them 8 bits, with some value shifts
             var value = payload.RawValue;
             if (String.IsNullOrEmpty(value))
             {
+                paddedBits = 0;
                 return value;
             }
 
             string ret = string.Empty;
 
-            for (int i = 0; i < value.Length / 6; ++i)
+            int numCharsToEncode = (int)Math.Ceiling(value.Length / 6.0);
+
+            paddedBits = 0;
+
+            for (int i = 0; i < numCharsToEncode; ++i)
             {
-                var b = value.Substring(6 * i, 6).PadLeft(8, '0');
+                string b;
+                if (value.Length >= 6 * i + 6)
+                {
+                    b = value.Substring(6 * i, 6).PadLeft(8, '0');
+                }
+                else
+                {
+                    // Last character, only partially filled
+                    int remainingBits = value.Length - (6 * i);
+                    b = value.Substring(6 * i, remainingBits);
+                    b += new string('0', 6 - remainingBits);
+                    b = b.PadLeft(8, '0'); // Now 8 bits, the relevant data is in the middle
+                    paddedBits = 6 - remainingBits;
+                }
+
                 var c = (byte)ConvertBitsToChar(b);
 
                 if (c < 40)

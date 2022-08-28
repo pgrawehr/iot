@@ -159,5 +159,23 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.Raim.ShouldBe(Raim.InUse);
             message.RadioStatus.ShouldBe(330923u);
         }
+
+        [Fact]
+        public void ShouldParseAndSerializeMessage()
+        {
+            const string sentence = "!AIVDM,1,1,,A,15Mq4J0P01EREODRv4@74gv00HRq,0*71";
+
+            var message = Parser.Parse(sentence) as PositionReportClassAMessage;
+            message.ShouldNotBeNull();
+            message.MessageType.ShouldBe(AisMessageType.PositionReportClassA);
+            message.Repeat.ShouldBe(0u);
+            message.Mmsi.ShouldBe(366888040u);
+            message.NavigationStatus.ShouldBe(NavigationStatus.UnderWayUsingEngine);
+
+            var encoded = Parser.ToSentence(message);
+            encoded.Count.ShouldBe(1);
+            string newMessage = encoded[0].ToNmeaMessage();
+            Assert.Equal(sentence, newMessage);
+        }
     }
 }

@@ -28,7 +28,12 @@ namespace Iot.Device.Nmea0183.Ais
             private set;
         }
 
-        public AisMessageType MessageType; // { get; }
+        public AisMessageType MessageType { get; internal set; }
+
+        /// <summary>
+        /// The length of the payload. This is given in bits!
+        /// </summary>
+        public int Length => RawValue.Length;
 
         public T ReadEnum<T>(int startIndex, int length)
             where T : Enum

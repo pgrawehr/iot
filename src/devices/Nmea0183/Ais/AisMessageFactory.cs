@@ -8,8 +8,7 @@ namespace Iot.Device.Nmea0183.Ais
 {
     public class AisMessageFactory
     {
-        public Payload Encode<T>(T message)
-            where T : AisMessage
+        public Payload Encode(AisMessage message)
         {
             Payload payload = new Payload();
             message.Encode(payload);
