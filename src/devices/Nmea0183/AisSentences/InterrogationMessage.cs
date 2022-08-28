@@ -36,7 +36,15 @@ namespace Iot.Device.Nmea0183.AisSentences
             {
                 // spare 88, 2
                 SecondMessageType = payload.ReadNullableMessageType(90, 6);
-                SecondSlotOffset = payload.ReadNullableUInt(96, 12);
+                if (SecondMessageType != null)
+                {
+                    SecondSlotOffset = payload.ReadNullableUInt(96, 12);
+                }
+                else
+                {
+                    SecondSlotOffset = null;
+                }
+
                 // spare 108, 2
             }
 
@@ -44,7 +52,15 @@ namespace Iot.Device.Nmea0183.AisSentences
             {
                 SecondStationInterrogationMmsi = payload.ReadNullableUInt(110, 30);
                 SecondStationFirstMessageType = payload.ReadNullableMessageType(140, 6);
-                SecondStationFirstSlotOffset = payload.ReadNullableUInt(146, 12);
+                if (SecondStationFirstMessageType != null)
+                {
+                    SecondStationFirstSlotOffset = payload.ReadNullableUInt(146, 12);
+                }
+                else
+                {
+                    SecondStationFirstSlotOffset = null;
+                }
+
                 // spare 158, 2
             }
         }

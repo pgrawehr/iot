@@ -3,6 +3,9 @@
 
 namespace Iot.Device.Nmea0183.Ais
 {
+    /// <summary>
+    /// Type of navigational aid for AtoN targets.
+    /// </summary>
     public enum NavigationalAidType
     {
         NotSpecified,

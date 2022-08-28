@@ -91,8 +91,15 @@ namespace Iot.Device.Nmea0183.Ais
                 return null;
             }
 
+            int messageNumber = 0;
+            // This field may be empty
+            if (!Int32.TryParse(sentenceParts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out messageNumber))
+            {
+                messageNumber = 0;
+            }
+
             var payload = DecodePayload(encodedPayload, Convert.ToInt32(sentenceParts[1]), Convert.ToInt32(sentenceParts[2]),
-                Convert.ToInt32(sentenceParts[3]), Convert.ToInt32(sentenceParts[6]));
+                messageNumber, Convert.ToInt32(sentenceParts[6]));
             return payload == null ? null : _messageFactory.Create(payload, ThrowOnUnknownMessage);
         }
 

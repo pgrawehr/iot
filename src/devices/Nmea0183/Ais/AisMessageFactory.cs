@@ -12,15 +12,7 @@ namespace Iot.Device.Nmea0183.Ais
             where T : AisMessage
         {
             Payload payload = new Payload();
-            switch (message)
-            {
-                case PositionReportClassAMessage t1:
-                    t1.Encode(payload);
-                    break;
-                default:
-                    throw new NotImplementedException($"Payloads of type {typeof(T)} cannot be encoded.");
-            }
-
+            message.Encode(payload);
             return payload;
         }
 

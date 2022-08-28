@@ -9,6 +9,7 @@ using System.Text;
 using Iot.Device.Nmea0183.Ais;
 using Microsoft.VisualStudio.CodeCoverage;
 using Shouldly;
+using UnitsNet;
 using Xunit;
 
 namespace Iot.Device.Nmea0183.Tests.Ais
@@ -74,24 +75,31 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             };
 
             reader.StartDecode();
-            ////var time = DateTimeOffset.UtcNow;
-            ////var sentence = TalkerSentence
-            ////    .FromSentenceString("!AIVDM,1,1,,B,ENk`sR9`92ah97PR9h0W1T@1@@@=MTpS<7GFP00003vP000,2*4B",
-            ////        out var success)!.GetAsRawSentence(ref time);
-            ////_manager.SendSentence(reader, sentence);
             reader.StopDecode();
 
             var ships = _manager.GetSpecificTargets<Ship>();
             ships.ShouldBeEmpty();
             // There are some very strange "group" MMSI targets in this data set. Not sure what they are about.
             Assert.True(ships.All(x => x.Mmsi != 0));
-            messagesParsed.ShouldBeGreaterThanOrEqualTo(50000); // A single file has around 44000 messages
 
-            Assert.True(_manager.TryGetTarget(1234, out AisTarget tgt));
+            Assert.True(_manager.TryGetTarget(1015, out AisTarget tgt));
 
+            var sar = (SarAircraft)tgt;
+            sar.Speed.GetValueOrDefault().ShouldBeGreaterThan(Speed.FromKnots(100));
+
+            Assert.True(_manager.TryGetTarget(993672072, out tgt));
             var aton = (AidToNavigation)tgt;
             Assert.True(aton.Position.ContainsValidPosition());
-            aton.Name.ShouldBeEquivalentTo("Blah");
+            aton.Name.ShouldBeEquivalentTo("PRES ROADS ANCH B");
+            Assert.Equal(MmsiType.AtoN, aton.IdentifyMmsiType());
+            Assert.False(aton.Virtual);
+
+            Assert.True(_manager.TryGetTarget(2579999, out tgt));
+            var baseStation = (BaseStation)tgt;
+            baseStation.Name.ShouldNotBeEmpty();
+            Assert.True(baseStation.Position.ContainsValidPosition());
+            Assert.Equal("002579999", baseStation.FormatMmsi());
+            Assert.Equal(MmsiType.BaseStation, baseStation.IdentifyMmsiType());
         }
     }
 }

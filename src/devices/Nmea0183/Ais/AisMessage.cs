@@ -31,6 +31,8 @@ namespace Iot.Device.Nmea0183.Ais
 
         public virtual void Encode(Payload payload)
         {
+            payload.MessageType = MessageType;
+            payload.WriteEnum(MessageType, 6);
             payload.WriteUInt(Repeat, 2);
             payload.WriteUInt(Mmsi, 30);
         }

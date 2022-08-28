@@ -300,6 +300,27 @@ namespace Iot.Device.Nmea0183
                     {
                         StandardSarAircraftPositionReportMessage sar = (StandardSarAircraftPositionReportMessage)msg;
                         var sarAircraft = GetOrCreateSarAircraft(sar.Mmsi);
+                        // Is the altitude here ellipsoid or geoid? Ships are normally at 0m geoid (unless on a lake, but the AIS system doesn't seem to be designed
+                        // for that)
+                        sarAircraft.Position = new GeographicPosition(sar.Latitude, sar.Longitude, sar.Altitude);
+                        sarAircraft.CourseOverGround = Angle.FromDegrees(sar.CourseOverGround);
+                        sarAircraft.Speed = sar.SpeedOverGround == 1023 ? null : Speed.FromKnots(sar.SpeedOverGround);
+                        break;
+                    }
+
+                    case AisMessageType.AidToNavigationReport:
+                    {
+                        AidToNavigationReportMessage aton = (AidToNavigationReportMessage)msg;
+                        var navigationTarget = GetOrCreateTarget(aton.Mmsi, x => new AidToNavigation(x), true);
+                        navigationTarget.Position = new GeographicPosition(aton.Latitude, aton.Longitude, 0);
+                        navigationTarget.Name = aton.Name + aton.NameExtension;
+                        navigationTarget.DimensionToBow = Length.FromMeters(aton.DimensionToBow);
+                        navigationTarget.DimensionToStern = Length.FromMeters(aton.DimensionToStern);
+                        navigationTarget.DimensionToPort = Length.FromMeters(aton.DimensionToPort);
+                        navigationTarget.DimensionToStarboard = Length.FromMeters(aton.DimensionToStarboard);
+                        navigationTarget.OffPosition = aton.OffPosition;
+                        navigationTarget.Virtual = aton.VirtualAid;
+                        navigationTarget.NavigationalAidType = aton.NavigationalAidType;
                         break;
                     }
 
