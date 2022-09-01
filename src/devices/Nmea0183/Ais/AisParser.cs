@@ -13,7 +13,7 @@ namespace Iot.Device.Nmea0183.Ais
 {
     public class AisParser
     {
-        private const int MaxPayloadLength = 56; // Characters
+        private const int MaxPayloadLength = 60; // Characters
 
         public bool ThrowOnUnknownMessage { get; }
         public static SentenceId VdoId = new SentenceId("VDO");
@@ -77,7 +77,7 @@ namespace Iot.Device.Nmea0183.Ais
 
             if (checksum != calculatedChecksum)
             {
-                throw new AisParserException($"Invalid sentence: checksum failure. Checksum: {checksum}, calculated: {calculatedChecksum}", sentence);
+                throw new AisParserException($"Invalid sentence: checksum failure. Checksum: {checksum:X2}, calculated: {calculatedChecksum:X2}", sentence);
             }
 
             var sentenceParts = sentenceWithoutChecksum.Split(',');

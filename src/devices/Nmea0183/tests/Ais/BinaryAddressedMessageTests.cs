@@ -25,7 +25,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.RetransmitFlag.ShouldBeFalse();
             message.DesignatedAreaCode.ShouldBe(235u);
             message.FunctionalId.ShouldBe(10u);
-            message.Data.ShouldBe("O(D");
+            message.Data.ShouldNotBeEmpty();
         }
     }
 }

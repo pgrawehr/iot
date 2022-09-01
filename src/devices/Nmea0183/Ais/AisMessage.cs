@@ -5,10 +5,6 @@ namespace Iot.Device.Nmea0183.Ais
 {
     public abstract class AisMessage
     {
-        public AisMessageType MessageType { get; }
-        public uint Repeat { get; set; }
-        public uint Mmsi { get; set; }
-
         protected AisMessage(AisMessageType messageType)
         {
             MessageType = messageType;
@@ -20,6 +16,10 @@ namespace Iot.Device.Nmea0183.Ais
             Repeat = payload.ReadUInt(6, 2);
             Mmsi = payload.ReadUInt(8, 30);
         }
+
+        public AisMessageType MessageType { get; }
+        public uint Repeat { get; set; }
+        public uint Mmsi { get; set; }
 
         public virtual AisTransceiverClass TransceiverType
         {

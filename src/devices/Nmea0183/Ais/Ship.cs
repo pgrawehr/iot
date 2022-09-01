@@ -41,6 +41,8 @@ namespace Iot.Device.Nmea0183.Ais
         public string Destination { get; set; }
         public Length? Draught { get; set; }
 
+        public uint ImoNumber { get; set; }
+
         public override string ToString()
         {
             string s = Name ?? string.Empty;

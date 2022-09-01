@@ -59,7 +59,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.AisVersion.ShouldBe(0u);
             message.ImoNumber.ShouldBe(439303422u);
             message.CallSign.ShouldBe("ZA83R");
-            message.ShipName.ShouldBe("ARCO AVON");
+            message.ShipName.ShouldBe("   ARCO AVON");
             message.ShipType.ShouldBe(ShipType.PassengerNoAdditionalInformation);
             message.DimensionToBow.ShouldBe(113u);
             message.DimensionToStern.ShouldBe(31u);
@@ -71,7 +71,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.EtaHour.ShouldBe(19u);
             message.EtaMinute.ShouldBe(45u);
             message.Draught.ShouldBe(13.2d);
-            message.Destination.ShouldBe("HOUSTON");
+            message.Destination.ShouldBe("  HOUSTON");
             message.DataTerminalReady.ShouldBeTrue();
             message.Spare.ShouldBe(0u);
         }
@@ -237,6 +237,50 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.Destination.ShouldBe("SPDM DOMINICAN REP.");
             message.DataTerminalReady.ShouldBeTrue();
             message.Spare.ShouldBe(0u);
+        }
+
+        [Fact]
+        public void ShouldRoundtripCorrectly()
+        {
+            const string sentence1 = "!AIVDM,2,1,1,A,53P<GC`000038D5c>01LThi=E10iV2222222220m1P834v2@044kmE20CD53,0*26";
+            const string sentence2 = "!AIVDM,2,2,1,A,k`888000000,2*26";
+
+            Parser.Parse(sentence1).ShouldBeNull();
+            var message = Parser.Parse(sentence2) as StaticAndVoyageRelatedDataMessage;
+
+            message.ShouldNotBeNull();
+            message.MessageType.ShouldBe(AisMessageType.StaticAndVoyageRelatedData);
+            message.Repeat.ShouldBe(0u);
+            message.Mmsi.ShouldBe(235083598u);
+            message.AisVersion.ShouldBe(2u);
+            message.ImoNumber.ShouldBe(0u);
+            message.CallSign.ShouldBe("2EAZ3");
+            message.ShipName.ShouldBe("WILLSUPPLY");
+            message.ShipType.ShouldBe(ShipType.PortTender);
+
+            var encoded = Parser.ToSentence(message);
+            encoded.Count.ShouldBe(2);
+            string newMessage1 = encoded[0].ToNmeaMessage();
+            Assert.Equal(sentence1.Length, newMessage1.Length); // Cannot compare exactly, since the ship and callsign names are truncated
+            string newMessage2 = encoded[1].ToNmeaMessage();
+            Assert.Equal(sentence2.Length, newMessage2.Length);
+
+            Parser.Parse(newMessage1).ShouldBeNull();
+            var message2 = Parser.Parse(newMessage2) as StaticAndVoyageRelatedDataMessage;
+
+            message2.ShouldNotBeNull();
+            message2.MessageType.ShouldBe(AisMessageType.StaticAndVoyageRelatedData);
+            message2.Repeat.ShouldBe(0u);
+            message2.Mmsi.ShouldBe(235083598u);
+            message2.AisVersion.ShouldBe(2u);
+            message2.ImoNumber.ShouldBe(0u);
+            message2.CallSign.ShouldBe("2EAZ3");
+            message2.ShipName.ShouldBe("WILLSUPPLY");
+            message2.ShipType.ShouldBe(ShipType.PortTender);
+            message2.DimensionToPort.ShouldBeEquivalentTo(message.DimensionToPort);
+            message2.DimensionToBow.ShouldBeEquivalentTo(message.DimensionToBow);
+            message2.DimensionToStarboard.ShouldBeEquivalentTo(message.DimensionToStarboard);
+            message2.DimensionToStern.ShouldBeEquivalentTo(message.DimensionToStern);
         }
     }
 }

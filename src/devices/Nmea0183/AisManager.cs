@@ -211,6 +211,7 @@ namespace Iot.Device.Nmea0183
                         ship.CallSign = voyage.CallSign;
                         ship.Destination = voyage.Destination;
                         ship.Draught = Length.FromMeters(voyage.Draught);
+                        ship.ImoNumber = voyage.ImoNumber;
                         var now = DateTimeOffset.UtcNow;
                         if (voyage.IsEtaValid())
                         {

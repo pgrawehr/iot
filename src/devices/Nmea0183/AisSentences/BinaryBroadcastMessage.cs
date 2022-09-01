@@ -10,6 +10,10 @@ namespace Iot.Device.Nmea0183.AisSentences
         public uint Spare { get; set; }
         public uint DesignatedAreaCode { get; set; }
         public uint FunctionalId { get; set; }
+
+        /// <summary>
+        /// Binary payload, as string of "0" and "1"
+        /// </summary>
         public string Data { get; set; }
 
         public BinaryBroadcastMessage()
@@ -24,7 +28,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             Spare = payload.ReadUInt(38, 2);
             DesignatedAreaCode = payload.ReadUInt(40, 10);
             FunctionalId = payload.ReadUInt(50, 6);
-            Data = payload.ReadString(56, 952);
+            Data = payload.RawValue.Substring(56);
         }
     }
 }

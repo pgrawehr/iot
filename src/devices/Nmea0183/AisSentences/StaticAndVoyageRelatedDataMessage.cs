@@ -41,7 +41,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             Mmsi = payload.ReadUInt(8, 30);
             AisVersion = payload.ReadUInt(38, 2);
             ImoNumber = payload.ReadUInt(40, 30);
-            CallSign = payload.ReadString(70, 42);
+            CallSign = payload.ReadString(70, 42).Trim(); // Unlike the name, the callsign cannot contain blanks, and so also not start with one
             ShipName = payload.ReadString(112, 120);
             ShipType = payload.ReadEnum<ShipType>(232, 8);
             DimensionToBow = payload.ReadUInt(240, 9);
@@ -67,6 +67,29 @@ namespace Iot.Device.Nmea0183.AisSentences
                    EtaDay >= 1 && EtaDay <= 31 &&
                    EtaHour >= 0 && EtaHour < 24 &&
                    EtaMinute >= 0 && EtaMinute < 60;
+        }
+
+        public override void Encode(Payload payload)
+        {
+            base.Encode(payload);
+            payload.WriteUInt(AisVersion, 2);
+            payload.WriteUInt(ImoNumber, 30);
+            payload.WriteString(CallSign, 42, true);
+            payload.WriteString(ShipName, 120, true);
+            payload.WriteEnum(ShipType, 8);
+            payload.WriteUInt(DimensionToBow, 9);
+            payload.WriteUInt(DimensionToStern, 9);
+            payload.WriteUInt(DimensionToPort, 6);
+            payload.WriteUInt(DimensionToStarboard, 6);
+            payload.WriteEnum(PositionFixType, 4);
+            payload.WriteUInt(EtaMonth, 4);
+            payload.WriteUInt(EtaDay, 5);
+            payload.WriteUInt(EtaHour, 5);
+            payload.WriteUInt(EtaMinute, 6);
+            payload.WriteDraught(Draught, 8);
+            payload.WriteString(Destination, 120, true);
+            payload.WriteUInt(DataTerminalReady ? 1u : 0, 1);
+            payload.WriteUInt(Spare, 1);
         }
     }
 }

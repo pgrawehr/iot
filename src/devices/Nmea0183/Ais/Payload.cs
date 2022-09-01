@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 
 namespace Iot.Device.Nmea0183.Ais
 {
@@ -10,6 +11,8 @@ namespace Iot.Device.Nmea0183.Ais
     /// </summary>
     public sealed class Payload
     {
+        private static readonly SixBitAsciiEncoding _encoding = new SixBitAsciiEncoding();
+
         public Payload()
         {
             MessageType = AisMessageType.PositionReportClassA;
@@ -98,11 +101,6 @@ namespace Iot.Device.Nmea0183.Ais
             }
 
             return value;
-        }
-
-        public void WriteMmsi(uint var, int length)
-        {
-            WriteUInt(var, length);
         }
 
         public int ReadInt(int startIndex, int length)
@@ -222,23 +220,64 @@ namespace Iot.Device.Nmea0183.Ais
         {
             var data = Substring(startIndex, length);
 
-            var value = string.Empty;
+            List<byte> bytes = new List<byte>();
             for (var i = 0; i < data.Length / 6; i++)
             {
                 var b = Convert.ToByte(data.Substring(i * 6, 6), 2);
 
-                if (b < 32) // convert to 6-bit ASCII - control chars to uppercase latins
+                if (b == 0)
                 {
-                    b = (byte)(b + 64);
+                    break;
                 }
 
-                if (b != 64)
-                {
-                    value = value + (char)b;
-                }
+                bytes.Add(b);
             }
 
-            return value.Trim();
+            return _encoding.GetString(bytes.ToArray()).TrimEnd();
+        }
+
+        /// <summary>
+        /// Writes the given string as 6-bit encoded ascii to the payload
+        /// </summary>
+        /// <param name="data">The string to write. Only a subset of the ascii characters is allowed, other letters will be replaced</param>
+        /// <param name="length">The maximum length to write, in bits. Must be a multiple of 6</param>
+        /// <param name="padToLength">True to pad the payload to the given length, false otherwise</param>
+        /// <returns>The number of bits written</returns>
+        /// <exception cref="ArgumentException">The length is not a multiple of 6</exception>
+        public int WriteString(string data, int length, bool padToLength)
+        {
+            string encoded = string.Empty;
+            if (length % 6 != 0)
+            {
+                throw new ArgumentException("The length of the expected bit string must be a multiple of 6", nameof(length));
+            }
+
+            int maxChars = length / 6;
+
+            int bitsWritten = 0;
+
+            byte[] bytes = new byte[_encoding.GetByteCount(data)];
+
+            int encodedBytes = _encoding.GetBytes(data, 0, data.Length, bytes, 0);
+
+            for (int i = 0; i < encodedBytes; i++)
+            {
+                if (i > maxChars)
+                {
+                    break;
+                }
+
+                WriteUInt(bytes[i], 6);
+                bitsWritten += 6;
+            }
+
+            while (padToLength && bitsWritten < length)
+            {
+                WriteUInt(0, 6);
+                bitsWritten += 6;
+            }
+
+            return bitsWritten;
         }
 
         public double ReadDraught(int startIndex, int length)
@@ -261,11 +300,6 @@ namespace Iot.Device.Nmea0183.Ais
         {
             var bitValue = Substring(startIndex, length);
             return Convert.ToInt32(bitValue) == 1;
-        }
-
-        public void WriteBoolean(bool var, int length)
-        {
-            RawValue += var.ToString();
         }
 
         private string Substring(int startIndex, int length)

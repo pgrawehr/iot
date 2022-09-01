@@ -30,7 +30,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             Spare = payload.ReadUInt(71, 1);
             DesignatedAreaCode = payload.ReadUInt(72, 10);
             FunctionalId = payload.ReadUInt(82, 6);
-            Data = payload.ReadString(88, 920);
+            Data = payload.RawValue.Substring(88); // It's binary, so keep it binary
         }
     }
 }
