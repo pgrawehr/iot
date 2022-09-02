@@ -6,7 +6,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public class AidToNavigationReportMessage : AisMessage
+    public record AidToNavigationReportMessage : AisMessage
     {
         public NavigationalAidType NavigationalAidType { get; set; }
         public string Name { get; set; }

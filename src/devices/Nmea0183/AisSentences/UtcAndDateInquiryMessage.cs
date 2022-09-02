@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public class UtcAndDateInquiryMessage : AisMessage
+    public record UtcAndDateInquiryMessage : AisMessage
     {
         public uint Spare1 { get; set; }
         public uint DestinationMmsi { get; set; }

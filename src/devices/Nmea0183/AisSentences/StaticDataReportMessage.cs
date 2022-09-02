@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public class StaticDataReportMessage : AisMessage
+    public record StaticDataReportMessage : AisMessage
     {
         public uint PartNumber { get; }
 
@@ -21,10 +21,8 @@ namespace Iot.Device.Nmea0183.AisSentences
         }
 
         protected StaticDataReportMessage(StaticDataReportMessage message)
-            : this()
+            : base(message)
         {
-            Repeat = message.Repeat;
-            Mmsi = message.Mmsi;
             PartNumber = message.PartNumber;
         }
 

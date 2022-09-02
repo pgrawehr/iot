@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public class PositionReportForLongRangeApplicationsMessage : AisMessage
+    public record PositionReportForLongRangeApplicationsMessage : AisMessage
     {
         public PositionAccuracy PositionAccuracy { get; set; }
         public Raim Raim { get; set; }

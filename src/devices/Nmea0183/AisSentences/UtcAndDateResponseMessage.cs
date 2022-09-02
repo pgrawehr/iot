@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public class UtcAndDateResponseMessage : AisMessage
+    public record UtcAndDateResponseMessage : AisMessage
     {
         public uint Year { get; set; }
         public uint Month { get; set; }

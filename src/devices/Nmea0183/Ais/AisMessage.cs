@@ -3,11 +3,18 @@
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public abstract class AisMessage
+    public abstract record AisMessage
     {
         protected AisMessage(AisMessageType messageType)
         {
             MessageType = messageType;
+        }
+
+        protected AisMessage(AisMessage other)
+        {
+            MessageType = other.MessageType;
+            Repeat = other.Repeat;
+            Mmsi = other.Mmsi;
         }
 
         protected AisMessage(AisMessageType messageType, Payload payload)

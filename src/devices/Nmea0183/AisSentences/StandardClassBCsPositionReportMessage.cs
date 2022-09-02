@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public class StandardClassBCsPositionReportMessage : AisMessage
+    public record StandardClassBCsPositionReportMessage : AisMessage
     {
         public uint Reserved { get; set; }
         public double SpeedOverGround { get; set; }

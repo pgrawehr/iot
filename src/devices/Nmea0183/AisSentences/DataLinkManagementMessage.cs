@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public class DataLinkManagementMessage : AisMessage
+    public record DataLinkManagementMessage : AisMessage
     {
         public uint Spare { get; set; }
         public uint Offset1 { get; set; }

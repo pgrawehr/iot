@@ -30,5 +30,25 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             var result = parser.Parse(sentence);
             result.ShouldBeNull();
         }
+
+        [Fact]
+        public void ParseStandardMessage1()
+        {
+            const string sentence1 = "!AIVDM,1,1,,B,139aspP000PWq54NlIKLbajr00S;,0*74";
+            var parser = new AisParser();
+
+            var result = parser.Parse(sentence1);
+            result.ShouldNotBeNull();
+        }
+
+        [Fact]
+        public void ParseStandardMessage2()
+        {
+            const string sentence1 = "!AIVDM,1,1,,B,H39aKq4TCBD5?f446HAj0008<22w,0*63";
+            var parser = new AisParser();
+
+            var result = parser.Parse(sentence1);
+            result.ShouldNotBeNull();
+        }
     }
 }
