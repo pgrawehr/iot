@@ -259,7 +259,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.ShipType.ShouldBe(ShipType.PortTender);
             message.DataTerminalReady.ShouldBeTrue();
 
-            var encoded = Parser.ToSentence(message);
+            var encoded = Parser.ToSentences(message);
             encoded.Count.ShouldBe(2);
             string newMessage1 = encoded[0].ToNmeaMessage();
             Assert.Equal(sentence1.Length, newMessage1.Length); // Cannot compare exactly, since the ship and callsign names are truncated

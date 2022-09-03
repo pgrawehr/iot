@@ -348,6 +348,18 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        public void SendBroadcastMessage(uint sourceMmsi, string text)
+        {
+            SafetyRelatedBroadcastMessage msg = new SafetyRelatedBroadcastMessage();
+            msg.Mmsi = sourceMmsi;
+            msg.Text = text;
+            List<NmeaSentence> sentences = _aisParser.ToSentences(msg);
+            foreach (var s in sentences)
+            {
+                DispatchSentenceEvents(this, s);
+            }
+        }
+
         public override void StopDecode()
         {
         }

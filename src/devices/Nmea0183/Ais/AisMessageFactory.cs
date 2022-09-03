@@ -60,6 +60,8 @@ namespace Iot.Device.Nmea0183.Ais
                     return StaticDataReportMessage.Create(payload);
                 case AisMessageType.PositionReportForLongRangeApplications:
                     return new PositionReportForLongRangeApplicationsMessage(payload);
+                case AisMessageType.SafetyRelatedBroadcastMessage:
+                    return new SafetyRelatedBroadcastMessage(payload);
                 default:
                     if (throwOnUnknownMessage)
                     {

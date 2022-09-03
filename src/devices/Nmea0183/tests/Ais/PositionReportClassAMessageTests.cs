@@ -172,7 +172,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.Mmsi.ShouldBe(366888040u);
             message.NavigationStatus.ShouldBe(NavigationStatus.UnderWayUsingEngine);
 
-            var encoded = Parser.ToSentence(message);
+            var encoded = Parser.ToSentences(message);
             encoded.Count.ShouldBe(1);
             string newMessage = encoded[0].ToNmeaMessage();
             Assert.Equal(sentence, newMessage);

@@ -138,7 +138,7 @@ namespace Iot.Device.Nmea0183.Ais
             return null;
         }
 
-        public List<NmeaSentence> ToSentence(AisMessage message)
+        public List<NmeaSentence> ToSentences(AisMessage message)
         {
             List<NmeaSentence> ret = new();
             Payload payLoad = _messageFactory.Encode(message);
