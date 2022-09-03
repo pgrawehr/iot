@@ -88,7 +88,7 @@ namespace Iot.Device.Nmea0183.AisSentences
             payload.WriteUInt(EtaMinute, 6);
             payload.WriteDraught(Draught, 8);
             payload.WriteString(Destination, 120, true);
-            payload.WriteUInt(DataTerminalReady ? 1u : 0, 1);
+            payload.WriteUInt(DataTerminalReady ? 0 : 1u, 1);
             payload.WriteUInt(Spare, 1);
         }
     }

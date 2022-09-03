@@ -257,6 +257,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.CallSign.ShouldBe("2EAZ3");
             message.ShipName.ShouldBe("WILLSUPPLY");
             message.ShipType.ShouldBe(ShipType.PortTender);
+            message.DataTerminalReady.ShouldBeTrue();
 
             var encoded = Parser.ToSentence(message);
             encoded.Count.ShouldBe(2);
@@ -281,6 +282,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message2.DimensionToBow.ShouldBeEquivalentTo(message.DimensionToBow);
             message2.DimensionToStarboard.ShouldBeEquivalentTo(message.DimensionToStarboard);
             message2.DimensionToStern.ShouldBeEquivalentTo(message.DimensionToStern);
+            message2.DataTerminalReady.ShouldBeTrue();
 
             message2.ShouldBeEquivalentTo(message);
         }
