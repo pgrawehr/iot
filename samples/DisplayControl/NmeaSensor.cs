@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -27,6 +28,7 @@ namespace DisplayControl
         private const string OpenCpn = "OpenCpn";
         private const string Udp = "Udp";
         private const string AuxiliaryGps = "AuxiliaryGps";
+        private const int WarningRepeatTimeoutMinutes = 10;
         
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -85,6 +87,9 @@ namespace DisplayControl
         private SerialPort _serialPortForward;
         private readonly SensorMeasurement _forwardRearSeparation;
         private readonly SensorMeasurement _forwardRearAngle;
+        private AisManager _aisManager;
+
+        private ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)> _activeWarnings;
 
         public NmeaSensor(MeasurementManager manager)
         {
@@ -100,6 +105,9 @@ namespace DisplayControl
                 SensorSource.Position);
             _rearPosition = new CustomData<GeographicPosition>("Rear antenna position", new GeographicPosition(),
                 SensorSource.Position);
+
+            _aisManager = new AisManager("AIS");
+            _activeWarnings = new();
 
             _forwardRearSeparation = new SensorMeasurement("Antenna separation", Length.Zero, SensorSource.Position, 3);
             _forwardRearAngle = new SensorMeasurement("GNSS derived heading", Angle.Zero, SensorSource.Position, 4);
@@ -118,6 +126,8 @@ namespace DisplayControl
             IList<FilterRule> rules = new List<FilterRule>();
             // Log just everything, but of course continue processing
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
+
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] {"AIS"}, true, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
             // GGA messages from the ship are normally discarded, but the cache shall decide (may use a fallback)
@@ -345,12 +355,16 @@ namespace DisplayControl
             _autopilot = new AutopilotController(_router, _router, _cache);
             _autopilot.NmeaSourceName = HandheldSourceName;
 
+            _aisManager.StartDecode();
+
             _router.AddEndPoint(_parserShipInterface);
             _router.AddEndPoint(_parserHandheldInterface);
             _router.AddEndPoint(_openCpnServer);
             _router.AddEndPoint(_clockSynchronizer);
             _router.AddEndPoint(_udpServer);
             _router.AddEndPoint(_parserForwardInterface);
+            _router.AddEndPoint(_aisManager);
+
             // _router.AddEndPoint(_signalKClientParser);
 
             _router.OnNewSequence += ParserOnNewSequence;
@@ -407,6 +421,33 @@ namespace DisplayControl
 
             _router.StartDecode();
             _autopilot.Start();
+        }
+
+        /// <summary>
+        /// Sends a message with the given <paramref name="messageText"/> as an AIS broadcast message
+        /// </summary>
+        /// <param name="messageId">Identifies the message. Messages with the same ID are only sent once, until the timeout elapses</param>
+        /// <param name="messageText">The text of the message. Supports only the AIS 6-bit character set.</param>
+        /// <returns>True if the message was sent, false otherwise</returns>
+        public bool SendWarningMessage(string messageId, string messageText)
+        {
+            if (_activeWarnings.TryGetValue(messageId, out var msg))
+            {
+                if (msg.TimeStamp  + TimeSpan.FromMinutes(WarningRepeatTimeoutMinutes) > DateTimeOffset.UtcNow)
+                {
+                    return false;
+                }
+
+                _activeWarnings.TryRemove(messageId, out _);
+            }
+
+            if (_activeWarnings.TryAdd(messageId, (messageText, DateTimeOffset.UtcNow)))
+            {
+                _aisManager.SendBroadcastMessage(0, messageText);
+                return true;
+            }
+
+            return false;
         }
 
         private void ParserOnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
@@ -701,6 +742,9 @@ namespace DisplayControl
 
             _parserHandheldInterface?.Dispose();
             _parserHandheldInterface = null;
+
+            _aisManager?.Dispose();
+            _aisManager = null!;
         }
 
         public void SendTrueWind(Angle windDirectionTrue, Speed windSpeed)
@@ -767,6 +811,17 @@ namespace DisplayControl
             if (_router == null)
             {
                 return; // cleanup in progress
+            }
+
+            if (engineData.EngineTemperature > Temperature.FromDegreesCelsius(70))
+            {
+                SendWarningMessage("ENGINETEMP",
+                    $"Engine room temperature critical: {engineData.EngineTemperature} Degrees celsius");
+            }
+
+            if (engineData.Revolutions > RotationalSpeed.FromRevolutionsPerMinute(10000))
+            {
+                SendWarningMessage("ENGINEREV", "Engine revolution sensor error");
             }
 
             // This is the old-stlye RPM message. Can carry only a limited set of information and is often no longer

@@ -30,19 +30,90 @@ namespace Iot.Device.Nmea0183
 
         private object _lock;
 
-        public AisManager(string interfaceName)
-        : this(interfaceName, false)
+        public AisManager(string interfaceName, uint ownMmsi, string ownShipName)
+        : this(interfaceName, false, ownMmsi, ownShipName)
         {
         }
 
-        public AisManager(string interfaceName, bool throwOnUnknownMessage)
+        public AisManager(string interfaceName, bool throwOnUnknownMessage, uint ownMmsi, string ownShipName)
             : base(interfaceName)
         {
+            OwnMmsi = ownMmsi;
+            OwnShipName = ownShipName;
             _throwOnUnknownMessage = throwOnUnknownMessage;
             _aisParser = new AisParser(throwOnUnknownMessage);
             _cache = new SentenceCache(this);
             _targets = new ConcurrentDictionary<uint, AisTarget>();
             _lock = new object();
+            AllowedPositionAge = TimeSpan.FromMinutes(1);
+        }
+
+        /// <summary>
+        /// The own MMSI
+        /// </summary>
+        public uint OwnMmsi { get; }
+
+        /// <summary>
+        /// The name of the own ship
+        /// </summary>
+        public string OwnShipName { get; }
+
+        public Length DimensionToBow { get; set; }
+
+        public Length DimensionToStern { get; set; }
+        public Length DimensionToPort { get; set; }
+        public Length DimensionToStarboard { get; set; }
+
+        /// <summary>
+        /// Maximum age of the position record for a given ship to consider it valid.
+        /// If this is set to a high value, there's a risk of calculating TCPA/CPA based on outdated data.
+        /// </summary>
+        public TimeSpan AllowedPositionAge { get; set; }
+
+        /// <summary>
+        /// Gets the data of the own ship (including position and movement vectors) as a ship structure.
+        /// </summary>
+        /// <param name="ownShip">Receives the data about the own ship</param>
+        /// <returns>True in case of success, false if relevant data is outdated or missing. Returns false if the
+        /// last received position message is older than <see cref="AllowedPositionAge"/>.</returns>
+        public bool GetOwnShipData(out Ship ownShip)
+        {
+            return GetOwnShipData(out ownShip, DateTimeOffset.UtcNow);
+        }
+
+        /// <summary>
+        /// Gets the data of the own ship (including position and movement vectors) as a ship structure.
+        /// </summary>
+        /// <param name="ownShip">Receives the data about the own ship</param>
+        /// <param name="currentTime">The current time</param>
+        /// <returns>True in case of success, false if relevant data is outdated or missing. Returns false if the
+        /// last received position message is older than <see cref="AllowedPositionAge"/>.</returns>
+        public bool GetOwnShipData(out Ship ownShip, DateTimeOffset currentTime)
+        {
+            var s = new Ship(OwnMmsi);
+            s.Name = OwnShipName;
+            s.DimensionToBow = DimensionToBow;
+            s.DimensionToStern = DimensionToStern;
+            s.DimensionToPort = DimensionToPort;
+            s.DimensionToStarboard = DimensionToStarboard;
+            if (!_cache.TryGetCurrentPosition(out var position, null, true, out var track, out var sog, out var heading,
+                    out var messageTime, currentTime) || (messageTime + AllowedPositionAge) < currentTime)
+            {
+                s.Position = position ?? new GeographicPosition();
+                s.CourseOverGround = track;
+                s.SpeedOverGround = sog;
+                s.TrueHeading = heading;
+                ownShip = s;
+                return false;
+            }
+
+            s.Position = position!;
+            s.CourseOverGround = track;
+            s.SpeedOverGround = sog;
+            s.TrueHeading = heading;
+
+            ownShip = s;
+            return true;
         }
 
         public override void StartDecode()

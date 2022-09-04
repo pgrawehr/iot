@@ -129,6 +129,22 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// The relative age of this sentence against a time stamp.
+        /// Useful when analyzing recorded data, where "now" should also be a time in the past.
+        /// </summary>
+        /// <param name="now">Time to compare against</param>
+        /// <returns>The time difference</returns>
+        public TimeSpan AgeTo(DateTimeOffset now)
+        {
+            if (!Valid)
+            {
+                return TimeSpan.Zero;
+            }
+
+            return now - DateTime;
+        }
+
+        /// <summary>
         /// Parses a date and a time field or any possible combinations of those
         /// </summary>
         protected static DateTimeOffset ParseDateTime(string date, string time)

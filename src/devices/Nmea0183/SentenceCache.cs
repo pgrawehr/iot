@@ -136,7 +136,33 @@ namespace Iot.Device.Nmea0183
             [NotNullWhen(true)]
 #endif
             out GeographicPosition? position,
-            String? source, bool extrapolate, out Angle track, out Speed sog, out Angle? heading, out DateTimeOffset messageTime)
+            String? source, bool extrapolate, out Angle track, out Speed sog, out Angle? heading,
+            out DateTimeOffset messageTime)
+        {
+            return TryGetCurrentPosition(out position, source, extrapolate, out track, out sog, out heading,
+                out messageTime, DateTimeOffset.UtcNow);
+        }
+
+        /// <summary>
+        /// Get the current position from the latest message containing any of the relevant data parts.
+        /// If <paramref name="extrapolate"></paramref> is true, the speed and direction are used to extrapolate the position (many older
+        /// GNSS receivers only deliver the position at 1Hz or less)
+        /// </summary>
+        /// <param name="position">Current position</param>
+        /// <param name="source">Only look at this source (otherwise, if multiple sources provide a position, any is used)</param>
+        /// <param name="extrapolate">True to extrapolate the current position using speed and track</param>
+        /// <param name="track">Track (course over ground)</param>
+        /// <param name="sog">Speed over ground</param>
+        /// <param name="heading">Vessel Heading</param>
+        /// <param name="messageTime">Time of the position report that was used</param>
+        /// <param name="now">The current time (when working with data in the past, this may be the a time within that data set)</param>
+        /// <returns>True if a valid position is returned</returns>
+        public bool TryGetCurrentPosition(
+#if NET5_0_OR_GREATER
+            [NotNullWhen(true)]
+#endif
+            out GeographicPosition? position,
+            String? source, bool extrapolate, out Angle track, out Speed sog, out Angle? heading, out DateTimeOffset messageTime, DateTimeOffset now)
         {
             messageTime = default;
             // Try to get any of the position messages

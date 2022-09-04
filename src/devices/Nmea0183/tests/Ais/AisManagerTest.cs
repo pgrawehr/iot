@@ -19,16 +19,27 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         private AisManager _manager;
         public AisManagerTest()
         {
-            _manager = new AisManager("Test", true);
+            _manager = new AisManager("Test", true, 269110660u, "Cirrus");
+        }
+
+        [Fact]
+        public void Initialisation()
+        {
+            _manager.AllowedPositionAge.ShouldBeEquivalentTo(TimeSpan.FromMinutes(1));
+            _manager.DimensionToStern.ShouldBeEquivalentTo(Length.Zero);
+            _manager.OwnMmsi.ShouldBeEquivalentTo(269110660u);
+            _manager.OwnShipName.ShouldNotBeEmpty();
         }
 
         [Fact]
         public void FeedWithRealDataAndCheckGeneralAttributes()
         {
             using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-2021-08-25-16-25.txt");
+            DateTimeOffset latestPacketDate = default;
             reader.OnNewSequence += (source, msg) =>
             {
                 _manager.SendSentence(source, msg);
+                latestPacketDate = msg.DateTime;
             };
 
             reader.StartDecode();
@@ -59,6 +70,12 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
 
             _manager.GetSpecificTargets<BaseStation>().ShouldNotBeEmpty();
+
+            Assert.True(_manager.GetOwnShipData(out Ship own, latestPacketDate));
+            Assert.Equal(own.SpeedOverGround.Value, Speed.FromKnots(2.7).Value, 1);
+            own.Name.ShouldBeEquivalentTo("Cirrus");
+            own.Position.ContainsValidPosition().ShouldBeTrue();
+            own.SpeedOverGround.ShouldBeInRange(Speed.FromKnots(2), Speed.FromKnots(5));
         }
 
         ////[Fact]
