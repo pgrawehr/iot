@@ -18,7 +18,9 @@ namespace Iot.Device.Nmea0183
 {
     public class AisManager : NmeaSinkAndSource
     {
+        private const int WarningRepeatTimeoutMinutes = 10;
         private readonly bool _throwOnUnknownMessage;
+
         private AisParser _aisParser;
 
         /// <summary>
@@ -27,6 +29,8 @@ namespace Iot.Device.Nmea0183
         private SentenceCache _cache;
 
         private ConcurrentDictionary<uint, AisTarget> _targets;
+
+        private ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)> _activeWarnings;
 
         private object _lock;
 
@@ -45,7 +49,9 @@ namespace Iot.Device.Nmea0183
             _cache = new SentenceCache(this);
             _targets = new ConcurrentDictionary<uint, AisTarget>();
             _lock = new object();
+            _activeWarnings = new ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)>();
             AllowedPositionAge = TimeSpan.FromMinutes(1);
+            AutoSendWarnings = true;
         }
 
         /// <summary>
@@ -69,6 +75,12 @@ namespace Iot.Device.Nmea0183
         /// If this is set to a high value, there's a risk of calculating TCPA/CPA based on outdated data.
         /// </summary>
         public TimeSpan AllowedPositionAge { get; set; }
+
+        /// <summary>
+        /// True to have the component automatically generate warning broadcast messages (when in collision range, or when seeing something unexpected,
+        /// such as an AIS-Sart target)
+        /// </summary>
+        public bool AutoSendWarnings { get; set; }
 
         /// <summary>
         /// Gets the data of the own ship (including position and movement vectors) as a ship structure.
@@ -228,29 +240,9 @@ namespace Iot.Device.Nmea0183
                     {
                         PositionReportClassAMessageBase msgPos = (PositionReportClassAMessageBase)msg;
                         ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
-                        ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
-                        if (msgPos.RateOfTurn.HasValue)
-                        {
-                            // See the cheat sheet at https://gpsd.gitlab.io/gpsd/AIVDM.html
-                            double v = msgPos.RateOfTurn.Value / 4.733;
-                            ship.RateOfTurn = RotationalSpeed.FromDegreesPerMinute(Math.Sign(v) * v * v); // Square value, keep sign
-                        }
-                        else
-                        {
-                            ship.RateOfTurn = null;
-                        }
+                        PositionReportClassAToShip(ship, msgPos);
 
-                        if (msgPos.TrueHeading.HasValue)
-                        {
-                            ship.TrueHeading = Angle.FromDegrees(msgPos.TrueHeading.Value);
-                        }
-                        else
-                        {
-                            ship.TrueHeading = null;
-                        }
-
-                        ship.CourseOverGround = Angle.FromDegrees(msgPos.CourseOverGround);
-                        ship.SpeedOverGround = Speed.FromKnots(msgPos.SpeedOverGround);
+                        CheckIsExceptionalTarget(ship);
                         break;
                     }
 
@@ -271,6 +263,7 @@ namespace Iot.Device.Nmea0183
                             ship.DimensionToStarboard = Length.FromMeters(msgPartB.DimensionToStarboard);
                         }
 
+                        CheckIsExceptionalTarget(ship);
                         break;
                     }
 
@@ -311,6 +304,7 @@ namespace Iot.Device.Nmea0183
                             ship.EstimatedTimeOfArrival = null; // may be deleted by the user
                         }
 
+                        CheckIsExceptionalTarget(ship);
                         break;
                     }
 
@@ -331,6 +325,7 @@ namespace Iot.Device.Nmea0183
 
                         ship.CourseOverGround = Angle.FromDegrees(msgPos.CourseOverGround);
                         ship.SpeedOverGround = Speed.FromKnots(msgPos.SpeedOverGround);
+                        CheckIsExceptionalTarget(ship);
                         break;
                     }
 
@@ -357,6 +352,7 @@ namespace Iot.Device.Nmea0183
                         ship.DimensionToStarboard = Length.FromMeters(msgPos.DimensionToStarboard);
                         ship.ShipType = msgPos.ShipType;
                         ship.Name = msgPos.Name;
+                        CheckIsExceptionalTarget(ship);
                         break;
                     }
 
@@ -419,6 +415,92 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        internal void PositionReportClassAToShip(Ship ship, PositionReportClassAMessageBase positionReport)
+        {
+            ship.Position = new GeographicPosition(positionReport.Latitude, positionReport.Longitude, 0);
+            if (positionReport.RateOfTurn.HasValue)
+            {
+                // See the cheat sheet at https://gpsd.gitlab.io/gpsd/AIVDM.html
+                double v = positionReport.RateOfTurn.Value / 4.733;
+                ship.RateOfTurn = RotationalSpeed.FromDegreesPerMinute(Math.Sign(v) * v * v); // Square value, keep sign
+            }
+            else
+            {
+                ship.RateOfTurn = null;
+            }
+
+            if (positionReport.TrueHeading.HasValue)
+            {
+                ship.TrueHeading = Angle.FromDegrees(positionReport.TrueHeading.Value);
+            }
+            else
+            {
+                ship.TrueHeading = null;
+            }
+
+            ship.CourseOverGround = Angle.FromDegrees(positionReport.CourseOverGround);
+            ship.SpeedOverGround = Speed.FromKnots(positionReport.SpeedOverGround);
+            ship.NavigationStatus = positionReport.NavigationStatus;
+        }
+
+        private void CheckIsExceptionalTarget(Ship ship)
+        {
+            void SendMessage(Ship ship, string type)
+            {
+                GetOwnShipData(out Ship ownShip); // take in in either case
+                Length distance = ownShip.DistanceTo(ship);
+                SendWarningMessage(ship.FormatMmsi(), ship.Mmsi,
+                    $"{type} Target activated: MMSI {ship.Mmsi} in Position {ship.Position}! Distance {distance}");
+            }
+
+            if (AutoSendWarnings == false)
+            {
+                return;
+            }
+
+            MmsiType type = ship.IdentifyMmsiType();
+            switch (type)
+            {
+                case MmsiType.AisSart:
+                    SendMessage(ship, "AIS SART");
+                    break;
+                case MmsiType.Epirb:
+                    SendMessage(ship, "EPIRB");
+                    break;
+                case MmsiType.Mob:
+                    SendMessage(ship, "AIS MOB");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Sends a message with the given <paramref name="messageText"/> as an AIS broadcast message
+        /// </summary>
+        /// <param name="messageId">Identifies the message. Messages with the same ID are only sent once, until the timeout elapses</param>
+        /// <param name="sourceMmsi">Source MMSI, can be 0 if irrelevant/unknown</param>
+        /// <param name="messageText">The text of the message. Supports only the AIS 6-bit character set.</param>
+        /// <returns>True if the message was sent, false otherwise</returns>
+        public bool SendWarningMessage(string messageId, uint sourceMmsi, string messageText)
+        {
+            if (_activeWarnings.TryGetValue(messageId, out var msg))
+            {
+                if (msg.TimeStamp + TimeSpan.FromMinutes(WarningRepeatTimeoutMinutes) > DateTimeOffset.UtcNow)
+                {
+                    return false;
+                }
+
+                _activeWarnings.TryRemove(messageId, out _);
+            }
+
+            if (_activeWarnings.TryAdd(messageId, (messageText, DateTimeOffset.UtcNow)))
+            {
+                SendBroadcastMessage(0, messageText);
+                return true;
+            }
+
+            return false;
+        }
+
         public void SendBroadcastMessage(uint sourceMmsi, string text)
         {
             SafetyRelatedBroadcastMessage msg = new SafetyRelatedBroadcastMessage();
@@ -433,6 +515,50 @@ namespace Iot.Device.Nmea0183
 
         public override void StopDecode()
         {
+            _activeWarnings.Clear();
+        }
+
+        internal PositionReportClassAMessage ShipToPositionReportClassAMessage(Ship ship)
+        {
+            PositionReportClassAMessage rpt = new PositionReportClassAMessage();
+            rpt.Mmsi = ship.Mmsi;
+            rpt.SpeedOverGround = ship.SpeedOverGround.Knots;
+            if (ship.RateOfTurn != null)
+            {
+                // Inverse of the formula above
+                double v = ship.RateOfTurn.Value.DegreesPerMinute;
+                v = Math.Sign(v) * Math.Sqrt(Math.Abs(v));
+                v = v * 4.733;
+                rpt.RateOfTurn = (int)Math.Round(v);
+            }
+            else
+            {
+                rpt.RateOfTurn = null;
+            }
+
+            rpt.CourseOverGround = ship.CourseOverGround.Degrees;
+            rpt.Latitude = ship.Position.Latitude;
+            rpt.Longitude = ship.Position.Longitude;
+            rpt.ManeuverIndicator = ManeuverIndicator.NoSpecialManeuver;
+            rpt.NavigationStatus = ship.NavigationStatus;
+            if (ship.TrueHeading.HasValue)
+            {
+                rpt.TrueHeading = (uint)ship.TrueHeading.Value.Degrees;
+            }
+
+            return rpt;
+        }
+
+        public NmeaSentence SendShipPositionReport(AisTransceiverClass transceiverClass, Ship ship)
+        {
+            if (transceiverClass == AisTransceiverClass.A)
+            {
+                return null!;
+            }
+            else
+            {
+                throw new NotSupportedException("Only class A messages can currently be constructed");
+            }
         }
     }
 }

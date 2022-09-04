@@ -11,7 +11,7 @@ namespace Iot.Device.Nmea0183.Ais
     /// <summary>
     /// Generic base class for all types of AIS targets
     /// </summary>
-    public abstract class AisTarget
+    public abstract record AisTarget
     {
         public AisTarget(uint mmsi)
         {

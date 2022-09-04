@@ -6,7 +6,7 @@ using Iot.Device.Common;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class BaseStation : AisTarget
+    public record BaseStation : AisTarget
     {
         /// <summary>
         ///  Base stations have no name in their data (just the country identifier)

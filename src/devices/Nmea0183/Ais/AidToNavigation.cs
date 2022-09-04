@@ -6,7 +6,7 @@ using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class AidToNavigation : AisTarget
+    public record AidToNavigation : AisTarget
     {
         public AidToNavigation(uint mmsi)
         : base(mmsi)

@@ -5,7 +5,7 @@ using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class SarAircraft : AisTarget
+    public record SarAircraft : AisTarget
     {
         /// <summary>
         /// Unfortunately, the sar message does not include a "name" field.

@@ -8,7 +8,7 @@ using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class Ship : AisTarget
+    public record Ship : AisTarget
     {
         public Ship(uint mmsi)
         : base(mmsi)
@@ -42,6 +42,8 @@ namespace Iot.Device.Nmea0183.Ais
         public Length? Draught { get; set; }
 
         public uint ImoNumber { get; set; }
+
+        public NavigationStatus NavigationStatus { get; set; }
 
         public override string ToString()
         {

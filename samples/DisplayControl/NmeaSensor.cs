@@ -28,7 +28,6 @@ namespace DisplayControl
         private const string OpenCpn = "OpenCpn";
         private const string Udp = "Udp";
         private const string AuxiliaryGps = "AuxiliaryGps";
-        private const int WarningRepeatTimeoutMinutes = 10;
         
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -431,23 +430,7 @@ namespace DisplayControl
         /// <returns>True if the message was sent, false otherwise</returns>
         public bool SendWarningMessage(string messageId, string messageText)
         {
-            if (_activeWarnings.TryGetValue(messageId, out var msg))
-            {
-                if (msg.TimeStamp  + TimeSpan.FromMinutes(WarningRepeatTimeoutMinutes) > DateTimeOffset.UtcNow)
-                {
-                    return false;
-                }
-
-                _activeWarnings.TryRemove(messageId, out _);
-            }
-
-            if (_activeWarnings.TryAdd(messageId, (messageText, DateTimeOffset.UtcNow)))
-            {
-                _aisManager.SendBroadcastMessage(0, messageText);
-                return true;
-            }
-
-            return false;
+            return _aisManager.SendWarningMessage(messageId, messageText);
         }
 
         private void ParserOnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)

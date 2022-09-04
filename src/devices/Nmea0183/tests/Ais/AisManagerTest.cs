@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Ais;
 using Microsoft.VisualStudio.CodeCoverage;
 using Shouldly;
@@ -156,6 +157,86 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             Assert.True(baseStation.Position.ContainsValidPosition());
             Assert.Equal("002579999", baseStation.FormatMmsi());
             Assert.Equal(MmsiType.BaseStation, baseStation.IdentifyMmsiType());
+        }
+
+        [Fact]
+        public void ShouldEncodeShipCorrectly1()
+        {
+            // Note that this tests internal conversion functionality of the manager. The public api is tested below.
+            Ship ship = new Ship(970001001)
+            {
+                ShipType = ShipType.NotAvailable, Position = new GeographicPosition(53.7, 9.44, 0), CourseOverGround = Angle.FromDegrees(220),
+                RateOfTurn = RotationalSpeed.FromDegreesPerMinute(8.75), TrueHeading = Angle.FromDegrees(20),
+                NavigationStatus = NavigationStatus.UnderWaySailing
+            };
+            var msg = _manager.ShipToPositionReportClassAMessage(ship);
+            Assert.Equal(ship.Mmsi, msg.Mmsi);
+
+            var ship2 = new Ship(ship.Mmsi);
+            _manager.PositionReportClassAToShip(ship2, msg);
+            ship2.Position.ShouldBeEquivalentTo(ship.Position);
+            ship2.CourseOverGround.ShouldBeEquivalentTo(ship.CourseOverGround);
+            Assert.Equal(ship.RateOfTurn.GetValueOrDefault().Value, ship2.RateOfTurn.GetValueOrDefault().Value, 2);
+            ship2.TrueHeading.ShouldBeEquivalentTo(ship.TrueHeading);
+            ship2.NavigationStatus.ShouldBeEquivalentTo(ship.NavigationStatus);
+        }
+
+        [Fact]
+        public void ShouldEncodeShipCorrectly2()
+        {
+            // Note that this tests internal conversion functionality of the manager. The public api is tested below.
+            Ship ship = new Ship(970001001)
+            {
+                ShipType = ShipType.NotAvailable,
+                Position = new GeographicPosition(53.7, 9.45, 0),
+                CourseOverGround = Angle.FromDegrees(220),
+                RateOfTurn = null,
+                TrueHeading = null,
+                NavigationStatus = NavigationStatus.RestrictedManeuverability
+            };
+            var msg = _manager.ShipToPositionReportClassAMessage(ship);
+            Assert.Equal(ship.Mmsi, msg.Mmsi);
+
+            var ship2 = new Ship(ship.Mmsi);
+            _manager.PositionReportClassAToShip(ship2, msg);
+            ship2.Position.ShouldBeEquivalentTo(ship.Position);
+            ship2.CourseOverGround.ShouldBeEquivalentTo(ship.CourseOverGround);
+            Assert.Equal(ship.RateOfTurn.GetValueOrDefault().Value, ship2.RateOfTurn.GetValueOrDefault().Value, 2);
+            ship2.TrueHeading.ShouldBeEquivalentTo(ship.TrueHeading);
+            ship2.NavigationStatus.ShouldBeEquivalentTo(ship.NavigationStatus);
+        }
+
+        [Fact]
+        public void ShouldEncodeShipCorrectly3()
+        {
+            // Note that this tests internal conversion functionality of the manager. The public api is tested below.
+            Ship ship = new Ship(970001001)
+            {
+                ShipType = ShipType.NotAvailable,
+                Position = new GeographicPosition(53.7, 9.45, 0),
+                CourseOverGround = Angle.FromDegrees(220),
+                RateOfTurn = RotationalSpeed.FromDegreesPerMinute(-25.71),
+                TrueHeading = Angle.FromDegrees(180),
+                NavigationStatus = NavigationStatus.RestrictedManeuverability
+            };
+            var msg = _manager.ShipToPositionReportClassAMessage(ship);
+            Assert.Equal(ship.Mmsi, msg.Mmsi);
+
+            var ship2 = new Ship(ship.Mmsi);
+            _manager.PositionReportClassAToShip(ship2, msg);
+            ship2.Position.ShouldBeEquivalentTo(ship.Position);
+            ship2.CourseOverGround.ShouldBeEquivalentTo(ship.CourseOverGround);
+            Assert.Equal(ship.RateOfTurn.GetValueOrDefault().Value, ship2.RateOfTurn.GetValueOrDefault().Value, 2);
+            ship2.TrueHeading.ShouldBeEquivalentTo(ship.TrueHeading);
+            ship2.NavigationStatus.ShouldBeEquivalentTo(ship.NavigationStatus);
+        }
+
+        [Fact]
+        public void ShouldSendWarningWhenMobTargetSeen()
+        {
+            Ship ship = new Ship(970001001) { ShipType = ShipType.OtherType, Position = new GeographicPosition(53.7, 9.44, 0), CourseOverGround = Angle.FromDegrees(220) };
+
+            _manager.SendShipPositionReport(AisTransceiverClass.A, ship);
         }
     }
 }
