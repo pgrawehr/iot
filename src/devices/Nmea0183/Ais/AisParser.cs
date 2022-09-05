@@ -162,6 +162,11 @@ namespace Iot.Device.Nmea0183.Ais
                 }
             }
 
+            if (numBlocks > 9)
+            {
+                throw new InvalidOperationException("Maximum number of blocks per message is 9");
+            }
+
             while (fullData.Length > 0)
             {
                 List<string> parts = new List<string>();
@@ -196,50 +201,6 @@ namespace Iot.Device.Nmea0183.Ais
         {
             return rs.Valid && rs.Fields.Length == 6 && (rs.SentenceId == VdoId || rs.SentenceId == VdmId) &&
                    rs.TalkerId == TalkerId.Ais;
-        }
-
-        public string Parse<T>(T aisMessage)
-            where T : AisMessage
-        {
-            string sentence = string.Empty;
-
-            // Example: !AIVDM,1,1,,A,B6CdCm0t3`tba35f@V9faHi7kP06,0*58
-            // Field 1: Sentence Type
-            // Field 2: Count Of Fragments
-            // Field 3: Fragment Number
-            // Field 4: Sequential Messages ID for multi-sentence messages (blank for none)
-            // Field 5: Radio Channel Code (A or B)
-            // Field 6: Payload
-            // Field 7: 6 bit Boundary Padding (Zero seems to always be OK)?
-            string sentenceType = "AIVDM";
-            int countOfFragments = 1;
-            int fragmentNumber = 1;
-            string radioChannel = "A";
-            int boundaryPadding = 0;
-
-            Payload payload = _messageFactory.Encode(aisMessage);
-            var payloadEncoded = _payloadEncoder.EncodeSixBitAis(payload, out _);
-
-            // Build the full sentence
-            sentence += "!";
-            sentence += sentenceType;
-            sentence += ",";
-            sentence += countOfFragments.ToString("0");
-            sentence += ",";
-            sentence += fragmentNumber.ToString("0");
-            sentence += ",";
-
-            sentence += ",";
-            sentence += radioChannel;
-            sentence += ",";
-            sentence += payloadEncoded;
-            sentence += ",";
-            sentence += boundaryPadding.ToString("0");
-
-            var calculatedChecksum = CalculateChecksum(sentence);
-            sentence += "*" + calculatedChecksum.ToString("00");
-
-            return sentence;
         }
 
         private Payload? DecodePayload(string encodedPayload, int numFragments, int fragmentNumber, int messageId, int numFillBits)

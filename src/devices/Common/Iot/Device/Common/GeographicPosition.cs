@@ -364,6 +364,25 @@ namespace Iot.Device.Common
 
         /// <summary>
         /// Formats this <see cref="GeographicPosition"/> instance to a string.
+        /// The format string can contain up to three groups of format identifiers of the form "Xn", where X is one of
+        /// * D: Decimal display: The value is printed in decimal notation
+        /// * U: Decimal, unsigned: The value is printed in decimal notation, omitting the sign
+        /// * M: Minutes: The value is displayed as degrees minutes
+        /// * S: Seconds: The value is displayed as degrees minutes seconds
+        /// A single digit after the letter indicates the number of digits for the last group (e.g. M2 uses two digits for the minutes)
+        /// The first of the above letters prints the latitude, the second the longitude and the third the altitude.
+        /// Additionally, the following special letters can be anywhere in the format string:
+        /// * N: North/South: Prints "N" when the latitude is greater or equal to 0, "S" otherwise
+        /// * E: East/West Prints "E" when the longitude is greater or equal to 0, "W" otherwise
+        /// Any other letters (including spaces) are printed as-is.
+        /// <example>
+        /// "Format specifier" - "Output"
+        /// "D3 D3" - "10.000° 23.500°"
+        /// "D3N D3E" - "10.000°N 23.500°E"
+        /// "D3N D3E" - "10.500°N 23.512°E"
+        /// "M2 M2" - "10° 30.00'N 23° 30.74'E"
+        /// "S1 S2 D0m" - "10° 30' 00.0\"N 023° 30' 44.42\"E -100m"
+        /// </example>
         /// </summary>
         /// <param name="format">The format string. Possible options see above</param>
         /// <param name="formatProvider">The format provider</param>

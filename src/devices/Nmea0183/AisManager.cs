@@ -34,6 +34,12 @@ namespace Iot.Device.Nmea0183
 
         private object _lock;
 
+        /// <summary>
+        /// This event fires when a new message (individual or broadcast) is received.
+        /// Parameters are: Source MMSI, Destination MMSI (may be 0) and text.
+        /// </summary>
+        public Action<uint, uint, string>? OnMessage;
+
         public AisManager(string interfaceName, uint ownMmsi, string ownShipName)
         : this(interfaceName, false, ownMmsi, ownShipName)
         {
@@ -403,6 +409,20 @@ namespace Iot.Device.Nmea0183
                         // not interesting.
                         break;
 
+                    case AisMessageType.AddressedSafetyRelatedMessage:
+                    {
+                        AddressedSafetyRelatedMessage addressedSafetyRelatedMessage = (AddressedSafetyRelatedMessage)msg;
+                        OnMessage?.Invoke(addressedSafetyRelatedMessage.Mmsi, addressedSafetyRelatedMessage.DestinationMmsi, addressedSafetyRelatedMessage.Text);
+                        break;
+                    }
+
+                    case AisMessageType.SafetyRelatedBroadcastMessage:
+                    {
+                        SafetyRelatedBroadcastMessage broadcastMessage = (SafetyRelatedBroadcastMessage)msg;
+                        OnMessage?.Invoke(broadcastMessage.Mmsi, 0, broadcastMessage.Text);
+                        break;
+                    }
+
                     default:
                         if (_throwOnUnknownMessage)
                         {
@@ -450,7 +470,7 @@ namespace Iot.Device.Nmea0183
                 GetOwnShipData(out Ship ownShip); // take in in either case
                 Length distance = ownShip.DistanceTo(ship);
                 SendWarningMessage(ship.FormatMmsi(), ship.Mmsi,
-                    $"{type} Target activated: MMSI {ship.Mmsi} in Position {ship.Position}! Distance {distance}");
+                    $"{type} Target activated: MMSI {ship.Mmsi} in Position {ship.Position:M1 M1}! Distance {distance}");
             }
 
             if (AutoSendWarnings == false)
@@ -494,7 +514,7 @@ namespace Iot.Device.Nmea0183
 
             if (_activeWarnings.TryAdd(messageId, (messageText, DateTimeOffset.UtcNow)))
             {
-                SendBroadcastMessage(0, messageText);
+                SendBroadcastMessage(sourceMmsi, messageText);
                 return true;
             }
 
@@ -553,7 +573,18 @@ namespace Iot.Device.Nmea0183
         {
             if (transceiverClass == AisTransceiverClass.A)
             {
-                return null!;
+                PositionReportClassAMessage msg = ShipToPositionReportClassAMessage(ship);
+                List<NmeaSentence> sentences = _aisParser.ToSentences(msg);
+                if (sentences.Count != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Encoding the position report for class A returned {sentences.Count} sentences. Exactly 1 expected");
+                }
+
+                NmeaSentence single = sentences.Single();
+
+                DispatchSentenceEvents(this, single);
+                return single;
             }
             else
             {

@@ -8,10 +8,12 @@ using System.Linq;
 using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Ais;
+using Iot.Device.Nmea0183.Sentences;
 using Microsoft.VisualStudio.CodeCoverage;
 using Shouldly;
 using UnitsNet;
 using Xunit;
+using NavigationStatus = Iot.Device.Nmea0183.Ais.NavigationStatus;
 
 namespace Iot.Device.Nmea0183.Tests.Ais
 {
@@ -232,11 +234,63 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         }
 
         [Fact]
-        public void ShouldSendWarningWhenMobTargetSeen()
+        public void SendsShipPositionReport()
         {
+            int seenMessages = 0;
+
+            void Report(NmeaSinkAndSource nmeaSinkAndSource, NmeaSentence nmeaSentence)
+            {
+                nmeaSentence.ShouldBeOfType<RawSentence>();
+                seenMessages++;
+            }
+
             Ship ship = new Ship(970001001) { ShipType = ShipType.OtherType, Position = new GeographicPosition(53.7, 9.44, 0), CourseOverGround = Angle.FromDegrees(220) };
 
+            _manager.OnNewSequence += Report;
             _manager.SendShipPositionReport(AisTransceiverClass.A, ship);
+
+            _manager.OnNewSequence -= Report;
+            Assert.Equal(1, seenMessages);
+        }
+
+        [Fact]
+        public void CreatesWarningWhenMobTargetSeen()
+        {
+            int seenMessages = 0;
+
+            bool warningReceived = false;
+            // The sentences that make up the warning are collected here
+            List<NmeaSentence> sentences = new List<NmeaSentence>();
+            void Report(NmeaSinkAndSource nmeaSinkAndSource, NmeaSentence nmeaSentence)
+            {
+                nmeaSentence.ShouldBeOfType<RawSentence>();
+                seenMessages++;
+                sentences.Add(nmeaSentence);
+            }
+
+            void MessageReceived(uint source, uint destination, string text)
+            {
+                warningReceived = true;
+                source.ShouldBeEquivalentTo(970001001u);
+                destination.ShouldBeEquivalentTo(0u);
+                text.ShouldBeEquivalentTo("AIS SART TARGET ACTIVATED: MMSI 970001001 IN POSITION 53_ 42.0'N 9_ 26.4'E! DISTANCE 3.248,43 NM");
+            }
+
+            Ship ship = new Ship(970001001) { ShipType = ShipType.OtherType, Position = new GeographicPosition(53.7, 9.44, 0), CourseOverGround = Angle.FromDegrees(220) };
+
+            var criticalMessage = _manager.SendShipPositionReport(AisTransceiverClass.A, ship);
+
+            _manager.OnNewSequence += Report;
+            _manager.OnMessage += MessageReceived;
+
+            _manager.SendSentence(criticalMessage);
+            // This path is actually for received messages
+            _manager.SendSentences(sentences);
+
+            _manager.OnNewSequence -= Report;
+            _manager.OnMessage -= MessageReceived;
+            Assert.Equal(2, seenMessages);
+            Assert.True(warningReceived);
         }
     }
 }

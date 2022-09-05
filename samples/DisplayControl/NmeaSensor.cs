@@ -88,8 +88,6 @@ namespace DisplayControl
         private readonly SensorMeasurement _forwardRearAngle;
         private AisManager _aisManager;
 
-        private ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)> _activeWarnings;
-
         public NmeaSensor(MeasurementManager manager)
         {
             _manager = manager;
@@ -105,8 +103,7 @@ namespace DisplayControl
             _rearPosition = new CustomData<GeographicPosition>("Rear antenna position", new GeographicPosition(),
                 SensorSource.Position);
 
-            _aisManager = new AisManager("AIS");
-            _activeWarnings = new();
+            _aisManager = new AisManager("AIS", false, 269110660, "CIRRUS");
 
             _forwardRearSeparation = new SensorMeasurement("Antenna separation", Length.Zero, SensorSource.Position, 3);
             _forwardRearAngle = new SensorMeasurement("GNSS derived heading", Angle.Zero, SensorSource.Position, 4);
@@ -430,7 +427,7 @@ namespace DisplayControl
         /// <returns>True if the message was sent, false otherwise</returns>
         public bool SendWarningMessage(string messageId, string messageText)
         {
-            return _aisManager.SendWarningMessage(messageId, messageText);
+            return _aisManager.SendWarningMessage(messageId, 0, messageText);
         }
 
         private void ParserOnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
@@ -576,6 +573,10 @@ namespace DisplayControl
 
                 case DepthBelowSurface dpt when dpt.Valid:
                     _manager.UpdateValue(SensorMeasurement.WaterDepth, dpt.Depth);
+                    if (dpt.Depth < Length.FromMeters(10))
+                    {
+                        _aisManager.SendWarningMessage("DEPTH", 0, $"It's only {dpt.Depth} deep!");
+                    }
                     break;
 
                 case WaterSpeedAndAngle vhw when vhw.Valid:
