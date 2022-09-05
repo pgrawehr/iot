@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Iot.Device.Common;
@@ -87,6 +88,22 @@ namespace Iot.Device.Nmea0183
         /// such as an AIS-Sart target)
         /// </summary>
         public bool AutoSendWarnings { get; set; }
+
+        /// <summary>
+        /// Which <see cref="SentenceId"/> generated AIS messages should get. Meaningful values are <see cref="AisParser.VdmId"/> or <see cref="AisParser.VdoId"/>.
+        /// Default is "VDO"
+        /// </summary>
+        public SentenceId GeneratedSentencesId
+        {
+            get
+            {
+                return _aisParser.GeneratedSentencesId;
+            }
+            set
+            {
+                _aisParser.GeneratedSentencesId = value;
+            }
+        }
 
         /// <summary>
         /// Gets the data of the own ship (including position and movement vectors) as a ship structure.

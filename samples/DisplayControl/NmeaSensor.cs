@@ -12,6 +12,7 @@ using System.Numerics;
 using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.Sentences;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
@@ -123,7 +124,9 @@ namespace DisplayControl
             // Log just everything, but of course continue processing
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
 
+            // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] {"AIS"}, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Ais, AisParser.VdoId, new []{ShipSourceName}, true, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
             // GGA messages from the ship are normally discarded, but the cache shall decide (may use a fallback)

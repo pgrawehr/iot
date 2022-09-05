@@ -42,6 +42,17 @@ namespace Iot.Device.Nmea0183.Ais
             _messageFactory = messageFactory;
             _payloadEncoder = payloadEncoder;
             _nextFragmentedMessageId = 1;
+            GeneratedSentencesId = VdoId;
+        }
+
+        /// <summary>
+        /// Which <see cref="SentenceId"/> generated AIS messages should get. Meaningful values are <see cref="VdmId"/> or <see cref="VdoId"/>.
+        /// Default is "VDO"
+        /// </summary>
+        public SentenceId GeneratedSentencesId
+        {
+            get;
+            set;
         }
 
         /// <summary>
@@ -189,7 +200,7 @@ namespace Iot.Device.Nmea0183.Ais
                     parts.Add("0");
                 }
 
-                RawSentence rs = new RawSentence(TalkerId.Ais, new SentenceId("VDM"), parts, DateTimeOffset.UtcNow);
+                RawSentence rs = new RawSentence(TalkerId.Ais, GeneratedSentencesId, parts, DateTimeOffset.UtcNow);
                 ret.Add(rs);
                 blockNumber++;
             }
