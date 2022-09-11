@@ -19,7 +19,9 @@ namespace Iot.Device.Nmea0183
 {
     public class AisManager : NmeaSinkAndSource
     {
-        private const int WarningRepeatTimeoutMinutes = 10;
+        private static readonly TimeSpan WarningRepeatTimeout = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan CleanupLatency = TimeSpan.FromSeconds(30);
+
         private readonly bool _throwOnUnknownMessage;
 
         private AisParser _aisParser;
@@ -34,6 +36,8 @@ namespace Iot.Device.Nmea0183
         private ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)> _activeWarnings;
 
         private object _lock;
+
+        private DateTimeOffset? _lastCleanupCheck;
 
         /// <summary>
         /// This event fires when a new message (individual or broadcast) is received.
@@ -59,6 +63,8 @@ namespace Iot.Device.Nmea0183
             _activeWarnings = new ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)>();
             AllowedPositionAge = TimeSpan.FromMinutes(1);
             AutoSendWarnings = true;
+            _lastCleanupCheck = null;
+            DeleteTargetAfterTimeout = TimeSpan.Zero;
         }
 
         /// <summary>
@@ -88,6 +94,13 @@ namespace Iot.Device.Nmea0183
         /// such as an AIS-Sart target)
         /// </summary>
         public bool AutoSendWarnings { get; set; }
+
+        /// <summary>
+        /// If a target has not been updated for this time, it is deleted from the list of targets.
+        /// Additionally, client software should consider targets as lost whose <see cref="AisTarget.LastSeen"/> value is older than a minute or so.
+        /// A value of 0 or less means infinite.
+        /// </summary>
+        public TimeSpan DeleteTargetAfterTimeout { get; set; }
 
         /// <summary>
         /// Which <see cref="SentenceId"/> generated AIS messages should get. Meaningful values are <see cref="AisParser.VdmId"/> or <see cref="AisParser.VdoId"/>.
@@ -245,6 +258,9 @@ namespace Iot.Device.Nmea0183
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             _cache.Add(sentence);
+
+            DoCleanup(sentence.DateTime);
+
             AisMessage? msg = _aisParser.Parse(sentence);
             if (msg == null)
             {
@@ -521,7 +537,7 @@ namespace Iot.Device.Nmea0183
         {
             if (_activeWarnings.TryGetValue(messageId, out var msg))
             {
-                if (msg.TimeStamp + TimeSpan.FromMinutes(WarningRepeatTimeoutMinutes) > DateTimeOffset.UtcNow)
+                if (msg.TimeStamp + WarningRepeatTimeout > DateTimeOffset.UtcNow)
                 {
                     return false;
                 }
@@ -606,6 +622,34 @@ namespace Iot.Device.Nmea0183
             else
             {
                 throw new NotSupportedException("Only class A messages can currently be constructed");
+            }
+        }
+
+        /// <summary>
+        /// Regularly scan our database to check for outdated targets. This is done from
+        /// the parser thread, so we don't need to create a separate thread just for this.
+        /// </summary>
+        /// <param name="currentTime">The time of the last packet</param>
+        private void DoCleanup(DateTimeOffset currentTime)
+        {
+            if (DeleteTargetAfterTimeout <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+            // Do if the cleanuplatency has elapsed
+            if (_lastCleanupCheck == null || _lastCleanupCheck.Value + CleanupLatency < currentTime)
+            {
+                lock (_lock)
+                {
+                    foreach (var t in _targets.Values)
+                    {
+                        if (t.Age(currentTime) > DeleteTargetAfterTimeout)
+                        {
+                            _targets.TryRemove(t.Mmsi, out _);
+                        }
+                    }
+                }
             }
         }
     }
