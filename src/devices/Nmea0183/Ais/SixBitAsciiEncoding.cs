@@ -47,7 +47,7 @@ namespace Iot.Device.Nmea0183.Ais
             }
 
             // The encoding is not exactly reversible, so add some improved replacements
-            _encodingDictionary.Add('°', 58); // * instead of ° for the degree sign
+            _encodingDictionary.Add('°', 42); // * instead of ° for the degree sign
         }
 
         public override int GetByteCount(char[] chars, int index, int count)

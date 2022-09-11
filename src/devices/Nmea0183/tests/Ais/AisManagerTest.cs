@@ -273,7 +273,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                 warningReceived = true;
                 source.ShouldBeEquivalentTo(970001001u);
                 destination.ShouldBeEquivalentTo(0u);
-                text.ShouldBeEquivalentTo("AIS SART TARGET ACTIVATED: MMSI 970001001 IN POSITION 53_ 42.0'N 9_ 26.4'E! DISTANCE 3.248,43 NM");
+                text.ShouldBeEquivalentTo("AIS SART TARGET ACTIVATED: MMSI 970001001 IN POSITION 53* 42.0'N 9* 26.4'E! DISTANCE 3.248,43 NM");
             }
 
             Ship ship = new Ship(970001001) { ShipType = ShipType.OtherType, Position = new GeographicPosition(53.7, 9.44, 0), CourseOverGround = Angle.FromDegrees(220) };

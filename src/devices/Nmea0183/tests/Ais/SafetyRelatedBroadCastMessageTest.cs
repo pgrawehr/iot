@@ -21,7 +21,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
 
             sentences.ShouldNotBeEmpty();
 
-            sentences[0].ToNmeaMessage().ShouldBeEquivalentTo("!AIVDM,1,1,,A,>000000PDhhv1Lu8h@,2*60");
+            sentences[0].ToNmeaMessage().ShouldBeEquivalentTo("!AIVDO,1,1,,A,>000000PDhhv1Lu8h@,2*62");
 
             foreach (var m in sentences)
             {
