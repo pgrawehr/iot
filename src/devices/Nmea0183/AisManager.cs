@@ -287,7 +287,7 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.StaticDataReport:
                     {
-                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType);
+                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType, false);
                         if (msg is StaticDataReportPartAMessage msgPartA)
                         {
                             ship.Name = msgPartA.ShipName;
@@ -308,7 +308,7 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.StaticAndVoyageRelatedData:
                     {
-                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType);
+                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType, false);
                         StaticAndVoyageRelatedDataMessage voyage = (StaticAndVoyageRelatedDataMessage)msg;
                         ship.Name = voyage.ShipName;
                         ship.CallSign = voyage.CallSign;

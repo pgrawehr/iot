@@ -576,10 +576,11 @@ namespace DisplayControl
 
                 case DepthBelowSurface dpt when dpt.Valid:
                     _manager.UpdateValue(SensorMeasurement.WaterDepth, dpt.Depth);
-                    if (dpt.Depth < Length.FromMeters(10))
-                    {
-                        _aisManager.SendWarningMessage("DEPTH", 0, $"It's only {dpt.Depth} deep!");
-                    }
+                    ////if (dpt.Depth < Length.FromMeters(10))
+                    ////{
+                    ////    // For test purposes (the displays already do this)
+                    ////    _aisManager.SendWarningMessage("DEPTH", 0, $"It's only {dpt.Depth} deep!");
+                    ////}
                     break;
 
                 case WaterSpeedAndAngle vhw when vhw.Valid:
