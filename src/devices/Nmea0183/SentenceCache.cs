@@ -176,7 +176,7 @@ namespace Iot.Device.Nmea0183
             List<(GeographicPosition, TimeSpan)> orderablePositions = new List<(GeographicPosition, TimeSpan)>();
             if (gll != null && gll.Position.ContainsValidPosition())
             {
-                orderablePositions.Add((gll.Position, gll.Age));
+                orderablePositions.Add((gll.Position, gll.AgeTo(now)));
                 messageTime = gll.DateTime;
             }
 
@@ -185,7 +185,7 @@ namespace Iot.Device.Nmea0183
             {
                 if (gga != null && gga.Valid)
                 {
-                    orderablePositions.Add((gga.Position, gga.Age));
+                    orderablePositions.Add((gga.Position, gga.AgeTo(now)));
                     messageTime = gga.DateTime;
                 }
 
@@ -193,7 +193,7 @@ namespace Iot.Device.Nmea0183
                 {
                     if (rmc != null && rmc.Valid)
                     {
-                        orderablePositions.Add((rmc.Position, rmc.Age));
+                        orderablePositions.Add((rmc.Position, rmc.AgeTo(now)));
                         messageTime = rmc.DateTime;
                     }
                 }

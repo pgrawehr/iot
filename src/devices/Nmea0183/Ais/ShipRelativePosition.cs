@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Ais
@@ -47,5 +46,17 @@ namespace Iot.Device.Nmea0183.Ais
         /// </summary>
         public Angle? RelativeDirection { get; init; }
 
+        public Length? ClosestPointOfApproach { get; set; }
+        public DateTimeOffset? TimeOfClosestPointOfApproach { get; set; }
+
+        public TimeSpan? TimeToClosestPointOfApproach(DateTimeOffset now)
+        {
+            if (!TimeOfClosestPointOfApproach.HasValue)
+            {
+                return null;
+            }
+
+            return TimeOfClosestPointOfApproach - now;
+        }
     }
 }

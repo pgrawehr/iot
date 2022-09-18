@@ -81,46 +81,99 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             own.SpeedOverGround.ShouldBeInRange(Speed.FromKnots(2), Speed.FromKnots(5));
         }
 
+        [Fact]
+        public void CheckSafety1()
+        {
+            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-2021-08-25-16-25.txt");
+            DateTimeOffset latestPacketDate = default;
+            reader.OnNewSequence += (source, msg) =>
+            {
+                _manager.SendSentence(source, msg);
+                latestPacketDate = msg.DateTime;
+            };
+
+            reader.StartDecode();
+            reader.StopDecode();
+
+            Ship ownShip;
+            Assert.True(_manager.GetOwnShipData(out ownShip, latestPacketDate));
+
+            Assert.Equal(0, ownShip.DistanceTo(ownShip).Meters, 4);
+
+            foreach (var ship in _manager.GetTargets())
+            {
+                if (!ship.Position.ContainsValidPosition())
+                {
+                    continue;
+                }
+
+                var distance = ownShip.DistanceTo(ship);
+                distance.ShouldBeGreaterThan(Length.FromMeters(50));
+                distance.ShouldBeLessThan(Length.FromNauticalMiles(30));
+
+                var age = ship.Age(latestPacketDate);
+                if (age.Duration() > TimeSpan.FromMinutes(5))
+                {
+                    continue;
+                }
+
+                var relativePosition = ownShip.RelativePositionTo(ship, latestPacketDate);
+                Assert.True(relativePosition.From == ownShip);
+                Assert.True(relativePosition.To == ship);
+                // Some error is acceptable, since "distance" is not corrected for the time between the now and the last position
+                Assert.Equal(distance.Kilometers, relativePosition.Distance.Kilometers, 2);
+            }
+
+            var ship1 = _manager.GetTarget(211810280) as Ship;
+            Assert.NotNull(ship1);
+            var relativePos1 = ownShip.RelativePositionTo(ship1!, latestPacketDate);
+            Assert.True(relativePos1.TimeOfClosestPointOfApproach.HasValue);
+            Assert.True(relativePos1.ClosestPointOfApproach.HasValue);
+
+            Assert.True(relativePos1.ClosestPointOfApproach < relativePos1.Distance);
+            Assert.Equal(TimeSpan.FromMinutes(1), relativePos1.TimeToClosestPointOfApproach(latestPacketDate));
+        }
+
         ////[Fact]
-        ////public void FeedWithMuchData()
-        ////{
-        ////    // This file contains virtual Aid-to-navigation targets (but only few ships)
-        ////    var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-29\\", "*.txt", SearchOption.TopDirectoryOnly);
-        ////    using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", files);
-        ////    reader.OnNewSequence += (source, msg) =>
-        ////    {
-        ////        _manager.SendSentence(source, msg);
-        ////    };
+            ////public void FeedWithMuchData()
+            ////{
+            ////    // This file contains virtual Aid-to-navigation targets (but only few ships)
+            ////    var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-29\\", "*.txt", SearchOption.TopDirectoryOnly);
+            ////    using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", files);
+            ////    reader.OnNewSequence += (source, msg) =>
+            ////    {
+            ////        _manager.SendSentence(source, msg);
+            ////    };
 
-        ////    reader.StartDecode();
-        ////    reader.StopDecode();
+            ////    reader.StartDecode();
+            ////    reader.StopDecode();
 
-        ////    var ships = _manager.GetSpecificTargets<Ship>();
-        ////    ships.ShouldNotBeEmpty();
-        ////    Assert.True(ships.All(x => x.Mmsi != 0));
-        ////    foreach (var s in ships)
-        ////    {
-        ////        // The recording is from somewhere in the baltic, so this is a very broad bounding rectangle.
-        ////        // If this is exceeded, the position decoding was most likely wrong.
-        ////        if (s.Position.ContainsValidPosition())
-        ////        {
-        ////            s.Position.Longitude.ShouldBeInRange(9.0, 10.5);
-        ////            s.Position.Latitude.ShouldBeInRange(56.0, 58.0);
-        ////        }
+            ////    var ships = _manager.GetSpecificTargets<Ship>();
+            ////    ships.ShouldNotBeEmpty();
+            ////    Assert.True(ships.All(x => x.Mmsi != 0));
+            ////    foreach (var s in ships)
+            ////    {
+            ////        // The recording is from somewhere in the baltic, so this is a very broad bounding rectangle.
+            ////        // If this is exceeded, the position decoding was most likely wrong.
+            ////        if (s.Position.ContainsValidPosition())
+            ////        {
+            ////            s.Position.Longitude.ShouldBeInRange(9.0, 10.5);
+            ////            s.Position.Latitude.ShouldBeInRange(56.0, 58.0);
+            ////        }
 
-        ////        if (!string.IsNullOrEmpty(s.Name))
-        ////        {
-        ////            Assert.True(s.Name.Length <= 20);
-        ////            Assert.True(s.Name.All(x => x < 0x128 && x >= ' ')); // Only printable ascii letters
-        ////        }
-        ////    }
+            ////        if (!string.IsNullOrEmpty(s.Name))
+            ////        {
+            ////            Assert.True(s.Name.Length <= 20);
+            ////            Assert.True(s.Name.All(x => x < 0x128 && x >= ' ')); // Only printable ascii letters
+            ////        }
+            ////    }
 
-        ////    // Check we have at least one A and B type message that contain name and a valid position
-        ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.A && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
-        ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
+            ////    // Check we have at least one A and B type message that contain name and a valid position
+            ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.A && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
+            ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
 
-        ////    _manager.GetSpecificTargets<BaseStation>().ShouldNotBeEmpty();
-        ////}
+            ////    _manager.GetSpecificTargets<BaseStation>().ShouldNotBeEmpty();
+            ////}
 
         [Fact]
         public void CheckSpecialTargetDecode()

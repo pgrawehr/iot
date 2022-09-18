@@ -17,6 +17,7 @@ namespace Iot.Device.Nmea0183.Ais
         {
             Mmsi = mmsi;
             Position = new GeographicPosition();
+            IsEstimate = false;
         }
 
         /// <summary>
@@ -26,9 +27,19 @@ namespace Iot.Device.Nmea0183.Ais
         public uint Mmsi { get; }
 
         /// <summary>
-        /// The time when we received the last message from this target
+        /// The time when we received the last message from this target. When this is an estimated instance, this gives
+        /// the time of the current estimate.
         /// </summary>
         public DateTimeOffset LastSeen
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Returns true if this instance contains estimates (e.g. over a future position of a vessel)
+        /// </summary>
+        public bool IsEstimate
         {
             get;
             set;

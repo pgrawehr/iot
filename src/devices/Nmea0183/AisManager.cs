@@ -151,6 +151,7 @@ namespace Iot.Device.Nmea0183
                 s.CourseOverGround = track;
                 s.SpeedOverGround = sog;
                 s.TrueHeading = heading;
+                s.LastSeen = messageTime;
                 ownShip = s;
                 return false;
             }
@@ -159,6 +160,7 @@ namespace Iot.Device.Nmea0183
             s.CourseOverGround = track;
             s.SpeedOverGround = sog;
             s.TrueHeading = heading;
+            s.LastSeen = messageTime;
 
             ownShip = s;
             return true;
@@ -183,11 +185,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        private Ship GetOrCreateShip(uint mmsi, AisTransceiverClass transceiverClass, bool updateLastSeen = true)
+        private Ship GetOrCreateShip(uint mmsi, AisTransceiverClass transceiverClass, DateTimeOffset? lastSeenTime)
         {
             lock (_lock)
             {
-                var ship = GetOrCreateTarget<Ship>(mmsi, x => new Ship(x), updateLastSeen);
+                var ship = GetOrCreateTarget<Ship>(mmsi, x => new Ship(x), lastSeenTime);
 
                 // The transceiver type is derived from the message type (a PositionReportClassA message is obviously only sent by class A equipment)
                 if (transceiverClass != AisTransceiverClass.Unknown)
@@ -199,7 +201,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        private T GetOrCreateTarget<T>(uint mmsi, Func<uint, T> constructor, bool updateLastSeen = true)
+        private T GetOrCreateTarget<T>(uint mmsi, Func<uint, T> constructor, DateTimeOffset? lastSeenTime)
         where T : AisTarget
         {
             lock (_lock)
@@ -219,23 +221,23 @@ namespace Iot.Device.Nmea0183
                     _targets.TryAdd(mmsi, ship);
                 }
 
-                if (updateLastSeen && ship != null)
+                if (lastSeenTime.HasValue && ship != null)
                 {
-                    ship.LastSeen = DateTimeOffset.UtcNow;
+                    ship.LastSeen = lastSeenTime.Value;
                 }
 
                 return ship!;
             }
         }
 
-        private BaseStation GetOrCreateBaseStation(uint mmsi, AisTransceiverClass transceiverClass, bool updateLastSeen = true)
+        private BaseStation GetOrCreateBaseStation(uint mmsi, AisTransceiverClass transceiverClass, DateTimeOffset? lastSeenTime)
         {
-            return GetOrCreateTarget<BaseStation>(mmsi, x => new BaseStation(mmsi), updateLastSeen);
+            return GetOrCreateTarget<BaseStation>(mmsi, x => new BaseStation(mmsi), lastSeenTime);
         }
 
-        private SarAircraft GetOrCreateSarAircraft(uint mmsi, bool updateLastSeen = true)
+        private SarAircraft GetOrCreateSarAircraft(uint mmsi, DateTimeOffset? lastSeenTime)
         {
-            return GetOrCreateTarget<SarAircraft>(mmsi, x => new SarAircraft(mmsi), updateLastSeen);
+            return GetOrCreateTarget<SarAircraft>(mmsi, x => new SarAircraft(mmsi), lastSeenTime);
         }
 
         public IEnumerable<AisTarget> GetTargets()
@@ -278,7 +280,7 @@ namespace Iot.Device.Nmea0183
                     case AisMessageType.PositionReportClassAResponseToInterrogation:
                     {
                         PositionReportClassAMessageBase msgPos = (PositionReportClassAMessageBase)msg;
-                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
+                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType, sentence.DateTime);
                         PositionReportClassAToShip(ship, msgPos);
 
                         CheckIsExceptionalTarget(ship);
@@ -287,7 +289,7 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.StaticDataReport:
                     {
-                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType, false);
+                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType, null);
                         if (msg is StaticDataReportPartAMessage msgPartA)
                         {
                             ship.Name = msgPartA.ShipName;
@@ -308,7 +310,7 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.StaticAndVoyageRelatedData:
                     {
-                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType, false);
+                        ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType, null);
                         StaticAndVoyageRelatedDataMessage voyage = (StaticAndVoyageRelatedDataMessage)msg;
                         ship.Name = voyage.ShipName;
                         ship.CallSign = voyage.CallSign;
@@ -350,7 +352,7 @@ namespace Iot.Device.Nmea0183
                     case AisMessageType.StandardClassBCsPositionReport:
                     {
                         StandardClassBCsPositionReportMessage msgPos = (StandardClassBCsPositionReportMessage)msg;
-                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
+                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType, sentence.DateTime);
                         ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
                         ship.RateOfTurn = null;
                         if (msgPos.TrueHeading.HasValue)
@@ -371,7 +373,7 @@ namespace Iot.Device.Nmea0183
                     case AisMessageType.ExtendedClassBCsPositionReport:
                     {
                         ExtendedClassBCsPositionReportMessage msgPos = (ExtendedClassBCsPositionReportMessage)msg;
-                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType);
+                        ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType, sentence.DateTime);
                         ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
                         ship.RateOfTurn = null;
                         if (msgPos.TrueHeading.HasValue)
@@ -398,7 +400,7 @@ namespace Iot.Device.Nmea0183
                     case AisMessageType.BaseStationReport:
                     {
                         BaseStationReportMessage rpt = (BaseStationReportMessage)msg;
-                        var station = GetOrCreateBaseStation(rpt.Mmsi, rpt.TransceiverType, true);
+                        var station = GetOrCreateBaseStation(rpt.Mmsi, rpt.TransceiverType, sentence.DateTime);
                         station.Position = new GeographicPosition(rpt.Latitude, rpt.Longitude, 0);
                         break;
                     }
@@ -406,7 +408,7 @@ namespace Iot.Device.Nmea0183
                     case AisMessageType.StandardSarAircraftPositionReport:
                     {
                         StandardSarAircraftPositionReportMessage sar = (StandardSarAircraftPositionReportMessage)msg;
-                        var sarAircraft = GetOrCreateSarAircraft(sar.Mmsi);
+                        var sarAircraft = GetOrCreateSarAircraft(sar.Mmsi, sentence.DateTime);
                         // Is the altitude here ellipsoid or geoid? Ships are normally at 0m geoid (unless on a lake, but the AIS system doesn't seem to be designed
                         // for that)
                         sarAircraft.Position = new GeographicPosition(sar.Latitude, sar.Longitude, sar.Altitude);
@@ -418,7 +420,7 @@ namespace Iot.Device.Nmea0183
                     case AisMessageType.AidToNavigationReport:
                     {
                         AidToNavigationReportMessage aton = (AidToNavigationReportMessage)msg;
-                        var navigationTarget = GetOrCreateTarget(aton.Mmsi, x => new AidToNavigation(x), true);
+                        var navigationTarget = GetOrCreateTarget(aton.Mmsi, x => new AidToNavigation(x), sentence.DateTime);
                         navigationTarget.Position = new GeographicPosition(aton.Latitude, aton.Longitude, 0);
                         navigationTarget.Name = aton.Name + aton.NameExtension;
                         navigationTarget.DimensionToBow = Length.FromMeters(aton.DimensionToBow);
@@ -650,6 +652,14 @@ namespace Iot.Device.Nmea0183
                         }
                     }
                 }
+            }
+        }
+
+        public AisTarget? GetTarget(uint mmsi)
+        {
+            lock (_lock)
+            {
+                return _targets.Values.FirstOrDefault(x => x.Mmsi == mmsi);
             }
         }
     }
