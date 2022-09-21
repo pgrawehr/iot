@@ -4,10 +4,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Ais;
@@ -21,6 +23,15 @@ namespace Iot.Device.Nmea0183
     {
         private static readonly TimeSpan WarningRepeatTimeout = TimeSpan.FromMinutes(10);
         private static readonly TimeSpan CleanupLatency = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// Delegate for AIS messages
+        /// </summary>
+        /// <param name="received">True if the message was received from another ship, false if the message is generated internally (e.g. a proximity warning)</param>
+        /// <param name="sourceMmsi">Source MMSI</param>
+        /// <param name="destinationMmsi">Destination MMSI. May be 0 for a broadcast message</param>
+        /// <param name="text">The text of the message.</param>
+        public delegate void AisMessageHandler(bool received, uint sourceMmsi, uint destinationMmsi, string text);
 
         private readonly bool _throwOnUnknownMessage;
 
@@ -40,10 +51,13 @@ namespace Iot.Device.Nmea0183
         private DateTimeOffset? _lastCleanupCheck;
 
         /// <summary>
-        /// This event fires when a new message (individual or broadcast) is received.
-        /// Parameters are: Source MMSI, Destination MMSI (may be 0) and text.
+        /// This event fires when a new message (individual or broadcast) is received and also when the <see cref="AisManager"/> generates own messages.
         /// </summary>
-        public Action<uint, uint, string>? OnMessage;
+        public event AisMessageHandler? OnMessage;
+
+        private bool _aisAlarmsEnabled;
+
+        private Thread? _aisBackgroundThread;
 
         public AisManager(string interfaceName, uint ownMmsi, string ownShipName)
         : this(interfaceName, false, ownMmsi, ownShipName)
@@ -61,10 +75,11 @@ namespace Iot.Device.Nmea0183
             _targets = new ConcurrentDictionary<uint, AisTarget>();
             _lock = new object();
             _activeWarnings = new ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)>();
-            AllowedPositionAge = TimeSpan.FromMinutes(1);
             AutoSendWarnings = true;
             _lastCleanupCheck = null;
             DeleteTargetAfterTimeout = TimeSpan.Zero;
+            _aisAlarmsEnabled = false;
+            TrackEstimationParameters = new TrackEstimationParameters();
         }
 
         /// <summary>
@@ -84,12 +99,6 @@ namespace Iot.Device.Nmea0183
         public Length DimensionToStarboard { get; set; }
 
         /// <summary>
-        /// Maximum age of the position record for a given ship to consider it valid.
-        /// If this is set to a high value, there's a risk of calculating TCPA/CPA based on outdated data.
-        /// </summary>
-        public TimeSpan AllowedPositionAge { get; set; }
-
-        /// <summary>
         /// True to have the component automatically generate warning broadcast messages (when in collision range, or when seeing something unexpected,
         /// such as an AIS-Sart target)
         /// </summary>
@@ -101,6 +110,8 @@ namespace Iot.Device.Nmea0183
         /// A value of 0 or less means infinite.
         /// </summary>
         public TimeSpan DeleteTargetAfterTimeout { get; set; }
+
+        public TrackEstimationParameters TrackEstimationParameters { get; private set; }
 
         /// <summary>
         /// Which <see cref="SentenceId"/> generated AIS messages should get. Meaningful values are <see cref="AisParser.VdmId"/> or <see cref="AisParser.VdoId"/>.
@@ -123,7 +134,7 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="ownShip">Receives the data about the own ship</param>
         /// <returns>True in case of success, false if relevant data is outdated or missing. Returns false if the
-        /// last received position message is older than <see cref="AllowedPositionAge"/>.</returns>
+        /// last received position message is older than <see cref="TrackEstimationParameters.MaximumPositionAge"/>.</returns>
         public bool GetOwnShipData(out Ship ownShip)
         {
             return GetOwnShipData(out ownShip, DateTimeOffset.UtcNow);
@@ -135,7 +146,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="ownShip">Receives the data about the own ship</param>
         /// <param name="currentTime">The current time</param>
         /// <returns>True in case of success, false if relevant data is outdated or missing. Returns false if the
-        /// last received position message is older than <see cref="AllowedPositionAge"/>.</returns>
+        /// last received position message is older than <see cref="TrackEstimationParameters.MaximumPositionAge"/>.</returns>
         public bool GetOwnShipData(out Ship ownShip, DateTimeOffset currentTime)
         {
             var s = new Ship(OwnMmsi);
@@ -145,7 +156,7 @@ namespace Iot.Device.Nmea0183
             s.DimensionToPort = DimensionToPort;
             s.DimensionToStarboard = DimensionToStarboard;
             if (!_cache.TryGetCurrentPosition(out var position, null, true, out var track, out var sog, out var heading,
-                    out var messageTime, currentTime) || (messageTime + AllowedPositionAge) < currentTime)
+                    out var messageTime, currentTime) || (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
             {
                 s.Position = position ?? new GeographicPosition();
                 s.CourseOverGround = track;
@@ -283,7 +294,7 @@ namespace Iot.Device.Nmea0183
                         ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType, sentence.DateTime);
                         PositionReportClassAToShip(ship, msgPos);
 
-                        CheckIsExceptionalTarget(ship);
+                        CheckIsExceptionalTarget(ship, sentence.DateTime);
                         break;
                     }
 
@@ -304,7 +315,7 @@ namespace Iot.Device.Nmea0183
                             ship.DimensionToStarboard = Length.FromMeters(msgPartB.DimensionToStarboard);
                         }
 
-                        CheckIsExceptionalTarget(ship);
+                        CheckIsExceptionalTarget(ship, sentence.DateTime);
                         break;
                     }
 
@@ -345,7 +356,7 @@ namespace Iot.Device.Nmea0183
                             ship.EstimatedTimeOfArrival = null; // may be deleted by the user
                         }
 
-                        CheckIsExceptionalTarget(ship);
+                        CheckIsExceptionalTarget(ship, sentence.DateTime);
                         break;
                     }
 
@@ -366,7 +377,7 @@ namespace Iot.Device.Nmea0183
 
                         ship.CourseOverGround = Angle.FromDegrees(msgPos.CourseOverGround);
                         ship.SpeedOverGround = Speed.FromKnots(msgPos.SpeedOverGround);
-                        CheckIsExceptionalTarget(ship);
+                        CheckIsExceptionalTarget(ship, sentence.DateTime);
                         break;
                     }
 
@@ -393,7 +404,7 @@ namespace Iot.Device.Nmea0183
                         ship.DimensionToStarboard = Length.FromMeters(msgPos.DimensionToStarboard);
                         ship.ShipType = msgPos.ShipType;
                         ship.Name = msgPos.Name;
-                        CheckIsExceptionalTarget(ship);
+                        CheckIsExceptionalTarget(ship, sentence.DateTime);
                         break;
                     }
 
@@ -447,14 +458,14 @@ namespace Iot.Device.Nmea0183
                     case AisMessageType.AddressedSafetyRelatedMessage:
                     {
                         AddressedSafetyRelatedMessage addressedSafetyRelatedMessage = (AddressedSafetyRelatedMessage)msg;
-                        OnMessage?.Invoke(addressedSafetyRelatedMessage.Mmsi, addressedSafetyRelatedMessage.DestinationMmsi, addressedSafetyRelatedMessage.Text);
+                        OnMessage?.Invoke(true, addressedSafetyRelatedMessage.Mmsi, addressedSafetyRelatedMessage.DestinationMmsi, addressedSafetyRelatedMessage.Text);
                         break;
                     }
 
                     case AisMessageType.SafetyRelatedBroadcastMessage:
                     {
                         SafetyRelatedBroadcastMessage broadcastMessage = (SafetyRelatedBroadcastMessage)msg;
-                        OnMessage?.Invoke(broadcastMessage.Mmsi, 0, broadcastMessage.Text);
+                        OnMessage?.Invoke(true, broadcastMessage.Mmsi, 0, broadcastMessage.Text);
                         break;
                     }
 
@@ -498,14 +509,14 @@ namespace Iot.Device.Nmea0183
             ship.NavigationStatus = positionReport.NavigationStatus;
         }
 
-        private void CheckIsExceptionalTarget(Ship ship)
+        private void CheckIsExceptionalTarget(Ship ship, DateTimeOffset now)
         {
             void SendMessage(Ship ship, string type)
             {
                 GetOwnShipData(out Ship ownShip); // take in in either case
                 Length distance = ownShip.DistanceTo(ship);
                 SendWarningMessage(ship.FormatMmsi(), ship.Mmsi,
-                    $"{type} Target activated: MMSI {ship.Mmsi} in Position {ship.Position:M1 M1}! Distance {distance}");
+                    $"{type} Target activated: MMSI {ship.Mmsi} in Position {ship.Position:M1 M1}! Distance {distance}", now);
             }
 
             if (AutoSendWarnings == false)
@@ -537,9 +548,22 @@ namespace Iot.Device.Nmea0183
         /// <returns>True if the message was sent, false otherwise</returns>
         public bool SendWarningMessage(string messageId, uint sourceMmsi, string messageText)
         {
+            return SendWarningMessage(messageId, sourceMmsi, messageText, DateTimeOffset.UtcNow);
+        }
+
+        /// <summary>
+        /// Sends a message with the given <paramref name="messageText"/> as an AIS broadcast message
+        /// </summary>
+        /// <param name="messageId">Identifies the message. Messages with the same ID are only sent once, until the timeout elapses</param>
+        /// <param name="sourceMmsi">Source MMSI, can be 0 if irrelevant/unknown</param>
+        /// <param name="messageText">The text of the message. Supports only the AIS 6-bit character set.</param>
+        /// <param name="now">The current time (to verify the timeout against)</param>
+        /// <returns>True if the message was sent, false otherwise</returns>
+        public bool SendWarningMessage(string messageId, uint sourceMmsi, string messageText, DateTimeOffset now)
+        {
             if (_activeWarnings.TryGetValue(messageId, out var msg))
             {
-                if (msg.TimeStamp + WarningRepeatTimeout > DateTimeOffset.UtcNow)
+                if (msg.TimeStamp + WarningRepeatTimeout > now)
                 {
                     return false;
                 }
@@ -547,7 +571,7 @@ namespace Iot.Device.Nmea0183
                 _activeWarnings.TryRemove(messageId, out _);
             }
 
-            if (_activeWarnings.TryAdd(messageId, (messageText, DateTimeOffset.UtcNow)))
+            if (_activeWarnings.TryAdd(messageId, (messageText, now)))
             {
                 SendBroadcastMessage(sourceMmsi, messageText);
                 return true;
@@ -561,6 +585,7 @@ namespace Iot.Device.Nmea0183
             SafetyRelatedBroadcastMessage msg = new SafetyRelatedBroadcastMessage();
             msg.Mmsi = sourceMmsi;
             msg.Text = text;
+            OnMessage?.Invoke(false, sourceMmsi, 0, text);
             List<NmeaSentence> sentences = _aisParser.ToSentences(msg);
             foreach (var s in sentences)
             {
@@ -570,6 +595,7 @@ namespace Iot.Device.Nmea0183
 
         public override void StopDecode()
         {
+            EnableAisAlarms(false, null);
             _activeWarnings.Clear();
         }
 
@@ -661,6 +687,113 @@ namespace Iot.Device.Nmea0183
             {
                 return _targets.Values.FirstOrDefault(x => x.Mmsi == mmsi);
             }
+        }
+
+        public void EnableAisAlarms(bool enable, TrackEstimationParameters? parameters = null)
+        {
+            _aisAlarmsEnabled = enable;
+            if (parameters != null)
+            {
+                TrackEstimationParameters = parameters;
+            }
+
+            if (enable)
+            {
+                var t = _aisBackgroundThread;
+                if (t != null && t.IsAlive)
+                {
+                    return;
+                }
+
+                t = new Thread(AisAlarmThread);
+                t.Start();
+                _aisBackgroundThread = t;
+            }
+            else
+            {
+                var t = _aisBackgroundThread;
+                if (t != null)
+                {
+                    t.Join();
+                    _aisBackgroundThread = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// This operation may be very expensive, so we need to do it in its own thread
+        /// </summary>
+        private void AisAlarmThread()
+        {
+            AisAlarmThread(DateTimeOffset.UtcNow);
+        }
+
+        /// <summary>
+        /// This operation may be very expensive, so we need to do it in its own thread
+        /// </summary>
+        /// <param name="time">The current time (used mainly for testing)</param>
+        internal void AisAlarmThread(DateTimeOffset time)
+        {
+            Stopwatch sw = new Stopwatch();
+            // This uses a do-while for easier testability
+            do
+            {
+                Ship ownShip;
+                if (GetOwnShipData(out ownShip, time) == false)
+                {
+                    if (TrackEstimationParameters.WarnIfGnssMissing)
+                    {
+                        if (ownShip.Position.ContainsValidPosition())
+                        {
+                            // Data is valid, but old
+                            SendWarningMessage("GNSSOLD", ownShip.Mmsi, "GNSS fix lost. No current position");
+                        }
+                        else
+                        {
+                            SendWarningMessage("NOGNSS", ownShip.Mmsi, "No GNSS data");
+                        }
+                    }
+
+                    Thread.Sleep(TrackEstimationParameters.AisSafetyCheckInterval);
+                    goto nextloop;
+                }
+
+                sw.Restart();
+
+                // it's a ConcurrentDictionary, so iterating over it without a lock is fine
+                foreach (var oneOtherShip in _targets.Values)
+                {
+                    if (oneOtherShip.Position.ContainsValidPosition() == false)
+                    {
+                        continue;
+                    }
+
+                    ShipRelativePosition difference = ownShip.RelativePositionTo(oneOtherShip, time, TrackEstimationParameters);
+                    var timeToClosest = difference.TimeToClosestPointOfApproach(time);
+                    if (difference.ClosestPointOfApproach < TrackEstimationParameters.WarningDistance &&
+                        timeToClosest > -TimeSpan.FromMinutes(1) && timeToClosest < TrackEstimationParameters.WarningTime)
+                    {
+                        // Warn if the ship will be closer than the warning distance in less than the WarningTime
+                        string name = oneOtherShip.Name ?? oneOtherShip.FormatMmsi();
+                        SendWarningMessage("DANGEROUS VESSEL-" + oneOtherShip.Mmsi, oneOtherShip.Mmsi, $"{name} is dangerously close. CPA {difference.ClosestPointOfApproach}; TCPA {timeToClosest:mm\\:ss}", time);
+                    }
+                }
+
+                nextloop:
+                // Restart the loop every check interval if the current interval used less time than allocated.
+                // We always wait at least 20ms, so that we don't fully block the CPU (even thought that could be really a small amount)
+                if (TrackEstimationParameters.AisSafetyCheckInterval > TimeSpan.Zero)
+                {
+                    TimeSpan remaining = TrackEstimationParameters.AisSafetyCheckInterval - sw.Elapsed;
+                    if (remaining < TimeSpan.FromMilliseconds(20))
+                    {
+                        remaining = TimeSpan.FromMilliseconds(20);
+                    }
+
+                    Thread.Sleep(remaining);
+                }
+            }
+            while (_aisAlarmsEnabled);
         }
     }
 }

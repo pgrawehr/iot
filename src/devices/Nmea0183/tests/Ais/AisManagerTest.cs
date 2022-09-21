@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.Sentences;
@@ -17,18 +18,24 @@ using NavigationStatus = Iot.Device.Nmea0183.Ais.NavigationStatus;
 
 namespace Iot.Device.Nmea0183.Tests.Ais
 {
-    public class AisManagerTest
+    public class AisManagerTest : IDisposable
     {
-        private AisManager _manager;
+        private readonly AisManager _manager;
+
         public AisManagerTest()
         {
             _manager = new AisManager("Test", true, 269110660u, "Cirrus");
         }
 
+        public void Dispose()
+        {
+            _manager.Dispose();
+        }
+
         [Fact]
         public void Initialisation()
         {
-            _manager.AllowedPositionAge.ShouldBeEquivalentTo(TimeSpan.FromMinutes(1));
+            _manager.TrackEstimationParameters.MaximumPositionAge.ShouldBeEquivalentTo(TimeSpan.FromMinutes(1));
             _manager.DimensionToStern.ShouldBeEquivalentTo(Length.Zero);
             _manager.OwnMmsi.ShouldBeEquivalentTo(269110660u);
             _manager.OwnShipName.ShouldNotBeEmpty();
@@ -117,63 +124,125 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                     continue;
                 }
 
-                var relativePosition = ownShip.RelativePositionTo(ship, latestPacketDate);
+                var relativePosition = ownShip.RelativePositionTo(ship, latestPacketDate, new TrackEstimationParameters());
                 Assert.True(relativePosition.From == ownShip);
                 Assert.True(relativePosition.To == ship);
                 // Some error is acceptable, since "distance" is not corrected for the time between the now and the last position
-                Assert.Equal(distance.Kilometers, relativePosition.Distance.Kilometers, 2);
+                Assert.True(Math.Abs(distance.Meters - relativePosition.Distance.Meters) < 100);
             }
 
             var ship1 = _manager.GetTarget(211810280) as Ship;
             Assert.NotNull(ship1);
-            var relativePos1 = ownShip.RelativePositionTo(ship1!, latestPacketDate);
+            var relativePos1 = ownShip.RelativePositionTo(ship1!, latestPacketDate, new TrackEstimationParameters());
             Assert.True(relativePos1.TimeOfClosestPointOfApproach.HasValue);
             Assert.True(relativePos1.ClosestPointOfApproach.HasValue);
 
             Assert.True(relativePos1.ClosestPointOfApproach < relativePos1.Distance);
-            Assert.Equal(TimeSpan.FromMinutes(1), relativePos1.TimeToClosestPointOfApproach(latestPacketDate));
+            Assert.True(relativePos1.TimeToClosestPointOfApproach(latestPacketDate) < TimeSpan.Zero);
+
+            // this ship is directly moving towards us at the end of the test sequence (if we didn't move, and ignoring that
+            // in reality, the test data set is from a river with many bends and even drawbridges)
+            ship1 = _manager.GetTarget(305966000) as Ship;
+            Assert.NotNull(ship1);
+            ownShip.SpeedOverGround = Speed.Zero; // Easier to get a close passage if we don't move here
+            relativePos1 = ownShip.RelativePositionTo(ship1!, latestPacketDate, new TrackEstimationParameters());
+            Assert.True(relativePos1.TimeOfClosestPointOfApproach.HasValue);
+            Assert.True(relativePos1.ClosestPointOfApproach.HasValue);
+
+            Assert.True(relativePos1.ClosestPointOfApproach < relativePos1.Distance);
+            Assert.Equal(TimeSpan.FromMinutes(30), relativePos1.TimeToClosestPointOfApproach(latestPacketDate));
+        }
+
+        [Fact]
+        public void CheckSafetyPermanently()
+        {
+            // This does a safety check all the time. Very expensive...
+            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-2021-08-25-16-25.txt");
+            int dangerousMessagesSeen = 0;
+            _manager.TrackEstimationParameters.AisSafetyCheckInterval = TimeSpan.Zero;
+            _manager.OnMessage += (received, sourceMmsi, destinationMmsi, text) =>
+            {
+                if (text.Contains("TCPA"))
+                {
+                    dangerousMessagesSeen++;
+                    Assert.True(sourceMmsi != _manager.OwnMmsi);
+                }
+            };
+
+            reader.OnNewSequence += (source, msg) =>
+            {
+                _manager.SendSentence(source, msg);
+                if (msg.SentenceId == new SentenceId("VDM"))
+                {
+                    // Call directly, so our test is deterministic
+                    _manager.AisAlarmThread(msg.DateTime);
+                }
+            };
+
+            reader.StartDecode();
+            reader.StopDecode();
+
+            Assert.Equal(10, dangerousMessagesSeen);
+        }
+
+        [Fact]
+        public void EnableDisableBackgroundThread()
+        {
+            ManualResetEvent ev = new ManualResetEvent(false);
+            _manager.EnableAisAlarms(true, new TrackEstimationParameters() { AisSafetyCheckInterval = TimeSpan.Zero, WarnIfGnssMissing = true });
+            _manager.OnMessage += (received, sourceMmsi, destinationMmsi, text) =>
+            {
+                if (text.Contains("GNSS"))
+                {
+                    ev.Set();
+                }
+            };
+
+            // Fails if we actually hit the timeout
+            Assert.True(ev.WaitOne(TimeSpan.FromSeconds(30)));
+            _manager.EnableAisAlarms(false);
         }
 
         ////[Fact]
-            ////public void FeedWithMuchData()
-            ////{
-            ////    // This file contains virtual Aid-to-navigation targets (but only few ships)
-            ////    var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-29\\", "*.txt", SearchOption.TopDirectoryOnly);
-            ////    using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", files);
-            ////    reader.OnNewSequence += (source, msg) =>
-            ////    {
-            ////        _manager.SendSentence(source, msg);
-            ////    };
+        ////public void FeedWithMuchData()
+        ////{
+        ////    // This file contains virtual Aid-to-navigation targets (but only few ships)
+        ////    var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-29\\", "*.txt", SearchOption.TopDirectoryOnly);
+        ////    using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", files);
+        ////    reader.OnNewSequence += (source, msg) =>
+        ////    {
+        ////        _manager.SendSentence(source, msg);
+        ////    };
 
-            ////    reader.StartDecode();
-            ////    reader.StopDecode();
+        ////    reader.StartDecode();
+        ////    reader.StopDecode();
 
-            ////    var ships = _manager.GetSpecificTargets<Ship>();
-            ////    ships.ShouldNotBeEmpty();
-            ////    Assert.True(ships.All(x => x.Mmsi != 0));
-            ////    foreach (var s in ships)
-            ////    {
-            ////        // The recording is from somewhere in the baltic, so this is a very broad bounding rectangle.
-            ////        // If this is exceeded, the position decoding was most likely wrong.
-            ////        if (s.Position.ContainsValidPosition())
-            ////        {
-            ////            s.Position.Longitude.ShouldBeInRange(9.0, 10.5);
-            ////            s.Position.Latitude.ShouldBeInRange(56.0, 58.0);
-            ////        }
+        ////    var ships = _manager.GetSpecificTargets<Ship>();
+        ////    ships.ShouldNotBeEmpty();
+        ////    Assert.True(ships.All(x => x.Mmsi != 0));
+        ////    foreach (var s in ships)
+        ////    {
+        ////        // The recording is from somewhere in the baltic, so this is a very broad bounding rectangle.
+        ////        // If this is exceeded, the position decoding was most likely wrong.
+        ////        if (s.Position.ContainsValidPosition())
+        ////        {
+        ////            s.Position.Longitude.ShouldBeInRange(9.0, 10.5);
+        ////            s.Position.Latitude.ShouldBeInRange(56.0, 58.0);
+        ////        }
 
-            ////        if (!string.IsNullOrEmpty(s.Name))
-            ////        {
-            ////            Assert.True(s.Name.Length <= 20);
-            ////            Assert.True(s.Name.All(x => x < 0x128 && x >= ' ')); // Only printable ascii letters
-            ////        }
-            ////    }
+        ////        if (!string.IsNullOrEmpty(s.Name))
+        ////        {
+        ////            Assert.True(s.Name.Length <= 20);
+        ////            Assert.True(s.Name.All(x => x < 0x128 && x >= ' ')); // Only printable ascii letters
+        ////        }
+        ////    }
 
-            ////    // Check we have at least one A and B type message that contain name and a valid position
-            ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.A && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
-            ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
+        ////    // Check we have at least one A and B type message that contain name and a valid position
+        ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.A && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
+        ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
 
-            ////    _manager.GetSpecificTargets<BaseStation>().ShouldNotBeEmpty();
-            ////}
+        ////    _manager.GetSpecificTargets<BaseStation>().ShouldNotBeEmpty();
+        ////}
 
         [Fact]
         public void CheckSpecialTargetDecode()
@@ -321,12 +390,16 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                 sentences.Add(nmeaSentence);
             }
 
-            void MessageReceived(uint source, uint destination, string text)
+            void MessageReceived(bool received, uint source, uint destination, string text)
             {
-                warningReceived = true;
-                source.ShouldBeEquivalentTo(970001001u);
-                destination.ShouldBeEquivalentTo(0u);
-                text.ShouldBeEquivalentTo("AIS SART TARGET ACTIVATED: MMSI 970001001 IN POSITION 53* 42.0'N 9* 26.4'E! DISTANCE 3.248,43 NM");
+                // We get the message twice, but only the second time is tested here
+                if (received)
+                {
+                    warningReceived = true;
+                    source.ShouldBeEquivalentTo(970001001u);
+                    destination.ShouldBeEquivalentTo(0u);
+                    text.ShouldBeEquivalentTo("AIS SART TARGET ACTIVATED: MMSI 970001001 IN POSITION 53* 42.0'N 9* 26.4'E! DISTANCE 3.248,43 NM");
+                }
             }
 
             Ship ship = new Ship(970001001) { ShipType = ShipType.OtherType, Position = new GeographicPosition(53.7, 9.44, 0), CourseOverGround = Angle.FromDegrees(220) };
@@ -337,7 +410,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             _manager.OnMessage += MessageReceived;
 
             _manager.SendSentence(criticalMessage);
-            // This path is actually for received messages
+            // This path is actually for received messages (we use this to decode our own message here)
             _manager.SendSentences(sentences);
 
             _manager.OnNewSequence -= Report;

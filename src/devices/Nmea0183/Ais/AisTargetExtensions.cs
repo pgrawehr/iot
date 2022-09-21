@@ -29,14 +29,9 @@ namespace Iot.Device.Nmea0183.Ais
             return toTime - self.LastSeen;
         }
 
-        public static ShipRelativePosition RelativePositionTo(this Ship self, AisTarget other, DateTimeOffset now)
+        public static ShipRelativePosition RelativePositionTo(this Ship self, AisTarget other, DateTimeOffset now, TrackEstimationParameters parameters)
         {
-            // Iteration constants. We calculate estimated tracks using these positions.
-            TimeSpan startTimeOffset = TimeSpan.FromMinutes(20);
-            TimeSpan normalStepSize = TimeSpan.FromSeconds(10);
-            TimeSpan endTimeOffset = TimeSpan.FromMinutes(20);
-
-            var self1 = EstimatePosition(self, now, normalStepSize);
+            var self1 = EstimatePosition(self, now, parameters.NormalStepSize);
 
             // Todo: If other is a SAR aircraft, convert it to a ship, because it moves
             Ship? otherAsShip = other as Ship;
@@ -52,10 +47,24 @@ namespace Iot.Device.Nmea0183.Ais
                 relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
             }
 
+            AisSafetyState state = AisSafetyState.Safe;
+
+            if (other.LastSeen + parameters.TargetLostTimeout < now)
+            {
+                // For a lost target, don't do a full computation
+                state = AisSafetyState.Lost;
+                otherAsShip = null;
+            }
+
             if (otherAsShip == null)
             {
                 // The other is not a ship - Assume static position
-                return new ShipRelativePosition(self, other, distance, direction)
+                if (distance < parameters.WarningDistance)
+                {
+                    state = AisSafetyState.Dangerous;
+                }
+
+                return new ShipRelativePosition(self, other, distance, direction, state)
                 {
                     RelativeDirection = relativeDirection,
                 };
@@ -64,8 +73,8 @@ namespace Iot.Device.Nmea0183.Ais
             {
                 var otherPos = other.Position;
                 GreatCircle.DistAndDir(self1.Position, otherPos, out distance, out direction);
-                List<Ship> thisTrack = GetEstimatedTrack(self1, now - startTimeOffset, now + endTimeOffset, normalStepSize);
-                List<Ship> otherTrack = GetEstimatedTrack(otherAsShip, now - startTimeOffset, now + endTimeOffset, normalStepSize);
+                List<Ship> thisTrack = GetEstimatedTrack(self1, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
+                List<Ship> otherTrack = GetEstimatedTrack(otherAsShip, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
 
                 if (thisTrack.Count != otherTrack.Count || thisTrack.Count < 1)
                 {
@@ -90,7 +99,7 @@ namespace Iot.Device.Nmea0183.Ais
                 // if the closest point is the first or the last element, we assume it's more than that, and leave the fields empty
                 if (usedIndex == 0 || usedIndex == thisTrack.Count - 1)
                 {
-                    return new ShipRelativePosition(self, other, distance, direction)
+                    return new ShipRelativePosition(self, other, distance, direction, AisSafetyState.Unknown)
                     {
                         RelativeDirection = relativeDirection,
                         ClosestPointOfApproach = null,
@@ -99,12 +108,22 @@ namespace Iot.Device.Nmea0183.Ais
                 }
                 else
                 {
-                    return new ShipRelativePosition(self, other, distance, direction)
+                    var ret = new ShipRelativePosition(self, other, distance, direction, state)
                     {
                         RelativeDirection = relativeDirection,
+                        // Todo: Should subtract the size of both ships here (idealy considering the direction of the ships hulls)
                         ClosestPointOfApproach = minimumDistance,
                         TimeOfClosestPointOfApproach = timeOfMinimumDistance,
                     };
+
+                    var timeToClosest = ret.TimeToClosestPointOfApproach(now);
+                    if (ret.ClosestPointOfApproach < parameters.WarningDistance &&
+                        timeToClosest > -TimeSpan.FromMinutes(1) && timeToClosest < parameters.WarningTime)
+                    {
+                        ret.SafetyState = AisSafetyState.Dangerous;
+                    }
+
+                    return ret;
                 }
             }
         }
