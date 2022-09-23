@@ -29,11 +29,11 @@ namespace Iot.Device.Nmea0183.Ais
         /// Maximum age of the position record for a given ship to consider it valid.
         /// If this is set to a high value, there's a risk of calculating TCPA/CPA based on outdated data.
         /// </summary>
-        public TimeSpan TargetLostTimeout { get; set; }
+        public TimeSpan TargetLostTimeout { get; set; } = TimeSpan.FromMinutes(5);
 
         /// <summary>
         /// Maximum age of our own position to consider it valid
         /// </summary>
-        public TimeSpan MaximumPositionAge { get; set; }
+        public TimeSpan MaximumPositionAge { get; set; } = TimeSpan.FromSeconds(20);
     }
 }

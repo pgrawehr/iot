@@ -35,7 +35,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         [Fact]
         public void Initialisation()
         {
-            _manager.TrackEstimationParameters.MaximumPositionAge.ShouldBeEquivalentTo(TimeSpan.FromMinutes(1));
+            _manager.TrackEstimationParameters.MaximumPositionAge.ShouldBeEquivalentTo(TimeSpan.FromSeconds(20));
             _manager.DimensionToStern.ShouldBeEquivalentTo(Length.Zero);
             _manager.OwnMmsi.ShouldBeEquivalentTo(269110660u);
             _manager.OwnShipName.ShouldNotBeEmpty();
@@ -158,31 +158,35 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         {
             // This does a safety check all the time. Very expensive...
             using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-2021-08-25-16-25.txt");
-            int dangerousMessagesSeen = 0;
+            List<string> messages = new List<string>();
             _manager.TrackEstimationParameters.AisSafetyCheckInterval = TimeSpan.Zero;
             _manager.OnMessage += (received, sourceMmsi, destinationMmsi, text) =>
             {
+                messages.Add(text);
                 if (text.Contains("TCPA"))
                 {
-                    dangerousMessagesSeen++;
                     Assert.True(sourceMmsi != _manager.OwnMmsi);
                 }
             };
 
+            int msgCount = 0;
             reader.OnNewSequence += (source, msg) =>
             {
                 _manager.SendSentence(source, msg);
                 if (msg.SentenceId == new SentenceId("VDM"))
                 {
-                    // Call directly, so our test is deterministic
-                    _manager.AisAlarmThread(msg.DateTime);
+                    if ((msgCount++ % 30) == 0)
+                    {
+                        // Call directly, so our test is deterministic
+                        _manager.AisAlarmThread(msg.DateTime);
+                    }
                 }
             };
 
             reader.StartDecode();
             reader.StopDecode();
 
-            Assert.Equal(10, dangerousMessagesSeen);
+            Assert.Equal(25, messages.Count(x => x.Contains("TCPA")));
         }
 
         [Fact]
