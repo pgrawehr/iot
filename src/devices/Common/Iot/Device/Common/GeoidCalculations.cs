@@ -658,11 +658,7 @@ namespace Iot.Device.Common
             double lat2 = 0,
                 lon2 = 0,
                 azi2 = 0,
-                s12 = 0,
-                m12 = 0,
-                M12 = 0,
-                M21 = 0,
-                S12 = 0;
+                s12 = 0;
 /* Avoid warning about uninitialized B12. */
             double sig12, ssig12, csig12, B12 = 0, AB1 = 0;
             double omg12, lam12, lon12;
@@ -735,8 +731,7 @@ namespace Iot.Device.Common
             calp2 = l.calp0 * csig2; /* No need to normalize */
 
             s12 = s12_a12;
-
-            double E = copysignx(1, l.salp0); /* east or west going? */
+            
 /* tan(omg2) = sin(alp0) * tan(sig2) */
             somg2 = l.salp0 * ssig2;
             comg2 = csig2; /* No need to normalize */
@@ -752,54 +747,6 @@ namespace Iot.Device.Common
             lat2 = atan2dx(sbet2, l.f1 * cbet2);
 
             azi2 = atan2dx(salp2, calp2);
-
-            double
-                B22 = SinCosSeries(TRUE, ssig2, csig2, l.C2a, nC2),
-                AB2 = (1 + l.A2m1) * (B22 - l.B21),
-                J12 = (l.A1m1 - l.A2m1) * sig12 + (AB1 - AB2);
-            /* Add parens around (csig1 * ssig2) and (ssig1 * csig2) to ensure
-                 * accurate cancellation in the case of coincident points. */
-                m12 = l.b * ((dn2 * (l.csig1 * ssig2) - l.dn1 * (l.ssig1 * csig2))
-                             - l.csig1 * csig2 * J12);
-                double t = l.k2 * (ssig2 - l.ssig1) * (ssig2 + l.ssig1) /
-                           (l.dn1 + dn2);
-                M12 = csig12 + (t * ssig2 - csig2 * J12) * l.ssig1 / l.dn1;
-                M21 = csig12 - (t * l.ssig1 - l.csig1 * J12) * ssig2 / dn2;
-
-                double
-                    B42 = SinCosSeries(FALSE, ssig2, csig2, l.C4a, nC4);
-                double salp12, calp12;
-                if (l.calp0 == 0 || l.salp0 == 0)
-                {
-                    /* alp12 = alp2 - alp1, used in atan2 so no need to normalize */
-                    salp12 = salp2 * l.calp1 - calp2 * l.salp1;
-                    calp12 = calp2 * l.calp1 + salp2 * l.salp1;
-                }
-                else
-                {
-                    /* tan(alp) = tan(alp0) * sec(sig)
-                     * tan(alp2-alp1) = (tan(alp2) -tan(alp1)) / (tan(alp2)*tan(alp1)+1)
-                     * = calp0 * salp0 * (csig1-csig2) / (salp0^2 + calp0^2 * csig1*csig2)
-                     * If csig12 > 0, write
-                     *   csig1 - csig2 = ssig12 * (csig1 * ssig12 / (1 + csig12) + ssig1)
-                     * else
-                     *   csig1 - csig2 = csig1 * (1 - csig12) + ssig12 * ssig1
-                     * No need to normalize */
-                    salp12 = l.calp0 * l.salp0 *
-                             (csig12 <= 0 ? l.csig1 * (1 - csig12) + ssig12 * l.ssig1 : ssig12 * (l.csig1 * ssig12 / (1 + csig12) + l.ssig1));
-                    calp12 = sq(l.salp0) + sq(l.calp0) * l.csig1 * csig2;
-                }
-
-                S12 = l.c2 * atan2(salp12, calp12) + l.A4 * (B42 - l.B41);
-
-                /* In the pattern
-                 *
-                 *   if ((outmask & GEOD_XX) && pYY)
-                 *     *pYY = YY;
-                 *
-                 * the second check "&& pYY" is redundant.  It's there to make the CLang
-                 * static analyzer happy.
-                 */
             plat2 = lat2;
             plon2 = lon2;
             pazi2 = azi2;
