@@ -76,7 +76,7 @@ namespace Iot.Device.Common.Tests
             handle.UpdateValue(Speed.FromMetersPerSecond(20));
             handle.UpdateValue(Speed.FromMetersPerSecond(30));
             _manager.ConfigureHistory(handle, TimeSpan.MaxValue, TimeSpan.MaxValue);
-            Assert.Empty(_manager.ObtainHistory(handle, TimeSpan.Zero, TimeSpan.Zero));
+            Assert.Empty(_manager.ObtainHistory(handle, -TimeSpan.FromSeconds(5), TimeSpan.Zero)); // "maxAge" negative, to avoid errors on fast systems
             Assert.NotEmpty(_manager.ObtainHistory(handle, TimeSpan.FromMinutes(2), TimeSpan.Zero));
         }
 
