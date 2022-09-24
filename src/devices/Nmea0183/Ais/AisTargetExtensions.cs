@@ -38,15 +38,6 @@ namespace Iot.Device.Nmea0183.Ais
             Length distance;
             Angle direction;
 
-            GreatCircle.DistAndDir(self.Position, other.Position, out distance, out direction);
-
-            Angle? relativeDirection = null;
-
-            if (self1.TrueHeading.HasValue)
-            {
-                relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
-            }
-
             AisSafetyState state = AisSafetyState.Safe;
 
             if (other.LastSeen + parameters.TargetLostTimeout < now)
@@ -58,6 +49,15 @@ namespace Iot.Device.Nmea0183.Ais
 
             if (otherAsShip == null)
             {
+                GreatCircle.DistAndDir(self.Position, other.Position, out distance, out direction);
+
+                Angle? relativeDirection = null;
+
+                if (self1.TrueHeading.HasValue)
+                {
+                    relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
+                }
+
                 // The other is not a ship - Assume static position
                 if (distance < parameters.WarningDistance)
                 {
@@ -80,6 +80,13 @@ namespace Iot.Device.Nmea0183.Ais
                 {
                     // The two lists must have equal length and contain at least one element
                     throw new InvalidDataException("Internal error: Data structures inconsistent");
+                }
+
+                Angle? relativeDirection = null;
+
+                if (self1.TrueHeading.HasValue)
+                {
+                    relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
                 }
 
                 Length minimumDistance = Length.MaxValue;
