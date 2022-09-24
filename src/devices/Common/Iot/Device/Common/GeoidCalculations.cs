@@ -651,30 +651,9 @@ namespace Iot.Device.Common
             geod_lineinit_int(out l, g, lat1, lon1, azi1, salp1, calp1, caps);
         }
 
-        public static void geod_gendirectline(out geod_geodesicline l,
-            geod_geodesic g,
-            double lat1, double lon1, double azi1,
-            uint flags, double s12_a12,
-            uint caps)
-        {
-            geod_lineinit(out l, g, lat1, lon1, azi1, caps);
-            geod_gensetdistance(l, flags, s12_a12);
-        }
-
-        public static void geod_directline(out geod_geodesicline l,
-            geod_geodesic g,
-            double lat1, double lon1, double azi1,
-            double s12, uint caps)
-        {
-            geod_gendirectline(out l, g, lat1, lon1, azi1, GEOD_NOFLAGS, s12, caps);
-        }
-
         public static double geod_genposition(geod_geodesicline l,
-            uint flags, double s12_a12,
-            out double plat2, out double plon2, out double pazi2,
-            out double ps12, out double pm12,
-            out double pM12, out double pM21,
-            out double pS12)
+            double s12_a12,
+            out double plat2, out double plon2, out double pazi2)
         {
             double lat2 = 0,
                 lon2 = 0,
@@ -688,83 +667,61 @@ namespace Iot.Device.Common
             double sig12, ssig12, csig12, B12 = 0, AB1 = 0;
             double omg12, lam12, lon12;
             double ssig2, csig2, sbet2, cbet2, somg2, comg2, salp2, calp2, dn2;
-            uint outmask = GEOD_ALL;
 
-            outmask &= l.caps & OUT_ALL;
-            if (!( /*Init() &&*/
-                    ((flags & GEOD_ARCMODE) != 0 || (l.caps & (GEOD_DISTANCE_IN & OUT_ALL)) != 0)))
-                /* Uninitialized or impossible distance calculation requested */
-            {
-                plat2 = plon2 = pazi2 = ps12 = pm12 = pM12 = pM21 = pS12 = 0;
-                return NaN;
-            }
-
-            if ((flags & GEOD_ARCMODE) != 0)
-            {
-                /* Interpret s12_a12 as spherical arc length */
-                sig12 = s12_a12 * degree;
-                sincosdx(s12_a12, out ssig12, out csig12);
-            }
-            else
-            {
-                /* Interpret s12_a12 as distance */
-                double
-                    tau12 = s12_a12 / (l.b * (1 + l.A1m1)),
-                    s = sin(tau12),
-                    c = cos(tau12);
+            /* Interpret s12_a12 as distance */
+            double
+                tau12 = s12_a12 / (l.b * (1 + l.A1m1)),
+                s = sin(tau12),
+                c = cos(tau12);
 /* tau2 = tau1 + tau12 */
-                B12 = -SinCosSeries(TRUE,
-                    l.stau1 * c + l.ctau1 * s,
-                    l.ctau1 * c - l.stau1 * s,
-                    l.C1pa, nC1p);
-                sig12 = tau12 - (B12 - l.B11);
+            B12 = -SinCosSeries(TRUE,
+                l.stau1 * c + l.ctau1 * s,
+                l.ctau1 * c - l.stau1 * s,
+                l.C1pa, nC1p);
+            sig12 = tau12 - (B12 - l.B11);
+            ssig12 = sin(sig12);
+            csig12 = cos(sig12);
+            if (fabs(l.f) > 0.01)
+            {
+                /* Reverted distance series is inaccurate for |f| > 1/100, so correct
+                 * sig12 with 1 Newton iteration.  The following table shows the
+                 * approximate maximum error for a = WGS_a() and various f relative to
+                 * GeodesicExact.
+                 *     erri = the error in the inverse solution (nm)
+                 *     errd = the error in the direct solution (series only) (nm)
+                 *     errda = the error in the direct solution (series + 1 Newton) (nm)
+                 *
+                 *       f     erri  errd errda
+                 *     -1/5    12e6 1.2e9  69e6
+                 *     -1/10  123e3  12e6 765e3
+                 *     -1/20   1110 108e3  7155
+                 *     -1/50  18.63 200.9 27.12
+                 *     -1/100 18.63 23.78 23.37
+                 *     -1/150 18.63 21.05 20.26
+                 *      1/150 22.35 24.73 25.83
+                 *      1/100 22.35 25.03 25.31
+                 *      1/50  29.80 231.9 30.44
+                 *      1/20   5376 146e3  10e3
+                 *      1/10  829e3  22e6 1.5e6
+                 *      1/5   157e6 3.8e9 280e6 */
+                double serr;
+                ssig2 = l.ssig1 * csig12 + l.csig1 * ssig12;
+                csig2 = l.csig1 * csig12 - l.ssig1 * ssig12;
+                B12 = SinCosSeries(TRUE, ssig2, csig2, l.C1a, nC1);
+                serr = (1 + l.A1m1) * (sig12 + (B12 - l.B11)) - s12_a12 / l.b;
+                sig12 = sig12 - serr / sqrt(1 + l.k2 * sq(ssig2));
                 ssig12 = sin(sig12);
                 csig12 = cos(sig12);
-                if (fabs(l.f) > 0.01)
-                {
-                    /* Reverted distance series is inaccurate for |f| > 1/100, so correct
-                     * sig12 with 1 Newton iteration.  The following table shows the
-                     * approximate maximum error for a = WGS_a() and various f relative to
-                     * GeodesicExact.
-                     *     erri = the error in the inverse solution (nm)
-                     *     errd = the error in the direct solution (series only) (nm)
-                     *     errda = the error in the direct solution (series + 1 Newton) (nm)
-                     *
-                     *       f     erri  errd errda
-                     *     -1/5    12e6 1.2e9  69e6
-                     *     -1/10  123e3  12e6 765e3
-                     *     -1/20   1110 108e3  7155
-                     *     -1/50  18.63 200.9 27.12
-                     *     -1/100 18.63 23.78 23.37
-                     *     -1/150 18.63 21.05 20.26
-                     *      1/150 22.35 24.73 25.83
-                     *      1/100 22.35 25.03 25.31
-                     *      1/50  29.80 231.9 30.44
-                     *      1/20   5376 146e3  10e3
-                     *      1/10  829e3  22e6 1.5e6
-                     *      1/5   157e6 3.8e9 280e6 */
-                    double serr;
-                    ssig2 = l.ssig1 * csig12 + l.csig1 * ssig12;
-                    csig2 = l.csig1 * csig12 - l.ssig1 * ssig12;
-                    B12 = SinCosSeries(TRUE, ssig2, csig2, l.C1a, nC1);
-                    serr = (1 + l.A1m1) * (sig12 + (B12 - l.B11)) - s12_a12 / l.b;
-                    sig12 = sig12 - serr / sqrt(1 + l.k2 * sq(ssig2));
-                    ssig12 = sin(sig12);
-                    csig12 = cos(sig12);
-                    /* Update B12 below */
-                }
+                /* Update B12 below */
             }
 
             /* sig2 = sig1 + sig12 */
             ssig2 = l.ssig1 * csig12 + l.csig1 * ssig12;
             csig2 = l.csig1 * csig12 - l.ssig1 * ssig12;
             dn2 = sqrt(1 + l.k2 * sq(ssig2));
-            if ((outmask & (GEOD_DISTANCE | GEOD_REDUCEDLENGTH | GEOD_GEODESICSCALE)) != 0)
-            {
-                if (((flags & GEOD_ARCMODE) != 0) || fabs(l.f) > 0.01)
-                    B12 = SinCosSeries(TRUE, ssig2, csig2, l.C1a, nC1);
-                AB1 = (1 + l.A1m1) * (B12 - l.B11);
-            }
+            if (fabs(l.f) > 0.01)
+                B12 = SinCosSeries(TRUE, ssig2, csig2, l.C1a, nC1);
+            AB1 = (1 + l.A1m1) * (B12 - l.B11);
 
             /* sin(bet2) = cos(alp0) * sin(sig2) */
             sbet2 = l.calp0 * ssig2;
@@ -777,57 +734,38 @@ namespace Iot.Device.Common
             salp2 = l.salp0;
             calp2 = l.calp0 * csig2; /* No need to normalize */
 
-            if ((outmask & GEOD_DISTANCE) != 0)
-                s12 = ((flags & GEOD_ARCMODE) != 0) ? l.b * ((1 + l.A1m1) * sig12 + AB1) : s12_a12;
+            s12 = s12_a12;
 
-            if ((outmask & GEOD_LONGITUDE) != 0)
-            {
-                double E = copysignx(1, l.salp0); /* east or west going? */
+            double E = copysignx(1, l.salp0); /* east or west going? */
 /* tan(omg2) = sin(alp0) * tan(sig2) */
-                somg2 = l.salp0 * ssig2;
-                comg2 = csig2; /* No need to normalize */
-                /* omg12 = omg2 - omg1 */
-                omg12 = ((flags & GEOD_LONG_UNROLL) != 0)
-                    ? E * (sig12
-                           - (atan2(ssig2, csig2) - atan2(l.ssig1, l.csig1))
-                           + (atan2(E * somg2, comg2) - atan2(E * l.somg1, l.comg1)))
-                    : atan2(somg2 * l.comg1 - comg2 * l.somg1,
-                        comg2 * l.comg1 + somg2 * l.somg1);
-                lam12 = omg12 + l.A3c *
-                        (sig12 + (SinCosSeries(TRUE, ssig2, csig2, l.C3a, nC3 - 1)
-                                  - l.B31));
-                lon12 = lam12 / degree;
-                lon2 = ((flags & GEOD_LONG_UNROLL) != 0) ? l.lon1 + lon12 : AngNormalize(AngNormalize(l.lon1) + AngNormalize(lon12));
-            }
+            somg2 = l.salp0 * ssig2;
+            comg2 = csig2; /* No need to normalize */
+            /* omg12 = omg2 - omg1 */
+            omg12 = atan2(somg2 * l.comg1 - comg2 * l.somg1,
+                comg2 * l.comg1 + somg2 * l.somg1);
+            lam12 = omg12 + l.A3c *
+                (sig12 + (SinCosSeries(TRUE, ssig2, csig2, l.C3a, nC3 - 1)
+                          - l.B31));
+            lon12 = lam12 / degree;
+            lon2 = AngNormalize(AngNormalize(l.lon1) + AngNormalize(lon12));
 
-            if ((outmask & GEOD_LATITUDE) != 0)
-                lat2 = atan2dx(sbet2, l.f1 * cbet2);
+            lat2 = atan2dx(sbet2, l.f1 * cbet2);
 
-            if ((outmask & GEOD_AZIMUTH) != 0)
-                azi2 = atan2dx(salp2, calp2);
+            azi2 = atan2dx(salp2, calp2);
 
-            if ((outmask & (GEOD_REDUCEDLENGTH | GEOD_GEODESICSCALE)) != 0)
-            {
-                double
-                    B22 = SinCosSeries(TRUE, ssig2, csig2, l.C2a, nC2),
-                    AB2 = (1 + l.A2m1) * (B22 - l.B21),
-                    J12 = (l.A1m1 - l.A2m1) * sig12 + (AB1 - AB2);
-                if ((outmask & GEOD_REDUCEDLENGTH) != 0)
-                    /* Add parens around (csig1 * ssig2) and (ssig1 * csig2) to ensure
-                     * accurate cancellation in the case of coincident points. */
-                    m12 = l.b * ((dn2 * (l.csig1 * ssig2) - l.dn1 * (l.ssig1 * csig2))
-                                 - l.csig1 * csig2 * J12);
-                if ((outmask & GEOD_GEODESICSCALE) != 0)
-                {
-                    double t = l.k2 * (ssig2 - l.ssig1) * (ssig2 + l.ssig1) /
-                               (l.dn1 + dn2);
-                    M12 = csig12 + (t * ssig2 - csig2 * J12) * l.ssig1 / l.dn1;
-                    M21 = csig12 - (t * l.ssig1 - l.csig1 * J12) * ssig2 / dn2;
-                }
-            }
+            double
+                B22 = SinCosSeries(TRUE, ssig2, csig2, l.C2a, nC2),
+                AB2 = (1 + l.A2m1) * (B22 - l.B21),
+                J12 = (l.A1m1 - l.A2m1) * sig12 + (AB1 - AB2);
+            /* Add parens around (csig1 * ssig2) and (ssig1 * csig2) to ensure
+                 * accurate cancellation in the case of coincident points. */
+                m12 = l.b * ((dn2 * (l.csig1 * ssig2) - l.dn1 * (l.ssig1 * csig2))
+                             - l.csig1 * csig2 * J12);
+                double t = l.k2 * (ssig2 - l.ssig1) * (ssig2 + l.ssig1) /
+                           (l.dn1 + dn2);
+                M12 = csig12 + (t * ssig2 - csig2 * J12) * l.ssig1 / l.dn1;
+                M21 = csig12 - (t * l.ssig1 - l.csig1 * J12) * ssig2 / dn2;
 
-            if ((outmask & GEOD_AREA) != 0)
-            {
                 double
                     B42 = SinCosSeries(FALSE, ssig2, csig2, l.C4a, nC4);
                 double salp12, calp12;
@@ -853,69 +791,26 @@ namespace Iot.Device.Common
                 }
 
                 S12 = l.c2 * atan2(salp12, calp12) + l.A4 * (B42 - l.B41);
-            }
 
-            /* In the pattern
-             *
-             *   if ((outmask & GEOD_XX) && pYY)
-             *     *pYY = YY;
-             *
-             * the second check "&& pYY" is redundant.  It's there to make the CLang
-             * static analyzer happy.
-             */
+                /* In the pattern
+                 *
+                 *   if ((outmask & GEOD_XX) && pYY)
+                 *     *pYY = YY;
+                 *
+                 * the second check "&& pYY" is redundant.  It's there to make the CLang
+                 * static analyzer happy.
+                 */
             plat2 = lat2;
             plon2 = lon2;
             pazi2 = azi2;
-            ps12 = s12;
-            pm12 = m12;
-            pM12 = M12;
-            pM21 = M21;
-            pS12 = S12;
 
-            return ((flags & GEOD_ARCMODE) != 0) ? s12_a12 : sig12 / degree;
-        }
-
-        private static void geod_setdistance(geod_geodesicline l, double s13)
-        {
-            l.s13 = s13;
-            l.a13 = geod_genposition(l, GEOD_NOFLAGS, l.s13, out _, out _, out _,
-                out _, out _, out _, out _, out _);
-        }
-
-        static void geod_setarc(geod_geodesicline l, double a13)
-        {
-            l.a13 = a13;
-            l.s13 = NaN;
-            geod_genposition(l, GEOD_ARCMODE, l.a13, out _, out _, out _, out l.s13,
-                out _, out _, out _, out _);
-        }
-
-        private static void geod_gensetdistance(geod_geodesicline l,
-            uint flags, double s13_a13)
-        {
-            if ((flags & GEOD_ARCMODE) != 0)
-            {
-                geod_setarc(l, s13_a13);
-            }
-            else
-            {
-                geod_setdistance(l, s13_a13);
-            }
-        }
-
-        public static void geod_position(geod_geodesicline l, double s12,
-            out double plat2, out double plon2, out double pazi2)
-        {
-            geod_genposition(l, 0, s12, out plat2, out plon2, out pazi2,
-                out _, out _, out _, out _, out _);
+            return sig12 / degree;
         }
 
         public static double geod_gendirect(geod_geodesic g,
             double lat1, double lon1, double azi1,
-            uint flags, double s12_a12,
-            out double plat2, out double plon2, out double pazi2,
-            out double ps12, out double pm12, out double pM12, out double pM21,
-            out double pS12)
+            double s12_a12,
+            out double plat2, out double plon2, out double pazi2)
         {
             geod_geodesicline l;
             uint outmask = GEOD_LATITUDE | GEOD_LONGITUDE | GEOD_AZIMUTH | GEOD_DISTANCE |
@@ -924,8 +819,8 @@ namespace Iot.Device.Common
             geod_lineinit(out l, g, lat1, lon1, azi1,
                 /* Automatically supply GEOD_DISTANCE_IN if necessary */
                 outmask | GEOD_DISTANCE_IN);
-            return geod_genposition(l, flags, s12_a12,
-                out plat2, out plon2, out pazi2, out ps12, out pm12, out pM12, out pM21, out pS12);
+            return geod_genposition(l, s12_a12,
+                out plat2, out plon2, out pazi2);
         }
 
         public static void geod_direct(geod_geodesic g,
@@ -933,8 +828,7 @@ namespace Iot.Device.Common
             double s12,
             out double plat2, out double plon2, out double pazi2)
         {
-            geod_gendirect(g, lat1, lon1, azi1, GEOD_NOFLAGS, s12, out plat2, out plon2, out pazi2,
-                out _, out _, out _, out _, out _);
+            geod_gendirect(g, lat1, lon1, azi1, s12, out plat2, out plon2, out pazi2);
         }
 
         static double geod_geninverse_int(geod_geodesic g,
@@ -943,7 +837,7 @@ namespace Iot.Device.Common
             out double psalp1, out double pcalp1,
             out double psalp2, out double pcalp2)
         {
-            double s12 = 0, m12 = 0, S12 = 0;
+            double s12 = 0;
             double lon12, lon12s;
             int latsign, lonsign, swapp;
             double sbet1, cbet1, sbet2, cbet2, s12x = 0, m12x = 0;
@@ -954,9 +848,6 @@ namespace Iot.Device.Common
 /* somg12 > 1 marks that it needs to be calculated */
             double omg12 = 0, somg12 = 2, comg12 = 0;
 
-            uint outmask = GEOD_DISTANCE | GEOD_REDUCEDLENGTH | GEOD_GEODESICSCALE | GEOD_AREA;
-
-            outmask &= OUT_ALL;
             /* Compute longitude difference (AngDiff does this carefully).  Result is
              * in [-180, 180] but -180 is only for west-going geodesics.  180 is for
              * east-going and meridional geodesics. */
@@ -1216,84 +1107,6 @@ namespace Iot.Device.Common
 
             s12 = 0 + s12x; /* Convert -0 to 0 */
 
-            m12 = 0 + m12x; /* Convert -0 to 0 */
-
-            if ((outmask & GEOD_AREA) != 0)
-            {
-                double
-                    /* From Lambda12: sin(alp1) * cos(bet1) = sin(alp0) */
-                    salp0 = salp1 * cbet1,
-                    calp0 = hypotx(calp1, salp1 * sbet1); /* calp0 > 0 */
-                double alp12;
-                if (calp0 != 0 && salp0 != 0)
-                {
-                    double
-                        /* From Lambda12: tan(bet) = tan(sig) * cos(alp) */
-                        ssig1 = sbet1,
-                        csig1 = calp1 * cbet1,
-                        ssig2 = sbet2,
-                        csig2 = calp2 * cbet2,
-                        k2 = sq(calp0) * g.ep2,
-                        eps = k2 / (2 * (1 + sqrt(1 + k2)) + k2),
-                        /* Multiplier = a^2 * e^2 * cos(alpha0) * sin(alpha0). */
-                        A4 = sq(g.a) * calp0 * salp0 * g.e2;
-                    double B41, B42;
-                    norm2(ref ssig1, ref csig1);
-                    norm2(ref ssig2, ref csig2);
-                    C4f(g, eps, Ca);
-                    B41 = SinCosSeries(FALSE, ssig1, csig1, Ca, nC4);
-                    B42 = SinCosSeries(FALSE, ssig2, csig2, Ca, nC4);
-                    S12 = A4 * (B42 - B41);
-                }
-                else
-                    /* Avoid problems with indeterminate sig1, sig2 on equator */
-                    S12 = 0;
-
-                if (!meridian && somg12 > 1)
-                {
-                    somg12 = sin(omg12);
-                    comg12 = cos(omg12);
-                }
-
-                if (!meridian &&
-                    /* omg12 < 3/4 * pi */
-                    comg12 > -(double)(0.7071) && /* Long difference not too big */
-                    sbet2 - sbet1 < (double)(1.75))
-                {
-                    /* Lat difference not too big */
-                    /* Use tan(Gamma/2) = tan(omg12/2)
-                     * * (tan(bet1/2)+tan(bet2/2))/(1+tan(bet1/2)*tan(bet2/2))
-                     * with tan(x/2) = sin(x)/(1+cos(x)) */
-                    double
-                        domg12 = 1 + comg12, dbet1 = 1 + cbet1, dbet2 = 1 + cbet2;
-                    alp12 = 2 * atan2(somg12 * (sbet1 * dbet2 + sbet2 * dbet1),
-                                domg12 * (sbet1 * sbet2 + dbet1 * dbet2));
-                }
-                else
-                {
-                    /* alp12 = alp2 - alp1, used in atan2 so no need to normalize */
-                    double
-                        salp12 = salp2 * calp1 - calp2 * salp1,
-                        calp12 = calp2 * calp1 + salp2 * salp1;
-                    /* The right thing appears to happen if alp1 = +/-180 and alp2 = 0, viz
-                     * salp12 = -0 and alp12 = -180.  However this depends on the sign
-                     * being attached to 0 correctly.  The following ensures the correct
-                     * behavior. */
-                    if (salp12 == 0 && calp12 < 0)
-                    {
-                        salp12 = tiny * calp1;
-                        calp12 = -1;
-                    }
-
-                    alp12 = atan2(salp12, calp12);
-                }
-
-                S12 += g.c2 * alp12;
-                S12 *= swapp * lonsign * latsign;
-/* Convert -0 to 0 */
-                S12 += 0;
-            }
-
             /* Convert calp, salp to azimuth accounting for lonsign, swapp, latsign. */
             if (swapp < 0)
             {
@@ -1327,23 +1140,6 @@ namespace Iot.Device.Common
             pazi1 = atan2dx(salp1, calp1);
             pazi2 = atan2dx(salp2, calp2);
             return a12;
-        }
-
-        public static void geod_inverseline(out geod_geodesicline l,
-            geod_geodesic g,
-            double lat1, double lon1, double lat2, double lon2,
-            uint caps)
-        {
-            double salp1,
-                calp1,
-                a12 = geod_geninverse_int(g, lat1, lon1, lat2, lon2, out _,
-                    out salp1, out calp1, out _, out _),
-                azi1 = atan2dx(salp1, calp1);
-            caps = (caps != 0) ? caps : GEOD_DISTANCE_IN | GEOD_LONGITUDE;
-            /* Ensure that a12 can be converted to a distance */
-            if ((caps & (OUT_ALL & GEOD_DISTANCE_IN)) != 0) caps |= GEOD_DISTANCE;
-            geod_lineinit_int(out l, g, lat1, lon1, azi1, salp1, calp1, caps);
-            geod_setarc(l, a12);
         }
 
         public static void geod_inverse(geod_geodesic g,
