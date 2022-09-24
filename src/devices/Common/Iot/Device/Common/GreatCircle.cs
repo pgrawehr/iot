@@ -239,7 +239,7 @@ namespace Iot.Device.Common
             Length distanceCovered = Length.Zero;
             GeographicPosition currentPos = start;
             ret.Add(currentPos); // Include start
-            while (distanceCovered < totalDistance)
+            while (distanceCovered + distanceStep < totalDistance)
             {
                 currentPos = CalcCoords(currentPos, angle, distanceStep);
                 ret.Add(currentPos);
@@ -284,11 +284,18 @@ namespace Iot.Device.Common
             Length distanceCovered = Length.Zero;
             GeographicPosition currentPos = start;
             ret.Add(currentPos); // Include start
-            while (distanceCovered < totalDistance)
+            while (distanceCovered + distanceStep < totalDistance)
             {
                 currentPos = CalcCoords(currentPos, direction, distanceStep);
                 ret.Add(currentPos);
                 distanceCovered += distanceStep;
+            }
+
+            // Add a final point if we're not close to the target already (the / 50 cares for an epsilon)
+            if (distanceCovered < totalDistance - (distanceStep / 50))
+            {
+                currentPos = CalcCoords(start, direction, totalDistance);
+                ret.Add(currentPos);
             }
 
             return ret;

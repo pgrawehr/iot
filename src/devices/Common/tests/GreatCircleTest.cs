@@ -95,6 +95,12 @@ namespace Iot.Device.Common.Tests
             Assert.Equal(61, route.Count);
             Assert.Equal(0, route[60].Longitude);
             Assert.Equal(11.00459987053422, route[60].Latitude, 7);
+            double previous = -1;
+            for (int i = 0; i < route.Count; i++)
+            {
+                Assert.True(previous < route[i].Latitude);
+                previous = route[i].Latitude;
+            }
         }
 
         [Fact]
@@ -103,12 +109,12 @@ namespace Iot.Device.Common.Tests
             var p1 = new GeographicPosition(10, 0, 0);
             var p2 = new GeographicPosition(11, 0, 0);
             var route = GreatCircle.CalculateRoute(p1, p2, Length.FromNauticalMiles(1));
-            Assert.Equal(62, route.Count);
+            Assert.Equal(61, route.Count);
             Assert.Equal(0, route[30].Longitude);
             Assert.Equal(10.5023079, route[30].Latitude, 7);
 
             Assert.Equal(p1, route[0]);
-            Assert.Equal(p2, route[61]);
+            Assert.Equal(p2, route[60]);
         }
     }
 }
