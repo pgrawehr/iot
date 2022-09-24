@@ -941,11 +941,9 @@ namespace Iot.Device.Common
             double lat1, double lon1, double lat2, double lon2,
             out double ps12,
             out double psalp1, out double pcalp1,
-            out double psalp2, out double pcalp2,
-            out double pm12, out double pM12, out double pM21,
-            out double pS12)
+            out double psalp2, out double pcalp2)
         {
-            double s12 = 0, m12 = 0, M12 = 0, M21 = 0, S12 = 0;
+            double s12 = 0, m12 = 0, S12 = 0;
             double lon12, lon12s;
             int latsign, lonsign, swapp;
             double sbet1, cbet1, sbet2, cbet2, s12x = 0, m12x = 0;
@@ -1064,8 +1062,7 @@ namespace Iot.Device.Common
                     csig1 * csig2 + ssig1 * ssig2);
                 Lengths(g, g.n, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2,
                     cbet1, cbet2, out s12x, out m12x, out _,
-                    out M12,
-                    out M21, Ca, true, true);
+                    Ca, true, true);
                 /* Add the check for sig12 since zero length geodesics might yield m12 <
                  * 0.  Test case was
                  *
@@ -1099,8 +1096,6 @@ namespace Iot.Device.Common
                 s12x = g.a * lam12;
                 sig12 = omg12 = lam12 / g.f1;
                 m12x = g.b * sin(sig12);
-                if ((outmask & GEOD_GEODESICSCALE) != 0)
-                    M12 = M21 = cos(sig12);
                 a12 = lon12 / g.f1;
 
             }
@@ -1122,8 +1117,6 @@ namespace Iot.Device.Common
                     /* Short lines (InverseStart sets salp2, calp2, dnm) */
                     s12x = sig12 * g.b * dnm;
                     m12x = sq(dnm) * g.b * sin(sig12 / dnm);
-                    if ((outmask & GEOD_GEODESICSCALE) != 0)
-                        M12 = M21 = cos(sig12 / dnm);
                     a12 = sig12 / degree;
                     omg12 = lam12 / (g.f1 * dnm);
                 }
@@ -1210,8 +1203,7 @@ namespace Iot.Device.Common
 
                     Lengths(g, eps, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2,
                         cbet1, cbet2, out s12x, out m12x, out _,
-                        out M12,
-                        out M21, Ca, true, true);
+                        Ca, true, true);
                     m12x *= g.b;
                     s12x *= g.b;
                     a12 = sig12 / degree;
@@ -1307,8 +1299,6 @@ namespace Iot.Device.Common
             {
                 swapx(ref salp1, ref salp2);
                 swapx(ref calp1, ref calp2);
-                if ((outmask & GEOD_GEODESICSCALE) != 0)
-                    swapx(ref M12, ref M21);
             }
 
             salp1 *= swapp * lonsign;
@@ -1322,10 +1312,6 @@ namespace Iot.Device.Common
             pcalp2 = calp2;
 
             ps12 = s12;
-            pm12 = m12;
-            pM12 = M12;
-            pM21 = M21;
-            pS12 = S12;
 
             /* Returned value in [0, 180] */
             return a12;
@@ -1333,13 +1319,11 @@ namespace Iot.Device.Common
 
         public static double geod_geninverse(geod_geodesic g,
             double lat1, double lon1, double lat2, double lon2,
-            out double ps12, out double pazi1, out double pazi2,
-            out double pm12, out double pM12, out double pM21, out double pS12)
+            out double ps12, out double pazi1, out double pazi2)
         {
             double salp1, calp1, salp2, calp2;
             double a12 = geod_geninverse_int(g, lat1, lon1, lat2, lon2, out ps12,
-                out salp1, out calp1, out salp2, out calp2,
-                out pm12, out pM12, out pM21, out pS12);
+                out salp1, out calp1, out salp2, out calp2);
             pazi1 = atan2dx(salp1, calp1);
             pazi2 = atan2dx(salp2, calp2);
             return a12;
@@ -1353,8 +1337,7 @@ namespace Iot.Device.Common
             double salp1,
                 calp1,
                 a12 = geod_geninverse_int(g, lat1, lon1, lat2, lon2, out _,
-                    out salp1, out calp1, out _, out _,
-                    out _, out _, out _, out _),
+                    out salp1, out calp1, out _, out _),
                 azi1 = atan2dx(salp1, calp1);
             caps = (caps != 0) ? caps : GEOD_DISTANCE_IN | GEOD_LONGITUDE;
             /* Ensure that a12 can be converted to a distance */
@@ -1367,8 +1350,7 @@ namespace Iot.Device.Common
             double lat1, double lon1, double lat2, double lon2,
             out double ps12, out double pazi1, out double pazi2)
         {
-            geod_geninverse(g, lat1, lon1, lat2, lon2, out ps12, out pazi1, out pazi2,
-                out _, out _, out _, out _);
+            geod_geninverse(g, lat1, lon1, lat2, lon2, out ps12, out pazi1, out pazi2);
         }
 
         private static double SinCosSeries(bool sinp, double sinx, double cosx, double[] c, int n)
@@ -1403,7 +1385,6 @@ namespace Iot.Device.Common
             double ssig2, double csig2, double dn2,
             double cbet1, double cbet2,
             out double ps12b, out double pm12b, out double pm0,
-            out double pM12, out double pM21,
             /* Scratch area of the right size */
             double[] Ca, bool usePs12b, bool useRedlp)
         {
@@ -1460,8 +1441,6 @@ namespace Iot.Device.Common
 
             double csig12 = csig1 * csig2 + ssig1 * ssig2;
             double t = g.ep2 * (cbet1 - cbet2) * (cbet1 + cbet2) / (dn1 + dn2);
-            pM12 = csig12 + (t * ssig2 - csig2 * J12) * ssig1 / dn1;
-            pM21 = csig12 - (t * ssig1 - csig1 * J12) * ssig2 / dn2;
 
         }
 
@@ -1630,7 +1609,7 @@ namespace Iot.Device.Common
  * Inverse. */
                     Lengths(g, g.n, pi + bet12a,
                         sbet1, -cbet1, dn1, sbet2, cbet2, dn2,
-                        cbet1, cbet2, out _, out m12b, out m0, out _, out _, Ca, true, true);
+                        cbet1, cbet2, out _, out m12b, out m0, Ca, true, true);
                     x = -1 + m12b / (cbet1 * cbet2 * m0 * pi);
                     betscale = x < -(double)(0.01) ? sbet12a / x : -g.f * sq(cbet1) * pi;
                     lamscale = betscale / cbet1;
@@ -1824,7 +1803,7 @@ namespace Iot.Device.Common
                 else
                 {
                     Lengths(g, eps, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2,
-                        cbet1, cbet2, out _, out dlam12, out _, out _, out _, Ca, true, true);
+                        cbet1, cbet2, out _, out dlam12, out _, Ca, true, true);
                     dlam12 *= g.f1 / (calp2 * cbet2);
                 }
             }
