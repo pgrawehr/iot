@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Iot.Device.Common;
 using UnitsNet;
 using UnitsNet.Units;
@@ -29,122 +30,160 @@ namespace Iot.Device.Nmea0183.Ais
             return toTime - self.LastSeen;
         }
 
-        public static ShipRelativePosition RelativePositionTo(this Ship self, AisTarget other, DateTimeOffset now, TrackEstimationParameters parameters)
+        public static ShipRelativePosition? RelativePositionTo(this Ship self, AisTarget other, DateTimeOffset now, TrackEstimationParameters parameters)
         {
+            return RelativePositionsTo(self, new List<AisTarget>()
+            {
+                other
+            }, now, parameters).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Calculates the relative positions and the collision vectors from one ship to a group of targets.
+        /// The algorithm used is inspired by https://core.ac.uk/download/74237799.pdf
+        /// </summary>
+        /// <param name="self">The own ship</param>
+        /// <param name="others">The list of visible AIS targets</param>
+        /// <param name="now">The current time (or the time the data is valid for)</param>
+        /// <param name="parameters">Parameters controlling the accuracy and speed of the calculation</param>
+        /// <returns>A list of relative positions between our ship and the targets. Targets without a valid position are skipped.</returns>
+        /// <exception cref="ArgumentException">Our ship has no valid position</exception>
+        /// <exception cref="InvalidDataException">An internal error occurred</exception>
+        public static List<ShipRelativePosition> RelativePositionsTo(this Ship self, IEnumerable<AisTarget> others, DateTimeOffset now, TrackEstimationParameters parameters)
+        {
+            List<ShipRelativePosition> retList = new List<ShipRelativePosition>();
+
+            if (self.Position.ContainsValidPosition() == false)
+            {
+                throw new ArgumentException("The own ship has no valid position", nameof(self));
+            }
+
             var self1 = EstimatePosition(self, now, parameters.NormalStepSize);
 
-            // Todo: If other is a SAR aircraft, convert it to a ship, because it moves
-            Ship? otherAsShip = other as Ship;
-            Length distance;
-            Angle direction;
+            List<Ship> thisTrack = GetEstimatedTrack(self1, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
 
-            AisSafetyState state = AisSafetyState.Safe;
-
-            if (other.LastSeen + parameters.TargetLostTimeout < now)
+            foreach (var other in others)
             {
-                // For a lost target, don't do a full computation
-                state = AisSafetyState.Lost;
-                otherAsShip = null;
-            }
-
-            if (otherAsShip == null)
-            {
-                GreatCircle.DistAndDir(self.Position, other.Position, out distance, out direction);
-
-                Angle? relativeDirection = null;
-
-                if (self1.TrueHeading.HasValue)
+                if (other.Position.ContainsValidPosition() == false)
                 {
-                    relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
+                    continue;
                 }
 
-                // The other is not a ship - Assume static position
-                if (distance < parameters.WarningDistance)
+                // Todo: If other is a SAR aircraft, convert it to a ship, because it moves
+                Ship? otherAsShip = other as Ship;
+                Length distance;
+                Angle direction;
+
+                AisSafetyState state = AisSafetyState.Safe;
+
+                if (other.LastSeen + parameters.TargetLostTimeout < now)
                 {
-                    state = AisSafetyState.Dangerous;
+                    // For a lost target, don't do a full computation
+                    state = AisSafetyState.Lost;
+                    otherAsShip = null;
                 }
 
-                return new ShipRelativePosition(self, other, distance, direction, state)
+                if (otherAsShip == null)
                 {
-                    RelativeDirection = relativeDirection,
-                };
-            }
-            else
-            {
-                var otherPos = other.Position;
-                GreatCircle.DistAndDir(self1.Position, otherPos, out distance, out direction);
-                List<Ship> thisTrack = GetEstimatedTrack(self1, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
-                List<Ship> otherTrack = GetEstimatedTrack(otherAsShip, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
+                    GreatCircle.DistAndDir(self.Position, other.Position, out distance, out direction);
 
-                if (thisTrack.Count != otherTrack.Count || thisTrack.Count < 1)
-                {
-                    // The two lists must have equal length and contain at least one element
-                    throw new InvalidDataException("Internal error: Data structures inconsistent");
-                }
+                    Angle? relativeDirection = null;
 
-                Angle? relativeDirection = null;
-
-                if (self1.TrueHeading.HasValue)
-                {
-                    relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
-                }
-
-                Length minimumDistance = Length.MaxValue;
-                DateTimeOffset timeOfMinimumDistance = default;
-                int usedIndex = 0;
-                for (int i = 0; i < thisTrack.Count; i++)
-                {
-                    GreatCircle.DistAndDir(thisTrack[i].Position, otherTrack[i].Position, out Length distance1, out _, out _);
-                    if (distance1 < minimumDistance)
+                    if (self1.TrueHeading.HasValue)
                     {
-                        minimumDistance = distance1;
-                        timeOfMinimumDistance = thisTrack[i].LastSeen;
-                        usedIndex = i;
+                        relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
                     }
-                }
 
-                // if the closest point is the first or the last element, we assume it's more than that, and leave the fields empty
-                if (usedIndex == 0 || usedIndex == thisTrack.Count - 1)
-                {
-                    return new ShipRelativePosition(self, other, distance, direction, AisSafetyState.Unknown)
+                    // The other is not a ship - Assume static position
+                    if (distance < parameters.WarningDistance)
+                    {
+                        state = AisSafetyState.Dangerous;
+                    }
+
+                    retList.Add(new ShipRelativePosition(self, other, distance, direction, state, now)
                     {
                         RelativeDirection = relativeDirection,
-                        ClosestPointOfApproach = null,
-                        TimeOfClosestPointOfApproach = null,
-                    };
+                    });
                 }
                 else
                 {
-                    var ret = new ShipRelativePosition(self, other, distance, direction, state)
-                    {
-                        RelativeDirection = relativeDirection,
-                        // Todo: Should subtract the size of both ships here (idealy considering the direction of the ships hulls)
-                        ClosestPointOfApproach = minimumDistance,
-                        TimeOfClosestPointOfApproach = timeOfMinimumDistance,
-                    };
+                    var otherPos = other.Position;
+                    GreatCircle.DistAndDir(self1.Position, otherPos, out distance, out direction);
+                    List<Ship> otherTrack = GetEstimatedTrack(otherAsShip, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
 
-                    var timeToClosest = ret.TimeToClosestPointOfApproach(now);
-                    if (ret.ClosestPointOfApproach < parameters.WarningDistance &&
-                        timeToClosest > -TimeSpan.FromMinutes(1) && timeToClosest < parameters.WarningTime)
+                    if (thisTrack.Count != otherTrack.Count || thisTrack.Count < 1)
                     {
-                        ret.SafetyState = AisSafetyState.Dangerous;
+                        // The two lists must have equal length and contain at least one element
+                        throw new InvalidDataException("Internal error: Data structures inconsistent");
                     }
 
-                    return ret;
+                    Angle? relativeDirection = null;
+
+                    if (self1.TrueHeading.HasValue)
+                    {
+                        relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
+                    }
+
+                    Length minimumDistance = Length.MaxValue;
+                    DateTimeOffset timeOfMinimumDistance = default;
+                    int usedIndex = 0;
+                    for (int i = 0; i < thisTrack.Count; i++)
+                    {
+                        GreatCircle.DistAndDir(thisTrack[i].Position, otherTrack[i].Position, out Length distance1, out _, out _);
+                        if (distance1 < minimumDistance)
+                        {
+                            minimumDistance = distance1;
+                            timeOfMinimumDistance = thisTrack[i].LastSeen;
+                            usedIndex = i;
+                        }
+                    }
+
+                    // if the closest point is the first or the last element, we assume it's more than that, and leave the fields empty
+                    if (usedIndex == 0 || usedIndex == thisTrack.Count - 1)
+                    {
+                        retList.Add(new ShipRelativePosition(self, other, distance, direction, AisSafetyState.Unknown, now)
+                        {
+                            RelativeDirection = relativeDirection,
+                            ClosestPointOfApproach = null,
+                            TimeOfClosestPointOfApproach = null,
+                        });
+                    }
+                    else
+                    {
+                        var pos = new ShipRelativePosition(self, other, distance, direction, state, now)
+                        {
+                            RelativeDirection = relativeDirection,
+                            // Todo: Should subtract the size of both ships here (idealy considering the direction of the ships hulls)
+                            ClosestPointOfApproach = minimumDistance,
+                            TimeOfClosestPointOfApproach = timeOfMinimumDistance,
+                        };
+
+                        var timeToClosest = pos.TimeToClosestPointOfApproach(now);
+                        if (pos.ClosestPointOfApproach < parameters.WarningDistance &&
+                            timeToClosest > -TimeSpan.FromMinutes(1) && timeToClosest < parameters.WarningTime)
+                        {
+                            pos.SafetyState = AisSafetyState.Dangerous;
+                        }
+
+                        retList.Add(pos);
+                    }
                 }
             }
+
+            return retList;
         }
 
         /// <summary>
         /// Estimates where a ship will be after some time.
         /// </summary>
         /// <param name="ship">The ship to extrapolate</param>
-        /// <param name="extrapolationTime">The time to move. Very large values are probably useless, because the ship might start a turn.</param>
-        /// <param name="stepSize">The extrapolation step size. Smaller values will lead to better estimation, but are compuationally expensive</param>
-        /// <returns>A <see cref="Ship"/> instance with the estunated position and course</returns>
+        /// <param name="extrapolationTime">How much time shall pass. Very large values are probably useless, because the ship might start a turn.</param>
+        /// <param name="stepSize">The extrapolation step size. Smaller values will lead to better estimation, but are computationally expensive</param>
+        /// <returns>A <see cref="Ship"/> instance with the estimated position and course</returns>
         /// <exception cref="ArgumentOutOfRangeException">Stepsize is not positive</exception>
         /// <remarks>The reference time is the position/time the last report was received from this ship. To be able to compare two ships, the
-        /// times still need to be aligned.</remarks>
+        /// times still need to be aligned. Use the overload <see cref="EstimatePosition(Iot.Device.Nmea0183.Ais.Ship,System.DateTimeOffset,System.TimeSpan)"/> if you
+        /// want to estimate the ship position at a certain position in time.</remarks>
         public static Ship EstimatePosition(this Ship ship, TimeSpan extrapolationTime, TimeSpan stepSize)
         {
             if (stepSize <= TimeSpan.FromMilliseconds(1))
@@ -161,10 +200,18 @@ namespace Iot.Device.Nmea0183.Ais
             DateTimeOffset currentTime = ship.LastSeen;
             Ship newShip = ship with { Position = new GeographicPosition(ship.Position), IsEstimate = true };
             Angle cogChange = Angle.Zero;
-            if (ship.RateOfTurn.HasValue)
+            if (ship.RateOfTurn.HasValue && Math.Abs(ship.RateOfTurn.Value.DegreesPerMinute) > 1)
             {
                 var rot = ship.RateOfTurn.Value;
                 cogChange = rot * stepSize;
+            }
+            else
+            {
+                // No turn indication -> Calculate directly
+                Length distance = extrapolationTime * newShip.SpeedOverGround;
+                newShip.Position = GreatCircle.CalcCoords(newShip.Position, newShip.CourseOverGround, distance);
+                newShip.LastSeen = currentTime + extrapolationTime;
+                return newShip;
             }
 
             // Differentiate between moving forward and backward in time. Note that stepSize is expected
@@ -199,6 +246,15 @@ namespace Iot.Device.Nmea0183.Ais
             return newShip;
         }
 
+        /// <summary>
+        /// Estimates where a ship will at a certain time.
+        /// </summary>
+        /// <param name="ship">The ship to extrapolate</param>
+        /// <param name="time">The time at which the position shall be estimated. The estimate is better the closer this time is to the last position
+        /// of the ship.</param>
+        /// <param name="stepSize">The extrapolation step size. Smaller values will lead to better estimation, but are computationally expensive</param>
+        /// <returns>A <see cref="Ship"/> instance with the estimated position and course</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Stepsize is not positive</exception>
         public static Ship EstimatePosition(this Ship ship, DateTimeOffset time, TimeSpan stepSize)
         {
             TimeSpan delta = ship.Age(time);

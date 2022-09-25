@@ -125,7 +125,8 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                 }
 
                 var relativePosition = ownShip.RelativePositionTo(ship, latestPacketDate, new TrackEstimationParameters());
-                Assert.True(relativePosition.From == ownShip);
+                Assert.NotNull(relativePosition);
+                Assert.True(relativePosition!.From == ownShip);
                 Assert.True(relativePosition.To == ship);
                 // Some error is acceptable, since "distance" is not corrected for the time between the now and the last position
                 Assert.True(Math.Abs(distance.Meters - relativePosition.Distance.Meters) < 100);
@@ -134,7 +135,8 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             var ship1 = _manager.GetTarget(211810280) as Ship;
             Assert.NotNull(ship1);
             var relativePos1 = ownShip.RelativePositionTo(ship1!, latestPacketDate, new TrackEstimationParameters());
-            Assert.True(relativePos1.TimeOfClosestPointOfApproach.HasValue);
+            Assert.NotNull(relativePos1);
+            Assert.True(relativePos1!.TimeOfClosestPointOfApproach.HasValue);
             Assert.True(relativePos1.ClosestPointOfApproach.HasValue);
 
             Assert.True(relativePos1.ClosestPointOfApproach < relativePos1.Distance);
@@ -146,11 +148,12 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             Assert.NotNull(ship1);
             ownShip.SpeedOverGround = Speed.Zero; // Easier to get a close passage if we don't move here
             relativePos1 = ownShip.RelativePositionTo(ship1!, latestPacketDate, new TrackEstimationParameters());
-            Assert.True(relativePos1.TimeOfClosestPointOfApproach.HasValue);
+            Assert.NotNull(relativePos1);
+            Assert.True(relativePos1!.TimeOfClosestPointOfApproach.HasValue);
             Assert.True(relativePos1.ClosestPointOfApproach.HasValue);
 
             Assert.True(relativePos1.ClosestPointOfApproach < relativePos1.Distance);
-            Assert.Equal(TimeSpan.FromMinutes(30), relativePos1.TimeToClosestPointOfApproach(latestPacketDate));
+            Assert.Equal(1790, relativePos1.TimeToClosestPointOfApproach(latestPacketDate)!.Value.TotalSeconds, 0);
         }
 
         [Fact]
@@ -163,10 +166,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             _manager.OnMessage += (received, sourceMmsi, destinationMmsi, text) =>
             {
                 messages.Add(text);
-                if (text.Contains("TCPA"))
-                {
-                    Assert.True(sourceMmsi != _manager.OwnMmsi);
-                }
+                Assert.True(sourceMmsi != _manager.OwnMmsi);
             };
 
             int msgCount = 0;
@@ -187,6 +187,13 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             reader.StopDecode();
 
             Assert.Equal(25, messages.Count(x => x.Contains("TCPA")));
+
+            var ship = _manager.GetTarget(305966000);
+            Assert.NotNull(ship);
+            Assert.False(ship!.IsEstimate);
+            Assert.NotNull(ship.RelativePosition);
+            Assert.True(ship.RelativePosition!.From.Name == "Cirrus");
+            Assert.Equal(8096.4, ship.RelativePosition.Distance.Meters, 1);
         }
 
         [Fact]

@@ -11,13 +11,14 @@ namespace Iot.Device.Nmea0183.Ais
     /// </summary>
     public class ShipRelativePosition
     {
-        public ShipRelativePosition(AisTarget from, AisTarget to, Length distance, Angle bearing, AisSafetyState state)
+        public ShipRelativePosition(AisTarget from, AisTarget to, Length distance, Angle bearing, AisSafetyState state, DateTimeOffset calculationTime)
         {
             Distance = distance;
             Bearing = bearing;
             From = from;
             To = to;
             SafetyState = state;
+            CalculationTime = calculationTime;
         }
 
         /// <summary>
@@ -51,6 +52,11 @@ namespace Iot.Device.Nmea0183.Ais
         public DateTimeOffset? TimeOfClosestPointOfApproach { get; set; }
 
         public AisSafetyState SafetyState { get; set; }
+
+        /// <summary>
+        /// The time this record was calculated.
+        /// </summary>
+        public DateTimeOffset CalculationTime { get; }
 
         public TimeSpan? TimeToClosestPointOfApproach(DateTimeOffset now)
         {

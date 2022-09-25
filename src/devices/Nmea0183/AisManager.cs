@@ -761,21 +761,27 @@ namespace Iot.Device.Nmea0183
                 sw.Restart();
 
                 // it's a ConcurrentDictionary, so iterating over it without a lock is fine
-                foreach (var oneOtherShip in _targets.Values)
-                {
-                    if (oneOtherShip.Position.ContainsValidPosition() == false)
-                    {
-                        continue;
-                    }
+                List<ShipRelativePosition> differences = ownShip.RelativePositionsTo(_targets.Values, time, TrackEstimationParameters);
 
-                    ShipRelativePosition difference = ownShip.RelativePositionTo(oneOtherShip, time, TrackEstimationParameters);
+                foreach (var difference in differences)
+                {
                     var timeToClosest = difference.TimeToClosestPointOfApproach(time);
                     if (difference.ClosestPointOfApproach < TrackEstimationParameters.WarningDistance &&
                         timeToClosest > -TimeSpan.FromMinutes(1) && timeToClosest < TrackEstimationParameters.WarningTime)
                     {
                         // Warn if the ship will be closer than the warning distance in less than the WarningTime
-                        string name = oneOtherShip.Name ?? oneOtherShip.FormatMmsi();
-                        SendWarningMessage("DANGEROUS VESSEL-" + oneOtherShip.Mmsi, oneOtherShip.Mmsi, $"{name} is dangerously close. CPA {difference.ClosestPointOfApproach}; TCPA {timeToClosest:mm\\:ss}", time);
+                        string name = difference.To.Name ?? difference.To.FormatMmsi();
+                        SendWarningMessage("DANGEROUS VESSEL-" + difference.To.Mmsi, difference.To.Mmsi, $"{name} is dangerously close. CPA {difference.ClosestPointOfApproach}; TCPA {timeToClosest:mm\\:ss}", time);
+                    }
+                }
+
+                lock (_lock)
+                {
+                    // Separate loop, because this one requires a lock and is cheaper than the above (sending a message may be expensive and could potentially be recursive)
+                    foreach (var difference in differences)
+                    {
+                        // Good we keep the target ship in the type, otherwise this would require an O(n^2) iteration
+                        difference.To.RelativePosition = difference;
                     }
                 }
 

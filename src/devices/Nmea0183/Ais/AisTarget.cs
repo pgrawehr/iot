@@ -64,6 +64,12 @@ namespace Iot.Device.Nmea0183.Ais
             set;
         }
 
+        /// <summary>
+        /// The relative position and collision information with respect to our ship (e.g. distance, CPA, TCPA)
+        /// Only valid if calculated by enabling <see cref="AisManager.EnableAisAlarms"/>.
+        /// </summary>
+        public ShipRelativePosition? RelativePosition { get; set; }
+
         public override string ToString()
         {
             string s = Name ?? string.Empty;
