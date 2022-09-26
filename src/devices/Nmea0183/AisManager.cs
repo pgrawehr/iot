@@ -300,6 +300,7 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.StaticDataReport:
                     {
+                        // This is the normal static data report from class B transceivers
                         ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType, null);
                         if (msg is StaticDataReportPartAMessage msgPartA)
                         {
@@ -321,6 +322,7 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.StaticAndVoyageRelatedData:
                     {
+                        // This message is only sent by class A transceivers.
                         ship = GetOrCreateShip(msg.Mmsi, msg.TransceiverType, null);
                         StaticAndVoyageRelatedDataMessage voyage = (StaticAndVoyageRelatedDataMessage)msg;
                         ship.Name = voyage.ShipName;
@@ -328,6 +330,7 @@ namespace Iot.Device.Nmea0183
                         ship.Destination = voyage.Destination;
                         ship.Draught = Length.FromMeters(voyage.Draught);
                         ship.ImoNumber = voyage.ImoNumber;
+                        ship.ShipType = voyage.ShipType;
                         var now = DateTimeOffset.UtcNow;
                         if (voyage.IsEtaValid())
                         {
@@ -362,6 +365,7 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.StandardClassBCsPositionReport:
                     {
+                        // This is an alternative static data report for class B transceivers
                         StandardClassBCsPositionReportMessage msgPos = (StandardClassBCsPositionReportMessage)msg;
                         ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType, sentence.DateTime);
                         ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
@@ -424,7 +428,8 @@ namespace Iot.Device.Nmea0183
                         // for that)
                         sarAircraft.Position = new GeographicPosition(sar.Latitude, sar.Longitude, sar.Altitude);
                         sarAircraft.CourseOverGround = Angle.FromDegrees(sar.CourseOverGround);
-                        sarAircraft.Speed = sar.SpeedOverGround == 1023 ? null : Speed.FromKnots(sar.SpeedOverGround);
+                        sarAircraft.SpeedOverGround = Speed.FromKnots(sar.SpeedOverGround);
+                        sarAircraft.RateOfTurn = RotationalSpeed.Zero;
                         break;
                     }
 

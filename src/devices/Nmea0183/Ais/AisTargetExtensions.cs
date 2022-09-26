@@ -60,7 +60,7 @@ namespace Iot.Device.Nmea0183.Ais
 
             var self1 = EstimatePosition(self, now, parameters.NormalStepSize);
 
-            List<Ship> thisTrack = GetEstimatedTrack(self1, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
+            List<MovingTarget> thisTrack = GetEstimatedTrack(self1, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
 
             foreach (var other in others)
             {
@@ -69,8 +69,7 @@ namespace Iot.Device.Nmea0183.Ais
                     continue;
                 }
 
-                // Todo: If other is a SAR aircraft, convert it to a ship, because it moves
-                Ship? otherAsShip = other as Ship;
+                MovingTarget? otherAsMovingTarget = other as MovingTarget;
                 Length distance;
                 Angle direction;
 
@@ -80,10 +79,10 @@ namespace Iot.Device.Nmea0183.Ais
                 {
                     // For a lost target, don't do a full computation
                     state = AisSafetyState.Lost;
-                    otherAsShip = null;
+                    otherAsMovingTarget = null;
                 }
 
-                if (otherAsShip == null)
+                if (otherAsMovingTarget == null)
                 {
                     GreatCircle.DistAndDir(self.Position, other.Position, out distance, out direction);
 
@@ -109,7 +108,7 @@ namespace Iot.Device.Nmea0183.Ais
                 {
                     var otherPos = other.Position;
                     GreatCircle.DistAndDir(self1.Position, otherPos, out distance, out direction);
-                    List<Ship> otherTrack = GetEstimatedTrack(otherAsShip, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
+                    List<MovingTarget> otherTrack = GetEstimatedTrack(otherAsMovingTarget, now - parameters.StartTimeOffset, now + parameters.EndTimeOffset, parameters.NormalStepSize);
 
                     if (thisTrack.Count != otherTrack.Count || thisTrack.Count < 1)
                     {
@@ -182,9 +181,9 @@ namespace Iot.Device.Nmea0183.Ais
         /// <returns>A <see cref="Ship"/> instance with the estimated position and course</returns>
         /// <exception cref="ArgumentOutOfRangeException">Stepsize is not positive</exception>
         /// <remarks>The reference time is the position/time the last report was received from this ship. To be able to compare two ships, the
-        /// times still need to be aligned. Use the overload <see cref="EstimatePosition(Iot.Device.Nmea0183.Ais.Ship,System.DateTimeOffset,System.TimeSpan)"/> if you
+        /// times still need to be aligned. Use the overload <see cref="EstimatePosition(Iot.Device.Nmea0183.Ais.MovingTarget,System.DateTimeOffset,System.TimeSpan)"/> if you
         /// want to estimate the ship position at a certain position in time.</remarks>
-        public static Ship EstimatePosition(this Ship ship, TimeSpan extrapolationTime, TimeSpan stepSize)
+        public static MovingTarget EstimatePosition(this MovingTarget ship, TimeSpan extrapolationTime, TimeSpan stepSize)
         {
             if (stepSize <= TimeSpan.FromMilliseconds(1))
             {
@@ -198,8 +197,8 @@ namespace Iot.Device.Nmea0183.Ais
             }
 
             DateTimeOffset currentTime = ship.LastSeen;
-            Ship newShip = ship with { Position = new GeographicPosition(ship.Position), IsEstimate = true };
-            Angle cogChange = Angle.Zero;
+            MovingTarget newShip = ship with { Position = new GeographicPosition(ship.Position), IsEstimate = true };
+            Angle cogChange;
             if (ship.RateOfTurn.HasValue && Math.Abs(ship.RateOfTurn.Value.DegreesPerMinute) > 1)
             {
                 var rot = ship.RateOfTurn.Value;
@@ -255,13 +254,13 @@ namespace Iot.Device.Nmea0183.Ais
         /// <param name="stepSize">The extrapolation step size. Smaller values will lead to better estimation, but are computationally expensive</param>
         /// <returns>A <see cref="Ship"/> instance with the estimated position and course</returns>
         /// <exception cref="ArgumentOutOfRangeException">Stepsize is not positive</exception>
-        public static Ship EstimatePosition(this Ship ship, DateTimeOffset time, TimeSpan stepSize)
+        public static MovingTarget EstimatePosition(this MovingTarget ship, DateTimeOffset time, TimeSpan stepSize)
         {
             TimeSpan delta = ship.Age(time);
             return EstimatePosition(ship, delta, stepSize);
         }
 
-        public static List<Ship> GetEstimatedTrack(this Ship ship, DateTimeOffset startTime, DateTimeOffset endTime, TimeSpan stepSize)
+        public static List<MovingTarget> GetEstimatedTrack(this MovingTarget ship, DateTimeOffset startTime, DateTimeOffset endTime, TimeSpan stepSize)
         {
             if (stepSize <= TimeSpan.FromMilliseconds(1))
             {
@@ -274,10 +273,10 @@ namespace Iot.Device.Nmea0183.Ais
                 throw new ArgumentException("startTime must be before endTime");
             }
 
-            List<Ship> track = new List<Ship>();
+            List<MovingTarget> track = new List<MovingTarget>();
 
             DateTimeOffset currentTime = startTime;
-            Ship ship1 = EstimatePosition(ship, currentTime, stepSize);
+            var ship1 = EstimatePosition(ship, currentTime, stepSize);
             track.Add(ship1);
             while (currentTime < endTime)
             {

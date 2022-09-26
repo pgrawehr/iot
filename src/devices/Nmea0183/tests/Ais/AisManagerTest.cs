@@ -214,6 +214,25 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             _manager.EnableAisAlarms(false);
         }
 
+        [Fact]
+        public void UseOfWithWorksCorrectly()
+        {
+            AisTarget ship = new Ship(1)
+            {
+                CallSign = "ABCD", CourseOverGround = Angle.FromDegrees(10)
+            };
+
+            var ship2 = ship with
+            {
+                Position = new GeographicPosition(1, 2, 3)
+            };
+
+            Assert.True(ship is Ship); // and not its base type
+            Assert.True(ship2 is Ship);
+
+            Assert.True(ship2.Position.ContainsValidPosition());
+        }
+
         ////[Fact]
         ////public void FeedWithMuchData()
         ////{
@@ -277,7 +296,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             Assert.True(_manager.TryGetTarget(1015, out AisTarget tgt));
 
             var sar = (SarAircraft)tgt;
-            sar.Speed.GetValueOrDefault().ShouldBeGreaterThan(Speed.FromKnots(100));
+            sar.SpeedOverGround.ShouldBeGreaterThan(Speed.FromKnots(100));
 
             Assert.True(_manager.TryGetTarget(993672072, out tgt));
             var aton = (AidToNavigation)tgt;

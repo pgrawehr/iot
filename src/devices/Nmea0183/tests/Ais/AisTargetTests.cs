@@ -37,6 +37,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         public void ExtrapolatePositionWithRotation()
         {
             Ship ship = new Ship(1);
+            ship.LastSeen = DateTimeOffset.UtcNow;
             ship.Position = new GeographicPosition(45, 9, 0);
             ship.SpeedOverGround = Speed.Zero;
             ship.CourseOverGround = Angle.Zero;
@@ -56,6 +57,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         {
             // This does the inverse of the above
             Ship ship = new Ship(1);
+            ship.LastSeen = DateTimeOffset.UtcNow;
             ship.Position = new GeographicPosition(45.015124163, 9.026965951, 0);
             ship.SpeedOverGround = Speed.FromKnots(10);
             ship.CourseOverGround = Angle.FromDegrees(100);

@@ -8,20 +8,15 @@ using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public record Ship : AisTarget
+    public record Ship : MovingTarget
     {
         public Ship(uint mmsi)
         : base(mmsi)
         {
-            LastSeen = DateTimeOffset.UtcNow;
             CallSign = string.Empty;
             Destination = string.Empty;
         }
 
-        public RotationalSpeed? RateOfTurn { get; set; }
-        public Angle? TrueHeading { get; set; }
-        public Angle CourseOverGround { get; set; }
-        public Speed SpeedOverGround { get; set; }
         public string CallSign { get; set; }
         public ShipType ShipType { get; set; }
         public Length DimensionToBow { get; set; }
