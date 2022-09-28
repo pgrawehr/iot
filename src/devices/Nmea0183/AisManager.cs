@@ -19,6 +19,10 @@ using UnitsNet;
 
 namespace Iot.Device.Nmea0183
 {
+    /// <summary>
+    /// Interpreter for AIS messages from NMEA-0183 data streams.
+    /// Accepts the encoded AIVDM and AIVDO sentences and converts them to user-understandable ship structures.
+    /// </summary>
     public class AisManager : NmeaSinkAndSource
     {
         private static readonly TimeSpan WarningRepeatTimeout = TimeSpan.FromMinutes(10);
@@ -59,11 +63,25 @@ namespace Iot.Device.Nmea0183
 
         private Thread? _aisBackgroundThread;
 
+        /// <summary>
+        /// Creates an instance of an <see cref="AisManager"/>
+        /// </summary>
+        /// <param name="interfaceName">Name of the manager, used for message routing</param>
+        /// <param name="ownMmsi">The MMSI of the own ship</param>
+        /// <param name="ownShipName">The name of the own ship</param>
         public AisManager(string interfaceName, uint ownMmsi, string ownShipName)
         : this(interfaceName, false, ownMmsi, ownShipName)
         {
         }
 
+        /// <summary>
+        /// Creates an instance of an <see cref="AisManager"/>
+        /// </summary>
+        /// <param name="interfaceName">Name of the manager, used for message routing</param>
+        /// <param name="throwOnUnknownMessage">True if an exception should be thrown when parsing an unknown message type. This parameter
+        /// is mainly intended for test scenarios where a data stream should be scanned for rare messages</param>
+        /// <param name="ownMmsi">The MMSI of the own ship</param>
+        /// <param name="ownShipName">The name of the own ship</param>
         public AisManager(string interfaceName, bool throwOnUnknownMessage, uint ownMmsi, string ownShipName)
             : base(interfaceName)
         {
@@ -92,10 +110,24 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public string OwnShipName { get; }
 
+        /// <summary>
+        /// Distance from GPS receiver to bow of own ship, see <see cref="Ship.DimensionToBow"/>
+        /// </summary>
         public Length DimensionToBow { get; set; }
 
+        /// <summary>
+        /// Distance from GPS receiver to stern of own ship, see <see cref="Ship.DimensionToStern"/>
+        /// </summary>
         public Length DimensionToStern { get; set; }
+
+        /// <summary>
+        /// Distance from GPS receiver to Port of own ship, see <see cref="Ship.DimensionToPort"/>
+        /// </summary>
         public Length DimensionToPort { get; set; }
+
+        /// <summary>
+        /// Distance from GPS receiver to Starboard of own ship, see <see cref="Ship.DimensionToStarboard"/>
+        /// </summary>
         public Length DimensionToStarboard { get; set; }
 
         /// <summary>
@@ -111,6 +143,9 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public TimeSpan DeleteTargetAfterTimeout { get; set; }
 
+        /// <summary>
+        /// Set of parameters that control track estimation.
+        /// </summary>
         public TrackEstimationParameters TrackEstimationParameters { get; private set; }
 
         /// <summary>
@@ -177,10 +212,17 @@ namespace Iot.Device.Nmea0183
             return true;
         }
 
+        /// <inheritdoc />
         public override void StartDecode()
         {
         }
 
+        /// <summary>
+        /// Tries to retrieve the target with the given MMSI from the database
+        /// </summary>
+        /// <param name="mmsi">MMSI to query</param>
+        /// <param name="target">Returns the given target, if found. The target should be cast to a more concrete type</param>
+        /// <returns>True if the target was found, false otherwise</returns>
         public bool TryGetTarget(uint mmsi,
 #if NET5_0_OR_GREATER
             [NotNullWhen(true)]
@@ -251,6 +293,10 @@ namespace Iot.Device.Nmea0183
             return GetOrCreateTarget<SarAircraft>(mmsi, x => new SarAircraft(mmsi), lastSeenTime);
         }
 
+        /// <summary>
+        /// Gets the list of active targets
+        /// </summary>
+        /// <returns>An enumeration of all currently tracked targets</returns>
         public IEnumerable<AisTarget> GetTargets()
         {
             lock (_lock)
@@ -259,6 +305,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Gets the list of all active targets of the given type
+        /// </summary>
+        /// <typeparam name="T">A type of target, must be a derivative of <see cref="AisTarget"/>.</typeparam>
+        /// <returns>An enumeration of all targets of that type</returns>
         public IEnumerable<T> GetSpecificTargets<T>()
         where T : AisTarget
         {
@@ -268,6 +319,13 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Processes incomming sequences. Use this method to input an NMEA stream to this component.
+        /// Note that _all_ messages should be forwarded to this method, as AIS target tracking requires the position and speed of our own vessel.
+        /// </summary>
+        /// <param name="source">Message source</param>
+        /// <param name="sentence">The new sentence</param>
+        /// <exception cref="AisParserException"></exception>
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             _cache.Add(sentence);
@@ -585,6 +643,13 @@ namespace Iot.Device.Nmea0183
             return false;
         }
 
+        /// <summary>
+        /// Send an AIS broadcast message to the NMEA stream (output!)
+        /// Some NMEA devices (in particular general-purpose displays) may pick up this information
+        /// from the data stream and show the warning to the user.
+        /// </summary>
+        /// <param name="sourceMmsi">The message source, can be 0</param>
+        /// <param name="text">The text. Will be converted to 6-Bit-Ascii (e.g. only capital letters)</param>
         public void SendBroadcastMessage(uint sourceMmsi, string text)
         {
             SafetyRelatedBroadcastMessage msg = new SafetyRelatedBroadcastMessage();
@@ -598,6 +663,7 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <inheritdoc />
         public override void StopDecode()
         {
             EnableAisAlarms(false, null);
@@ -635,6 +701,14 @@ namespace Iot.Device.Nmea0183
             return rpt;
         }
 
+        /// <summary>
+        /// Sends a ship position report for the given ship to the NMEA stream. Useful for testing or simulation.
+        /// </summary>
+        /// <param name="transceiverClass">Transceiver class to simulate</param>
+        /// <param name="ship">The ship whose position data to send</param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException">An internal inconsistency occurred</exception>
+        /// <exception cref="NotSupportedException">This message type is not currently supported for encoding</exception>
         public NmeaSentence SendShipPositionReport(AisTransceiverClass transceiverClass, Ship ship)
         {
             if (transceiverClass == AisTransceiverClass.A)
@@ -686,6 +760,11 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Gets the target with the given MMSI
+        /// </summary>
+        /// <param name="mmsi">The MMSI to search</param>
+        /// <returns>The given target or null if it was not found.</returns>
         public AisTarget? GetTarget(uint mmsi)
         {
             lock (_lock)
@@ -694,6 +773,19 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Enable automatic generation of AIS alarms.
+        /// This method will start a background thread that regularly evaluates all ships in vicinity for possibly dangerous proximity.
+        /// It uses an estimate of a track for each ship to find the closest point of approach (CPA) and the time to that closest point (TCPA).
+        /// When this is enabled, <see cref="AisTarget.RelativePosition"/> will be regularly updated for all targets.
+        /// </summary>
+        /// <param name="enable">True to enable AIS alarms. The alarms will be presented by a message on the outgoing stream and a call to <see cref="OnMessage"/></param>
+        /// <param name="parameters">Parameter set to use for the estimation</param>
+        /// <remarks>Note 1: Since this uses a precise track estimation that includes COG change, the calculation is rather expensive. CPU
+        /// performance should be monitored when in a crowded area. Algorithm improvements that cut CPU usage e.g. for stationary ships are pending.
+        /// Note 2: The algorithm is experimental and should not be relied on
+        /// Note 3: NEVER rely on an AIS alarm as sole supervision of your surroundings! Many ships do not have AIS or the system may malfunction.
+        /// Always keep a visible lookout!</remarks>
         public void EnableAisAlarms(bool enable, TrackEstimationParameters? parameters = null)
         {
             _aisAlarmsEnabled = enable;
