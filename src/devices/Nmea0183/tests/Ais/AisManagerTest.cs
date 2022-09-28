@@ -175,7 +175,8 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                 _manager.SendSentence(source, msg);
                 if (msg.SentenceId == new SentenceId("VDM"))
                 {
-                    if ((msgCount++ % 30) == 0)
+                    // This is a big number that misses some dangerous encounters, but causes the test to end in reasonable time (10s instead of 22s)
+                    if ((msgCount++ % 60) == 0)
                     {
                         // Call directly, so our test is deterministic
                         _manager.AisAlarmThread(msg.DateTime);
@@ -186,14 +187,14 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             reader.StartDecode();
             reader.StopDecode();
 
-            Assert.Equal(25, messages.Count(x => x.Contains("TCPA")));
+            Assert.Equal(20, messages.Count(x => x.Contains("TCPA")));
 
             var ship = _manager.GetTarget(305966000);
             Assert.NotNull(ship);
             Assert.False(ship!.IsEstimate);
             Assert.NotNull(ship.RelativePosition);
             Assert.True(ship.RelativePosition!.From.Name == "Cirrus");
-            Assert.Equal(8096.4, ship.RelativePosition.Distance.Meters, 1);
+            Assert.Equal(8260.2, ship.RelativePosition.Distance.Meters, 1);
         }
 
         [Fact]
