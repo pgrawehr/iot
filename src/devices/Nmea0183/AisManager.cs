@@ -329,7 +329,6 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="source">Message source</param>
         /// <param name="sentence">The new sentence</param>
-        /// <exception cref="AisParserException"></exception>
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             _cache.Add(sentence);
@@ -539,8 +538,7 @@ namespace Iot.Device.Nmea0183
                     default:
                         if (_throwOnUnknownMessage)
                         {
-                            throw new AisParserException(
-                                $"Received a message of type {msg.MessageType} which was not handled", sentence.ToNmeaMessage());
+                            throw new NotSupportedException($"Received a message of type {msg.MessageType} which was not handled");
                         }
 
                         break;

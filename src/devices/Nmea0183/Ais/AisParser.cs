@@ -68,8 +68,7 @@ namespace Iot.Device.Nmea0183.Ais
         /// <param name="sentence">The sentence to decode</param>
         /// <returns>An AIS message or null if the message is valid, but unrecognized</returns>
         /// <exception cref="ArgumentNullException">Sentence is null</exception>
-        /// <exception cref="AisParserException">The message is syntactically incorrect</exception>
-        /// <exception cref="FormatException">The message has a valid checksum, but is otherwise messed up</exception>
+        /// <exception cref="FormatException">The message could not be parsed</exception>
         public AisMessage? Parse(string sentence)
         {
             if (string.IsNullOrWhiteSpace(sentence))
@@ -79,13 +78,13 @@ namespace Iot.Device.Nmea0183.Ais
 
             if (sentence[0] != '!')
             {
-                throw new AisParserException("Invalid sentence: sentence must start with !", sentence);
+                throw new FormatException($"Invalid sentence: sentence must start with '!':{sentence}");
             }
 
             var checksumIndex = sentence.IndexOf('*');
             if (checksumIndex == -1)
             {
-                throw new AisParserException("Invalid sentence: unable to find checksum", sentence);
+                throw new FormatException($"Invalid sentence: unable to find checksum: {sentence}");
             }
 
             var checksum = ExtractChecksum(sentence, checksumIndex);
@@ -95,14 +94,14 @@ namespace Iot.Device.Nmea0183.Ais
 
             if (checksum != calculatedChecksum)
             {
-                throw new AisParserException($"Invalid sentence: checksum failure. Checksum: {checksum:X2}, calculated: {calculatedChecksum:X2}", sentence);
+                throw new FormatException($"Invalid sentence: checksum failure. Checksum: {checksum:X2}, calculated: {calculatedChecksum:X2}: {sentence}");
             }
 
             var sentenceParts = sentenceWithoutChecksum.Split(',');
             var packetHeader = sentenceParts[0];
             if (!ValidPacketHeader(packetHeader))
             {
-                throw new AisParserException($"Unrecognised message: packet header {packetHeader}", sentence);
+                throw new FormatException($"Unrecognised message: packet header {packetHeader}: {sentence}");
             }
 
             // var radioChannelCode = sentenceParts[4];

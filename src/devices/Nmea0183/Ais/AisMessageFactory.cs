@@ -65,7 +65,7 @@ namespace Iot.Device.Nmea0183.Ais
                 default:
                     if (throwOnUnknownMessage)
                     {
-                        throw new AisMessageException($"Unrecognised message type: {payload.MessageType}");
+                        throw new NotSupportedException($"Unrecognised message type: {payload.MessageType}");
                     }
                     else
                     {
