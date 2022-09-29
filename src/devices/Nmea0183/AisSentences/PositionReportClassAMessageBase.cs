@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public abstract record PositionReportClassAMessageBase : AisMessage
+    internal abstract record PositionReportClassAMessageBase : AisMessage
     {
         public NavigationStatus NavigationStatus { get; set; }
         public int? RateOfTurn { get; set; }

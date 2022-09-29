@@ -3,7 +3,7 @@
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public abstract record AisMessage
+    internal abstract record AisMessage
     {
         protected AisMessage(AisMessageType messageType)
         {

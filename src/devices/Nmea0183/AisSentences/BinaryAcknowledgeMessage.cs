@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record BinaryAcknowledgeMessage : AisMessage
+    internal record BinaryAcknowledgeMessage : AisMessage
     {
         public uint Spare { get; set; }
         public uint SequenceNumber1 { get; set; }

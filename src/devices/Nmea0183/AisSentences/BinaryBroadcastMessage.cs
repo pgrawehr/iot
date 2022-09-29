@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record BinaryBroadcastMessage : AisMessage
+    internal record BinaryBroadcastMessage : AisMessage
     {
         public uint Spare { get; set; }
         public uint DesignatedAreaCode { get; set; }

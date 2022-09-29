@@ -6,7 +6,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record SafetyRelatedBroadcastMessage : AisMessage
+    internal record SafetyRelatedBroadcastMessage : AisMessage
     {
         public uint Spare { get; set; }
 

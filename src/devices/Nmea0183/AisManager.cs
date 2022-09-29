@@ -23,6 +23,10 @@ namespace Iot.Device.Nmea0183
     /// Interpreter for AIS messages from NMEA-0183 data streams.
     /// Accepts the encoded AIVDM and AIVDO sentences and converts them to user-understandable ship structures.
     /// </summary>
+    /// <remarks>
+    /// WARNING: Never rely on an AIS alarm as sole supervision of your surroundings! Many ships do not have AIS or the system may malfunction.
+    /// Keep a lookout by eye and ear at all times!
+    /// </remarks>
     public class AisManager : NmeaSinkAndSource
     {
         private static readonly TimeSpan WarningRepeatTimeout = TimeSpan.FromMinutes(10);
@@ -783,9 +787,9 @@ namespace Iot.Device.Nmea0183
         /// <param name="parameters">Parameter set to use for the estimation</param>
         /// <remarks>Note 1: Since this uses a precise track estimation that includes COG change, the calculation is rather expensive. CPU
         /// performance should be monitored when in a crowded area. Algorithm improvements that cut CPU usage e.g. for stationary ships are pending.
-        /// Note 2: The algorithm is experimental and should not be relied on
-        /// Note 3: NEVER rely on an AIS alarm as sole supervision of your surroundings! Many ships do not have AIS or the system may malfunction.
-        /// Always keep a visible lookout!</remarks>
+        /// Note 2: The algorithm is experimental and should not be relied on.
+        /// Also read the notes at <see cref="AisManager"/>
+        /// </remarks>
         public void EnableAisAlarms(bool enable, TrackEstimationParameters? parameters = null)
         {
             _aisAlarmsEnabled = enable;

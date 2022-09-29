@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record StaticDataReportMessage : AisMessage
+    internal record StaticDataReportMessage : AisMessage
     {
         public uint PartNumber { get; }
 

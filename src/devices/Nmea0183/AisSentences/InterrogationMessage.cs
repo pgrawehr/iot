@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record InterrogationMessage : AisMessage
+    internal record InterrogationMessage : AisMessage
     {
         public uint InterrogatedMmsi { get; set; }
         public AisMessageType FirstMessageType { get; set; }

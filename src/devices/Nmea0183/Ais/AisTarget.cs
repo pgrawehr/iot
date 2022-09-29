@@ -9,11 +9,15 @@ using Iot.Device.Nmea0183.AisSentences;
 namespace Iot.Device.Nmea0183.Ais
 {
     /// <summary>
-    /// Generic base class for all types of AIS targets
+    /// Abstract base class for all types of AIS targets
     /// </summary>
     public abstract record AisTarget
     {
-        public AisTarget(uint mmsi)
+        /// <summary>
+        /// Constructs a new AIS target.
+        /// </summary>
+        /// <param name="mmsi">MMSI of the new target</param>
+        protected AisTarget(uint mmsi)
         {
             Mmsi = mmsi;
             Position = new GeographicPosition();
@@ -70,6 +74,10 @@ namespace Iot.Device.Nmea0183.Ais
         /// </summary>
         public ShipRelativePosition? RelativePosition { get; set; }
 
+        /// <summary>
+        /// Creates a string representation of this target
+        /// </summary>
+        /// <returns>A string</returns>
         public override string ToString()
         {
             string s = Name ?? string.Empty;
@@ -88,7 +96,8 @@ namespace Iot.Device.Nmea0183.Ais
         }
 
         /// <summary>
-        /// Returns the MMSI in user-readable format (always 9 digits)
+        /// Returns the MMSI in user-readable format (always 9 digits).
+        /// The first three non-zero digits are the country code of the target (for a ship, that defines the flag it flies)
         /// </summary>
         /// <returns>The MMSI as string</returns>
         public string FormatMmsi()
@@ -104,6 +113,11 @@ namespace Iot.Device.Nmea0183.Ais
             return m;
         }
 
+        /// <summary>
+        /// Tries to identify the type of target from the MMSI.
+        /// Some MMSI numbers are reserved for special targets. This method decodes that.
+        /// </summary>
+        /// <returns>The <see cref="MmsiType"/> of this target.</returns>
         public MmsiType IdentifyMmsiType()
         {
             // We need to look at the first few digits. That's easiest in string format.

@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record PositionReportClassAAssignedScheduleMessage : PositionReportClassAMessageBase
+    internal record PositionReportClassAAssignedScheduleMessage : PositionReportClassAMessageBase
     {
         public PositionReportClassAAssignedScheduleMessage()
             : base(AisMessageType.PositionReportClassAAssignedSchedule)

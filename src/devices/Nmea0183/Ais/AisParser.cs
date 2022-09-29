@@ -11,7 +11,14 @@ using Iot.Device.Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class AisParser
+    /// <summary>
+    /// This is the low-level AIS message decoder.
+    /// It converts the AIVDM/AIVDO messages into an instance of a subclass of <see cref="AisMessage"/>
+    /// </summary>
+    /// <remarks>
+    /// The class is internal, as users are highly recommended to use the high-level abstraction provided by <see cref="AisManager"/> instead.
+    /// </remarks>
+    internal class AisParser
     {
         private const int MaxPayloadLength = 60; // Characters
 

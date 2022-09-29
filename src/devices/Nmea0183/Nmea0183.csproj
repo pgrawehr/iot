@@ -5,7 +5,6 @@
     <!--Disabling default items so samples source won't get build by the main library-->
     <EnableDefaultItems>false</EnableDefaultItems>
     <RootNamespace>Iot.Device.Nmea0183</RootNamespace>
-    <NoWarn>$(NoWarn);CS1591</NoWarn> <!--temporarily!-->
   </PropertyGroup>
 
   <ItemGroup>

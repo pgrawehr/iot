@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record PositionReportClassAResponseToInterrogationMessage : PositionReportClassAMessageBase
+    internal record PositionReportClassAResponseToInterrogationMessage : PositionReportClassAMessageBase
     {
         public PositionReportClassAResponseToInterrogationMessage()
             : base(AisMessageType.PositionReportClassAResponseToInterrogation)

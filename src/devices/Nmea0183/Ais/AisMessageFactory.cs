@@ -6,7 +6,7 @@ using Iot.Device.Nmea0183.AisSentences;
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public class AisMessageFactory
+    internal class AisMessageFactory
     {
         public Payload Encode(AisMessage message)
         {

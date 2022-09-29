@@ -5,7 +5,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record StandardSarAircraftPositionReportMessage : AisMessage
+    internal record StandardSarAircraftPositionReportMessage : AisMessage
     {
         public uint Altitude { get; set; }
         public uint SpeedOverGround { get; set; }

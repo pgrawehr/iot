@@ -6,7 +6,7 @@ using Iot.Device.Nmea0183.Ais;
 
 namespace Iot.Device.Nmea0183.AisSentences
 {
-    public record AddressedSafetyRelatedMessage : AisMessage
+    internal record AddressedSafetyRelatedMessage : AisMessage
     {
         public uint SequenceNumber { get; set; }
         public uint DestinationMmsi { get; set; }
