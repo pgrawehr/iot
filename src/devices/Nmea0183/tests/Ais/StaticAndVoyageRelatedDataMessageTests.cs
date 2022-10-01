@@ -190,7 +190,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.ImoNumber.ShouldBe(7729526u);
             message.CallSign.ShouldBe("WDD9287");
             message.ShipName.ShouldBe("SEA HAWK");
-            message.ShipType.ShouldBe(ShipType.TowingLarge);
+            message.ShipType.ShouldBe(ShipType.TowLarge);
             message.DimensionToBow.ShouldBe(5u);
             message.DimensionToStern.ShouldBe(12u);
             message.DimensionToPort.ShouldBe(3u);

@@ -9,7 +9,7 @@ namespace Iot.Device.Nmea0183.Ais
     /// <summary>
     /// Represents the payload part of an AIS message, in form of a bit-string (a string containing only the values "0" or "1")
     /// </summary>
-    public sealed class Payload
+    internal sealed class Payload
     {
         private static readonly SixBitAsciiEncoding _encoding = new SixBitAsciiEncoding();
 

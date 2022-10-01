@@ -13,6 +13,9 @@ namespace Iot.Device.Nmea0183.Ais
     /// </remarks>
     public enum MmsiType
     {
+        /// <summary>
+        /// The MMSI uses a reserved range.
+        /// </summary>
         Unknown,
 
         /// <summary>

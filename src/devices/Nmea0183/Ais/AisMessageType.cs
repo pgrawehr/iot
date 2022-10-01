@@ -3,7 +3,11 @@
 
 namespace Iot.Device.Nmea0183.Ais
 {
-    public enum AisMessageType
+    /// <summary>
+    /// The type of an AIS message (encoded in the message header)
+    /// Do not change the enum values, these are required to decode the messages!
+    /// </summary>
+    internal enum AisMessageType
     {
         PositionReportClassA = 1,
         PositionReportClassAAssignedSchedule = 2,

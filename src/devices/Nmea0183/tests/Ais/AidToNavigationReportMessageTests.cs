@@ -77,7 +77,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             message.MessageType.ShouldBe(AisMessageType.AidToNavigationReport);
             message.Repeat.ShouldBe(0u);
             message.Mmsi.ShouldBe(992351149u);
-            message.NavigationalAidType.ShouldBe(NavigationalAidType.FixedStuctureOffShore);
+            message.NavigationalAidType.ShouldBe(NavigationalAidType.FixedStructureOffShore);
             message.Name.ShouldBe("BRAMBLE PILE");
             message.PositionAccuracy.ShouldBe(PositionAccuracy.High);
         }

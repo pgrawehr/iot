@@ -11,8 +11,17 @@ using UnitsNet.Units;
 
 namespace Iot.Device.Nmea0183.Ais
 {
+    /// <summary>
+    /// Extension methods on AIS targets
+    /// </summary>
     public static class AisTargetExtensions
     {
+        /// <summary>
+        /// Calculates the distance to another target
+        /// </summary>
+        /// <param name="self">First target</param>
+        /// <param name="other">Other target</param>
+        /// <returns>The distance between the two targets, based on their last known position</returns>
         public static Length DistanceTo(this AisTarget self, AisTarget other)
         {
             GreatCircle.DistAndDir(self.Position, other.Position, out Length distance, out _);
@@ -30,6 +39,15 @@ namespace Iot.Device.Nmea0183.Ais
             return toTime - self.LastSeen;
         }
 
+        /// <summary>
+        /// Calculates the relative position data set to another vessel.
+        /// </summary>
+        /// <param name="self">Our own vessel</param>
+        /// <param name="other">The other ship or target (can also be a stationary target, such as an <see cref="AidToNavigation"/> instance)</param>
+        /// <param name="now">The time at which the comparison occurs. Typically now, but it is also possible to estimate the dangers at another time. When playing
+        /// back old data, this must correspond to the playback time</param>
+        /// <param name="parameters">The parameters used for the calculation</param>
+        /// <returns>An instance of <see cref="ShipRelativePosition"/> with all possible fields filled out.</returns>
         public static ShipRelativePosition? RelativePositionTo(this Ship self, AisTarget other, DateTimeOffset now, TrackEstimationParameters parameters)
         {
             return RelativePositionsTo(self, new List<AisTarget>()
@@ -260,6 +278,18 @@ namespace Iot.Device.Nmea0183.Ais
             return EstimatePosition(ship, delta, stepSize);
         }
 
+        /// <summary>
+        /// Calculate a track estimation for a ship
+        /// </summary>
+        /// <param name="ship">The ship to move</param>
+        /// <param name="startTime">The time at which the track should start (may be in the past)</param>
+        /// <param name="endTime">The time at which the track should end</param>
+        /// <param name="stepSize">The step size of the returned track</param>
+        /// <returns>A list of targets (for each estimated position from <paramref name="startTime"/> to <paramref name="endTime"/>).</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Stepsize is to small or negative</exception>
+        /// <exception cref="ArgumentException">Start time is after end time</exception>
+        /// <remarks>The calculation of this track may be expensive, when the timespan between start and end is large or stepSize is small. Or when the
+        /// timespan is far from the time the ship was last seen.</remarks>
         public static List<MovingTarget> GetEstimatedTrack(this MovingTarget ship, DateTimeOffset startTime, DateTimeOffset endTime, TimeSpan stepSize)
         {
             if (stepSize <= TimeSpan.FromMilliseconds(1))
