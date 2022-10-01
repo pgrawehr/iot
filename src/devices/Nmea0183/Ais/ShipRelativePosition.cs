@@ -11,6 +11,15 @@ namespace Iot.Device.Nmea0183.Ais
     /// </summary>
     public class ShipRelativePosition
     {
+        /// <summary>
+        /// Relative position instance
+        /// </summary>
+        /// <param name="from">Source vessel</param>
+        /// <param name="to">Target vessel</param>
+        /// <param name="distance">Current distance between these vessels</param>
+        /// <param name="bearing">Bearing from first vessel to second</param>
+        /// <param name="state">Safety state between these vessels</param>
+        /// <param name="calculationTime">Time this record was calculated</param>
         public ShipRelativePosition(AisTarget from, AisTarget to, Length distance, Angle bearing, AisSafetyState state, DateTimeOffset calculationTime)
         {
             Distance = distance;
@@ -48,9 +57,19 @@ namespace Iot.Device.Nmea0183.Ais
         /// </summary>
         public Angle? RelativeDirection { get; init; }
 
+        /// <summary>
+        /// Distance at closest point of approach
+        /// </summary>
         public Length? ClosestPointOfApproach { get; set; }
+
+        /// <summary>
+        /// Time at which the closest point will be reached
+        /// </summary>
         public DateTimeOffset? TimeOfClosestPointOfApproach { get; set; }
 
+        /// <summary>
+        /// Safety state
+        /// </summary>
         public AisSafetyState SafetyState { get; set; }
 
         /// <summary>
@@ -58,6 +77,11 @@ namespace Iot.Device.Nmea0183.Ais
         /// </summary>
         public DateTimeOffset CalculationTime { get; }
 
+        /// <summary>
+        /// Calculate the time of closes approach with a given "now"
+        /// </summary>
+        /// <param name="now">This is the current time</param>
+        /// <returns>Time from now to TCPA</returns>
         public TimeSpan? TimeToClosestPointOfApproach(DateTimeOffset now)
         {
             if (!TimeOfClosestPointOfApproach.HasValue)

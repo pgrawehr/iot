@@ -16,6 +16,7 @@ using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.AisSentences;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
+using NavigationStatus = Iot.Device.Nmea0183.Ais.NavigationStatus;
 
 namespace Iot.Device.Nmea0183
 {
@@ -587,6 +588,11 @@ namespace Iot.Device.Nmea0183
             if (AutoSendWarnings == false)
             {
                 return;
+            }
+
+            if (ship.NavigationStatus == NavigationStatus.AisSartIsActive)
+            {
+                SendMessage(ship, "AIS SART status");
             }
 
             MmsiType type = ship.IdentifyMmsiType();

@@ -15,14 +15,39 @@ namespace Iot.Device.Nmea0183.Ais
     /// </summary>
     public record TrackEstimationParameters
     {
+        /// <summary>
+        /// How much time to calculate back
+        /// </summary>
         public TimeSpan StartTimeOffset { get; set; } = TimeSpan.FromMinutes(20);
+
+        /// <summary>
+        /// Default step size
+        /// </summary>
         public TimeSpan NormalStepSize { get; set; } = TimeSpan.FromSeconds(10);
+
+        /// <summary>
+        /// How much to calculate ahead
+        /// </summary>
         public TimeSpan EndTimeOffset { get; set; } = TimeSpan.FromMinutes(60);
 
+        /// <summary>
+        /// True to issue a warning if no position data for the own ship is available
+        /// </summary>
         public bool WarnIfGnssMissing { get; set; } = true;
 
+        /// <summary>
+        /// Time span between AIS safety checks
+        /// </summary>
         public TimeSpan AisSafetyCheckInterval { get; set; } = TimeSpan.FromSeconds(5);
+
+        /// <summary>
+        /// Minimum CPA distance to issue a warning.
+        /// </summary>
         public Length WarningDistance { get; set; } = Length.FromNauticalMiles(1);
+
+        /// <summary>
+        /// Minimum TCPA to issue a warning (when <see cref="WarningDistance"/> is also reached)
+        /// </summary>
         public TimeSpan WarningTime { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
