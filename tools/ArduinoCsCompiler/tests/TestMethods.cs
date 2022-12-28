@@ -1477,5 +1477,23 @@ namespace Iot.Device.Arduino.Tests
             MiniAssert.That("abcd".StartsWith("AB", StringComparison.InvariantCultureIgnoreCase));
             return 1;
         }
+
+        public static int UnitsNetTest1(int arg1, int arg2)
+        {
+            Temperature t1 = Temperature.FromDegreesCelsius(0);
+            Temperature t2 = t1.ToUnit(TemperatureUnit.DegreeFahrenheit);
+
+            Assert.True(t2.Value > 0);
+            Assert.True(t1.Equals(t2, 1E-5, ComparisonType.Absolute));
+            return 1;
+        }
+
+        public static int UnitsNetTest2(int arg1, int arg2)
+        {
+            Temperature t1 = Temperature.FromDegreesCelsius(50);
+
+            Assert.Equal("50 °C", t1.ToString(CultureInfo.InvariantCulture));
+            return 1;
+        }
     }
 }

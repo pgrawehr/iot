@@ -441,6 +441,14 @@ namespace Iot.Device.Arduino.Tests
         }
 
         [Theory]
+        [InlineData(nameof(TestMethods.UnitsNetTest1), 1)]
+        [InlineData(nameof(TestMethods.UnitsNetTest2), 1)]
+        public void UnitsNetTest(string methodName, Int32 expected)
+        {
+            LoadCodeMethod(typeof(TestMethods), methodName, 0, 0, expected);
+        }
+
+        [Theory]
         [InlineData(nameof(ThreadingTests.StartAndStopThread), 0, 0, 1)]
         [InlineData(nameof(ThreadingTests.DiningPhilosophers), 0, 0, 1)]
         [InlineData(nameof(ThreadingTests.UseThreadStatic), 0, 0, 1)]
