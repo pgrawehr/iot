@@ -789,8 +789,21 @@ namespace ArduinoCsCompiler
                     else if (typeArgs[0].IsGenericType && typeArgs[0].GetGenericTypeDefinition() == typeof(Nullable<>))
                     {
                         var embeddedType = typeArgs[0].GetGenericArguments()[0];
-                        var alsoRequired = GetSystemPrivateType("System.Collections.Generic.NullableEqualityComparer`1")!.MakeGenericType(embeddedType);
-                        PrepareClassDeclaration(set, alsoRequired);
+                        if (embeddedType.IsEnum)
+                        {
+                            var alsoRequired = GetSystemPrivateType("System.Collections.Generic.EnumEqualityComparer`1")!.MakeGenericType(embeddedType);
+                            PrepareClassDeclaration(set, alsoRequired);
+                        }
+                        else
+                        {
+                            // This doesn't work with enums
+                            var alsoRequired = GetSystemPrivateType("System.Collections.Generic.NullableEqualityComparer`1")!.MakeGenericType(embeddedType);
+                            PrepareClassDeclaration(set, alsoRequired);
+                            // Also need ObjectEqualityComparer<Nullable<T>>
+                            var nullableOfT = typeof(Nullable<>).MakeGenericType(embeddedType);
+                            alsoRequired = GetSystemPrivateType("System.Collections.Generic.ObjectEqualityComparer`1")!.MakeGenericType(nullableOfT);
+                            PrepareClassDeclaration(set, alsoRequired);
+                        }
                     }
                     else if (!typeArgs[0].IsAssignableTo(requiredInterface))
                     {
@@ -1007,6 +1020,7 @@ namespace ArduinoCsCompiler
                     // method, the derived method's actual implementation is linked. I.e. IEqualityComparer.Equals(object,object) -> EqualityComparer.Equals(object, object) ->
                     // EqualityComparer<T>.Equals(T,T) -> -> GenericEqualityComparer<T>.Equals(T,T)
                     newDeclarations.Sort(new ClassDeclarationByInheritanceSorter());
+                    AddNullabilityBaseClasses(set);
                     DetectRequiredVirtualMethodImplementations(set, newDeclarations);
 
                     // Of all classes in the list, load their static cctors. This may also add new classes in turn
@@ -1067,6 +1081,19 @@ namespace ArduinoCsCompiler
 
             set.RemoveUnusedDataFields();
 
+            var ordered = set.Classes.OrderBy(x => x.NewToken).ToList();
+            int previousToken = -1;
+            foreach (var cls in ordered)
+            {
+                if (cls.NewToken == previousToken)
+                {
+                    // We have a duplicate token - these two classes shall be the same, so drop one (shouldn't matter which one)
+                    set.Classes.Remove(cls);
+                }
+
+                previousToken = cls.NewToken;
+            }
+
             if (!forKernel)
             {
                 PrepareStaticCtors(set);
@@ -1083,6 +1110,31 @@ namespace ArduinoCsCompiler
             }
 
             _logger.LogInformation($"Estimated program memory usage: {set.EstimateRequiredMemory()} bytes.");
+        }
+
+        /// <summary>
+        /// If Nullable{something} is part of the set, something must also be loaded (even if it's mostly empty)
+        /// </summary>
+        private void AddNullabilityBaseClasses(ExecutionSet set)
+        {
+            var orig = set.Classes.ToList();
+            foreach (var cls in orig)
+            {
+                if (cls.TheType.IsGenericType && !cls.TheType.IsGenericTypeDefinition)
+                {
+                    if (cls.TheType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                    {
+                        // Contains exactly one element now
+                        var arg = cls.TheType.GetGenericArguments();
+                        if (!set.HasDefinition(arg[0]))
+                        {
+                            PrepareClass(set, arg[0]);
+                            var requiredInterface = typeof(IEquatable<>).MakeGenericType(arg[0]);
+                            PrepareClassDeclaration(set, requiredInterface);
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>

@@ -38,7 +38,7 @@ namespace ArduinoCsCompiler.Runtime
         /// </summary>
         public virtual bool IsGenericTypeDefinition
         {
-            [ArduinoImplementation("TypeIsGenericTypeDefinition", 0x65)]
+            [ArduinoImplementation("TypeIsGenericTypeDefinition", 235)]
             get
             {
                 return (m_handle & ExecutionSet.GenericTokenMask) != 0;
@@ -116,16 +116,15 @@ namespace ArduinoCsCompiler.Runtime
 
         public virtual Type[] GenericTypeArguments
         {
-            [ArduinoImplementation("TypeGetGenericTypeArguments", 0x63)]
             get
             {
-                return new Type[0];
+                return (IsGenericType && !IsGenericTypeDefinition) ? GetGenericArguments() : Type.EmptyTypes;
             }
         }
 
         public virtual Type[] GenericTypeParameters
         {
-            [ArduinoImplementation("TypeGetGenericTypeArguments", 0x66)]
+            [ArduinoImplementation("TypeGetGenericTypeParameters", 233)]
             get
             {
                 return new Type[0];
@@ -312,7 +311,7 @@ namespace ArduinoCsCompiler.Runtime
             return Equals(other);
         }
 
-        [ArduinoImplementation("TypeGetArrayRank", 0x64)]
+        [ArduinoImplementation("TypeGetArrayRank", 234)]
         public virtual int GetArrayRank()
         {
             return 1;
