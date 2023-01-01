@@ -443,9 +443,16 @@ namespace Iot.Device.Arduino.Tests
         [Theory]
         [InlineData(nameof(TestMethods.UnitsNetTest1), 1)]
         [InlineData(nameof(TestMethods.UnitsNetTest2), 1)]
+        [InlineData(nameof(TestMethods.Enumerator1), 1)]
         public void UnitsNetTest(string methodName, Int32 expected)
         {
-            LoadCodeMethod(typeof(TestMethods), methodName, 0, 0, expected);
+            var settings = new CompilerSettings()
+            {
+                CreateKernelForFlashing = false,
+                UseFlashForKernel = false
+            };
+
+            LoadCodeMethod(typeof(TestMethods), methodName, 0, 0, expected, settings);
         }
 
         [Theory]

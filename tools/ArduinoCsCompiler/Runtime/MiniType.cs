@@ -11,11 +11,10 @@ namespace ArduinoCsCompiler.Runtime
     internal class MiniType
     {
         public static readonly Type[] EmptyTypes = new Type[0];
-#pragma warning disable 414, SX1309
+#pragma warning disable SX1309
         // This is used by firmware code directly. Do not reorder the members without checking the firmware
         // The member contains the token of the class declaration
         private Int32 m_handle;
-#pragma warning restore 414
 
         [ArduinoImplementation("TypeCtor", 0x50)]
         protected MiniType()
@@ -317,16 +316,14 @@ namespace ArduinoCsCompiler.Runtime
             return 1;
         }
 
-        [ArduinoImplementation("TypeGetMethod")]
         public MethodInfo? GetMethod(string name, Type[] types)
         {
-            return null;
+            throw new PlatformNotSupportedException(name);
         }
 
-        [ArduinoImplementation("TypeGetMethod2")]
         public MethodInfo? GetMethod(string name, BindingFlags bindingAttr)
         {
-            return null;
+            throw new PlatformNotSupportedException(name);
         }
 
         [ArduinoImplementation("TypeGetFields")]

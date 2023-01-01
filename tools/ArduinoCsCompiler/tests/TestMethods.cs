@@ -1483,8 +1483,8 @@ namespace Iot.Device.Arduino.Tests
             Temperature t1 = Temperature.FromDegreesCelsius(0);
             Temperature t2 = t1.ToUnit(TemperatureUnit.DegreeFahrenheit);
 
-            Assert.True(t2.Value > 0);
-            Assert.True(t1.Equals(t2, 1E-5, ComparisonType.Absolute));
+            MiniAssert.That(t2.Value > 0);
+            MiniAssert.That(t1.Equals(t2, 1E-5, ComparisonType.Absolute));
             return 1;
         }
 
@@ -1492,8 +1492,28 @@ namespace Iot.Device.Arduino.Tests
         {
             Temperature t1 = Temperature.FromDegreesCelsius(50);
 
-            Assert.Equal("50 °C", t1.ToString(CultureInfo.InvariantCulture));
+            MiniAssert.AreEqual("50 °C", t1.ToString(CultureInfo.InvariantCulture));
             return 1;
+        }
+
+        public static int Enumerator1(int arg1, int arg2)
+        {
+            Enum1[] e1 = new Enum1[]
+            {
+                Enum1.Zero, Enum1.One, Enum1.Two, Enum1.Three
+            };
+
+            Enum1 e2 = e1.First(x => x.Equals(Enum1.Three));
+            MiniAssert.That(e2 == Enum1.Three);
+            return 1;
+        }
+
+        public enum Enum1
+        {
+            Zero,
+            One,
+            Two,
+            Three
         }
     }
 }

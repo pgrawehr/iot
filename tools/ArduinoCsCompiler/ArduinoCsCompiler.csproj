@@ -36,6 +36,8 @@
 
   <ItemGroup>
     <Compile Include="Runtime\UnitsNet\MiniQuantity.cs" />
+    <Compile Include="Runtime\UnitsNet\MiniQuantityConverter.cs" />
+    <Compile Include="Runtime\UnitsNet\MiniUnitAbbrevationsCache.cs" />
   </ItemGroup>
 
 </Project>
