@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnitsNet;
@@ -15,7 +16,7 @@ namespace ArduinoCsCompiler.Runtime.UnitsNet
     {
         public delegate void RegisterDefaultConversionsDelegate(UnitConverter converter);
 
-        public delegate void MapGeneratedLocalizations(MiniUnitAbbreviationsCache cache);
+        public delegate void MapGeneratedLocalizations(UnitAbbreviationsCache cache);
 
         /// <summary>
         /// The default cctor links all unit types -> bad
@@ -52,8 +53,8 @@ namespace ArduinoCsCompiler.Runtime.UnitsNet
         {
             if (forType == typeof(Temperature))
             {
-                MapGeneratedLocalizations c = MapGeneratedLocalizationsTemplate;
-                c.Invoke(cache);
+                MapGeneratedLocalizations c = GenerateLocalizationMethod<Temperature>();
+                c.Invoke(MiniUnsafe.As<UnitAbbreviationsCache>(cache));
             }
             else
             {
@@ -61,8 +62,18 @@ namespace ArduinoCsCompiler.Runtime.UnitsNet
             }
         }
 
-        public static void MapGeneratedLocalizationsTemplate(MiniUnitAbbreviationsCache cache)
+        [ArduinoCompileTimeConstant]
+        public static MapGeneratedLocalizations GenerateLocalizationMethod<T>()
         {
+            var method = typeof(T).GetMethod("MapGeneratedLocalizations", BindingFlags.NonPublic | BindingFlags.Static);
+            if (method == null)
+            {
+                throw new NotImplementedException();
+            }
+
+            var del = method.CreateDelegate(typeof(MapGeneratedLocalizations));
+
+            return (MapGeneratedLocalizations)del;
         }
     }
 }
