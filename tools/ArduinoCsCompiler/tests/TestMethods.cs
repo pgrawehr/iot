@@ -1492,7 +1492,7 @@ namespace Iot.Device.Arduino.Tests
         {
             Temperature t1 = Temperature.FromDegreesCelsius(50);
 
-            MiniAssert.AreEqual("50 °C", t1.ToString(CultureInfo.InvariantCulture));
+            MiniAssert.AreEqual("50 °C", t1.ToString(CultureInfo.CurrentCulture));
             return 1;
         }
 

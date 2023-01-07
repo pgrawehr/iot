@@ -22,5 +22,17 @@ namespace ArduinoCsCompiler.Runtime
 
             return (int)value;
         }
+
+        [ArduinoImplementation]
+        public static Int16 ToInt16(string value, int fromBase)
+        {
+            throw new NotImplementedException();
+        }
+
+        [ArduinoImplementation]
+        public static Int32 ToInt32(string value, int fromBase)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Threading;
 using ArduinoCsCompiler.Runtime;
+using ArduinoCsCompiler.Runtime.UnitsNet;
 using Iot.Device.Arduino;
 using Iot.Device.Common;
 using Microsoft.CodeAnalysis;
@@ -288,14 +289,14 @@ namespace ArduinoCsCompiler
 
             void AddMethod(EquatableMethod method, int nativeMethod)
             {
-                if (!set.HasMethod(method, method, out _))
+                if (!set.HasMethod(method, method, out _, out _))
                 {
                     set.GetReplacement(method.DeclaringType);
                     var replacement = set.GetReplacement(method, method);
                     if (replacement != null)
                     {
                         method = replacement;
-                        if (set.HasMethod(method, method, out _))
+                        if (set.HasMethod(method, method, out _, out _))
                         {
                             return;
                         }
@@ -1544,7 +1545,7 @@ namespace ArduinoCsCompiler
                 CollectBaseImplementations(set, new EquatableMethod(m), methodsBeingImplemented);
 
                 // We need the implementation if at least one base implementation is being called and is used
-                return methodsBeingImplemented.Count > 0 && methodsBeingImplemented.Any(x => set.HasMethod(x, m, out _));
+                return methodsBeingImplemented.Count > 0 && methodsBeingImplemented.Any(x => set.HasMethod(x, m, out _, out _));
             }
 
             return false;
@@ -2023,14 +2024,14 @@ namespace ArduinoCsCompiler
                 {
                     // Ensure we're not scanning the same implementation twice, as this would result
                     // in a stack overflow when a method is recursive (even indirect)
-                    if (!set.HasMethod(me, methodInfo, out var code1) && newMethods.Add(me))
+                    if (!set.HasMethod(me, methodInfo, out var code1, out _) && newMethods.Add(me))
                     {
                         CollectDependendentMethods(set, me, code1, newMethods);
                     }
                 }
                 else if (finalMethod.Method is ConstructorInfo co)
                 {
-                    if (!set.HasMethod(co, methodInfo, out var code2) && newMethods.Add(co))
+                    if (!set.HasMethod(co, methodInfo, out var code2, out _) && newMethods.Add(co))
                     {
                         CollectDependendentMethods(set, co, code2, newMethods);
                     }
@@ -2066,7 +2067,7 @@ namespace ArduinoCsCompiler
                 throw new ObjectDisposedException(nameof(MicroCompiler));
             }
 
-            if (set.HasMethod(methodInfo, methodInfo, out _))
+            if (set.HasMethod(methodInfo, methodInfo, out _, out _))
             {
                 unchecked
                 {
@@ -2253,7 +2254,15 @@ namespace ArduinoCsCompiler
             return exec;
         }
 
-        internal void PrepareMethod(ExecutionSet set, EquatableMethod methodInfo, ArduinoMethodDeclaration? parent)
+        /// <summary>
+        /// Ensures the given method is part of the execution set and generates its patched binary code
+        /// </summary>
+        /// <param name="set">The execution set</param>
+        /// <param name="methodInfo">The method to add</param>
+        /// <param name="parent">The parent method (for tracing only)</param>
+        /// <returns>The new method token for the added method</returns>
+        /// <exception cref="InvalidOperationException">A method should have been replaced, but is missing</exception>
+        internal int PrepareMethod(ExecutionSet set, EquatableMethod methodInfo, ArduinoMethodDeclaration? parent)
         {
             // Ensure the class is known, if it needs replacement
             var classReplacement = set.GetReplacement(methodInfo.DeclaringType);
@@ -2270,9 +2279,9 @@ namespace ArduinoCsCompiler
                 methodInfo = replacement;
             }
 
-            if (set.HasMethod(methodInfo, parentMethod, out _))
+            if (set.HasMethod(methodInfo, parentMethod, out _, out int newToken))
             {
-                return;
+                return newToken;
             }
 
             if (classReplacement != null && replacement == null)
@@ -2287,7 +2296,7 @@ namespace ArduinoCsCompiler
                 int tk1 = set.GetOrAddMethodToken(methodInfo, parentMethod);
                 var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, parent, MethodFlags.SpecialMethod, implementation!.MethodNumber);
                 set.AddMethod(newInfo1);
-                return;
+                return newInfo1.Token;
             }
 
             if (HasIntrinsicAttribute(methodInfo))
@@ -2299,7 +2308,7 @@ namespace ArduinoCsCompiler
                     int tk1 = set.GetOrAddMethodToken(methodInfo, methodInfo);
                     var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, parent, MethodFlags.SpecialMethod, ArduinoImplementationAttribute.GetStaticHashCode("ByReferenceCtor"));
                     set.AddMethod(newInfo1);
-                    return;
+                    return newInfo1.Token;
                 }
 
                 if (methodInfo.Name == "get_Value" && methodInfo.DeclaringType!.Name == "ByReference`1")
@@ -2307,7 +2316,7 @@ namespace ArduinoCsCompiler
                     int tk1 = set.GetOrAddMethodToken(methodInfo, methodInfo);
                     var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, parent, MethodFlags.SpecialMethod, ArduinoImplementationAttribute.GetStaticHashCode("ByReferenceValue"));
                     set.AddMethod(newInfo1);
-                    return;
+                    return newInfo1.Token;
                 }
             }
 
@@ -2441,7 +2450,7 @@ namespace ArduinoCsCompiler
                 else
                 {
                     ErrorManager.AddWarning("ACS0004", $"{methodInfo.MethodSignature()} has no visible implementation");
-                    return;
+                    return 0;
                 }
             }
 
@@ -2582,6 +2591,27 @@ namespace ArduinoCsCompiler
                         AddCommandWith32BitArgument(code, OpCode.CEE_STELEM, (int)KnownTypeTokens.String);
                     }
                 }
+                else if (t.IsAssignableTo(typeof(Delegate)))
+                {
+                    // We have a delegate that we need to transform into code returning said delegate (for calling at runtime)
+                    Delegate del = (Delegate)result;
+                    Type typeOfDelegate = result.GetType();
+                    Type typeOfObject = del.Method.DeclaringType!;
+                    string name = del.Method.Name;
+                    // Make sure we have this method in the execution set
+                    var method1 = typeOfObject.GetMethod(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static) ?? throw new MissingMethodException(typeOfObject.FullName, name);
+                    int tokenOfTargetMethod = PrepareMethod(set, method1, parent);
+                    PrepareClass(set, typeOfDelegate); // Prepare the required delegate type (?)
+                    var ctorOfDelgate = typeOfDelegate.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, new Type[]
+                    {
+                        typeof(object),
+                        typeof(IntPtr)
+                    }) ?? throw new MissingMethodException(typeOfDelegate.FullName, ".ctor");
+                    int tokenOfDelegateCtor = PrepareMethod(set, ctorOfDelgate, parent);
+                    AddCommand(code, OpCode.CEE_LDNULL);
+                    AddCommandWith32BitArgument(code, OpCode.CEE_LDFTN, tokenOfTargetMethod);
+                    AddCommandWith32BitArgument(code, OpCode.CEE_NEWOBJ, tokenOfDelegateCtor);
+                }
                 else
                 {
                     throw new NotSupportedException($"[ArduinoCompileTimeConstant] for type {t} is not implemented");
@@ -2681,6 +2711,8 @@ namespace ArduinoCsCompiler
                     PrepareMethod(set, dep, newInfo);
                 }
             }
+
+            return newInfo.Token;
         }
 
         private void InitStructFromConstant<T>(ExecutionSet set, EquatableMethod parentMethod, T information, List<byte> code, List<MethodBase> dependentMethods)
@@ -2829,7 +2861,7 @@ namespace ArduinoCsCompiler
                 ClassDeclaration? cls = classes[index];
                 if (!cls.SuppressInit && cls.TheType.TypeInitializer != null)
                 {
-                    set.HasMethod(cls.TheType.TypeInitializer, cls.TheType.TypeInitializer, out var code);
+                    set.HasMethod(cls.TheType.TypeInitializer, cls.TheType.TypeInitializer, out var code, out _);
                     if (code == null)
                     {
                         throw new InvalidOperationException("Inconsistent data set");

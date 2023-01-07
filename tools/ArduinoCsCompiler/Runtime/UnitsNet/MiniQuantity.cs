@@ -11,13 +11,13 @@ using UnitsNet;
 
 namespace ArduinoCsCompiler.Runtime.UnitsNet
 {
+    public delegate void RegisterDefaultConversionsDelegate(UnitConverter converter);
+
+    public delegate void MapGeneratedLocalizations(UnitAbbreviationsCache cache);
+
     [ArduinoReplacement(typeof(Quantity), false, IncludingPrivates = true)]
     public static class MiniQuantity
     {
-        public delegate void RegisterDefaultConversionsDelegate(UnitConverter converter);
-
-        public delegate void MapGeneratedLocalizations(UnitAbbreviationsCache cache);
-
         /// <summary>
         /// The default cctor links all unit types -> bad
         /// </summary>
@@ -74,6 +74,18 @@ namespace ArduinoCsCompiler.Runtime.UnitsNet
             var del = method.CreateDelegate(typeof(MapGeneratedLocalizations));
 
             return (MapGeneratedLocalizations)del;
+        }
+
+        /// <summary>
+        /// Just test code below, to see what code we need to generate
+        /// </summary>
+        public static MapGeneratedLocalizations ReturnDelegate()
+        {
+            return MethodToReturn;
+        }
+
+        public static void MethodToReturn(UnitAbbreviationsCache cache)
+        {
         }
     }
 }
