@@ -8,6 +8,16 @@ namespace System.Device.Gpio.Drivers;
 /// </summary>
 internal class RaspberryPiCm3Driver : RaspberryPi3LinuxDriver
 {
+    public RaspberryPiCm3Driver()
+        : base()
+    {
+    }
+
+    public RaspberryPiCm3Driver(RaspberryBoardInfo? boardInfo)
+    : base(boardInfo)
+    {
+    }
+
     /// <summary>
     /// Raspberry CM3 has 48 GPIO pins.
     /// </summary>

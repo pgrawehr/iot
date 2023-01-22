@@ -23,7 +23,7 @@ public class RaspberryPiDriverTests : GpioControllerTestBase
     {
     }
 
-    protected override GpioDriver GetTestDriver() => new RaspberryPi3Driver();
+    protected override GpioDriver GetTestDriver() => RaspberryPiDriverFactory.CreateDriver();
 
     protected override PinNumberingScheme GetTestNumberingScheme() => PinNumberingScheme.Logical;
 

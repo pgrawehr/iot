@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 
@@ -10,8 +12,10 @@ namespace System.Device.Gpio;
 /// <summary>
 /// Identification of Raspberry Pi board models
 /// </summary>
-internal class RaspberryBoardInfo
+public class RaspberryBoardInfo
 {
+    private const string ModelFilePath = "/proc/device-tree/model";
+
     /// <summary>
     /// The Raspberry Pi model.
     /// </summary>
@@ -135,39 +139,18 @@ internal class RaspberryBoardInfo
 
     #endregion
 
-    #region Properties
+    /// <summary>
+    /// Returns a read-only collection of the board properties.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> BoardSettings => _settings;
 
+    /// <summary>
+    /// Returns the board model
+    /// </summary>
     public Model BoardModel
     {
         get;
     }
-
-    /// <summary>
-    /// Get board model from firmware revision
-    /// See http://www.raspberrypi-spy.co.uk/2012/09/checking-your-raspberry-pi-board-version/ for information.
-    /// </summary>
-    /// <returns></returns>
-    private Model GetBoardModel() => (Firmware & 0xFFFF) switch
-    {
-        0x2 or 0x3 => Model.RaspberryPiBRev1,
-        0x4 or 0x5 or 0x6 or 0xd or 0xe or 0xf => Model.RaspberryPiBRev2,
-        0x7 or 0x8 or 0x9 => Model.RaspberryPiA,
-        0x10 or 0x13 or 0x32 => Model.RaspberryPiBPlus,
-        0x11 or 0x14 or 0x61 => Model.RaspberryPiComputeModule,
-        0x12 or 0x15 or 0x21 => Model.RaspberryPiAPlus,
-        0x1040 or 0x1041 or 0x2042 => Model.RaspberryPi2B,
-        0x0092 or 0x0093 => Model.RaspberryPiZero,
-        0x00C1 => Model.RaspberryPiZeroW,
-        0x2120 => Model.RaspberryPiZero2W,
-        0x2082 or 0x2083 => Model.RaspberryPi3B,
-        0x20D3 => Model.RaspberryPi3BPlus,
-        0x20E0 => Model.RaspberryPi3APlus,
-        0x20A0 or 0x2100 => Model.RaspberryPiComputeModule3,
-        0x3111 or 0x3112 or 0x3114 or 0x3115 => Model.RaspberryPi4,
-        0x3140 or 0x3141 => Model.RaspberryPiComputeModule4,
-        0x3130 => Model.RaspberryPi400,
-        _ => Model.Unknown,
-    };
 
     /// <summary>
     /// Gets the processor name.
@@ -210,17 +193,52 @@ internal class RaspberryBoardInfo
         }
     }
 
-    #endregion
+    /// <summary>
+    /// Get board model from firmware revision
+    /// See http://www.raspberrypi-spy.co.uk/2012/09/checking-your-raspberry-pi-board-version/ for information.
+    /// </summary>
+    /// <returns></returns>
+    private Model GetBoardModel() => (Firmware & 0xFFFF) switch
+    {
+        0x2 or 0x3 => Model.RaspberryPiBRev1,
+        0x4 or 0x5 or 0x6 or 0xd or 0xe or 0xf => Model.RaspberryPiBRev2,
+        0x7 or 0x8 or 0x9 => Model.RaspberryPiA,
+        0x10 or 0x13 or 0x32 => Model.RaspberryPiBPlus,
+        0x11 or 0x14 or 0x61 => Model.RaspberryPiComputeModule,
+        0x12 or 0x15 or 0x21 => Model.RaspberryPiAPlus,
+        0x1040 or 0x1041 or 0x2042 => Model.RaspberryPi2B,
+        0x0092 or 0x0093 => Model.RaspberryPiZero,
+        0x00C1 => Model.RaspberryPiZeroW,
+        0x2120 => Model.RaspberryPiZero2W,
+        0x2082 or 0x2083 => Model.RaspberryPi3B,
+        0x20D3 => Model.RaspberryPi3BPlus,
+        0x20E0 => Model.RaspberryPi3APlus,
+        0x20A0 or 0x2100 => Model.RaspberryPiComputeModule3,
+        0x3111 or 0x3112 or 0x3114 or 0x3115 => Model.RaspberryPi4,
+        0x3140 or 0x3141 => Model.RaspberryPiComputeModule4,
+        0x3130 => Model.RaspberryPi400,
+        _ => Model.Unknown,
+    };
 
     #region Private Helpers
 
     /// <summary>
-    /// Detect the board CPU information from /proc/cpuinfo
+    /// Detect the board and CPU information
     /// </summary>
+    /// <param name="boardInfo">An instance of <see cref="RaspberryBoardInfo"/></param>
+    /// <param name="error">The internal error in case of a problem</param>
     /// <returns>
-    /// The <see cref="RaspberryBoardInfo"/>.
+    /// True on success, false otherwise
     /// </returns>
-    internal static RaspberryBoardInfo LoadBoardInfo()
+    public static bool TryDetermineBoardInfo(
+#if NET5_0_OR_GREATER
+    [NotNullWhen(true)]
+#endif
+    out RaspberryBoardInfo boardInfo,
+#if NET5_0_OR_GREATER
+    [NotNullWhen(false)]
+#endif
+    out Exception error)
     {
         try
         {
@@ -251,11 +269,15 @@ internal class RaspberryBoardInfo
                 }
             }
 
-            return new RaspberryBoardInfo(settings);
+            boardInfo = new RaspberryBoardInfo(settings);
+            error = null;
+            return true;
         }
-        catch
+        catch (Exception ex)
         {
-            return new RaspberryBoardInfo(new Dictionary<string, string>());
+            error = ex;
+            boardInfo = null!;
+            return false;
         }
     }
     #endregion

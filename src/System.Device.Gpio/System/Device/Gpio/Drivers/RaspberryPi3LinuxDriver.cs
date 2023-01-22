@@ -27,20 +27,28 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     private const string GpioMemoryFilePath = "/dev/gpiomem";
     private const string MemoryFilePath = "/dev/mem";
     private const string DeviceTreeRanges = "/proc/device-tree/soc/ranges";
-    private const string ModelFilePath = "/proc/device-tree/model";
 
     private static readonly object s_initializationLock = new object();
 
     private readonly PinState?[] _pinModes;
+    private readonly RaspberryBoardInfo? _boardInfo;
     private RegisterView* _registerViewPointer = null;
 
     private UnixDriver? _interruptDriver = null;
 
-    private string? _detectedModel;
-
     public RaspberryPi3LinuxDriver()
     {
         _pinModes = new PinState[PinCount];
+    }
+
+    /// <summary>
+    /// Create the driver, supplying the information that was used to select it.
+    /// </summary>
+    /// <param name="boardInfo">The Information that was used to select this driver. May be null to simplify logic at the call site</param>
+    public RaspberryPi3LinuxDriver(RaspberryBoardInfo? boardInfo)
+        : this()
+    {
+        _boardInfo = boardInfo;
     }
 
     /// <summary>
@@ -51,11 +59,7 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     /// <summary>
     /// Returns true if this is a Raspberry Pi4
     /// </summary>
-    private bool IsPi4
-    {
-        get;
-        set;
-    }
+    protected virtual bool IsPi4 => false;
 
     private void ValidatePinNumber(int pinNumber)
     {
@@ -253,11 +257,11 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     {
         ValidatePinNumber(pinNumber);
 
-        RaspberryPi3Driver.AltMode altMode = GetAlternatePinMode(pinNumber);
+        AltMode altMode = GetAlternatePinMode(pinNumber);
         PinMode mode = altMode switch
         {
-            RaspberryPi3Driver.AltMode.Output => PinMode.Output,
-            RaspberryPi3Driver.AltMode.Input => PinMode.Input,
+            AltMode.Output => PinMode.Output,
+            AltMode.Input => PinMode.Input,
             _ => PinMode.Input
         };
 
@@ -423,7 +427,7 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     /// <param name="altPinMode">Alternate mode to set</param>
     /// <exception cref="NotSupportedException">This mode is not supported by this driver (or by the given pin)</exception>
     /// <remarks>The method is intended for usage by higher-level abstraction interfaces. User code should be very careful when using this method.</remarks>
-    protected internal void SetAlternatePinMode(int pinNumber, RaspberryPi3Driver.AltMode altPinMode)
+    protected internal void SetAlternatePinMode(int pinNumber, AltMode altPinMode)
     {
         Initialize();
         ValidatePinNumber(pinNumber);
@@ -446,14 +450,14 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
 
         modeBits = altPinMode switch
         {
-            RaspberryPi3Driver.AltMode.Input => 0b000,
-            RaspberryPi3Driver.AltMode.Output => 0b001,
-            RaspberryPi3Driver.AltMode.Alt0 => 0b100,
-            RaspberryPi3Driver.AltMode.Alt1 => 0b101,
-            RaspberryPi3Driver.AltMode.Alt2 => 0b110,
-            RaspberryPi3Driver.AltMode.Alt3 => 0b111,
-            RaspberryPi3Driver.AltMode.Alt4 => 0b011,
-            RaspberryPi3Driver.AltMode.Alt5 => 0b010,
+            AltMode.Input => 0b000,
+            AltMode.Output => 0b001,
+            AltMode.Alt0 => 0b100,
+            AltMode.Alt1 => 0b101,
+            AltMode.Alt2 => 0b110,
+            AltMode.Alt3 => 0b111,
+            AltMode.Alt4 => 0b011,
+            AltMode.Alt5 => 0b010,
             _ => throw new InvalidOperationException($"Unknown Alternate pin mode value: {altPinMode}")
         };
 
@@ -467,7 +471,7 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     /// </summary>
     /// <param name="pinNumber">Pin number in the logical scheme of the driver</param>
     /// <returns>Current pin mode</returns>
-    protected internal RaspberryPi3Driver.AltMode GetAlternatePinMode(int pinNumber)
+    protected internal AltMode GetAlternatePinMode(int pinNumber)
     {
         Initialize();
         ValidatePinNumber(pinNumber);
@@ -489,21 +493,21 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
         {
             case 0b000:
                 // Input
-                return RaspberryPi3Driver.AltMode.Input;
+                return AltMode.Input;
             case 0b001:
-                return RaspberryPi3Driver.AltMode.Output;
+                return AltMode.Output;
             case 0b100:
-                return RaspberryPi3Driver.AltMode.Alt0;
+                return AltMode.Alt0;
             case 0b101:
-                return RaspberryPi3Driver.AltMode.Alt1;
+                return AltMode.Alt1;
             case 0b110:
-                return RaspberryPi3Driver.AltMode.Alt2;
+                return AltMode.Alt2;
             case 0b111:
-                return RaspberryPi3Driver.AltMode.Alt3;
+                return AltMode.Alt3;
             case 0b011:
-                return RaspberryPi3Driver.AltMode.Alt4;
+                return AltMode.Alt4;
             case 0b010:
-                return RaspberryPi3Driver.AltMode.Alt5;
+                return AltMode.Alt5;
         }
 
         // This cannot happen.
@@ -715,29 +719,6 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
             Interop.close(fileDescriptor);
             _registerViewPointer = (RegisterView*)mapPointer;
 
-            // Detect whether we're running on a Raspberry Pi 4
-            IsPi4 = false;
-            try
-            {
-                if (File.Exists(ModelFilePath))
-                {
-                    string model = File.ReadAllText(ModelFilePath, Text.Encoding.ASCII);
-                    if (model.Contains("Raspberry Pi 4"))
-                    {
-                        IsPi4 = true;
-                    }
-
-                    _detectedModel = model;
-                }
-            }
-            catch (Exception x)
-            {
-                // This should not normally fail, but we currently don't know how this behaves on different operating systems. Therefore, we ignore
-                // any exceptions in release and just continue as Pi3 if something fails.
-                // If in debug mode, we might want to check what happened here (i.e unsupported OS, incorrect permissions)
-                Debug.Fail($"Unexpected exception: {x}");
-            }
-
             InitializeInterruptDriver();
         }
     }
@@ -777,16 +758,16 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     {
         StringBuilder sb = new StringBuilder();
         Initialize();
-        if (_detectedModel != null)
+        if (_boardInfo != null)
         {
-            sb.Append(_detectedModel);
+            sb.Append(_boardInfo);
         }
         else
         {
-            sb.Append($"Raspberry Pi {(IsPi4 ? "4" : "3")}");
+            sb.Append($"Raspberry Pi {(IsPi4 ? "4" : "3")} linux Driver, manually constructed, ");
         }
 
-        sb.Append($" linux driver with {PinCount} pins");
+        sb.Append($" with {PinCount} pins");
         if (_interruptDriver != null)
         {
             sb.Append(" and an interrupt driver");

@@ -455,11 +455,13 @@ public class GpioController : IDisposable, IQueryComponentInformation
     /// <returns>A driver that works with the board the program is executing on.</returns>
     private static GpioDriver GetBestDriverForBoardOnLinux()
     {
-        RaspberryPi3LinuxDriver? internalDriver = RaspberryPi3Driver.CreateInternalRaspberryPi3LinuxDriver(out _);
-
-        if (internalDriver is object)
+        if (RaspberryBoardInfo.TryDetermineBoardInfo(out RaspberryBoardInfo boardInfo, out Exception error))
         {
-            return new RaspberryPi3Driver(internalDriver);
+            GpioDriver? driver = RaspberryPiDriverFactory.CreateDriver(boardInfo.BoardModel, boardInfo);
+            if (driver != null)
+            {
+                return driver;
+            }
         }
 
         return UnixDriver.Create();
@@ -489,7 +491,7 @@ public class GpioController : IDisposable, IQueryComponentInformation
         if (baseBoardProduct == RaspberryPi3Product || baseBoardProduct.StartsWith($"{RaspberryPi3Product} ") ||
             baseBoardProduct == RaspberryPi2Product || baseBoardProduct.StartsWith($"{RaspberryPi2Product} "))
         {
-            return new RaspberryPi3Driver();
+            return new Windows10Driver();
         }
 
         if (baseBoardProduct == HummingBoardProduct || baseBoardProduct.StartsWith($"{HummingBoardProduct} "))
