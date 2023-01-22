@@ -312,7 +312,7 @@ public abstract class GpioControllerTestBase
         GpioDriver testDriver = GetTestDriver();
         // Skipping the test for now when using the SysFsDriver or the RaspberryPi3Driver given that this test is flaky for those drivers.
         // Issue tracking this problem is https://github.com/dotnet/iot/issues/629
-        if (testDriver is SysFsDriver || testDriver is RaspberryPi3Driver)
+        if (testDriver is SysFsDriver)
         {
             return;
         }

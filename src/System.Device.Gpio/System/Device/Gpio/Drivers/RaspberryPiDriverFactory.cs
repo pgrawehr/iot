@@ -49,11 +49,11 @@ public static class RaspberryPiDriverFactory
                 RaspberryBoardInfo.Model.RaspberryPi3APlus or
                 RaspberryBoardInfo.Model.RaspberryPi3BPlus or
                 RaspberryBoardInfo.Model.RaspberryPiZeroW or
-                RaspberryBoardInfo.Model.RaspberryPiZero2W or
-                RaspberryBoardInfo.Model.RaspberryPi4 or
-                RaspberryBoardInfo.Model.RaspberryPi400 => new RaspberryPi3LinuxDriver(boardInfo),
-            RaspberryBoardInfo.Model.RaspberryPiComputeModule4 or
-                RaspberryBoardInfo.Model.RaspberryPiComputeModule3 => new RaspberryPiCm3Driver(boardInfo),
+                RaspberryBoardInfo.Model.RaspberryPiZero2W => new RaspberryPi3LinuxDriver(boardInfo),
+            RaspberryBoardInfo.Model.RaspberryPi4 or
+                RaspberryBoardInfo.Model.RaspberryPi400 => new RaspberryPi4LinuxDriver(boardInfo),
+            RaspberryBoardInfo.Model.RaspberryPiComputeModule3 => new RaspberryPiCm3Driver(boardInfo),
+            RaspberryBoardInfo.Model.RaspberryPiComputeModule4 => new RaspberryPiCm4Driver(boardInfo),
             _ => null,
         };
     }

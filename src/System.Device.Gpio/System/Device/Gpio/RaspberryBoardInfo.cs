@@ -270,7 +270,7 @@ public class RaspberryBoardInfo
             }
 
             boardInfo = new RaspberryBoardInfo(settings);
-            error = null;
+            error = null!;
             return true;
         }
         catch (Exception ex)
