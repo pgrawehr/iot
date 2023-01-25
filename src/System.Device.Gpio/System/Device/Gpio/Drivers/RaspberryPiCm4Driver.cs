@@ -6,7 +6,7 @@ namespace System.Device.Gpio.Drivers;
 /// <summary>
 /// A GPIO driver for the Raspberry Pi Compute Module 4
 /// </summary>
-internal class RaspberryPiCm4Driver : RaspberryPi3LinuxDriver
+internal class RaspberryPiCm4Driver : RaspberryPiDriver
 {
     public RaspberryPiCm4Driver()
         : base()

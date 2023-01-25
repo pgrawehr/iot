@@ -6,7 +6,7 @@ namespace System.Device.Gpio.Drivers;
 /// <summary>
 /// A GPIO driver for the Raspberry Pi 4 and 400
 /// </summary>
-internal class RaspberryPi4LinuxDriver : RaspberryPi3LinuxDriver
+internal class RaspberryPi4LinuxDriver : RaspberryPiDriver
 {
     public RaspberryPi4LinuxDriver()
         : base()
@@ -18,16 +18,7 @@ internal class RaspberryPi4LinuxDriver : RaspberryPi3LinuxDriver
     {
     }
 
-    protected override bool IsPi4 => true;
+    protected internal override int PinCount => 28;
 
-    /// <summary>
-    /// Converts a board pin number to the driver's logical numbering scheme.
-    /// </summary>
-    /// <param name="pinNumber">The board pin number to convert.</param>
-    /// <returns>The pin number in the driver's logical numbering scheme.</returns>
-    protected internal override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
-    {
-        // CM3 has no physical numbering scheme
-        return pinNumber;
-    }
+    protected override bool IsPi4 => true;
 }
