@@ -62,6 +62,11 @@ public abstract unsafe class RaspberryPiDriver : GpioDriver
         get;
     }
 
+    /// <summary>
+    /// True if this driver supports setting the pins to alternate modes.
+    /// </summary>
+    public virtual bool AlternatePinModeSettingSupported => true;
+
     private void ValidatePinNumber(int pinNumber)
     {
         if (pinNumber < 0 || pinNumber >= PinCount)
@@ -429,7 +434,7 @@ public abstract unsafe class RaspberryPiDriver : GpioDriver
     /// <param name="altPinMode">Alternate mode to set</param>
     /// <exception cref="NotSupportedException">This mode is not supported by this driver (or by the given pin)</exception>
     /// <remarks>The method is intended for usage by higher-level abstraction interfaces. User code should be very careful when using this method.</remarks>
-    protected internal void SetAlternatePinMode(int pinNumber, AltMode altPinMode)
+    public virtual void SetAlternatePinMode(int pinNumber, AltMode altPinMode)
     {
         Initialize();
         ValidatePinNumber(pinNumber);
@@ -473,7 +478,7 @@ public abstract unsafe class RaspberryPiDriver : GpioDriver
     /// </summary>
     /// <param name="pinNumber">Pin number in the logical scheme of the driver</param>
     /// <returns>Current pin mode</returns>
-    protected internal AltMode GetAlternatePinMode(int pinNumber)
+    public virtual AltMode GetAlternatePinMode(int pinNumber)
     {
         Initialize();
         ValidatePinNumber(pinNumber);

@@ -19,6 +19,7 @@ namespace Iot.Device.LEDMatrix
     /// </summary>
     public class RGBLedMatrix
     {
+        private RaspberryPiDriver _driver;
         private GpioController _controller;
         private Gpio _gpio; // Gpio handling.
         private PinMapping _mapping; // mapping the pin numbers to the Gpio (R1, G1, B1, OE, Clock, Latch...etc.).
@@ -64,9 +65,15 @@ namespace Iot.Device.LEDMatrix
             }
 
             _deviceRows = height / chainRows;
+            var rpiDriver = RaspberryPiDriverFactory.CreateDriver() as RaspberryPiDriver;
+            if (rpiDriver == null)
+            {
+                throw new PlatformNotSupportedException("This binding is only supported on the Raspberry Pi");
+            }
 
-            _gpio = new Gpio(mapping, _deviceRows);
-            _controller = new GpioController(PinNumberingScheme.Logical, _gpio);
+            _driver = rpiDriver;
+            _gpio = new Gpio(_driver, mapping, _deviceRows);
+            _controller = new GpioController(PinNumberingScheme.Logical, _driver);
 
             OpenAndWriteToPin(_mapping.A, PinValue.Low);
             OpenAndWriteToPin(_mapping.B, PinValue.Low);
@@ -354,6 +361,7 @@ namespace Iot.Device.LEDMatrix
 
                 _controller.Dispose();
                 _controller = null!;
+                _driver = null!;
             }
         }
 

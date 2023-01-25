@@ -344,16 +344,7 @@ namespace Iot.Device.Board
         /// <returns>A driver that works with the board the program is executing on.</returns>
         private static GpioDriver GetBestDriverForBoardOnLinux()
         {
-            try
-            {
-                // Because we can't construct the internal driver here (and the identification isn't public either), we'll have to go trough the exception
-                return new RaspberryPi3Driver();
-            }
-            catch (Exception x) when (x is NotSupportedException || x is PlatformNotSupportedException)
-            {
-            }
-
-            return UnixDriver.Create();
+            return RaspberryPiDriverFactory.CreateDriver();
         }
 
         /// <summary>
@@ -376,12 +367,6 @@ namespace Iot.Device.Board
             if (baseBoardProduct is null)
             {
                 throw new Exception("Single board computer type cannot be detected.");
-            }
-
-            if (baseBoardProduct == RaspberryPi3Product || baseBoardProduct.StartsWith($"{RaspberryPi3Product} ") ||
-                baseBoardProduct == RaspberryPi2Product || baseBoardProduct.StartsWith($"{RaspberryPi2Product} "))
-            {
-                return new RaspberryPi3Driver();
             }
 
             if (baseBoardProduct == HummingBoardProduct || baseBoardProduct.StartsWith($"{HummingBoardProduct} "))

@@ -23,7 +23,7 @@ namespace Iot.Device.Board
         private readonly object _initLock = new object();
 
         private ManagedGpioController? _managedGpioController;
-        private RaspberryPi3Driver? _raspberryPi3Driver;
+        private RaspberryPiDriver? _raspberryPi3Driver;
         private bool _initialized;
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace Iot.Device.Board
         /// <inheritdoc />
         protected override GpioDriver? TryCreateBestGpioDriver()
         {
-            return new RaspberryPi3Driver();
+            return RaspberryPiDriverFactory.CreateDriver();
         }
 
         /// <summary>
@@ -69,7 +69,6 @@ namespace Iot.Device.Board
                     return;
                 }
 
-                // Needs to be a raspi 3 driver here (either unix or windows)
                 GpioDriver? driver = TryCreateBestGpioDriver();
                 if (driver == null)
                 {
@@ -77,7 +76,7 @@ namespace Iot.Device.Board
                 }
 
                 _managedGpioController = new ManagedGpioController(this, driver);
-                _raspberryPi3Driver = driver as RaspberryPi3Driver;
+                _raspberryPi3Driver = driver as RaspberryPiDriver;
 
                 PinCount = _managedGpioController.PinCount;
                 _initialized = true;
@@ -271,8 +270,8 @@ namespace Iot.Device.Board
         /// <param name="pinNumberingScheme">Pin numbering scheme for the pin provided (logical or physical)</param>
         /// <param name="bus">Optional bus argument, for SPI and I2C pins</param>
         /// <returns>
-        /// A member of <see cref="RaspberryPi3Driver.AltMode"/> describing the mode the pin is in.</returns>
-        private RaspberryPi3Driver.AltMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0)
+        /// A member of <see cref="AltMode"/> describing the mode the pin is in.</returns>
+        private AltMode GetHardwareModeForPinUsage(int pinNumber, PinUsage usage, PinNumberingScheme pinNumberingScheme = PinNumberingScheme.Logical, int bus = 0)
         {
             if (pinNumber >= PinCount)
             {
@@ -282,7 +281,7 @@ namespace Iot.Device.Board
             if (usage == PinUsage.Gpio)
             {
                 // all pins support GPIO
-                return RaspberryPi3Driver.AltMode.Input;
+                return AltMode.Input;
             }
 
             if (usage == PinUsage.I2c)
@@ -295,7 +294,7 @@ namespace Iot.Device.Board
                     case 1:
                     case 2:
                     case 3:
-                        return RaspberryPi3Driver.AltMode.Alt0;
+                        return AltMode.Alt0;
                     case 4:
                     case 5:
                     case 6:
@@ -307,10 +306,10 @@ namespace Iot.Device.Board
                     case 12:
                     case 13:
                     case 14:
-                        return RaspberryPi3Driver.AltMode.Alt5;
+                        return AltMode.Alt5;
                     case 22:
                     case 23:
-                        return RaspberryPi3Driver.AltMode.Alt5;
+                        return AltMode.Alt5;
                 }
 
                 throw new NotSupportedException($"No I2C support on Pin {pinNumber}.");
@@ -320,12 +319,12 @@ namespace Iot.Device.Board
             {
                 if (pinNumber == 12 || pinNumber == 13)
                 {
-                    return RaspberryPi3Driver.AltMode.Alt0;
+                    return AltMode.Alt0;
                 }
 
                 if (pinNumber == 18 || pinNumber == 19)
                 {
-                    return RaspberryPi3Driver.AltMode.Alt5;
+                    return AltMode.Alt5;
                 }
 
                 throw new NotSupportedException($"No Pwm support on Pin {pinNumber}.");
@@ -336,39 +335,39 @@ namespace Iot.Device.Board
                 switch (pinNumber)
                 {
                     case 7: // Pin 7 can be assigned to either SPI0 or SPI4
-                        return bus == 0 ? RaspberryPi3Driver.AltMode.Alt0 : RaspberryPi3Driver.AltMode.Alt3;
+                        return bus == 0 ? AltMode.Alt0 : AltMode.Alt3;
                     case 8:
                     case 9:
                     case 10:
                     case 11:
-                        return RaspberryPi3Driver.AltMode.Alt0;
+                        return AltMode.Alt0;
                     case 0:
                     case 1:
                     case 2:
                     case 3:
-                        return RaspberryPi3Driver.AltMode.Alt3;
+                        return AltMode.Alt3;
                     case 4:
                     case 5:
                     case 6:
-                        return RaspberryPi3Driver.AltMode.Alt3;
+                        return AltMode.Alt3;
                     case 12:
                     case 13:
                     case 14:
                     case 15:
-                        return RaspberryPi3Driver.AltMode.Alt3;
+                        return AltMode.Alt3;
                     case 16:
                     case 17:
-                        return RaspberryPi3Driver.AltMode.Alt4;
+                        return AltMode.Alt4;
                     case 18:
                     case 19:
                     case 20:
                     case 21:
-                        return bus == 6 ? RaspberryPi3Driver.AltMode.Alt3 : RaspberryPi3Driver.AltMode.Alt4;
+                        return bus == 6 ? AltMode.Alt3 : AltMode.Alt4;
                     case 24:
                     case 25:
                     case 26:
                     case 27:
-                        return RaspberryPi3Driver.AltMode.Alt5;
+                        return AltMode.Alt5;
                 }
 
                 throw new NotSupportedException($"No SPI support on Pin {pinNumber}.");
@@ -392,26 +391,26 @@ namespace Iot.Device.Board
                     case 11:
                     case 12:
                     case 13:
-                        return RaspberryPi3Driver.AltMode.Alt4;
+                        return AltMode.Alt4;
                     case 14:
                     case 15:
                         if (bus == 0)
                         {
-                            return RaspberryPi3Driver.AltMode.Alt0;
+                            return AltMode.Alt0;
                         }
                         else if (bus == 5)
                         {
-                            return RaspberryPi3Driver.AltMode.Alt4;
+                            return AltMode.Alt4;
                         }
                         else if (bus == 1)
                         {
-                            return RaspberryPi3Driver.AltMode.Alt5;
+                            return AltMode.Alt5;
                         }
 
                         break;
                     case 16:
                     case 17:
-                        return (bus == 0) ? RaspberryPi3Driver.AltMode.Alt3 : RaspberryPi3Driver.AltMode.Alt5;
+                        return (bus == 0) ? AltMode.Alt3 : AltMode.Alt5;
                 }
 
                 throw new NotSupportedException($"No Uart support on Pin {pinNumber}.");
@@ -461,7 +460,7 @@ namespace Iot.Device.Board
             }
 
             var modeToSet = GetHardwareModeForPinUsage(pinNumber, usage, PinNumberingScheme.Logical);
-            if (modeToSet != RaspberryPi3Driver.AltMode.Unknown)
+            if (modeToSet != AltMode.Unknown)
             {
                 _raspberryPi3Driver.SetAlternatePinMode(pinNumber, modeToSet);
             }
@@ -494,7 +493,7 @@ namespace Iot.Device.Board
             }
 
             var pinMode = _raspberryPi3Driver.GetAlternatePinMode(pinNumber);
-            if (pinMode == RaspberryPi3Driver.AltMode.Input || pinMode == RaspberryPi3Driver.AltMode.Output)
+            if (pinMode == AltMode.Input || pinMode == AltMode.Output)
             {
                 return PinUsage.Gpio;
             }

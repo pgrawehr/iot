@@ -2,13 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Device.Gpio;
 using System.Device.Gpio.Drivers;
 using System.Runtime.CompilerServices;
 
 namespace Iot.Device.LEDMatrix
 {
-    internal sealed class Gpio : RaspberryPi3Driver
+    internal sealed class Gpio
     {
+        private readonly RaspberryPiDriver _masterDriver;
         internal ulong AMask { get; set; }
         internal ulong BMask { get; set; }
         internal ulong CMask { get; set; }
@@ -28,8 +30,9 @@ namespace Iot.Device.LEDMatrix
         internal ulong B2Mask { get; set; }
         internal ulong AllColorsMask { get; set; }
 
-        internal Gpio(PinMapping mapping, int rows)
+        internal Gpio(RaspberryPiDriver masterDriver, PinMapping mapping, int rows)
         {
+            _masterDriver = masterDriver;
             AMask = 1U << mapping.A;
             BMask = 1U << mapping.B;
             CMask = 1U << mapping.C;
@@ -63,9 +66,9 @@ namespace Iot.Device.LEDMatrix
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void WriteSet(ulong mask) => SetRegister = mask;
+        internal void WriteSet(ulong mask) => _masterDriver.SetRegister = mask;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void WriteClear(ulong mask) => ClearRegister = mask;
+        internal void WriteClear(ulong mask) => _masterDriver.ClearRegister = mask;
     }
 }
