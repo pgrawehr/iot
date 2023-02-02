@@ -364,6 +364,8 @@ namespace DisplayControl
             _router.AddEndPoint(_parserForwardInterface);
             _router.AddEndPoint(_aisManager);
 
+            _aisManager.EnableAisAlarms(true, new TrackEstimationParameters());
+
             // _router.AddEndPoint(_signalKClientParser);
 
             _router.OnNewSequence += ParserOnNewSequence;

@@ -1,0 +1,81 @@
+# Current configuration of Yacht Devices NMEA 0183 Gateway YDNG-03
+# Firmware: 1.35 24/12/2021                 
+
+# Default speed 4800, Navtex 9600, AIS 38400 (recommended)
+0183_SPEED=115200
+
+TALKER_ID=YD
+WIND_CALC=ANY
+FAST_0183_HEADING=OFF
+FAST_N2K_HEADING=OFF
+TUNNEL=OFF
+
+# Filter type (WHITE or BLACK)
+0183_TX_TYPE=BLACK
+0183_RX_TYPE=BLACK
+N2K_TX_TYPE=BLACK
+N2K_RX_TYPE=BLACK
+
+# Filter definition, examples for 0183 and N2K:
+#
+# 0183_TX_FILTER=GLL, VDO, VDM, DPT
+# N2K_RX_FILTER=0x1FD0700 0x1FFFFFF, 130310, 1 255, 130311
+#
+0183_TX_FILTER=
+0183_RX_FILTER=
+N2K_TX_FILTER=
+N2K_RX_FILTER=129539,129540
+
+# Filter for data forwarding from the NMEA 0183 RX to NMEA 0183 TX
+# An empty WHITE filter prohibits forwarding of all data
+0183_RTE_TYPE=WHITE
+0183_RTE_FILTER=
+
+# Autopilot
+RAY_AUTOPILOT=OFF
+WPT_AUTO_CONFIRM=OFF
+RMB_N2K_VARIATION=OFF
+NAV_DATA_MAG=ON
+
+# Transducer IDs (up to 16 characters) for outgoing XDR sentences. Leave blank
+# to disable transmission. Factory settings (without quotes): "","Baro","","Air",
+# "ENV_INSIDE_T","Air","ENV_INSIDE_H","EXHAUST","EngineBoost#0","EngineBoost#1",
+# "EngineHours#0","EngineHours#1","Alternator#0","Alternator#1","Engine#0",
+# "Engine#1","Fuel#0","Fuel#1","Yaw","Pitch","Roll".
+# Note: Yaw, Pitch and Roll settings are used for outgoing sentences and to
+# parse incoming sentences.
+XDR_SEA_TEMPERATURE=ENV_WATER_T
+XDR_ATM_PRESSURE_PASCAL=Barometer
+XDR_ATM_PRESSURE_BAR=
+XDR_OUTSIDE_AIR_TEMPERATURE=ENV_OUTAIR_T
+XDR_INSIDE_AIR_TEMPERATURE=ENV_INSIDE_T
+XDR_OUTSIDE_REL_HUMIDITY=Air
+XDR_INSIDE_REL_HUMIDITY=ENV_INSIDE_H
+XDR_EXHAUST_TEMPERATURE=EXHAUST
+XDR_PORT_ENG_BOOST=EngineBoost#0
+XDR_STBD_ENG_BOOST=EngineBoost#1
+XDR_PORT_ENG_HOURS=EngineHours#0
+XDR_STBD_ENG_HOURS=EngineHours#1
+XDR_PORT_ENG_ALTERNATOR=Alternator#0
+XDR_STBD_ENG_ALTERNATOR=Alternator#1
+XDR_PORT_ENG_TEMPERATURE=Engine#0
+XDR_STBD_ENG_TEMPERATURE=Engine#1
+XDR_PORT_ENG_FUEL_RATE=Fuel#0
+XDR_STBD_ENG_FUEL_RATE=Fuel#1
+XDR_YAW=Yaw
+XDR_PITCH=Pitch
+XDR_ROLL=Roll
+
+# Incoming XDR messages: sensor id, units field, nmea 2000 data type
+# Example: XDR_IN_TEMPERATURE=Air,C,1
+XDR_IN_TEMPERATURE=Air,C,1
+XDR_IN_PRESSURE=Barometer,P,1
+XDR_IN_HUMIDITY=
+
+# Device type (class,function). Never change the factory setting (25,135)
+# without serious reason. Only pairs declared in NMEA 2000 Standard 3.101
+# are allowed. Well known types: AIS - 60,195; Autopilot - 40,150;
+# GPS Receiver - 60,145; Engine Gateway - 50,160; 0183 Gateway - 25,135.
+DEVICE_TYPE=25,135
+
+# End of file
