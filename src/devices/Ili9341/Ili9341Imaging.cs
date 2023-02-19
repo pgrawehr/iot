@@ -3,8 +3,8 @@
 
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using Iot.Device.Graphics;
 
 namespace Iot.Device.Ili9341
 {
@@ -14,7 +14,7 @@ namespace Iot.Device.Ili9341
         /// Send a bitmap to the Ili9341 display specifying the starting position and destination clipping rectangle.
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
-        public void SendBitmap(Bitmap bm)
+        public void SendBitmap(BitmapImage bm)
         {
             SendBitmap(bm, new Point(0, 0), new Rectangle(0, 0, ScreenWidthPx, ScreenHeightPx));
         }
@@ -24,7 +24,7 @@ namespace Iot.Device.Ili9341
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="updateRect">A rectangle that defines where in the display the bitmap is written. Note that no scaling is done.</param>
-        public void SendBitmap(Bitmap bm, Rectangle updateRect)
+        public void SendBitmap(BitmapImage bm, Rectangle updateRect)
         {
             SendBitmap(bm, new Point(updateRect.X, updateRect.Y), updateRect);
         }
@@ -35,7 +35,7 @@ namespace Iot.Device.Ili9341
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="sourcePoint">A coordinate point in the source bitmap where copying starts from.</param>
         /// <param name="destinationRect">A rectangle that defines where in the display the bitmap is written. Note that no scaling is done.</param>
-        public void SendBitmap(Bitmap bm, Point sourcePoint, Rectangle destinationRect)
+        public void SendBitmap(BitmapImage bm, Point sourcePoint, Rectangle destinationRect)
         {
             if (bm is null)
             {
@@ -56,9 +56,9 @@ namespace Iot.Device.Ili9341
         /// </summary>
         /// <param name="bm">The bitmap to be sent to the display controller note that only Pixel Format Format32bppArgb is supported.</param>
         /// <param name="sourceRect">A rectangle that defines where in the bitmap data is to be converted from.</param>
-        public Span<byte> GetBitmapPixelData(Bitmap bm, Rectangle sourceRect)
+        public Span<byte> GetBitmapPixelData(BitmapImage bm, Rectangle sourceRect)
         {
-            BitmapData bmd;
+            BitmapImage bmd;
             byte[] bitmapData; // array that takes the raw bytes of the bitmap
             byte[] outputBuffer; // array used to form the data to be written out to the SPI interface
 
