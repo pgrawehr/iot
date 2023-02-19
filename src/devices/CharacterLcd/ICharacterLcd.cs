@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using SixLabors.ImageSharp;
+using Iot.Device.Graphics;
 
 namespace Iot.Device.CharacterLcd
 {

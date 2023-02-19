@@ -8,8 +8,8 @@ using System.Text;
 using System.Threading;
 using System.Timers;
 using System.Globalization;
+using Iot.Device.Graphics;
 using Iot.Device.Mcp23xxx;
-using SixLabors.ImageSharp;
 
 namespace Iot.Device.CharacterLcd.Samples
 {
@@ -197,8 +197,7 @@ namespace Iot.Device.CharacterLcd.Samples
 
             Color[] colors =
             {
-                Color.Red, Color.Green, Color.Blue, Color.Aqua, Color.Azure,
-                Color.Brown, Color.Chocolate, Color.LemonChiffon, Color.Lime, Color.Tomato, Color.Yellow
+                Color.Black, Color.White, Color.Blue, Color.Red, Color.Green,
             };
 
             foreach (var color in colors)
