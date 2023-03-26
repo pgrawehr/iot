@@ -18,12 +18,14 @@ namespace Iot.Device.Graphics
         /// <param name="width">Width of the image</param>
         /// <param name="height">Height of the image</param>
         /// <param name="stride">Number of bytes per row</param>
-        protected BitmapImage(byte[] data, int width, int height, int stride)
+        /// <param name="pixelFormat">The pixel format of the data</param>
+        protected BitmapImage(byte[] data, int width, int height, int stride, PixelFormat pixelFormat)
         {
             _data = data;
             Width = width;
             Height = height;
             Stride = stride;
+            PixelFormat = pixelFormat;
         }
 
         private readonly byte[] _data;
@@ -47,6 +49,11 @@ namespace Iot.Device.Graphics
         /// Number of bytes per row
         /// </summary>
         public int Stride { get; }
+
+        /// <summary>
+        /// The format of the image
+        /// </summary>
+        public PixelFormat PixelFormat { get; }
 
         /// <summary>
         /// Sets pixel at specific position
