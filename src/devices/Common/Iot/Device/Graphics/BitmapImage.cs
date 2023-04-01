@@ -3,6 +3,7 @@
 
 using System;
 using System.Drawing;
+using System.Runtime.InteropServices;
 
 namespace Iot.Device.Graphics
 {
@@ -11,6 +12,8 @@ namespace Iot.Device.Graphics
     /// </summary>
     public abstract class BitmapImage
     {
+        private readonly byte[] _data;
+
         /// <summary>
         /// Initializes a <see cref="T:Iot.Device.Graphics.BitmapImage" /> instance with the specified data, width, height and stride.
         /// </summary>
@@ -27,13 +30,6 @@ namespace Iot.Device.Graphics
             Stride = stride;
             PixelFormat = pixelFormat;
         }
-
-        private readonly byte[] _data;
-
-        /// <summary>
-        /// Data related to the image (derived class defines a specific format)
-        /// </summary>
-        public Span<byte> Data => _data;
 
         /// <summary>
         /// Width of the image
@@ -76,6 +72,24 @@ namespace Iot.Device.Graphics
                     SetPixel(x, y, color);
                 }
             }
+        }
+
+        /// <summary>
+        /// Return the data pointer as a raw span of bytes
+        /// </summary>
+        /// <returns>A span of bytes</returns>
+        public virtual Span<byte> AsByteSpan()
+        {
+            return _data;
+        }
+
+        /// <summary>
+        /// Returns the data pointer as Span of Colors
+        /// </summary>
+        /// <returns>A span of colors</returns>
+        public virtual Span<Color> AsColorSpan()
+        {
+            return MemoryMarshal.Cast<byte, Color>(AsByteSpan());
         }
     }
 }

@@ -57,7 +57,6 @@ namespace Iot.Device.Ili9341
         /// <param name="sourceRect">A rectangle that defines where in the bitmap data is to be converted from.</param>
         public Span<byte> GetBitmapPixelData(BitmapImage bm, Rectangle sourceRect)
         {
-            BitmapImage bmd;
             byte[] bitmapData; // array that takes the raw bytes of the bitmap
             byte[] outputBuffer; // array used to form the data to be written out to the SPI interface
 
@@ -72,21 +71,16 @@ namespace Iot.Device.Ili9341
             }
 
             // allocate the working arrays.
-            bitmapData = new byte[sourceRect.Width * sourceRect.Height * 4];
             outputBuffer = new byte[sourceRect.Width * sourceRect.Height * 2];
 
             // get the raw pixel data for the bitmap
-            bmd = bm.LockBits(sourceRect, ImageLockMode.ReadOnly, bm.PixelFormat);
-
-            Marshal.Copy(bmd.Scan0, bitmapData, 0, bitmapData.Length);
-
-            bm.UnlockBits(bmd);
+            var colors = bm.AsByteSpan();
 
             // iterate over the source bitmap converting each pixle in the raw data
             // to a format suitablle for sending to the display
-            for (int i = 0; i < bitmapData.Length; i += 4)
+            for (int i = 0; i < colors.Length; i += 4)
             {
-                    (outputBuffer[i / 4 * 2 + 0], outputBuffer[i / 4 * 2 + 1]) = Color565(Color.FromArgb(bitmapData[i + 2], bitmapData[i + 1], bitmapData[i + 0]));
+                    (outputBuffer[i / 4 * 2 + 0], outputBuffer[i / 4 * 2 + 1]) = Color565(Color.FromArgb(colors[i + 2], colors[i + 1], colors[i + 0]));
             }
 
             return (outputBuffer);
