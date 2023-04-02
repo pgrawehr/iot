@@ -82,14 +82,5 @@ namespace Iot.Device.Graphics
         {
             return _data;
         }
-
-        /// <summary>
-        /// Returns the data pointer as Span of Colors
-        /// </summary>
-        /// <returns>A span of colors</returns>
-        public virtual Span<Color> AsColorSpan()
-        {
-            return MemoryMarshal.Cast<byte, Color>(AsByteSpan());
-        }
     }
 }

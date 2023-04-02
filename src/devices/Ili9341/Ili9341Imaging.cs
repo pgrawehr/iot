@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Drawing;
 using System.Runtime.InteropServices;
 using Iot.Device.Graphics;
 
@@ -57,7 +58,6 @@ namespace Iot.Device.Ili9341
         /// <param name="sourceRect">A rectangle that defines where in the bitmap data is to be converted from.</param>
         public Span<byte> GetBitmapPixelData(BitmapImage bm, Rectangle sourceRect)
         {
-            byte[] bitmapData; // array that takes the raw bytes of the bitmap
             byte[] outputBuffer; // array used to form the data to be written out to the SPI interface
 
             if (bm is null)

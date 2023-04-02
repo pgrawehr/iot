@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Iot.Device.Ft4222;
+using Iot.Device.Graphics;
 using Iot.Device.Ili9341;
 
 Console.WriteLine("Are you using Ft4222? Type 'yes' and press ENTER if so, anything else will be treated as no.");
@@ -18,8 +19,7 @@ int pinDC = isFt4222 ? 1 : 23;
 int pinReset = isFt4222 ? 0 : 24;
 int pinLed = isFt4222 ? 2 : -1;
 
-using Bitmap dotnetBM = new(240, 320);
-using Graphics g = Graphics.FromImage(dotnetBM);
+using BitmapImage dotnetBM = new(240, 320);
 using SpiDevice displaySPI = isFt4222 ? GetSpiFromFt4222() : GetSpiFromDefault();
 GpioController gpio = isFt4222 ? GetGpioControllerFromFt4222() : new GpioController();
 using Ili9341 ili9341 = new(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio);
