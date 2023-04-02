@@ -30,8 +30,17 @@ namespace Iot.Device.Nmea0183
     /// </remarks>
     public class AisManager : NmeaSinkAndSource
     {
-        private static readonly TimeSpan WarningRepeatTimeout = TimeSpan.FromMinutes(10);
-        private static readonly TimeSpan CleanupLatency = TimeSpan.FromSeconds(30);
+        /// <summary>
+        /// Time between repeats of the same warning. If this is set to a short value, the same proximity warning will be shown very often,
+        /// which is typically annoying.
+        /// </summary>
+        public static readonly TimeSpan WarningRepeatTimeout = TimeSpan.FromMinutes(10);
+
+        /// <summary>
+        /// Controls how often lost targets are removed completely from the target list. The timespan after which a target is considered lost
+        /// is controlled via <see cref="Iot.Device.Nmea0183.Ais.TrackEstimationParameters.TargetLostTimeout"/>
+        /// </summary>
+        public static readonly TimeSpan CleanupLatency = TimeSpan.FromSeconds(30);
 
         /// <summary>
         /// Delegate for AIS messages
@@ -68,6 +77,8 @@ namespace Iot.Device.Nmea0183
 
         private Thread? _aisBackgroundThread;
 
+        private PositionProvider _positionProvider;
+
         /// <summary>
         /// Creates an instance of an <see cref="AisManager"/>
         /// </summary>
@@ -95,6 +106,7 @@ namespace Iot.Device.Nmea0183
             _throwOnUnknownMessage = throwOnUnknownMessage;
             _aisParser = new AisParser(throwOnUnknownMessage);
             _cache = new SentenceCache(this);
+            _positionProvider = new PositionProvider(_cache);
             _targets = new ConcurrentDictionary<uint, AisTarget>();
             _lock = new object();
             _activeWarnings = new ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)>();
@@ -195,7 +207,7 @@ namespace Iot.Device.Nmea0183
             s.DimensionToStern = DimensionToStern;
             s.DimensionToPort = DimensionToPort;
             s.DimensionToStarboard = DimensionToStarboard;
-            if (!_cache.TryGetCurrentPosition(out var position, null, true, out var track, out var sog, out var heading,
+            if (!_positionProvider.TryGetCurrentPosition(out var position, null, true, out var track, out var sog, out var heading,
                     out var messageTime, currentTime) || (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
             {
                 s.Position = position ?? new GeographicPosition();
@@ -320,7 +332,7 @@ namespace Iot.Device.Nmea0183
         {
             lock (_lock)
             {
-                return _targets.Values.Where(x => x is T).Cast<T>();
+                return _targets.Values.OfType<T>();
             }
         }
 
@@ -582,7 +594,7 @@ namespace Iot.Device.Nmea0183
                 GetOwnShipData(out Ship ownShip); // take in in either case
                 Length distance = ownShip.DistanceTo(ship);
                 SendWarningMessage(ship.FormatMmsi(), ship.Mmsi,
-                    $"{type} Target activated: MMSI {ship.Mmsi} in Position {ship.Position:M1 M1}! Distance {distance}", now);
+                    $"{type} Target activated: MMSI {ship.Mmsi} in Position {ship.Position:M1N M1E}! Distance {distance}", now);
             }
 
             if (AutoSendWarnings == false)
@@ -683,7 +695,7 @@ namespace Iot.Device.Nmea0183
             PositionReportClassAMessage rpt = new PositionReportClassAMessage();
             rpt.Mmsi = ship.Mmsi;
             rpt.SpeedOverGround = ship.SpeedOverGround.Knots;
-            if (ship.RateOfTurn != null)
+            if (ship.RateOfTurn.HasValue)
             {
                 // Inverse of the formula above
                 double v = ship.RateOfTurn.Value.DegreesPerMinute;
@@ -823,6 +835,14 @@ namespace Iot.Device.Nmea0183
                     _aisBackgroundThread = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// Clears the list of suppressed warnings
+        /// </summary>
+        public void ClearWarnings()
+        {
+            _activeWarnings.Clear();
         }
 
         /// <summary>

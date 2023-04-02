@@ -155,18 +155,13 @@ namespace Iot.Device.Nmea0183
                             FireOnParserError("End of stream detected.", NmeaError.PortClosed);
                         }
                     }
-                    catch (ObjectDisposedException)
+                    catch (Exception x) when (x is IOException || x is ObjectDisposedException)
                     {
                         // Ignore here (already reported above)
                     }
 
                     continue; // Probably because the stream was closed.
                 }
-
-                //// if (currentLine.IndexOf("AIVDM", StringComparison.Ordinal) > 0)
-                //// {
-                ////    FireOnParserError($"{currentLine}", NmeaError.None);
-                //// }
 
                 if (SupportLogReading)
                 {
@@ -227,7 +222,6 @@ namespace Iot.Device.Nmea0183
                         var newerInstance = _outQueue.FirstOrDefault(x => x.SentenceId == sentenceToSend.SentenceId && x.TalkerId == sentenceToSend.TalkerId);
                         if (newerInstance != null)
                         {
-                            // FireOnParserError($"Message with type {sentenceToSend.TalkerId}{sentenceToSend.SentenceId} dropped because it's outdated.", NmeaError.MessageDropped);
                             continue;
                         }
                     }

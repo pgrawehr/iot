@@ -44,7 +44,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         [Fact]
         public void FeedWithRealDataAndCheckGeneralAttributes()
         {
-            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-2021-08-25-16-25.txt");
+            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", TestDataHelper.GetResourceStream("Nmea-2021-08-25-16-25.txt"));
             DateTimeOffset latestPacketDate = default;
             reader.OnNewSequence += (source, msg) =>
             {
@@ -68,7 +68,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                     s.Position.Latitude.ShouldBeInRange(56.0, 58.0);
                 }
 
-                if (!string.IsNullOrEmpty(s.Name))
+                if (s.Name != null)
                 {
                     Assert.True(s.Name.Length <= 20);
                     Assert.True(s.Name.All(x => x < 0x128 && x >= ' ')); // Only printable ascii letters
@@ -91,7 +91,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         [Fact]
         public void CheckSafety1()
         {
-            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-2021-08-25-16-25.txt");
+            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", TestDataHelper.GetResourceStream("Nmea-2021-08-25-16-25.txt"));
             DateTimeOffset latestPacketDate = default;
             reader.OnNewSequence += (source, msg) =>
             {
@@ -160,7 +160,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         public void CheckSafetyPermanently()
         {
             // This does a safety check all the time. Very expensive...
-            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-2021-08-25-16-25.txt");
+            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", TestDataHelper.GetResourceStream("Nmea-2021-08-25-16-25.txt"));
             List<string> messages = new List<string>();
             _manager.TrackEstimationParameters.AisSafetyCheckInterval = TimeSpan.Zero;
             _manager.OnMessage += (received, sourceMmsi, destinationMmsi, text) =>
@@ -201,7 +201,6 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         public void EnableDisableBackgroundThread()
         {
             ManualResetEvent ev = new ManualResetEvent(false);
-            _manager.EnableAisAlarms(true, new TrackEstimationParameters() { AisSafetyCheckInterval = TimeSpan.Zero, WarnIfGnssMissing = true });
             _manager.OnMessage += (received, sourceMmsi, destinationMmsi, text) =>
             {
                 if (text.Contains("GNSS"))
@@ -209,6 +208,9 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                     ev.Set();
                 }
             };
+
+            _manager.ClearWarnings();
+            _manager.EnableAisAlarms(true, new TrackEstimationParameters() { AisSafetyCheckInterval = TimeSpan.Zero, WarnIfGnssMissing = true });
 
             // Fails if we actually hit the timeout
             Assert.True(ev.WaitOne(TimeSpan.FromSeconds(30)));
@@ -234,51 +236,10 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             Assert.True(ship2.Position.ContainsValidPosition());
         }
 
-        ////[Fact]
-        ////public void FeedWithMuchData()
-        ////{
-        ////    // This file contains virtual Aid-to-navigation targets (but only few ships)
-        ////    var files = Directory.GetFiles("C:\\projects\\shiplogs\\Log-2022-08-29\\", "*.txt", SearchOption.TopDirectoryOnly);
-        ////    using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", files);
-        ////    reader.OnNewSequence += (source, msg) =>
-        ////    {
-        ////        _manager.SendSentence(source, msg);
-        ////    };
-
-        ////    reader.StartDecode();
-        ////    reader.StopDecode();
-
-        ////    var ships = _manager.GetSpecificTargets<Ship>();
-        ////    ships.ShouldNotBeEmpty();
-        ////    Assert.True(ships.All(x => x.Mmsi != 0));
-        ////    foreach (var s in ships)
-        ////    {
-        ////        // The recording is from somewhere in the baltic, so this is a very broad bounding rectangle.
-        ////        // If this is exceeded, the position decoding was most likely wrong.
-        ////        if (s.Position.ContainsValidPosition())
-        ////        {
-        ////            s.Position.Longitude.ShouldBeInRange(9.0, 10.5);
-        ////            s.Position.Latitude.ShouldBeInRange(56.0, 58.0);
-        ////        }
-
-        ////        if (!string.IsNullOrEmpty(s.Name))
-        ////        {
-        ////            Assert.True(s.Name.Length <= 20);
-        ////            Assert.True(s.Name.All(x => x < 0x128 && x >= ' ')); // Only printable ascii letters
-        ////        }
-        ////    }
-
-        ////    // Check we have at least one A and B type message that contain name and a valid position
-        ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.A && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
-        ////    Assert.Contains(ships, x => x.TransceiverClass == AisTransceiverClass.B && !string.IsNullOrWhiteSpace(x.Name) && !string.IsNullOrWhiteSpace(x.CallSign) && x.Position.ContainsValidPosition());
-
-        ////    _manager.GetSpecificTargets<BaseStation>().ShouldNotBeEmpty();
-        ////}
-
         [Fact]
         public void CheckSpecialTargetDecode()
         {
-            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", "../../../Nmea-AisSpecialTargets.txt");
+            using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", TestDataHelper.GetResourceStream("Nmea-AisSpecialTargets.txt"));
             int messagesParsed = 0;
             reader.OnNewSequence += (source, msg) =>
             {
@@ -429,7 +390,8 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                     warningReceived = true;
                     source.ShouldBeEquivalentTo(970001001u);
                     destination.ShouldBeEquivalentTo(0u);
-                    text.ShouldBeEquivalentTo("AIS SART TARGET ACTIVATED: MMSI 970001001 IN POSITION 53* 42.0'N 9* 26.4'E! DISTANCE 3.248,43 NM");
+                    // Because UnitsNet still has the culture bug (uses UI culture), we cannot test the last part of the message
+                    text.ShouldStartWith("AIS SART TARGET ACTIVATED: MMSI 970001001 IN POSITION 53* 42.0'N 9* 26.4'E! DISTANCE");
                 }
             }
 
