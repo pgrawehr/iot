@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace Iot.Device.Graphics
 {
     /// <summary>
-    /// Specifies the pixel format of an image. The supported values are equivalent to the ones present in System.Drawing.PixelFormat
+    /// Specifies the pixel format of an image.
     /// </summary>
     public enum PixelFormat
     {
@@ -23,5 +23,10 @@ namespace Iot.Device.Graphics
         /// The standard 32 bit image format
         /// </summary>
         Format32bppArgb,
+
+        /// <summary>
+        /// 32 bit image format with ignored alpha
+        /// </summary>
+        Format32bppXrgb,
     }
 }

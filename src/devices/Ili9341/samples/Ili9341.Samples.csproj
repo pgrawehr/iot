@@ -8,6 +8,7 @@
   <ItemGroup>
   	<ProjectReference Include="../Ili9341.csproj" />
     <ProjectReference Include="../../Ft4222/Ft4222.csproj" />
+    <ProjectReference Include="..\..\SkiaSharpConnector\SkiaSharpConnector.csproj" />
   </ItemGroup>
 
   <ItemGroup>

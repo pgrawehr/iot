@@ -10,21 +10,17 @@ namespace Iot.Device.Graphics
     /// <summary>
     /// Represents bitmap image
     /// </summary>
-    public abstract class BitmapImage
+    public abstract class BitmapImage : IDisposable
     {
-        private readonly byte[] _data;
-
         /// <summary>
         /// Initializes a <see cref="T:Iot.Device.Graphics.BitmapImage" /> instance with the specified data, width, height and stride.
         /// </summary>
-        /// <param name="data">Data representing the image (derived class defines a specific format)</param>
         /// <param name="width">Width of the image</param>
         /// <param name="height">Height of the image</param>
         /// <param name="stride">Number of bytes per row</param>
         /// <param name="pixelFormat">The pixel format of the data</param>
-        protected BitmapImage(byte[] data, int width, int height, int stride, PixelFormat pixelFormat)
+        protected BitmapImage(int width, int height, int stride, PixelFormat pixelFormat)
         {
-            _data = data;
             Width = width;
             Height = height;
             Stride = stride;
@@ -52,6 +48,23 @@ namespace Iot.Device.Graphics
         public PixelFormat PixelFormat { get; }
 
         /// <summary>
+        /// Accesses the pixel at the given position
+        /// </summary>
+        /// <param name="x">Pixel X position</param>
+        /// <param name="y">Pixel Y position</param>
+        public Color this[int x, int y]
+        {
+            get
+            {
+                return GetPixel(x, y);
+            }
+            set
+            {
+                SetPixel(x, y, value);
+            }
+        }
+
+        /// <summary>
         /// Sets pixel at specific position
         /// </summary>
         /// <param name="x">X coordinate of the pixel</param>
@@ -75,12 +88,32 @@ namespace Iot.Device.Graphics
         }
 
         /// <summary>
+        /// Gets the color of the pixel at the given position
+        /// </summary>
+        /// <param name="x">X coordinate of the pixel</param>
+        /// <param name="y">Y coordinate of the pixel</param>
+        /// <returns></returns>
+        public abstract Color GetPixel(int x, int y);
+
+        /// <summary>
         /// Return the data pointer as a raw span of bytes
         /// </summary>
         /// <returns>A span of bytes</returns>
-        public virtual Span<byte> AsByteSpan()
+        public abstract Span<byte> AsByteSpan();
+
+        /// <summary>
+        /// Disposes this instance
+        /// </summary>
+        /// <param name="disposing">True if disposing, false if called from finalizer</param>
+        protected abstract void Dispose(bool disposing);
+
+        /// <summary>
+        /// Disposes this instance. Correctly disposing instance of this class is important to prevent memory leaks or overload of the garbage collector.
+        /// </summary>
+        public void Dispose()
         {
-            return _data;
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

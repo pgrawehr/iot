@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Iot.Device.Ft4222;
 using Iot.Device.Graphics;
+using Iot.Device.Graphics.SkiaSharpConnector;
 using Iot.Device.Ili9341;
 
 Console.WriteLine("Are you using Ft4222? Type 'yes' and press ENTER if so, anything else will be treated as no.");
@@ -19,7 +20,9 @@ int pinDC = isFt4222 ? 1 : 23;
 int pinReset = isFt4222 ? 0 : 24;
 int pinLed = isFt4222 ? 2 : -1;
 
-using BitmapImage dotnetBM = new(240, 320);
+SkiaSharpConnector.Register();
+
+using BitmapImage dotnetBM = ImageFactoryRegistry.CreateBitmap(240, 320, PixelFormat.Format32bppArgb);
 using SpiDevice displaySPI = isFt4222 ? GetSpiFromFt4222() : GetSpiFromDefault();
 GpioController gpio = isFt4222 ? GetGpioControllerFromFt4222() : new GpioController();
 using Ili9341 ili9341 = new(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio);
@@ -29,9 +32,7 @@ while (true)
     foreach (string filepath in Directory.GetFiles(@"images", "*.png").OrderBy(f => f))
     {
         Console.WriteLine($"Drawing {filepath}");
-        using Bitmap bm = (Bitmap)Bitmap.FromFile(filepath);
-        g.Clear(Color.Black);
-        g.DrawImage(bm, 0, 0, bm.Width, bm.Height);
+        using BitmapImage bm = ImageFactoryRegistry.CreateFromFile(filepath);
         ili9341.SendBitmap(dotnetBM);
         Task.Delay(1000).Wait();
     }
