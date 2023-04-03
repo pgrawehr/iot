@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../_DeviceBinding.csproj" />
+    <ProjectReference Include="../SkiaSharpConnector.csproj" />
   </ItemGroup>
 
 </Project>

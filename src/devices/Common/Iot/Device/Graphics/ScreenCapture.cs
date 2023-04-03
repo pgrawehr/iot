@@ -4,13 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 
 namespace Iot.Device.Graphics
 {
@@ -24,7 +20,6 @@ namespace Iot.Device.Graphics
         /// </summary>
         public ScreenCapture()
         {
-            _imageConfiguration = Configuration.Default;
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 InitLinux();
@@ -35,7 +30,7 @@ namespace Iot.Device.Graphics
         /// Gets the contents of a section of the screen
         /// </summary>
         /// <returns>An image. Returns null if no image can currently be retrieved (may happen e.g. when the safe desktop is shown)</returns>
-        public virtual Image<Rgba32>? GetScreenContents(SixLabors.ImageSharp.Rectangle area)
+        public virtual BitmapImage? GetScreenContents(Rectangle area)
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
@@ -54,7 +49,7 @@ namespace Iot.Device.Graphics
         /// Gets the contents of the screen
         /// </summary>
         /// <returns>An image. Returns null if no image can currently be retrieved (may happen e.g. when the safe desktop is shown)</returns>
-        public Image<Rgba32>? GetScreenContents()
+        public BitmapImage? GetScreenContents()
         {
             return GetScreenContents(ScreenSize());
         }
@@ -64,7 +59,7 @@ namespace Iot.Device.Graphics
         /// This returns the full size of the virtual desktop, which might span multiple screens
         /// </summary>
         /// <returns>A rectangle with the size of all screens</returns>
-        public virtual SixLabors.ImageSharp.Rectangle ScreenSize()
+        public virtual Rectangle ScreenSize()
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {

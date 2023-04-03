@@ -3,12 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
 using static Interop;
 
 namespace Iot.Device.Graphics

@@ -9,14 +9,12 @@ using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Graphics
 {
     public partial class ScreenCapture
     {
-        private Image<Rgba32>? GetScreenContentsWindows(SixLabors.ImageSharp.Rectangle area)
+        private BitmapImage? GetScreenContentsWindows(Rectangle area)
         {
             try
             {

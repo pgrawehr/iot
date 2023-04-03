@@ -8,6 +8,5 @@
     <Compile Include="Command\*.cs" />
     <Compile Include="*.cs" />
     <None Include="README.md" />
-    <PackageReference Include="System.Drawing.Common" Version="$(SystemDrawingCommonPackageVersion)" />
   </ItemGroup>
 </Project>

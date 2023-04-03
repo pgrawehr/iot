@@ -3,7 +3,6 @@
 
 using System;
 using System.Threading;
-using SixLabors.ImageSharp;
 using static Interop;
 
 namespace Iot.Device.Graphics

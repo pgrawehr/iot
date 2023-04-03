@@ -102,6 +102,15 @@ namespace Iot.Device.Graphics
         public abstract Span<byte> AsByteSpan();
 
         /// <summary>
+        /// Return the data pointer as a raw span of integers. For 32bit images, this equals to one pixel per entry.
+        /// </summary>
+        /// <returns>A span of integers</returns>
+        public virtual Span<int> AsIntSpan()
+        {
+            return MemoryMarshal.Cast<byte, int>(AsByteSpan());
+        }
+
+        /// <summary>
         /// Disposes this instance
         /// </summary>
         /// <param name="disposing">True if disposing, false if called from finalizer</param>
