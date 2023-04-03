@@ -239,14 +239,6 @@ namespace Iot.Device.Common
             }
         }
 
-        public QuantityType Type
-        {
-            get
-            {
-                return _value.Type;
-            }
-        }
-
         public SensorMeasurementStatus Status
         {
             get
@@ -346,9 +338,9 @@ namespace Iot.Device.Common
                 return;
             }
 
-            if (_value.Type != value.Type)
+            if (_value.QuantityInfo.BaseDimensions != value.QuantityInfo.BaseDimensions)
             {
-                throw new InvalidOperationException($"The quantity of '{Name}' is {_value.Type}, you cannot change it to {value.Type}.");
+                throw new InvalidOperationException($"The quantity of '{Name}' is {_value.QuantityInfo.BaseDimensions}, you cannot change it.");
             }
 
             if (!value.Equals(_value) || status != _measurementStatus)

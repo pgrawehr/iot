@@ -23,21 +23,15 @@ namespace Iot.Device.Common
     /// <typeparam name="T">Any data type</typeparam>
     public class CustomQuantity<T> : IQuantity
     {
-        public static CustomQuantity<T> Zero = new CustomQuantity<T>(default(T)!);
+        public static CustomQuantity<T> Zero = new CustomQuantity<T>(default(T)!, string.Empty);
 
         private T _value;
+        private string _name;
 
-        public CustomQuantity(T value)
+        public CustomQuantity(T value, string name)
         {
             _value = value;
-        }
-
-        public QuantityType Type
-        {
-            get
-            {
-                return QuantityType.Undefined;
-            }
+            _name = name;
         }
 
         public BaseDimensions Dimensions
@@ -52,7 +46,7 @@ namespace Iot.Device.Common
         {
             get
             {
-                return new QuantityInfo(Type, new UnitInfo[] { new UnitInfo(NoUnitEnum.None, BaseUnits.Undefined) }, NoUnitEnum.None,
+                return new QuantityInfo(_name, typeof(NoUnitEnum), new UnitInfo[] { new UnitInfo(NoUnitEnum.None, _name, BaseUnits.Undefined) }, NoUnitEnum.None,
                     Zero, BaseDimensions.Dimensionless);
             }
         }
@@ -68,7 +62,7 @@ namespace Iot.Device.Common
         /// <summary>
         /// Note: Not supposed to be called.
         /// </summary>
-        double IQuantity.Value
+        QuantityValue IQuantity.Value
         {
             get
             {

@@ -16,7 +16,7 @@ namespace Iot.Device.Common
         /// Constructs a custom data instance with a custom quantity
         /// </summary>
         public CustomData(String name, T value, SensorSource source, int instanceNo = 1)
-        : base(name, new CustomQuantity<T>(value), source, instanceNo)
+        : base(name, new CustomQuantity<T>(value, name), source, instanceNo)
         {
         }
 
@@ -24,7 +24,7 @@ namespace Iot.Device.Common
         /// Constructs a custom data instance with a custom quantity
         /// </summary>
         public CustomData(String name, T value, SensorSource source, int instanceNo, TimeSpan maxMeasurementAge)
-            : base(name, new CustomQuantity<T>(value), source, instanceNo, maxMeasurementAge)
+            : base(name, new CustomQuantity<T>(value, name), source, instanceNo, maxMeasurementAge)
         {
         }
 
@@ -60,7 +60,7 @@ namespace Iot.Device.Common
         /// </summary>
         public void UpdateValue(T value, SensorMeasurementStatus status)
         {
-            UpdateValue(new CustomQuantity<T>(value), status, false);
+            UpdateValue(new CustomQuantity<T>(value, Name), status, false);
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ namespace Iot.Device.Common
         /// </summary>
         public void UpdateValue(T value)
         {
-            UpdateValue(new CustomQuantity<T>(value), SensorMeasurementStatus.None, false);
+            UpdateValue(new CustomQuantity<T>(value, Name), SensorMeasurementStatus.None, false);
         }
 
         /// <inheritdoc />
