@@ -3,7 +3,7 @@
 
 using System.Device.Gpio;
 using System.Device.I2c;
-using Iot.Device.Graphics;
+using SixLabors.ImageSharp;
 
 namespace Iot.Device.CharacterLcd
 {

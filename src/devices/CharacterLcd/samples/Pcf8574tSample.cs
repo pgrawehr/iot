@@ -7,8 +7,8 @@ using System.Device.I2c;
 using System.Diagnostics;
 using System.Text;
 using System.Timers;
-using Iot.Device.Graphics;
 using Iot.Device.Pcx857x;
+using SixLabors.ImageSharp;
 
 namespace Iot.Device.CharacterLcd.Samples
 {
@@ -209,7 +209,8 @@ namespace Iot.Device.CharacterLcd.Samples
         {
             Color[] colors =
             {
-                Color.Red, Color.Green, Color.Blue, Color.White
+                Color.Red, Color.Green, Color.Blue, Color.Aqua, Color.Azure,
+                Color.Brown, Color.Chocolate, Color.LemonChiffon, Color.Lime, Color.Tomato, Color.Yellow
             };
 
             foreach (var color in colors)

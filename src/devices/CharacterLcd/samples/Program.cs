@@ -10,8 +10,8 @@ using Iot.Device.Arduino;
 using Iot.Device.Mcp23xxx;
 using Iot.Device.CharacterLcd;
 using Iot.Device.CharacterLcd.Samples;
-using Iot.Device.Graphics;
 using Iot.Device.Multiplexing;
+using SixLabors.ImageSharp;
 
 // Choose the right setup for your display:
 // UsingGpioPins();
@@ -66,7 +66,7 @@ void UsingGroveRgbDisplay()
     using LcdRgb lcd = new LcdRgb(new Size(16, 2), i2cLcdDevice, i2cRgbDevice);
     {
         lcd.Write("Hello World!");
-        lcd.SetBacklightColor(Color.White);
+        lcd.SetBacklightColor(Color.Azure);
     }
 }
 

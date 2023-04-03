@@ -8,6 +8,7 @@ using System.Text;
 using Iot.Device.CharacterLcd;
 using Iot.Device.Graphics;
 using Moq;
+using SixLabors.ImageSharp;
 using Xunit;
 
 namespace CharacterLcd.Tests
