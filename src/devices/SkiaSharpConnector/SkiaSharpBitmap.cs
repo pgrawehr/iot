@@ -32,6 +32,8 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
             }
         }
 
+        internal SKBitmap WrappedBitmap => _bitmap;
+
         public SkiaSharpBitmap(SKBitmap bitmap, PixelFormat pixelFormat)
             : base(bitmap.Width, bitmap.Height, bitmap.Width * 4, pixelFormat)
         {
@@ -70,6 +72,31 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
         {
             _bitmap?.Dispose();
             _bitmap = null!;
+        }
+
+        public override IGraphics GetDrawingApi()
+        {
+            return new BitmapCanvas(_bitmap);
+        }
+
+        internal class BitmapCanvas : IGraphics
+        {
+            private SKCanvas _canvas;
+            private SKBitmap _bitmap;
+
+            public BitmapCanvas(SKBitmap bitmap)
+            {
+                _bitmap = bitmap;
+                _canvas = new SKCanvas(_bitmap);
+            }
+
+            public SKCanvas Canvas => _canvas;
+
+            public void Dispose()
+            {
+                // Do not dispose the bitmap, it's not ours
+                _canvas.Dispose();
+            }
         }
     }
 }

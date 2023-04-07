@@ -15,14 +15,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Axp192;
 using Iot.Device.Graphics;
+using Iot.Device.Graphics.SkiaSharpConnector;
 using Iot.Device.Ili934x;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using UnitsNet;
 using UnitsNet.Units;
 
@@ -35,10 +31,10 @@ namespace Iot.Device.Ili934x.Samples
         private readonly Ili9341 _screen;
         private readonly M5ToughPowerControl? _powerControl;
 
-        private readonly Image<Rgba32> _defaultMenuBar;
-        private readonly Image<Rgba32> _leftMouseMenuBar;
-        private readonly Image<Rgba32> _rightMouseMenuBar;
-        private readonly Image<Rgba32> _openMenu;
+        private readonly BitmapImage _defaultMenuBar;
+        private readonly BitmapImage _leftMouseMenuBar;
+        private readonly BitmapImage _rightMouseMenuBar;
+        private readonly BitmapImage _openMenu;
 
         private readonly ScreenCapture _capture;
         private readonly string _nmeaSourceAddress;
@@ -59,6 +55,7 @@ namespace Iot.Device.Ili934x.Samples
         private int _selectedDataSet;
 
         private bool _forceUpdate;
+        private PositionProvider _positionProvider;
 
         public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IInputDeviceSimulator deviceSimulator, ScreenCapture capture, string nmeaSourceAddress)
         {
@@ -78,9 +75,14 @@ namespace Iot.Device.Ili934x.Samples
             _dataSets = new List<NmeaDataSet>();
             _forceUpdate = true;
 
+            _tcpClient = new NmeaTcpClient("TcpClient", nmeaSourceAddress, 10100);
+            _tcpClient.OnNewSequence += OnNewSequence;
+            _cache = new SentenceCache(_tcpClient);
+            _positionProvider = new PositionProvider(_cache);
+
             _dataSets.Add(new NmeaValueDataSet("Speed over Ground", s =>
             {
-                if (s.TryGetCurrentPosition(out _, out _, out Speed sog, out _))
+                if (_positionProvider.TryGetCurrentPosition(out _, out _, out Speed sog, out _))
                 {
                     return sog.ToUnit(SpeedUnit.Knot);
                 }
@@ -100,7 +102,7 @@ namespace Iot.Device.Ili934x.Samples
 
             _dataSets.Add(new NmeaValueDataSet("Course over Ground", s =>
             {
-                if (s.TryGetCurrentPosition(out _, out Angle track, out _, out _))
+                if (_positionProvider.TryGetCurrentPosition(out _, out Angle track, out _, out _))
                 {
                     return track;
                 }
@@ -159,14 +161,11 @@ namespace Iot.Device.Ili934x.Samples
             }));
 
             _selectedDataSet = 0;
-            _leftMouseMenuBar = Image.Load<Rgba32>("images/MenuBarLeftMouse.png");
-            _rightMouseMenuBar = Image.Load<Rgba32>("images/MenuBarRightMouse.png");
-            _defaultMenuBar = Image.Load<Rgba32>("images/MenuBar.png");
-            _openMenu = Image.Load<Rgba32>("images/OpenMenu.png");
+            _leftMouseMenuBar = ImageFactoryRegistry.CreateFromFile("images/MenuBarLeftMouse.png");
+            _rightMouseMenuBar = ImageFactoryRegistry.CreateFromFile("images/MenuBarRightMouse.png");
+            _defaultMenuBar = ImageFactoryRegistry.CreateFromFile("images/MenuBar.png");
+            _openMenu = ImageFactoryRegistry.CreateFromFile("images/OpenMenu.png");
 
-            _tcpClient = new NmeaTcpClient("TcpClient", nmeaSourceAddress, 10100);
-            _tcpClient.OnNewSequence += OnNewSequence;
-            _cache = new SentenceCache(_tcpClient);
             _tcpClient.StartDecode();
         }
 
@@ -365,7 +364,7 @@ namespace Iot.Device.Ili934x.Samples
 
                 if (_menuMode)
                 {
-                    Image<Rgba32> bm = _defaultMenuBar;
+                    BitmapImage bm = _defaultMenuBar;
                     if (_mouseEnabled == MouseButton.Left)
                     {
                         bm = _leftMouseMenuBar;
@@ -439,7 +438,7 @@ namespace Iot.Device.Ili934x.Samples
             if (bmp != null)
             {
                 _screen.FillRect(Color.Black, 0, 0, _screen.ScreenWidth, _screen.ScreenHeight, false);
-                bmp.Mutate(x => x.Resize((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
+                bmp.Resize(new Size((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
                 var pt = new Point((int)left, (int)top);
                 var rect = new Rectangle(0, 0, _screen.ScreenWidth, _screen.ScreenHeight);
                 Converters.AdjustImageDestination(bmp, ref pt, ref rect);
@@ -457,14 +456,12 @@ namespace Iot.Device.Ili934x.Samples
             var data = _dataSets[_selectedDataSet];
             if (data.Update(_cache, 1E-2) || force)
             {
-                using Image<Rgba32> bmp = _screen.CreateBackBuffer();
-                Font font = GetFont(110);
-                Font smallFont = GetFont(30);
-                bmp.Mutate(x => x.DrawText(data.Value, font, SixLabors.ImageSharp.Color.Blue, new PointF(20, 30)));
-                bmp.Mutate(
-                    x => x.DrawText(data.Name, smallFont, SixLabors.ImageSharp.Color.Blue, new PointF(10, 5)));
-                bmp.Mutate(x => x.DrawText(data.Unit, smallFont, SixLabors.ImageSharp.Color.Blue,
-                    new PointF(_screen.ScreenWidth / 2.0f, _screen.ScreenHeight - 33)));
+                using var bmp = _screen.CreateBackBuffer();
+                using var g = bmp.GetDrawingApi();
+                string font = GetDefaultFontName();
+                g.DrawText(data.Value, font, 110, Color.Blue, new Point(20, 30));
+                g.DrawText(data.Name, font, 10, Color.Blue, new Point(10, 5));
+                g.DrawText(data.Unit, font, 10, Color.Blue, new Point(_screen.ScreenWidth / 2, _screen.ScreenHeight - 33));
 
                 _screen.DrawBitmap(bmp);
                 return true;
@@ -480,16 +477,16 @@ namespace Iot.Device.Ili934x.Samples
                 foreach (string filepath in Directory.GetFiles(@"images", "*.png").OrderBy(f => f))
                 {
                     Console.WriteLine($"Drawing {filepath}");
-                    using var bm = Image<Rgba32>.Load<Rgba32>(filepath);
+                    using var bm = ImageFactoryRegistry.CreateFromFile(filepath);
                     _screen.DrawBitmap(bm);
                     _screen.SendFrame();
                 }
 
                 Console.WriteLine("FillRect(Color.Red, 120, 160, 60, 80)");
-                _screen.FillRect(new Rgba32(255, 0, 0), 120, 160, 60, 80, true);
+                _screen.FillRect(Color.FromArgb(255, 0, 0), 120, 160, 60, 80, true);
 
                 Console.WriteLine("FillRect(Color.Blue, 0, 0, 320, 240)");
-                _screen.FillRect(new Rgba32(0, 0, 255), 0, 0, 320, 240, true);
+                _screen.FillRect(Color.FromArgb(0, 0, 255), 0, 0, 320, 240, true);
 
                 Console.WriteLine("ClearScreen()");
                 _screen.ClearScreen();
@@ -501,19 +498,15 @@ namespace Iot.Device.Ili934x.Samples
             }
         }
 
-        private Font GetFont(float size)
+        private String GetDefaultFontName()
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                FontFamily family = SystemFonts.Get("Arial");
-                Font font = new Font(family, size);
-                return font;
+                return "Arial";
             }
             else
             {
-                FontFamily family = SystemFonts.Get("Liberation Sans");
-                Font font = new Font(family, size);
-                return font;
+                return "Liberation Sans";
             }
         }
 
@@ -522,9 +515,10 @@ namespace Iot.Device.Ili934x.Samples
             if (_powerControl != null)
             {
                 var pc = _powerControl.GetPowerControlData();
-                using Image<Rgba32> bmp = _screen.CreateBackBuffer();
-                Font font = GetFont(20);
-                bmp.Mutate(x => x.DrawText(pc.ToString(), font, SixLabors.ImageSharp.Color.Blue, new PointF(0, 10)));
+                using var bmp = _screen.CreateBackBuffer();
+                var font = GetDefaultFontName();
+                using var g = bmp.GetDrawingApi();
+                g.DrawText(pc.ToString(), font, 20, Color.Blue, new Point(0, 10));
                 _screen.DrawBitmap(bmp);
             }
         }

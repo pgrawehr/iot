@@ -17,6 +17,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axp192", "..\Axp192\Axp192.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nmea0183", "..\Nmea0183\Nmea0183.csproj", "{5277BF07-40B8-4E65-A777-20ECB2A420CF}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkiaSharpConnector", "..\SkiaSharpConnector\SkiaSharpConnector.csproj", "{DD919A7C-32DD-4D0B-B7B4-61285E188672}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -99,6 +101,18 @@ Global
 		{5277BF07-40B8-4E65-A777-20ECB2A420CF}.Release|x64.Build.0 = Release|Any CPU
 		{5277BF07-40B8-4E65-A777-20ECB2A420CF}.Release|x86.ActiveCfg = Release|Any CPU
 		{5277BF07-40B8-4E65-A777-20ECB2A420CF}.Release|x86.Build.0 = Release|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Debug|x64.Build.0 = Debug|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Debug|x86.Build.0 = Debug|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Release|x64.ActiveCfg = Release|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Release|x64.Build.0 = Release|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Release|x86.ActiveCfg = Release|Any CPU
+		{DD919A7C-32DD-4D0B-B7B4-61285E188672}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

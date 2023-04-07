@@ -124,5 +124,10 @@ namespace Iot.Device.Graphics
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+        /// <summary>
+        /// Returns an abstraction interface for drawing to this bitmap.
+        /// </summary>
+        public abstract IGraphics GetDrawingApi();
     }
 }

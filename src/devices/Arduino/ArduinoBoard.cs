@@ -463,6 +463,7 @@ namespace Iot.Device.Arduino
             {
                 _extendedCommandHandlers.Add(new DhtSensor());
                 _extendedCommandHandlers.Add(new FrequencySensor());
+                _extendedCommandHandlers.Add(new Esp32Sleep());
             }
         }
 

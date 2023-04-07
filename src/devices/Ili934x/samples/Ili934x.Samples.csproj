@@ -11,6 +11,7 @@
     <ProjectReference Include="../../Arduino/Arduino.csproj" />
     <ProjectReference Include="..\..\Axp192\Axp192.csproj" />
     <ProjectReference Include="..\..\Nmea0183\Nmea0183.csproj" />
+    <ProjectReference Include="..\..\SkiaSharpConnector\SkiaSharpConnector.csproj" />
   </ItemGroup>
 
   <ItemGroup>
