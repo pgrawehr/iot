@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
@@ -14,20 +15,21 @@ namespace Iot.Device.Graphics
 {
     public partial class ScreenCapture
     {
-        private BitmapImage? GetScreenContentsWindows(Rectangle area)
+        [SuppressMessage("Interoperability", "CA1416", Justification = "Only used on windows, see call site")]
+        private static BitmapImage? GetScreenContentsWindows(Rectangle area)
         {
             try
             {
-                using (Bitmap bitmap = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppArgb))
+                using (Bitmap bitmap = new Bitmap(area.Width, area.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
                 {
                     using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bitmap))
                     {
                         g.CopyFromScreen(new System.Drawing.Point(area.Left, area.Top), System.Drawing.Point.Empty, new System.Drawing.Size(area.Width, area.Height));
                     }
 
-                    var image = Converters.ToImage(bitmap);
+                    var image = Converters.ToBitmapImage(bitmap);
                     // For some reason, we need to swap R and B here. Strange...
-                    Converters.ColorTransform(image, (i, j, c) => new Rgba32(c.B, c.G, c.R, c.A));
+                    Converters.ColorTransform(image, (i, j, c) => Color.FromArgb(c.B, c.G, c.R, c.A));
                     return image;
                 }
             }
@@ -37,9 +39,9 @@ namespace Iot.Device.Graphics
             }
         }
 
-        private SixLabors.ImageSharp.Rectangle ScreenSizeWindows()
+        private Rectangle ScreenSizeWindows()
         {
-            return new SixLabors.ImageSharp.Rectangle(Interop.GetSystemMetrics(Interop.SystemMetric.SM_XVIRTUALSCREEN),
+            return new Rectangle(Interop.GetSystemMetrics(Interop.SystemMetric.SM_XVIRTUALSCREEN),
                 Interop.GetSystemMetrics(Interop.SystemMetric.SM_YVIRTUALSCREEN),
                 Interop.GetSystemMetrics(Interop.SystemMetric.SM_CXVIRTUALSCREEN),
                 Interop.GetSystemMetrics(Interop.SystemMetric.SM_CYVIRTUALSCREEN));

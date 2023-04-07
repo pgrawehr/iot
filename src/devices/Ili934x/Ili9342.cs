@@ -8,8 +8,6 @@ using System.Device.Spi;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Ili934x
 {

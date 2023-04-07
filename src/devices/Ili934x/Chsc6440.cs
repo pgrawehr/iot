@@ -5,11 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
 
 namespace Iot.Device.Ili934x
 {

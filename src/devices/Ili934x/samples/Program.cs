@@ -6,6 +6,7 @@ using System.Device.Gpio;
 using System.Device.I2c;
 using System.Device.Spi;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -18,12 +19,6 @@ using Iot.Device.Common;
 using Iot.Device.Ft4222;
 using Iot.Device.Graphics;
 using Iot.Device.Ili934x;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Drawing;
-using SixLabors.ImageSharp.Drawing.Processing;
 using UnitsNet;
 
 namespace Iot.Device.Ili934x.Samples
