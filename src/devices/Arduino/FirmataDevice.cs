@@ -308,11 +308,11 @@ namespace Iot.Device.Arduino
 
                 case FirmataCommand.ANALOG_MESSAGE:
                     // report analog commands store the pin number in the lower nibble of the command byte, the value is split over two 7-bit bytes
-                    // AnalogValueUpdated(this,
-                    //    new CallbackEventArgs(lower_nibble, (ushort)(message[0] | (message[1] << 7))));
                     {
-                        int pin = lower_nibble;
+                        int channel = lower_nibble;
                         uint value = (uint)(message[0] | (message[1] << 7));
+                        // This must work
+                        int pin = _supportedPinConfigurations.First(x => x.AnalogPinNumber == channel).Pin;
                         lock (_lastAnalogValueLock)
                         {
                             _lastAnalogValues[pin] = value;
@@ -485,6 +485,24 @@ namespace Iot.Device.Arduino
                             }
 
                             break;
+
+                        case FirmataSysexCommand.EXTENDED_ANALOG:
+                            // report analog commands store the pin number in the lower nibble of the command byte, the value is split over two 7-bit bytes
+                            {
+                            int channel = raw_data[1];
+                            uint value = (uint)(raw_data[2] | (raw_data[3] << 7));
+                            // This must work
+                            int pin = _supportedPinConfigurations.First(x => x.AnalogPinNumber == channel).Pin;
+                            lock (_lastAnalogValueLock)
+                            {
+                                _lastAnalogValues[pin] = value;
+                            }
+
+                            AnalogPinValueUpdated?.Invoke(pin, value);
+                            }
+
+                            break;
+
                         case FirmataSysexCommand.I2C_REPLY:
                             _lastCommandError = CommandError.None;
                             _pendingResponses.Add(raw_data);
@@ -1131,9 +1149,11 @@ namespace Iot.Device.Arduino
         }
 
         /// <summary>
-        /// This takes the pin number in Arduino's own Analog numbering scheme. So A0 shall be specifed as 0
+        /// Enable analog reporting for the given physical pin
         /// </summary>
-        internal void EnableAnalogReporting(int pinNumber)
+        /// <param name="pinNumber">Physical pin number</param>
+        /// <param name="analogChannel">Analog channel corresponding to the given pin (Axx in arduino terminology)</param>
+        internal void EnableAnalogReporting(int pinNumber, int analogChannel)
         {
             if (_firmataStream == null)
             {
@@ -1143,12 +1163,26 @@ namespace Iot.Device.Arduino
             lock (_synchronisationLock)
             {
                 _lastAnalogValues[pinNumber] = 0; // to make sure this entry exists
-                _firmataStream.WriteByte((byte)((int)FirmataCommand.REPORT_ANALOG_PIN + pinNumber));
-                _firmataStream.WriteByte((byte)1);
+                _logger.LogInformation($"Enabling analog reporting on pin {pinNumber}, Channel A{analogChannel}");
+                if (analogChannel <= 15)
+                {
+                    _firmataStream.WriteByte((byte)((int)FirmataCommand.REPORT_ANALOG_PIN + analogChannel));
+                    _firmataStream.WriteByte((byte)1);
+                }
+                else
+                {
+                    // Note: Requires ConfigurableFirmata 3.1 or later
+                    FirmataCommandSequence commandSequence = new();
+                    commandSequence.WriteByte((byte)FirmataSysexCommand.EXTENDED_REPORT_ANALOG);
+                    commandSequence.WriteByte((byte)analogChannel);
+                    commandSequence.WriteByte((byte)1);
+                    commandSequence.WriteByte((byte)FirmataCommand.END_SYSEX);
+                    SendCommand(commandSequence);
+                }
             }
         }
 
-        internal void DisableAnalogReporting(int pinNumber)
+        internal void DisableAnalogReporting(int pinNumber, int analogChannel)
         {
             if (_firmataStream == null)
             {
@@ -1157,8 +1191,21 @@ namespace Iot.Device.Arduino
 
             lock (_synchronisationLock)
             {
-                _firmataStream.WriteByte((byte)((int)FirmataCommand.REPORT_ANALOG_PIN + pinNumber));
-                _firmataStream.WriteByte((byte)0);
+                _logger.LogInformation($"Disabling analog reporting on pin {pinNumber}, Channel A{analogChannel}");
+                if (analogChannel <= 15)
+                {
+                    _firmataStream.WriteByte((byte)((int)FirmataCommand.REPORT_ANALOG_PIN + analogChannel));
+                    _firmataStream.WriteByte((byte)0);
+                }
+                else
+                {
+                    FirmataCommandSequence pwmCommandSequence = new();
+                    pwmCommandSequence.WriteByte((byte)FirmataSysexCommand.EXTENDED_REPORT_ANALOG);
+                    pwmCommandSequence.WriteByte((byte)analogChannel);
+                    pwmCommandSequence.WriteByte((byte)0);
+                    pwmCommandSequence.WriteByte((byte)FirmataCommand.END_SYSEX);
+                    SendCommand(pwmCommandSequence);
+                }
             }
         }
 

@@ -49,11 +49,11 @@ namespace Iot.Device.Arduino
             }
         }
 
-        private void FirmataOnAnalogPinValueUpdated(int pin, uint rawvalue)
+        private void FirmataOnAnalogPinValueUpdated(int channel, uint rawvalue)
         {
             if (_autoReportingReferenceCount > 0)
             {
-                int physicalPin = Controller.ConvertLogicalNumberingSchemeToPinNumber(pin);
+                int physicalPin = Controller.ConvertAnalogChannelNumberToPinNumber(channel);
                 ElectricPotential voltage = ConvertToVoltage(rawvalue);
                 var message = new ValueChangedEventArgs(rawvalue, voltage, physicalPin, TriggerReason.Timed);
                 FireValueChanged(message);

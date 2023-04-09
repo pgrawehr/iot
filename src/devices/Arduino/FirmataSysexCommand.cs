@@ -18,6 +18,7 @@ namespace Iot.Device.Arduino
         I2C_REQUEST = 0x76,
         I2C_REPLY = 0x77,
         I2C_CONFIG = 0x78,
+        EXTENDED_REPORT_ANALOG = 0x64,
         EXTENDED_ANALOG = 0x6F,
         PIN_STATE_QUERY = 0x6D,
         PIN_STATE_RESPONSE = 0x6E,
