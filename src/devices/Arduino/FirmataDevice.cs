@@ -318,7 +318,7 @@ namespace Iot.Device.Arduino
                             _lastAnalogValues[pin] = value;
                         }
 
-                        AnalogPinValueUpdated?.Invoke(pin, value);
+                        AnalogPinValueUpdated?.Invoke(channel, value);
                     }
 
                     break;
@@ -489,16 +489,16 @@ namespace Iot.Device.Arduino
                         case FirmataSysexCommand.EXTENDED_ANALOG:
                             // report analog commands store the pin number in the lower nibble of the command byte, the value is split over two 7-bit bytes
                             {
-                            int channel = raw_data[1];
-                            uint value = (uint)(raw_data[2] | (raw_data[3] << 7));
-                            // This must work
-                            int pin = _supportedPinConfigurations.First(x => x.AnalogPinNumber == channel).Pin;
-                            lock (_lastAnalogValueLock)
-                            {
-                                _lastAnalogValues[pin] = value;
-                            }
+                                int channel = raw_data[1];
+                                uint value = (uint)(raw_data[2] | (raw_data[3] << 7));
+                                // This must work
+                                int pin = _supportedPinConfigurations.First(x => x.AnalogPinNumber == channel).Pin;
+                                lock (_lastAnalogValueLock)
+                                {
+                                    _lastAnalogValues[pin] = value;
+                                }
 
-                            AnalogPinValueUpdated?.Invoke(pin, value);
+                                AnalogPinValueUpdated?.Invoke(channel, value);
                             }
 
                             break;

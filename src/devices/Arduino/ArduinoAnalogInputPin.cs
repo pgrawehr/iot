@@ -65,12 +65,12 @@ namespace Iot.Device.Arduino
         /// <summary>
         /// The arduino would theoretically allow for an external analog reference, but firmata currently doesn't support that.
         /// </summary>
-        public override ElectricPotential MaxVoltage => ElectricPotential.FromVolts(5);
+        public override ElectricPotential MaxVoltage => VoltageReference;
 
         /// <summary>
-        /// Similar here: Some boards support more than 10 bit resolution, but we'd have to extend the firmware for that.
+        /// The ADC resolution for this pin, as reported by the firmware.
         /// </summary>
-        public override int AdcResolutionBits => 10;
+        public override int AdcResolutionBits => _configuration.AnalogInputResolutionBits;
 
         /// <summary>
         /// Reads the analog raw value from a given pin.

@@ -290,6 +290,8 @@ namespace Iot.Device.Arduino.Sample
         {
             int analogPin = GetAnalogPin(board, _analogInputChannel);
             var analogController = board.CreateAnalogController(0);
+            // Add this line for 3.3V boards, to get correct voltages.
+            // analogController.VoltageReference = ElectricPotential.FromVolts(3.3);
             board.SetAnalogPinSamplingInterval(TimeSpan.FromMilliseconds(10));
             var pin = analogController.OpenPin(analogPin);
             pin.EnableAnalogValueChangedEvent(null, 0);
