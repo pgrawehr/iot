@@ -43,7 +43,20 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
             SKFont fnt = new SKFont(SKTypeface.FromFamilyName(fontFamilyName), size);
             var paint = new SKPaint(fnt);
             paint.Color = new SKColor((uint)color.ToArgb());
-            canvas.DrawText(text, new SKPoint(position.X, position.Y), paint);
+            paint.TextAlign = SKTextAlign.Left;
+            paint.TextEncoding = SKTextEncoding.Utf16;
+            int lineSpacing = size + 2;
+            SKPoint currentPosition = new SKPoint(position.X, position.Y + size); // drawing begins to the right and above the given point.
+            var texts = text.Split(new char[]
+            {
+                '\r', '\n'
+            }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
+
+            foreach (var t in texts)
+            {
+                canvas.DrawText(t, currentPosition, paint);
+                currentPosition.Y += lineSpacing;
+            }
         }
 
         private static SKCanvas GetCanvas(IGraphics graphics)

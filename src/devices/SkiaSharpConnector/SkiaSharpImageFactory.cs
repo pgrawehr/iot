@@ -31,7 +31,7 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
             {
                 pf = PixelFormat.Format32bppXrgb;
             }
-            else if (image.ColorType == SKColorType.Rgb888x)
+            else if (image.ColorType == SKColorType.Bgra8888)
             {
                 pf = PixelFormat.Format32bppArgb;
             }

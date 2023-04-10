@@ -185,16 +185,19 @@ namespace Iot.Device.Ili934x.Samples
                 {
                     _menuMode = false;
                     _screenMode = ScreenMode.Mirror;
+                    Console.WriteLine("Changed to mirror mode");
                 }
                 else if (point.Y < 50 && point.X > 100 && point.X < 160)
                 {
                     _screenMode = ScreenMode.Battery;
+                    Console.WriteLine("Changed to battery status mode");
                     _mouseEnabled = MouseButton.None;
                     _menuMode = false;
                 }
                 else if (point.Y < 50 && point.X >= 160 && point.X < 220)
                 {
                     _screenMode = ScreenMode.NmeaValue;
+                    Console.WriteLine("Changed to NMEA display mode");
                     _mouseEnabled = MouseButton.None;
                     _forceUpdate = true;
                     _menuMode = false;
@@ -202,10 +205,12 @@ namespace Iot.Device.Ili934x.Samples
                 else if (point.Y > 50 && point.X > 100 && point.X < 160)
                 {
                     _scale /= 1.1f;
+                    Console.WriteLine($"Changed scale to {_scale}");
                 }
                 else if (point.Y > 50 && point.X > 160 && point.X < 220)
                 {
                     _scale *= 1.1f;
+                    Console.WriteLine($"Changed scale to {_scale}");
                 }
                 else if (point.X < 100)
                 {
@@ -438,14 +443,14 @@ namespace Iot.Device.Ili934x.Samples
             if (bmp != null)
             {
                 _screen.FillRect(Color.Black, 0, 0, _screen.ScreenWidth, _screen.ScreenHeight, false);
-                bmp.Resize(new Size((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
+                using var resizedBitmap = bmp.Resize(new Size((int)(bmp.Width * scale), (int)(bmp.Height * scale)));
                 var pt = new Point((int)left, (int)top);
                 var rect = new Rectangle(0, 0, _screen.ScreenWidth, _screen.ScreenHeight);
-                Converters.AdjustImageDestination(bmp, ref pt, ref rect);
+                Converters.AdjustImageDestination(resizedBitmap, ref pt, ref rect);
                 left = pt.X;
                 top = pt.Y;
 
-                _screen.DrawBitmap(bmp, pt, rect);
+                _screen.DrawBitmap(resizedBitmap, pt, rect);
                 bmp.Dispose();
             }
         }
@@ -518,7 +523,7 @@ namespace Iot.Device.Ili934x.Samples
                 using var bmp = _screen.CreateBackBuffer();
                 var font = GetDefaultFontName();
                 using var g = bmp.GetDrawingApi();
-                g.DrawText(pc.ToString(), font, 20, Color.Blue, new Point(0, 10));
+                g.DrawText(pc.ToString(), font, 20, Color.Blue, new Point(0, 20));
                 _screen.DrawBitmap(bmp);
             }
         }

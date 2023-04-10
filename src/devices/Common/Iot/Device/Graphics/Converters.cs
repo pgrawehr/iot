@@ -64,22 +64,6 @@ namespace Iot.Device.Graphics
         }
 
         /// <summary>
-        /// Performs a color transformation on the image
-        /// </summary>
-        /// <param name="image">The image to transform</param>
-        /// <param name="transformFunc">A function that is called for each pixel, taking the coordinate of the pixel in the whole image and the input color</param>
-        public static void ColorTransform(BitmapImage image, Func<int, int, Color, Color> transformFunc)
-        {
-            Parallel.For(0, image.Height, j =>
-            {
-                for (int i = 0; i < image.Width; i++)
-                {
-                    image[i, j] = transformFunc(i, j, image[i, j]);
-                }
-            });
-        }
-
-        /// <summary>
         /// Adjusts the target position and size so that a given image can be copied to a target image without scaling and without further cropping.
         /// This ensures the destination rectangle, starting at the given point lies within the image.
         /// </summary>
