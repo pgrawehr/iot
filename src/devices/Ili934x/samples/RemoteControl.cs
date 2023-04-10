@@ -178,6 +178,7 @@ namespace Iot.Device.Ili934x.Samples
         private void OnTouched(object o, Point point)
         {
             Console.WriteLine($"Touched screen at {point}");
+            _powerControl?.Beep(TimeSpan.FromMilliseconds(20));
             // For the coordinates here, see the MenuBar.png file
             if (_menuMode && point.Y < 100)
             {
@@ -394,8 +395,6 @@ namespace Iot.Device.Ili934x.Samples
                 {
                     Thread.Sleep(100);
                 }
-
-                // Console.WriteLine($"Last frame took {sw.Elapsed.TotalMilliseconds}ms ({1.0 / sw.Elapsed.TotalSeconds} FPS)");
             }
         }
 
@@ -465,8 +464,8 @@ namespace Iot.Device.Ili934x.Samples
                 using var g = bmp.GetDrawingApi();
                 string font = GetDefaultFontName();
                 g.DrawText(data.Value, font, 110, Color.Blue, new Point(20, 30));
-                g.DrawText(data.Name, font, 10, Color.Blue, new Point(10, 5));
-                g.DrawText(data.Unit, font, 10, Color.Blue, new Point(_screen.ScreenWidth / 2, _screen.ScreenHeight - 33));
+                g.DrawText(data.Name, font, 20, Color.Blue, new Point(10, 5));
+                g.DrawText(data.Unit, font, 20, Color.Blue, new Point(_screen.ScreenWidth / 2, _screen.ScreenHeight - 33));
 
                 _screen.DrawBitmap(bmp);
                 return true;
@@ -523,7 +522,7 @@ namespace Iot.Device.Ili934x.Samples
                 using var bmp = _screen.CreateBackBuffer();
                 var font = GetDefaultFontName();
                 using var g = bmp.GetDrawingApi();
-                g.DrawText(pc.ToString(), font, 20, Color.Blue, new Point(0, 20));
+                g.DrawText(pc.ToString(), font, 18, Color.Blue, new Point(0, 10));
                 _screen.DrawBitmap(bmp);
             }
         }

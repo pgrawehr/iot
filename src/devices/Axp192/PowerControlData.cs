@@ -16,6 +16,8 @@ namespace Iot.Device.Axp192
     /// </summary>
     public class PowerControlData
     {
+        private const double EmptyBatteryVoltage = 3.2;
+
         /// <summary>
         /// The internal temperature of the power controller
         /// </summary>
@@ -75,6 +77,19 @@ namespace Iot.Device.Axp192
         /// Indicates whether a battery is present
         /// </summary>
         public bool BatteryPresent { get; init; }
+
+        /// <summary>
+        /// Returns the charge level of the battery.
+        /// Only valid if a battery is present.
+        /// </summary>
+        public Ratio BatteryLevel
+        {
+            get
+            {
+                ElectricPotential value = BatteryVoltage - ElectricPotential.FromVolts(EmptyBatteryVoltage);
+                return Ratio.FromPercent(MathExtensions.Clamp(value.Volts * 100, 0, 100));
+            }
+        }
 
         /// <summary>
         /// Returns the status of the battery as user-readable english text
@@ -142,7 +157,7 @@ Battery Charging Current: {BatteryChargingCurrent}
 Battery Charging Status: {GetBatteryStatusAsText()}
 Battery Discharge Current: {BatteryDischargeCurrent}
 Battery Instantaneous Power: {BatteryInstantaneousPower}
-Battery Voltage: {BatteryVoltage}";
+Battery Voltage: {BatteryVoltage} ({BatteryLevel.Percent:F0}%)";
         }
     }
 }

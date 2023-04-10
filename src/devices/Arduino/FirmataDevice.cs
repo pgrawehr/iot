@@ -34,9 +34,7 @@ namespace Iot.Device.Arduino
 
         private byte _firmwareVersionMajor;
         private byte _firmwareVersionMinor;
-        private byte _actualFirmataProtocolMajorVersion;
-        private byte _actualFirmataProtocolMinorVersion;
-
+        private Version _actualFirmataProtocolVersion;
         private Version _firmwareVersion;
 
         private int _lastRequestId;
@@ -82,6 +80,7 @@ namespace Iot.Device.Arduino
             _firmwareVersionMajor = 0;
             _firmwareVersionMinor = 0;
             _firmwareVersion = new Version(0, 0);
+            _actualFirmataProtocolVersion = new Version(0, 0);
             _firmataStream = null;
             InputThreadShouldExit = false;
             _dataReceived = new AutoResetEvent(false);
@@ -291,7 +290,7 @@ namespace Iot.Device.Arduino
                 case FirmataCommand.SYSTEM_RESET:
                     return;
                 case FirmataCommand.PROTOCOL_VERSION:
-                    if (_actualFirmataProtocolMajorVersion != 0)
+                    if (_actualFirmataProtocolVersion.Major != 0)
                     {
                         // Firmata sends this message automatically after a device reset (if you press the reset button on the arduino)
                         // If we know the version already, this is unexpected.
@@ -299,9 +298,8 @@ namespace Iot.Device.Arduino
                         OnError?.Invoke("The device was unexpectedly reset. Please restart the communication.", null);
                     }
 
-                    _actualFirmataProtocolMajorVersion = message[0];
-                    _actualFirmataProtocolMinorVersion = message[1];
-                    _logger.LogInformation($"Received protocol version: {_actualFirmataProtocolMajorVersion}.{_actualFirmataProtocolMinorVersion}.");
+                    _actualFirmataProtocolVersion = new Version(message[0], message[1]);
+                    _logger.LogInformation($"Received protocol version: {_actualFirmataProtocolVersion}.");
                     _dataReceived.Set();
 
                     return;
@@ -797,7 +795,7 @@ namespace Iot.Device.Arduino
                         continue;
                     }
 
-                    if (_actualFirmataProtocolMajorVersion == 0)
+                    if (_actualFirmataProtocolVersion.Major == 0)
                     {
                         // The device may be resetting itself as part of opening the serial port (this is the typical
                         // behavior of the Arduino Uno, but not of most newer boards)
@@ -805,7 +803,7 @@ namespace Iot.Device.Arduino
                         continue;
                     }
 
-                    return new Version(_actualFirmataProtocolMajorVersion, _actualFirmataProtocolMinorVersion);
+                    return _actualFirmataProtocolVersion;
                 }
             }
 
@@ -1169,15 +1167,19 @@ namespace Iot.Device.Arduino
                     _firmataStream.WriteByte((byte)((int)FirmataCommand.REPORT_ANALOG_PIN + analogChannel));
                     _firmataStream.WriteByte((byte)1);
                 }
-                else
+                else if (_actualFirmataProtocolVersion >= new Version(2, 7))
                 {
-                    // Note: Requires ConfigurableFirmata 3.1 or later
+                    // Note: Requires Protocol Version 2.7 or later
                     FirmataCommandSequence commandSequence = new();
                     commandSequence.WriteByte((byte)FirmataSysexCommand.EXTENDED_REPORT_ANALOG);
                     commandSequence.WriteByte((byte)analogChannel);
                     commandSequence.WriteByte((byte)1);
                     commandSequence.WriteByte((byte)FirmataCommand.END_SYSEX);
                     SendCommand(commandSequence);
+                }
+                else
+                {
+                    throw new NotSupportedException($"Using analog channel A{analogChannel} requires firmata protocol version 2.7 or later");
                 }
             }
         }

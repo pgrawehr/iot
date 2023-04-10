@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Device.Analog;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Linq;
@@ -20,9 +21,11 @@ namespace Iot.Device.Axp192
     {
         private Axp192 _axp;
         private ILogger _logger;
+        private Board.Board _board;
 
         public M5ToughPowerControl(Board.Board board)
         {
+            _board = board;
             var bus = board.CreateOrGetI2cBus(0, new int[]
             {
                 21, 22
@@ -98,6 +101,22 @@ namespace Iot.Device.Axp192
 
             // Configure charging for external battery (not fitted to M5Tough by default)
             _axp.SetChargingFunctions(true, ChargingVoltage.V4_2, ChargingCurrent.Current450mA, ChargingStopThreshold.Percent10);
+        }
+
+        /// <summary>
+        /// Beeps using the speaker for the given time, using a fixed frequency
+        /// </summary>
+        /// <param name="duration">The duration of the beep</param>
+        public void Beep(TimeSpan duration)
+        {
+            bool isEnabled = EnableSpeaker;
+            EnableSpeaker = true;
+            using var pwm = _board.CreatePwmChannel(0, 2);
+            pwm.DutyCycle = 0.5f;
+            pwm.Start();
+            Thread.Sleep(duration);
+            pwm.Stop();
+            EnableSpeaker = isEnabled;
         }
 
         /// <summary>
