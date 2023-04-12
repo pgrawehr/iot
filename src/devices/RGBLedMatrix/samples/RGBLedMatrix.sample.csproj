@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../RGBLedMatrix.csproj" />
+    <ProjectReference Include="..\..\SkiaSharpConnector\SkiaSharpConnector.csproj" />
   </ItemGroup>
 
   <ItemGroup>

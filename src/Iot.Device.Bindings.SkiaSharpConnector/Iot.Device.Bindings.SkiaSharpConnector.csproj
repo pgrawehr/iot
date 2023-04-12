@@ -14,9 +14,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
-    <PackageReference Include="System.Management" Version="$(SystemManagementPackageVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractionsPackageVersion)" />
-    <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonPackageVersion)" />
   </ItemGroup>
 
 

@@ -3,14 +3,13 @@
 
 using Xunit;
 
-namespace Iot.Device._DeviceBinding.Tests
+namespace Iot.Device.SkiaSharpConnector.Tests
 {
-    public class _DeviceBindingTests
+    public class SkiaSharpConnector
     {
         [Fact]
-        public void Test1()
+        public void Test()
         {
-            // NOTE: THIS TEST PROJECT IS NOT REQUIRED AND CAN BE DELETED IF NOT USED.
         }
     }
 }

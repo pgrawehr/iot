@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -56,6 +57,22 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
             IntPtr ptr = IntPtr.Zero;
             ptr = _bitmap.GetPixels(out IntPtr length);
             return new Span<byte>(ptr.ToPointer(), length.ToInt32());
+        }
+
+        public override void SaveToStream(Stream stream, ImageFileType fileType)
+        {
+            using var img = SKImage.FromBitmap(WrappedBitmap);
+
+            SKEncodedImageFormat encodingFormat = fileType switch
+            {
+                ImageFileType.Bmp => SKEncodedImageFormat.Bmp,
+                ImageFileType.Png => SKEncodedImageFormat.Png,
+                ImageFileType.Jpg => SKEncodedImageFormat.Jpeg,
+                _ => throw new NotSupportedException($"File type {fileType} is not supported")
+            };
+
+            var data = img.Encode(encodingFormat, 100);
+            data.SaveTo(stream);
         }
 
         private SKColor ConvertColor(Color c)

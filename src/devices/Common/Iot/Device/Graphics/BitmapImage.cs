@@ -3,6 +3,7 @@
 
 using System;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace Iot.Device.Graphics
@@ -109,6 +110,29 @@ namespace Iot.Device.Graphics
         {
             return MemoryMarshal.Cast<byte, int>(AsByteSpan());
         }
+
+        /// <summary>
+        /// Saves this bitmap to a file
+        /// </summary>
+        /// <param name="filename">The filename to save it to</param>
+        /// <param name="fileType">The filetype to use.</param>
+        /// <remarks>
+        /// Generally, the method is not checking that the filename extension matches the file type provided.
+        /// </remarks>
+        public virtual void SaveToFile(string filename, ImageFileType fileType)
+        {
+            using (var fs = new FileStream(filename, FileMode.CreateNew))
+            {
+                SaveToStream(fs, fileType);
+            }
+        }
+
+        /// <summary>
+        /// Save the image to a stream
+        /// </summary>
+        /// <param name="stream">The stream to save the data to</param>
+        /// <param name="format">The image format</param>
+        public abstract void SaveToStream(Stream stream, ImageFileType format);
 
         /// <summary>
         /// Disposes this instance

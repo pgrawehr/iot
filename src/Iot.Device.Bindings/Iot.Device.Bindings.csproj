@@ -36,6 +36,8 @@
     <PackageReference Include="System.Management" Version="$(SystemManagementPackageVersion)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractionsPackageVersion)" />
     <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonPackageVersion)" />
+    <!-- This package is only used for windows specific stuff. -->
+    <PackageReference Include="System.Drawing.Common" Version="$(SystemDrawingCommonPackageVersion)" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
