@@ -9,4 +9,7 @@
     <Compile Include="*.cs" />
     <None Include="README.md" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SkiaSharpConnector\SkiaSharpConnector.csproj" />
+  </ItemGroup>
 </Project>

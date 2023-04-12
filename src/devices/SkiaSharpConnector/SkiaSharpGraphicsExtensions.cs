@@ -59,6 +59,20 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
             }
         }
 
+        /// <summary>
+        /// Draws another image into this one, at the given position and without scaling
+        /// </summary>
+        /// <param name="graphics">The target bitmap</param>
+        /// <param name="source">The source bitmap</param>
+        /// <param name="x">The x coordinate of the source bitmap in the resulting target bitmap</param>
+        /// <param name="y">The y coordinate of the source bitmap in the resulting target bitmap</param>
+        public static void DrawImage(this IGraphics graphics, BitmapImage source, int x, int y)
+        {
+            var sourceBmp = (SkiaSharpBitmap)source;
+            var targetCanvas = GetCanvas(graphics);
+            targetCanvas.DrawBitmap(sourceBmp.WrappedBitmap, x, y, null);
+        }
+
         private static SKCanvas GetCanvas(IGraphics graphics)
         {
             if (graphics == null)
