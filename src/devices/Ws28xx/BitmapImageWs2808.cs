@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Drawing;
+using System.Xml.Linq;
 using Iot.Device.Graphics;
+using Ws28xx;
 
 namespace Iot.Device.Ws28xx
 {
-    internal class BitmapImageWs2808 : BitmapImage
+    internal class BitmapImageWs2808 : RawPixelContainer
     {
         private const int BytesPerPixel = 3;
 
