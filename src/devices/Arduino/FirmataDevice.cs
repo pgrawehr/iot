@@ -75,6 +75,8 @@ namespace Iot.Device.Arduino
 
         private int _numberOfConsecutiveI2cWrites = 0;
 
+        private bool _systemVariablesSupported = false;
+
         public FirmataDevice(List<SupportedMode> supportedModes)
         {
             _firmwareVersionMajor = 0;
@@ -1209,6 +1211,132 @@ namespace Iot.Device.Arduino
                     SendCommand(pwmCommandSequence);
                 }
             }
+        }
+
+        private string? CheckSystemVariablesSupported()
+        {
+            if (_actualFirmataProtocolVersion.Major == 0)
+            {
+                // This should not happen
+                return "Cannot query System Variables before the firmata version is known";
+            }
+
+            if (_actualFirmataProtocolVersion < new Version(2, 7))
+            {
+                return "Firmata protocol version 2.7 or above required";
+            }
+
+            return null;
+        }
+
+        public void SetSystemVariable(SystemVariable variableId, int pinNumber, int value)
+        {
+            
+        }
+
+        public bool GetSystemVariable(SystemVariable variableId, int pinNumber, out int value)
+        {
+            var checkResult = CheckSystemVariablesSupported();
+            if (!string.IsNullOrEmpty(checkResult))
+            {
+                throw new NotSupportedException(checkResult);
+            }
+
+            return GetSystemVariableNoCheck(variableId, pinNumber, out value);
+        }
+
+        private bool GetSystemVariableNoCheck(SystemVariable variableId, int pinNumber, out int value)
+        {
+            FirmataCommandSequence cmd = new FirmataCommandSequence();
+            cmd.WriteByte((byte)FirmataSysexCommand.SYSTEM_VARIABLE);
+            cmd.WriteByte(0); // Query value
+            cmd.WriteByte(1); // Data type: Integer
+            cmd.WriteByte(0); // Status (irrelevant)
+            cmd.SendInt14((int)variableId);
+            if (pinNumber < 127 && pinNumber >= 0)
+            {
+                cmd.WriteByte((byte)pinNumber);
+            }
+            else
+            {
+                cmd.WriteByte(127);
+            }
+            cmd.SendInt32(0);
+
+            byte[] reply = SendCommandAndWait(cmd, DefaultReplyTimeout, (sequence, bytes) =>
+            {
+                if (bytes.Length < 12)
+                {
+                    return false;
+                }
+
+                if (bytes[0] != (byte)FirmataSysexCommand.SYSTEM_VARIABLE)
+                {
+                    return false;
+                }
+
+                // Reply must be for the same pin and the same variable Id.
+                if (bytes[6] != pinNumber)
+                {
+                    return false;
+                }
+
+                int id = FirmataCommandSequence.DecodeInt14(bytes, 4);
+                if (id != (int)variableId)
+                {
+                    return false;
+                }
+
+                return true;
+            }, out var error);
+
+            _lastCommandError = error;
+
+            if (error != CommandError.None)
+            {
+                throw new IOException($"Unable to query {variableId}. Command returned status {error}");
+            }
+
+            SystemVariableError status = (SystemVariableError)reply[3];
+            if (!CheckVariableReplyStatus(variableId, status))
+            {
+                value = 0;
+                return false;
+            }
+
+            int replyType = reply[2];
+            if (replyType != 1)
+            {
+                // The firmware indicates that the type of the value is something else than int. This is a problem for now.
+                throw new NotSupportedException($"Firmware reports an unknown data type: {replyType}");
+            }
+
+            value = FirmataCommandSequence.DecodeInt32(reply, 7);
+            return true;
+        }
+
+        private bool CheckVariableReplyStatus(SystemVariable variableId, SystemVariableError status)
+        {
+            switch (status)
+            {
+                case SystemVariableError.FieldReadOnly:
+                    _logger.LogError($"Field {variableId} is read-only");
+                    return false;
+                case SystemVariableError.FieldWriteOnly:
+                    _logger.LogError($"Field {variableId} is write-only");
+                    return false;
+                case SystemVariableError.GenericError:
+                    _logger.LogError($"There was an error processing the request");
+                    return false;
+                case SystemVariableError.UnknownDataType:
+                    _logger.LogError($"The data type is not supported");
+                    return false;
+                case SystemVariableError.UnknownVariableId:
+                    _logger.LogError($"The variable id {variableId} is not supported");
+                    return false;
+            }
+
+            return true;
         }
 
         public void EnableSpi()

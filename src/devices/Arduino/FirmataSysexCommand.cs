@@ -33,5 +33,6 @@ namespace Iot.Device.Arduino
         SYSEX_REALTIME = 0x7F,
         DHT_SENSOR_DATA_REQUEST = 0x74, // User defined block
         FREQUENCY_COMMAND = 0x7D,
+        SYSTEM_VARIABLE = 0x66,
     }
 }
