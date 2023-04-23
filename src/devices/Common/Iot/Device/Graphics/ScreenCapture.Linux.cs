@@ -51,9 +51,10 @@ namespace Iot.Device.Graphics
                 {
                     UInt32 pixel = XGetPixel(rawImage, x, y);
 
-                    nuint blue = pixel & blue_mask;
+                    // Swap R and B (similar to windows, but since the display of directly loaded images is right, I still think the error is here)
+                    nuint red = pixel & blue_mask;
                     nuint green = (pixel & green_mask) >> 8;
-                    nuint red = (pixel & red_mask) >> 16;
+                    nuint blue = (pixel & red_mask) >> 16;
 
                     var color = Color.FromArgb(255, (int)red, (int)green, (int)blue);
                     targetImage[area.Width * y + x] = color.ToArgb();
