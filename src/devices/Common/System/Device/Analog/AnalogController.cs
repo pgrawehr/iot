@@ -135,7 +135,9 @@ namespace System.Device.Analog
         /// </summary>
         protected virtual void Dispose(bool disposing)
         {
-            foreach (var pin in _openPins)
+            // Make copy, because Dispose manipulates the array.
+            var copy = _openPins.ToArray();
+            foreach (var pin in copy)
             {
                 pin.Dispose();
             }
