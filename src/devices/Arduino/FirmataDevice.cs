@@ -1213,43 +1213,64 @@ namespace Iot.Device.Arduino
             }
         }
 
-        private string? CheckSystemVariablesSupported()
+        /// <summary>
+        /// Check support for System variables. Should be done on init/reinit.
+        /// </summary>
+        /// <returns>Null if everything is ok, an error message otherwise.</returns>
+        internal string? CheckSystemVariablesSupported()
         {
             if (_actualFirmataProtocolVersion.Major == 0)
             {
                 // This should not happen
+                _systemVariablesSupported = false;
                 return "Cannot query System Variables before the firmata version is known";
             }
 
             if (_actualFirmataProtocolVersion < new Version(2, 7))
             {
+                _systemVariablesSupported = false;
                 return "Firmata protocol version 2.7 or above required";
             }
+
+            int value = 0;
+            try
+            {
+                // now assume true (otherwise, the method would also fail immediately)
+                _systemVariablesSupported = true;
+                if (!GetOrSetSystemVariable(SystemVariable.FunctionSupportCheck, -1, true, ref value))
+                {
+                    _systemVariablesSupported = false;
+                    return "System Variable support check failed";
+                }
+            }
+            catch (Exception x) when (x is TimeoutException || x is IOException || x is NotSupportedException)
+            {
+                _systemVariablesSupported = false;
+                return $"GetSystemVariable(FunctionSupportCheck) returned an exception: {x.Message}";
+            }
+
+            if (value != 1)
+            {
+                _systemVariablesSupported = false;
+                return "System variables not supported";
+            }
+
+            _systemVariablesSupported = true;
 
             return null;
         }
 
-        public void SetSystemVariable(SystemVariable variableId, int pinNumber, int value)
+        public bool GetOrSetSystemVariable(SystemVariable variableId, int pinNumber, bool readValue, ref int value)
         {
-            
-        }
-
-        public bool GetSystemVariable(SystemVariable variableId, int pinNumber, out int value)
-        {
-            var checkResult = CheckSystemVariablesSupported();
-            if (!string.IsNullOrEmpty(checkResult))
+            if (!_systemVariablesSupported)
             {
-                throw new NotSupportedException(checkResult);
+                value = 0;
+                return false;
             }
 
-            return GetSystemVariableNoCheck(variableId, pinNumber, out value);
-        }
-
-        private bool GetSystemVariableNoCheck(SystemVariable variableId, int pinNumber, out int value)
-        {
             FirmataCommandSequence cmd = new FirmataCommandSequence();
             cmd.WriteByte((byte)FirmataSysexCommand.SYSTEM_VARIABLE);
-            cmd.WriteByte(0); // Query value
+            cmd.WriteByte((byte)(readValue ? 0 : 1)); // Query or set
             cmd.WriteByte(1); // Data type: Integer
             cmd.WriteByte(0); // Status (irrelevant)
             cmd.SendInt14((int)variableId);
@@ -1261,7 +1282,15 @@ namespace Iot.Device.Arduino
             {
                 cmd.WriteByte(127);
             }
-            cmd.SendInt32(0);
+
+            if (readValue)
+            {
+                // Don't send garbage in case of a read request.
+                value = 0;
+            }
+
+            cmd.SendInt32(value);
+            cmd.WriteByte((byte)FirmataCommand.END_SYSEX);
 
             byte[] reply = SendCommandAndWait(cmd, DefaultReplyTimeout, (sequence, bytes) =>
             {
@@ -1276,7 +1305,13 @@ namespace Iot.Device.Arduino
                 }
 
                 // Reply must be for the same pin and the same variable Id.
-                if (bytes[6] != pinNumber)
+                int replyPin = bytes[6];
+                if (replyPin == 127)
+                {
+                    replyPin = -1;
+                }
+
+                if (replyPin != pinNumber)
                 {
                     return false;
                 }

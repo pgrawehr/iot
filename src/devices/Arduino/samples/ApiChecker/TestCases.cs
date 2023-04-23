@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Device.Spi;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -203,7 +204,7 @@ namespace Iot.Device.Arduino.Sample
             Console.WriteLine($" 4 Run event wait test event on GPIO{_buttonPin} on Falling and Rising");
             Console.WriteLine($" 5 Run callback event test on GPIO{_buttonPin}");
             Console.WriteLine($" 6 Run PWM test with a LED dimming on GPIO{_ledPin} port");
-            Console.WriteLine(" 7 Blink the LED according to the input on A1");
+            Console.WriteLine($" 7 Blink the LED according to the input on A{_analogInputChannel}");
             Console.WriteLine(" 8 Read analog channel as fast as possible");
             Console.WriteLine(" 9 Run SPI tests with an MCP3008 (experimental)");
             Console.WriteLine(" 0 Detect all devices on the I2C bus");
@@ -211,6 +212,7 @@ namespace Iot.Device.Arduino.Sample
             Console.WriteLine(" A Color fade an RGB led on 3 PWM channels");
             Console.WriteLine(" B Run I2C tests with a BME680");
             Console.WriteLine(" F Measure frequency on a GPIO Pin (experimental)");
+            Console.WriteLine($" S Send board to sleep (wake up with interrupt on {_buttonPin})");
             Console.WriteLine();
             Console.WriteLine(" C Configure pins for tests");
             Console.WriteLine(" I Get board information");
@@ -277,6 +279,10 @@ namespace Iot.Device.Arduino.Sample
                 case 'i':
                 case 'I':
                     BoardInformation();
+                    break;
+                case 's':
+                case 'S':
+                    SendBoardToSleep();
                     break;
                 case 'x':
                 case 'X':
@@ -648,5 +654,50 @@ namespace Iot.Device.Arduino.Sample
             }
         }
 
+        private void SendBoardToSleep()
+        {
+            // Sends the board to sleep mode
+            TimeSpan sleepDelay = TimeSpan.FromSeconds(5);
+            if (!_board.SetSystemVariable(SystemVariable.SleepModeInterruptEnable, _buttonPin, 1))
+            {
+                return;
+            }
+
+            if (!_board.SetSystemVariable(SystemVariable.EnterSleepMode, _buttonPin, (int)sleepDelay.TotalSeconds))
+            {
+                return;
+            }
+
+            Console.WriteLine("Board is soon entering sleep. Connection might drop now.");
+            Stopwatch sw = Stopwatch.StartNew();
+            while (sw.Elapsed < sleepDelay + sleepDelay)
+            {
+                Thread.Sleep(50);
+                var pings = _board.Ping(1);
+                if (pings[0] < TimeSpan.Zero)
+                {
+                    break;
+                }
+            }
+
+            sw.Restart();
+            Console.WriteLine("Board is now asleep. Waiting for wakeup");
+            while (true)
+            {
+                Thread.Sleep(50);
+                var pings = _board.Ping(1);
+                if (pings[0] >= TimeSpan.Zero)
+                {
+                    break;
+                }
+            }
+
+            Console.WriteLine("Board is answering again");
+            if (sw.Elapsed < TimeSpan.FromSeconds(2))
+            {
+                Console.WriteLine("That was to fast ... assuming a wrong interrupt was caught");
+                SendBoardToSleep();
+            }
+        }
     }
 }

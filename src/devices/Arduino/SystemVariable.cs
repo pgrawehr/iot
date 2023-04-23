@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -26,5 +29,11 @@ namespace Iot.Device.Arduino
         /// The method cannot be used to wake up the MCU, since it might really be asleep and require an external interrupt to wake up.
         /// </summary>
         EnterSleepMode = 102,
+
+        /// <summary>
+        /// Configures sleep mode.
+        /// Requires a valid interrupt pin. The argument is 0 for LOW trigger and 1 for HIGH trigger.
+        /// </summary>
+        SleepModeInterruptEnable = 103,
     }
 }
