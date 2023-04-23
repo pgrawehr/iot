@@ -1,11 +1,11 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Xunit;
 
-namespace Iot.Device.SkiaSharpConnector.Tests
+namespace Iot.Device.Ili934x.Tests
 {
-    public class SkiaSharpConnector
+    public class Ili934xTests
     {
         [Fact]
         public void Test()

@@ -6,10 +6,12 @@ using System.Collections.Generic;
 using System.Device.Analog;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.Arduino;
 using Iot.Device.Common;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
@@ -141,13 +143,40 @@ namespace Iot.Device.Axp192
         /// <summary>
         /// Enter and leave low-power mode.
         /// The physical power button that is normally used to recover the AXP from sleep mode is not accessible on the M5Tough when the case is closed.
-        /// Therefore the CPU must be kept running and the screen interrupt is used to wake up the device.
+        /// After setting the AXP to sleep, we send the CPU to sleep as well. It will only wake up on tapping the screen.
         /// </summary>
         /// <param name="enterSleep">True to enter sleep, false to recover from sleep.</param>
         /// <remarks>After recovering from sleep mode, some peripheral devices might need to be restarted (such as the display controller)</remarks>
         public void Sleep(bool enterSleep)
         {
             _axp.SetSleep(enterSleep, false);
+            if (enterSleep)
+            {
+                SendCpuToSleep();
+            }
+        }
+
+        private void SendCpuToSleep()
+        {
+            // Sends the board to sleep mode
+            TimeSpan sleepDelay = TimeSpan.FromSeconds(10);
+            const int wakeupPin = 39; // The screen interrupt is connected to this pin
+
+            if (!(_board is ArduinoBoard ab))
+            {
+                return;
+            }
+
+            // Trigger value is low-active on the M5Tough
+            if (!ab.SetSystemVariable(SystemVariable.SleepModeInterruptEnable, wakeupPin, 0))
+            {
+                return;
+            }
+
+            if (!ab.SetSystemVariable(SystemVariable.EnterSleepMode, wakeupPin, (int)sleepDelay.TotalSeconds))
+            {
+                return;
+            }
         }
 
         public PowerControlData GetPowerControlData()
