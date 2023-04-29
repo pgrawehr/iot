@@ -320,7 +320,7 @@ namespace Iot.Device.Ili934x.Samples
 
         public void DisplayFeatures()
         {
-            //// DemoMode();
+            StartupDisplay();
 
             bool abort = false;
             Point dragBegin = Point.Empty;
@@ -474,32 +474,47 @@ namespace Iot.Device.Ili934x.Samples
             return false;
         }
 
-        private void DemoMode()
+        private void StartupDisplay()
         {
-            while (!Console.KeyAvailable && (_touch != null && !_touch.IsPressed()))
+            using var image = ImageFactoryRegistry.CreateFromFile(@"images/Landscape.png");
+            using var backBuffer = _screen.CreateBackBuffer();
+            for (int i = 1; i < 20; i++)
             {
-                foreach (string filepath in Directory.GetFiles(@"images", "*.png").OrderBy(f => f))
+                float factor = i / 10.0f;
+                if (Console.KeyAvailable || (_touch != null && _touch.IsPressed()))
                 {
-                    Console.WriteLine($"Drawing {filepath}");
-                    using var bm = ImageFactoryRegistry.CreateFromFile(filepath);
-                    _screen.DrawBitmap(bm);
-                    _screen.SendFrame();
+                    break;
                 }
 
-                Console.WriteLine("FillRect(Color.Red, 120, 160, 60, 80)");
-                _screen.FillRect(Color.FromArgb(255, 0, 0), 120, 160, 60, 80, true);
+                IGraphics api = backBuffer.GetDrawingApi();
+                Rectangle newRect = Rectangle.Empty;
+                newRect.Width = (int)(image.Width * factor);
+                newRect.Height = (int)(image.Height * factor);
+                newRect.X = (backBuffer.Width / 2) - (newRect.Width / 2);
+                newRect.Y = (backBuffer.Height / 2) - (newRect.Height / 2);
+                api.DrawImage(image, new Rectangle(0, 0, image.Width, image.Height), newRect);
 
-                Console.WriteLine("FillRect(Color.Blue, 0, 0, 320, 240)");
-                _screen.FillRect(Color.FromArgb(0, 0, 255), 0, 0, 320, 240, true);
-
-                Console.WriteLine("ClearScreen()");
-                _screen.ClearScreen();
+                _screen.DrawBitmap(backBuffer);
+                _screen.SendFrame();
+                Thread.Sleep(100);
             }
 
             if (Console.KeyAvailable)
             {
                 Console.ReadKey(true);
             }
+
+            _screen.FillRect(Color.FromArgb(0, 0, 255), 0, 0, 320, 240, true);
+
+            // Draws a few stripes
+            for (int x = 0; x < backBuffer.Width; x += 4)
+            {
+                _screen.FillRect(Color.FromArgb(255, 0, 0), x, 0, 1, 240, false);
+            }
+
+            _screen.SendFrame();
+
+            Thread.Sleep(500);
         }
 
         private String GetDefaultFontName()

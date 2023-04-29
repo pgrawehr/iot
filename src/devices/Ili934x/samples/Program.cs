@@ -144,11 +144,11 @@ namespace Iot.Device.Ili934x.Samples
                 displaySPI = GetSpiFromDefault();
             }
 
-            using Ili9342 ili9341 = new(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio, spiBufferSize: spiBufferSize, shouldDispose: false);
+            Ili9342 display = new Ili9342(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio, spiBufferSize: spiBufferSize, shouldDispose: false);
 
             if (board != null)
             {
-                touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), new Size(ili9341.ScreenWidth, ili9341.ScreenHeight), 39, board.CreateGpioController(), false);
+                touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), new Size(display.ScreenWidth, display.ScreenHeight), 39, board.CreateGpioController(), false);
                 touch.UpdateInterval = TimeSpan.FromMilliseconds(100);
                 touch.EnableEvents();
             }
@@ -165,10 +165,10 @@ namespace Iot.Device.Ili934x.Samples
                 touchSimulator = new MouseClickSimulatorUInput(screenCapture.ScreenSize().Width, screenCapture.ScreenSize().Height);
             }
 
-            using RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl, touchSimulator, screenCapture, nmeaSourceAddress);
+            using RemoteControl ctrol = new RemoteControl(touch, display, powerControl, touchSimulator, screenCapture, nmeaSourceAddress);
             ctrol.DisplayFeatures();
 
-            ili9341.ClearScreen(true);
+            display.ClearScreen(true);
             if (powerControl != null)
             {
                 powerControl.SetLcdVoltage(ElectricPotential.Zero);
@@ -177,7 +177,7 @@ namespace Iot.Device.Ili934x.Samples
 
             touch?.Dispose();
 
-            ili9341.Dispose();
+            display.Dispose();
 
             powerControl?.Dispose();
             board?.Dispose();

@@ -52,6 +52,7 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
                 '\r', '\n'
             }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim());
 
+            // The DrawText implementation of SkiaSharp does not work with line breaks, so do that manually.
             foreach (var t in texts)
             {
                 canvas.DrawText(t, currentPosition, paint);
@@ -73,7 +74,27 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
             targetCanvas.DrawBitmap(sourceBmp.WrappedBitmap, x, y, null);
         }
 
-        private static SKCanvas GetCanvas(IGraphics graphics)
+        /// <summary>
+        /// Draws another image into this one, at the given position and without scaling
+        /// </summary>
+        /// <param name="graphics">The target bitmap</param>
+        /// <param name="source">The source bitmap</param>
+        /// <param name="sourceRectangle">Rectangle in source image from where to draw</param>
+        /// <param name="targetRectangle">Rectangle in target image where to draw to</param>
+        public static void DrawImage(this IGraphics graphics, BitmapImage source, Rectangle sourceRectangle, Rectangle targetRectangle)
+        {
+            var sourceBmp = (SkiaSharpBitmap)source;
+            var targetCanvas = GetCanvas(graphics);
+            targetCanvas.DrawBitmap(sourceBmp.WrappedBitmap, new SKRect(sourceRectangle.Left, sourceRectangle.Top, sourceRectangle.Right, sourceRectangle.Bottom),
+                new SKRect(targetRectangle.Left, targetRectangle.Top, targetRectangle.Right, targetRectangle.Bottom));
+        }
+
+        /// <summary>
+        /// Get the internal SKCanvas instance, to manually draw to the target bitmap.
+        /// </summary>
+        /// <param name="graphics">The reference to the image</param>
+        /// <returns>An instance that can be used in calls for drawing methods</returns>
+        public static SKCanvas GetCanvas(this IGraphics graphics)
         {
             if (graphics == null)
             {

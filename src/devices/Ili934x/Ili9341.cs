@@ -100,6 +100,9 @@ namespace Iot.Device.Ili934x
 
             _screenBuffer = new Rgb565[ScreenWidth * ScreenHeight];
             _previousBuffer = new Rgb565[ScreenWidth * ScreenHeight];
+
+            // And clear the display
+            SendFrame(true);
         }
 
         /// <summary>
@@ -336,7 +339,7 @@ namespace Iot.Device.Ili934x
         /// <returns>An image instance</returns>
         public virtual BitmapImage CreateBackBuffer()
         {
-            return ImageFactoryRegistry.CreateBitmap(ScreenWidth, ScreenWidth, PixelFormat.Format32bppArgb);
+            return ImageFactoryRegistry.CreateBitmap(ScreenWidth, ScreenHeight, PixelFormat.Format32bppArgb);
         }
 
         /// <inheritdoc cref="Dispose()"/>
