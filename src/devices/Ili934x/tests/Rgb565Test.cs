@@ -26,6 +26,13 @@ namespace Iot.Device.Ili934x.Tests
             b = Rgb565.FromRgba32(Color.Red);
             Assert.Equal(Color.FromArgb(255, 0, 0), b.ToColor());
 
+            // Ensure the bits of green are right
+            b = Rgb565.FromRgba32(Color.FromArgb(0, 103, 0));
+            Assert.Equal(Color.FromArgb(0, 103, 0), b.ToColor());
+
+            b = Rgb565.FromRgba32(Color.FromArgb(0, 0, 103));
+            Assert.Equal(Color.FromArgb(0, 0, 103), b.ToColor());
+
             Rgb565 d = new Rgb565(0xf800);
             Assert.Equal(0xf800, d.PackedValue);
         }
@@ -33,22 +40,23 @@ namespace Iot.Device.Ili934x.Tests
         [Fact]
         public void Init()
         {
-            Rgb565 c = new Rgb565(101, 52, 10);
-            Assert.Equal(0x9AC, c.PackedValue);
-
-            c = new Rgb565(255, 255, 255);
+            Rgb565 c = new Rgb565(255, 255, 255);
             Assert.Equal(0xFFFF, c.PackedValue);
 
+            Rgb565 b = Rgb565.FromRgba32(Color.Red);
+            Assert.NotEqual(0, b.PackedValue);
+
             Rgb565 d = new Rgb565(0xff, 0, 0);
-            Assert.Equal(0x001f, d.PackedValue);
+            Assert.Equal(b.PackedValue, d.PackedValue);
             Assert.Equal(255, d.R);
+            Assert.Equal(0x00F8, d.PackedValue);
 
             Rgb565 e = new Rgb565(0, 0xff, 0);
-            Assert.Equal(0x07e0, e.PackedValue);
+            Assert.Equal(0xe007, e.PackedValue);
             Assert.Equal(255, e.G);
 
             Rgb565 f = new Rgb565(0, 0, 0xff);
-            Assert.Equal(0xf800, f.PackedValue);
+            Assert.Equal(0x1f00, f.PackedValue);
             Assert.Equal(255, f.B);
         }
 

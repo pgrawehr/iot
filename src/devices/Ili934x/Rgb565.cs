@@ -35,7 +35,7 @@ namespace Iot.Device.Ili934x
             get
             {
                 // Ensure full black is a possible result
-                int lowByte = (_value << 3) & 0xF8;
+                int lowByte = _value & 0xF8;
                 if (lowByte == 0)
                 {
                     return 0;
@@ -49,7 +49,7 @@ namespace Iot.Device.Ili934x
         {
             get
             {
-                int gbyte = ((_value & 0x7E0) >> 3);
+                int gbyte = ((Swap(_value) & 0x7E0) >> 3);
                 if (gbyte == 0)
                 {
                     return 0;
@@ -63,7 +63,7 @@ namespace Iot.Device.Ili934x
         {
             get
             {
-                int bbyte = (_value >> 8) & 0xF8;
+                int bbyte = (_value >> 5) & 0xF8;
                 if (bbyte == 0)
                 {
                     return 0;
@@ -75,7 +75,8 @@ namespace Iot.Device.Ili934x
 
         private void InitFrom(ushort r, ushort g, ushort b)
         {
-            UInt16 retval = (UInt16)(b >> 3);
+            // get the top 5 MSB of the blue or red value
+            UInt16 retval = (UInt16)(r >> 3);
             // shift right to make room for the green Value
             retval <<= 6;
             // combine with the 6 MSB if the green value
@@ -83,8 +84,9 @@ namespace Iot.Device.Ili934x
             // shift right to make room for the red or blue Value
             retval <<= 5;
             // combine with the 6 MSB if the red or blue value
-            retval |= (UInt16)(r >> 3);
-            _value = retval;
+            retval |= (UInt16)(b >> 3);
+
+            _value = Swap(retval);
         }
 
         /// <summary>
@@ -97,12 +99,8 @@ namespace Iot.Device.Ili934x
         /// byte    11111111 00000000
         /// bit     76543210 76543210
         ///
-        /// For ColorSequence.RGB
-        ///         RRRRRGGG GGGBBBBB
-        ///         43210543 21043210
-        ///
-        /// For ColorSequence.BGR
-        ///         BBBBBGGG GGGRRRRR
+        /// For ColorSequence.RGB (inversed!, the LSB is the top byte)
+        ///         GGGBBBBB RRRRRGGG
         ///         43210543 21043210
         /// </returns>
         public static Rgb565 FromRgba32(Color color)
