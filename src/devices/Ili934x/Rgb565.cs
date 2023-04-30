@@ -12,7 +12,8 @@ using System.Threading.Tasks;
 namespace Iot.Device.Ili934x
 {
     /// <summary>
-    /// This is the image format used by the Ili934X internally
+    /// This is the image format used by the Ili934X internally. It's similar to the (meanwhile otherwise rather obsolete) 16-bit RGB format with
+    /// 5 bits for red, 6 bits for green and 5 bits for blue.
     /// </summary>
     internal struct Rgb565 : IEquatable<Rgb565>
     {
@@ -29,15 +30,52 @@ namespace Iot.Device.Ili934x
             InitFrom(r, g, b);
         }
 
-        public int R => (Swap(_value) >> 8) | 0x7;
+        public int R
+        {
+            get
+            {
+                // Ensure full black is a possible result
+                int lowByte = (_value << 3) & 0xF8;
+                if (lowByte == 0)
+                {
+                    return 0;
+                }
 
-        public int G => ((Swap(_value) & 0x7E0) >> 3) | 0x7;
+                return lowByte | 0x7;
+            }
+        }
 
-        public int B => ((Swap(_value) & 0x1F) << 3) | 0x7;
+        public int G
+        {
+            get
+            {
+                int gbyte = ((_value & 0x7E0) >> 3);
+                if (gbyte == 0)
+                {
+                    return 0;
+                }
+
+                return gbyte | 0x7;
+            }
+        }
+
+        public int B
+        {
+            get
+            {
+                int bbyte = (_value >> 8) & 0xF8;
+                if (bbyte == 0)
+                {
+                    return 0;
+                }
+
+                return bbyte | 0x7;
+            }
+        }
 
         private void InitFrom(ushort r, ushort g, ushort b)
         {
-            UInt16 retval = (UInt16)(r >> 3);
+            UInt16 retval = (UInt16)(b >> 3);
             // shift right to make room for the green Value
             retval <<= 6;
             // combine with the 6 MSB if the green value
@@ -45,7 +83,7 @@ namespace Iot.Device.Ili934x
             // shift right to make room for the red or blue Value
             retval <<= 5;
             // combine with the 6 MSB if the red or blue value
-            retval |= (UInt16)(b >> 3);
+            retval |= (UInt16)(r >> 3);
             _value = retval;
         }
 
@@ -153,6 +191,11 @@ namespace Iot.Device.Ili934x
             }
 
             return true;
+        }
+
+        public Color ToColor()
+        {
+            return Color.FromArgb(255, R, G, B);
         }
     }
 }

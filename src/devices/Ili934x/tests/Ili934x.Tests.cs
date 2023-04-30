@@ -79,6 +79,9 @@ namespace Iot.Device.Ili934x.Tests
             m_spiMock.Data.Clear();
             m_testee.DrawBitmap(bmp);
             m_testee.SendFrame(true);
+
+            // 11 bytes setup + 2 bytes per pixel (this is raw SPI data, not including any possible Arduino headers)
+            Assert.Equal(11 + (320 * 240 * 2), m_spiMock.Data.Count);
         }
     }
 }
