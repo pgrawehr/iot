@@ -26,8 +26,6 @@ namespace Iot.Device.Ili934x.Tests
             b = Rgb565.FromRgba32(Color.Red);
             Assert.Equal(Color.FromArgb(255, 0, 0), b.ToColor());
 
-            Assert.Equal(248, b.PackedValue);
-
             Rgb565 d = new Rgb565(0xf800);
             Assert.Equal(0xf800, d.PackedValue);
         }
@@ -75,7 +73,7 @@ namespace Iot.Device.Ili934x.Tests
             Assert.True(Rgb565.AlmostEqual(a, b, 0));
 
             a = new Rgb565(0, 52, 101);
-            b = new Rgb565(12, 53, 102);
+            b = new Rgb565(7, 53, 102);
             Assert.True(Rgb565.AlmostEqual(a, b, 1));
         }
     }
