@@ -331,7 +331,7 @@ unsafe void Demo4(RGBLedMatrix matrix)
     BdfFont font1 = BdfFont.Load(@"fonts/5x7.bdf");
 
     BitmapImage? weatherIcon = null;
-    BitmapImage defaultIcon = ImageFactoryRegistry.CreateFromFile("bitmaps/01d.bmp");
+    BitmapImage defaultIcon = BitmapImage.CreateFromFile("bitmaps/01d.bmp");
     string? lastIcon = null;
     string description = string.Empty;
 
@@ -354,7 +354,7 @@ unsafe void Demo4(RGBLedMatrix matrix)
 
             if (lastIcon != icon)
             {
-                weatherIcon = ImageFactoryRegistry.CreateFromFile("bitmaps/" + icon ?? defaultIcon + ".bmp");
+                weatherIcon = BitmapImage.CreateFromFile("bitmaps/" + icon ?? defaultIcon + ".bmp");
             }
 
             matrix.DrawBitmap(20, 2, weatherIcon ?? defaultIcon, 255, 255, 255, 0, 0, blue);
@@ -407,8 +407,8 @@ unsafe void Demo6(RGBLedMatrix matrix)
 
         BitmapImage[] bitmaps = new BitmapImage[]
         {
-            ImageFactoryRegistry.CreateFromFile(@"bitmaps/dotnet-bot-branded-32x32.bmp"),
-            ImageFactoryRegistry.CreateFromFile(@"bitmaps/i-love-dotnet.bmp")
+            BitmapImage.CreateFromFile(@"bitmaps/dotnet-bot-branded-32x32.bmp"),
+            BitmapImage.CreateFromFile(@"bitmaps/i-love-dotnet.bmp")
         };
 
         int x = matrix.Width - 1;

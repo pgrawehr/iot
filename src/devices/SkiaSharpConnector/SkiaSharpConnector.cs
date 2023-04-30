@@ -19,7 +19,7 @@ namespace Iot.Device.Graphics.SkiaSharpConnector
         /// </summary>
         public static void Register()
         {
-            ImageFactoryRegistry.RegisterImageFactory(new SkiaSharpImageFactory());
+            BitmapImage.RegisterImageFactory(new SkiaSharpImageFactory());
         }
     }
 }

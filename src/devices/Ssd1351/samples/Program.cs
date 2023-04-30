@@ -14,7 +14,7 @@ const int pinID_DC = 23;
 const int pinID_Reset = 24;
 
 SkiaSharpConnector.Register();
-using BitmapImage dotnetBM = ImageFactoryRegistry.CreateBitmap(128, 128, PixelFormat.Format32bppArgb);
+using BitmapImage dotnetBM = BitmapImage.CreateBitmap(128, 128, PixelFormat.Format32bppArgb);
 using SpiDevice displaySPI = SpiDevice.Create(new SpiConnectionSettings(0, 0) { Mode = SpiMode.Mode3, DataBitLength = 8, ClockFrequency = 12_000_000 /* 12MHz */ });
 using Ssd1351 ssd1351 = new(displaySPI, pinID_DC, pinID_Reset);
 ssd1351.ResetDisplayAsync().Wait();
@@ -24,7 +24,7 @@ while (true)
 {
     foreach (string filepath in Directory.GetFiles(@"images", "*.png").OrderBy(f => f))
     {
-        using BitmapImage bm = ImageFactoryRegistry.CreateFromFile(filepath);
+        using BitmapImage bm = BitmapImage.CreateFromFile(filepath);
         dotnetBM.Clear(Color.Black);
         dotnetBM.GetDrawingApi().DrawImage(bm, 0, 0);
         ssd1351.SendBitmap(bm);

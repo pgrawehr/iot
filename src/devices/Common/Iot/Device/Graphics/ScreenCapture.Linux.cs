@@ -38,7 +38,7 @@ namespace Iot.Device.Graphics
                 throw new NotSupportedException("Unable to get screen image pointer");
             }
 
-            var resultImage = ImageFactoryRegistry.CreateBitmap(area.Width, area.Height, PixelFormat.Format32bppXrgb);
+            var resultImage = BitmapImage.CreateBitmap(area.Width, area.Height, PixelFormat.Format32bppXrgb);
             Span<int> targetImage = resultImage.AsIntSpan();
 
             nuint red_mask = image.red_mask;

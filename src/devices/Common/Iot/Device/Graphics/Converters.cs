@@ -42,7 +42,7 @@ namespace Iot.Device.Graphics
 
             if (bmp.PixelFormat == System.Drawing.Imaging.PixelFormat.Format32bppArgb)
             {
-                var target = ImageFactoryRegistry.CreateBitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb);
+                var target = BitmapImage.CreateBitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb);
 
                 var bmd = bmp.LockBits(new System.Drawing.Rectangle(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, bmp.PixelFormat);
 

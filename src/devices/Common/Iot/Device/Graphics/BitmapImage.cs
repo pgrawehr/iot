@@ -9,10 +9,18 @@ using System.Runtime.InteropServices;
 namespace Iot.Device.Graphics
 {
     /// <summary>
-    /// Represents bitmap image
+    /// An abstract class for a bitmap image, to be implemented by an image provider.
+    /// This class is also the factory to create new bitmaps with the current image factory.
+    /// The image factory must implement <see cref="IImageFactory"/> and must be registered using a call to
+    /// <see cref="RegisterImageFactory"/>.
     /// </summary>
     public abstract class BitmapImage : IDisposable
     {
+        /// <summary>
+        /// The currently registered image factory
+        /// </summary>
+        private static IImageFactory? s_currentFactory;
+
         /// <summary>
         /// Initializes a <see cref="T:Iot.Device.Graphics.BitmapImage" /> instance with the specified data, width, height and stride.
         /// </summary>
@@ -63,6 +71,59 @@ namespace Iot.Device.Graphics
             {
                 SetPixel(x, y, value);
             }
+        }
+
+        /// <summary>
+        /// Register an image factory.
+        /// </summary>
+        /// <param name="factory">The image factory to register</param>
+        public static void RegisterImageFactory(IImageFactory factory)
+        {
+            s_currentFactory = factory;
+        }
+
+        /// <summary>
+        /// Creates a bitmap using the active factory
+        /// </summary>
+        /// <param name="width">Width of the image, in pixels</param>
+        /// <param name="height">Height of the image, in pixels</param>
+        /// <param name="pixelFormat">Desired pixel format</param>
+        /// <returns>A new bitmap with the provided size</returns>
+        public static BitmapImage CreateBitmap(int width, int height, PixelFormat pixelFormat)
+        {
+            VerifyFactoryAvailable();
+            return s_currentFactory!.CreateBitmap(width, height, pixelFormat);
+        }
+
+        private static void VerifyFactoryAvailable()
+        {
+            if (s_currentFactory == null)
+            {
+                throw new InvalidOperationException("No image factory registered. Call BitmapImager.RegisterImageFactory() with a suitable implementation first");
+            }
+        }
+
+        /// <summary>
+        /// Create a bitmap from a file
+        /// </summary>
+        /// <param name="filename">The file to load</param>
+        /// <returns>A bitmap</returns>
+        public static BitmapImage CreateFromFile(string filename)
+        {
+            VerifyFactoryAvailable();
+            using var s = new FileStream(filename, FileMode.Open);
+            return s_currentFactory!.CreateFromStream(s);
+        }
+
+        /// <summary>
+        /// Create a bitmap from an open stream
+        /// </summary>
+        /// <param name="data">The data stream</param>
+        /// <returns>A bitmap</returns>
+        public static BitmapImage CreateFromStream(Stream data)
+        {
+            VerifyFactoryAvailable();
+            return s_currentFactory!.CreateFromStream(data);
         }
 
         /// <summary>

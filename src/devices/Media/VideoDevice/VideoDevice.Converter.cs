@@ -138,7 +138,7 @@ namespace Iot.Device.Media
         {
             int width = (int)size.Width, height = (int)size.Height;
 
-            BitmapImage pic = ImageFactoryRegistry.CreateBitmap(width, height, format);
+            BitmapImage pic = BitmapImage.CreateBitmap(width, height, format);
 
             for (int x = 0; x < width; x++)
             {

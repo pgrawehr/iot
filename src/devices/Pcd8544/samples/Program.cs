@@ -290,13 +290,13 @@ void DisplayTextChangePositionBlink()
 void DisplayingBitmap()
 {
     Console.WriteLine("Displaying bitmap, text, resizing them");
-    using BitmapImage bitmapMe = ImageFactoryRegistry.CreateFromFile(Path.Combine("me.bmp"));
+    using BitmapImage bitmapMe = BitmapImage.CreateFromFile(Path.Combine("me.bmp"));
     var bitmap1 = BitmapToByteArray(bitmapMe);
-    using BitmapImage bitmapNokia = ImageFactoryRegistry.CreateFromFile(Path.Combine("nokia_bw.bmp"));
+    using BitmapImage bitmapNokia = BitmapImage.CreateFromFile(Path.Combine("nokia_bw.bmp"));
     var bitmap2 = BitmapToByteArray(bitmapNokia);
 
     // Open a non bitmap and resize it
-    BitmapImage bitmapLarge = ImageFactoryRegistry.CreateFromFile(Path.Combine("nonbmp.jpg"));
+    BitmapImage bitmapLarge = BitmapImage.CreateFromFile(Path.Combine("nonbmp.jpg"));
     bitmapLarge = bitmapLarge.Resize(Pcd8544.PixelScreenSize);
     bitmapLarge.Clear();
     var bitmap3 = BitmapToByteArray(bitmapLarge);

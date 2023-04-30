@@ -13,7 +13,7 @@ namespace Iot.Device.Graphics
     /// <summary>
     /// Factory interface for creating bitmaps.
     /// An instance of this interface shall be provided by library-specific adapter classes.
-    /// See <see cref="ImageFactoryRegistry"/>
+    /// The class <see cref="BitmapImage"/> requires an instance of this interface to work properly.
     /// </summary>
     public interface IImageFactory
     {

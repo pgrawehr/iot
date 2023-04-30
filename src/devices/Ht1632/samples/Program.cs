@@ -58,6 +58,6 @@ void ShowImage()
 {
     Console.WriteLine("Show image");
 
-    var image = ImageFactoryRegistry.CreateFromFile("./dotnet-bot.bmp");
+    var image = BitmapImage.CreateFromFile("./dotnet-bot.bmp");
     ht1632.ShowImageWith16Com(image);
 }

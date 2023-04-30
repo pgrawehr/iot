@@ -161,10 +161,10 @@ namespace Iot.Device.Ili934x.Samples
             }));
 
             _selectedDataSet = 0;
-            _leftMouseMenuBar = ImageFactoryRegistry.CreateFromFile("images/MenuBarLeftMouse.png");
-            _rightMouseMenuBar = ImageFactoryRegistry.CreateFromFile("images/MenuBarRightMouse.png");
-            _defaultMenuBar = ImageFactoryRegistry.CreateFromFile("images/MenuBar.png");
-            _openMenu = ImageFactoryRegistry.CreateFromFile("images/OpenMenu.png");
+            _leftMouseMenuBar = BitmapImage.CreateFromFile("images/MenuBarLeftMouse.png");
+            _rightMouseMenuBar = BitmapImage.CreateFromFile("images/MenuBarRightMouse.png");
+            _defaultMenuBar = BitmapImage.CreateFromFile("images/MenuBar.png");
+            _openMenu = BitmapImage.CreateFromFile("images/OpenMenu.png");
 
             _tcpClient.StartDecode();
         }
@@ -476,7 +476,7 @@ namespace Iot.Device.Ili934x.Samples
 
         private void StartupDisplay()
         {
-            using var image = ImageFactoryRegistry.CreateFromFile(@"images/Landscape.png");
+            using var image = BitmapImage.CreateFromFile(@"images/Landscape.png");
             using var backBuffer = _screen.CreateBackBuffer();
             for (int i = 1; i < 20; i++)
             {

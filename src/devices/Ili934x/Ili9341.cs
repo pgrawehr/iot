@@ -339,7 +339,7 @@ namespace Iot.Device.Ili934x
         /// <returns>An image instance</returns>
         public virtual BitmapImage CreateBackBuffer()
         {
-            return ImageFactoryRegistry.CreateBitmap(ScreenWidth, ScreenHeight, PixelFormat.Format32bppArgb);
+            return BitmapImage.CreateBitmap(ScreenWidth, ScreenHeight, PixelFormat.Format32bppArgb);
         }
 
         /// <inheritdoc cref="Dispose()"/>
