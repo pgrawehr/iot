@@ -46,7 +46,7 @@
 * [Holtek HT1632 - 32×8 & 24×16 LED Driver](Ht1632/README.md)
 * [HT16K33 - LED Matrix Display Driver](Display/README.md)
 * [HTS221 - Capacitive digital sensor for relative humidity and temperature](Hts221/README.md)
-* [Ili9341 TFT LCD Controller](Ili9341/README.md)
+* [Ili934x TFT LCD Controller](Ili934x/README.md)
 * [INA219 - Bidirectional Current/Power Monitor](Ina219/README.md)
 * [IP5306 - Power management](Ip5306/README.md)
 * [Key Matrix](KeyMatrix/README.md)

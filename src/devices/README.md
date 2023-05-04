@@ -194,7 +194,7 @@ Our vision: the majority of .NET bindings are written completely in .NET languag
 * [Character LCD (Liquid Crystal Display)](CharacterLcd/README.md)
 * [Holtek HT1632 - 32×8 & 24×16 LED Driver](Ht1632/README.md)
 * [HT16K33 - LED Matrix Display Driver](Display/README.md)
-* [Ili9341 TFT LCD Controller](Ili9341/README.md)
+* [Ili934x TFT LCD Controller](Ili934x/README.md)
 * [Lp55231 - Nine-Channel RGB, White-LED Driver](Lp55231/README.md)
 * [Max7219 (LED Matrix driver)](Max7219/README.md)
 * [PCD8544 - 48 × 84 pixels matrix LCD, famous Nokia 5110 screen](Pcd8544/README.md)
