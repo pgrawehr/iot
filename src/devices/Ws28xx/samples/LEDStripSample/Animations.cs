@@ -4,7 +4,6 @@
 using System.Drawing;
 using Iot.Device.Graphics;
 using Iot.Device.Ws28xx;
-using Ws28xx;
 
 namespace LEDStripSample
 {

@@ -14,7 +14,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
-using BuildHat.Models;
 using Iot.Device.BuildHat.Models;
 using Iot.Device.BuildHat.Motors;
 using Iot.Device.BuildHat.Sensors;

@@ -3,8 +3,6 @@
 
 using System.Drawing;
 using Iot.Device.Graphics;
-using Ws28xx;
-
 namespace Iot.Device.Ws28xx
 {
     internal class BitmapImageNeo4 : RawPixelContainer

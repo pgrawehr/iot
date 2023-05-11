@@ -4,7 +4,7 @@
 using System;
 using System.Drawing;
 
-namespace Ws28xx
+namespace Iot.Device.Ws28xx
 {
     /// <summary>
     /// An abstract class that acts as a data container for device-dependent pixel arrays
