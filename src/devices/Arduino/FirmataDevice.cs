@@ -30,7 +30,7 @@ namespace Iot.Device.Arduino
         private const byte FIRMATA_PROTOCOL_MAJOR_VERSION = 2;
         private const byte FIRMATA_PROTOCOL_MINOR_VERSION = 5; // 2.5 works, but 2.6 is recommended
         private const int FIRMATA_INIT_TIMEOUT_SECONDS = 2;
-        internal static readonly TimeSpan DefaultReplyTimeout = TimeSpan.FromMilliseconds(1000);
+        internal static readonly TimeSpan DefaultReplyTimeout = TimeSpan.FromMilliseconds(2000);
 
         private byte _firmwareVersionMajor;
         private byte _firmwareVersionMinor;
@@ -588,7 +588,7 @@ namespace Iot.Device.Arduino
         }
 
         /// <summary>
-        /// Send a command and wait for a reply
+        /// Send a set of command and wait for a reply
         /// </summary>
         /// <param name="sequences">The command sequences to send, typically starting with <see cref="FirmataCommand.START_SYSEX"/> and ending with <see cref="FirmataCommand.END_SYSEX"/></param>
         /// <param name="timeout">A non-default timeout</param>
@@ -1394,7 +1394,7 @@ namespace Iot.Device.Arduino
             SendCommand(disableSpi);
         }
 
-        public void SpiWrite(int csPin, ReadOnlySpan<byte> writeBytes, bool waitForReply = false)
+        public void SpiWrite(int csPin, ReadOnlySpan<byte> writeBytes, bool waitForReply)
         {
             // When the command is SPI_WRITE, the device answer is already discarded in the firmware.
             if (waitForReply)
