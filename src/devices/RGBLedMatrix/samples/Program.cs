@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.LEDMatrix;
 using Iot.Device.Graphics;
-using Iot.Device.Graphics.SkiaSharpConnector;
+using Iot.Device.Graphics.SkiaSharpAdapter;
 
 bool play = false;
 int scenario = 2;
@@ -37,7 +37,7 @@ CityData[] citiesData = new CityData[]
     new("Riyadh", "SA", "Asia/Riyadh")
 };
 
-SkiaSharpConnector.Register();
+SkiaSharpAdapter.Register();
 
 Console.WriteLine($"Hello Matrix World!");
 

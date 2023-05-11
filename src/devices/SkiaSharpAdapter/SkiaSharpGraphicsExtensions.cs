@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SkiaSharp;
 
-namespace Iot.Device.Graphics.SkiaSharpConnector
+namespace Iot.Device.Graphics.SkiaSharpAdapter
 {
     /// <summary>
     /// Contains extension methods that operate on <see cref="IGraphics"/>

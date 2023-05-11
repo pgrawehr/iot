@@ -18,7 +18,7 @@ using Iot.Device.Axp192;
 using Iot.Device.Common;
 using Iot.Device.Ft4222;
 using Iot.Device.Graphics;
-using Iot.Device.Graphics.SkiaSharpConnector;
+using Iot.Device.Graphics.SkiaSharpAdapter;
 using Iot.Device.Ili934x;
 using UnitsNet;
 
@@ -33,7 +33,7 @@ namespace Iot.Device.Ili934x.Samples
             bool isFt4222 = false;
             bool isArduino = false;
             IPAddress address = IPAddress.None;
-            SkiaSharpConnector.Register();
+            SkiaSharpAdapter.Register();
             string nmeaSourceAddress = "localhost";
 
             if (args.Length < 2)

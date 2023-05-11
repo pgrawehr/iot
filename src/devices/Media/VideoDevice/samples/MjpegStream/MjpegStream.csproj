@@ -7,7 +7,7 @@
   
   <ItemGroup>
     <ProjectReference Include="../../../Media.csproj" />
-    <ProjectReference Include="..\..\..\..\SkiaSharpConnector\SkiaSharpConnector.csproj" />
+    <ProjectReference Include="..\..\..\..\SkiaSharpAdapter\SkiaSharpAdapter.csproj" />
   </ItemGroup>
 
   <ItemGroup>

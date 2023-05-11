@@ -5,7 +5,7 @@
     <!--Disabling default items so samples source won't get build by the main library-->
     <EnableDefaultItems>false</EnableDefaultItems>
     <LangVersion>9</LangVersion>
-    <RootNamespace>Iot.Device.Graphics.SkiaSharpConnector</RootNamespace>
+    <RootNamespace>Iot.Device.Graphics.SkiaSharpAdapter</RootNamespace>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 

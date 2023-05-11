@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SkiaSharp;
 
-namespace Iot.Device.Graphics.SkiaSharpConnector
+namespace Iot.Device.Graphics.SkiaSharpAdapter
 {
     internal class SkiaSharpBitmap : BitmapImage
     {

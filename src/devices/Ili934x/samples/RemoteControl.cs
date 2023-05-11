@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Axp192;
 using Iot.Device.Graphics;
-using Iot.Device.Graphics.SkiaSharpConnector;
+using Iot.Device.Graphics.SkiaSharpAdapter;
 using Iot.Device.Ili934x;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;

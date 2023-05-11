@@ -10,6 +10,6 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SkiaSharpConnector\SkiaSharpConnector.csproj" />
+    <ProjectReference Include="..\SkiaSharpAdapter\SkiaSharpAdapter.csproj" />
   </ItemGroup>
 </Project>

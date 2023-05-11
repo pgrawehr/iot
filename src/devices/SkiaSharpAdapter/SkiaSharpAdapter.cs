@@ -6,12 +6,12 @@ using System.Device.Gpio;
 using System.Device.I2c;
 using System.Device.Spi;
 
-namespace Iot.Device.Graphics.SkiaSharpConnector
+namespace Iot.Device.Graphics.SkiaSharpAdapter
 {
     /// <summary>
     /// Image factory registry helper.
     /// </summary>
-    public static class SkiaSharpConnector
+    public static class SkiaSharpAdapter
     {
         /// <summary>
         /// Registers this factory as the default image factory.

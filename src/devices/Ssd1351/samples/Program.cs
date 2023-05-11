@@ -7,13 +7,13 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Iot.Device.Graphics;
-using Iot.Device.Graphics.SkiaSharpConnector;
+using Iot.Device.Graphics.SkiaSharpAdapter;
 using Iot.Device.Ssd1351;
 
 const int pinID_DC = 23;
 const int pinID_Reset = 24;
 
-SkiaSharpConnector.Register();
+SkiaSharpAdapter.Register();
 using BitmapImage dotnetBM = BitmapImage.CreateBitmap(128, 128, PixelFormat.Format32bppArgb);
 using SpiDevice displaySPI = SpiDevice.Create(new SpiConnectionSettings(0, 0) { Mode = SpiMode.Mode3, DataBitLength = 8, ClockFrequency = 12_000_000 /* 12MHz */ });
 using Ssd1351 ssd1351 = new(displaySPI, pinID_DC, pinID_Reset);

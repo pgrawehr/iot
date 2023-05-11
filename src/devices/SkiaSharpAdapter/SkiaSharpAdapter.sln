@@ -3,11 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33326.253
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkiaSharpConnector", "SkiaSharpConnector.csproj", "{B82C190A-642B-465B-BD3F-DB56FFF22253}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{6A4DE7B1-03F3-4EE0-BF73-A0BAEF88BA2B}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkiaSharpConnector.Samples", "samples\SkiaSharpConnector.Samples.csproj", "{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkiaSharpAdapter", "SkiaSharpAdapter.csproj", "{B82C190A-642B-465B-BD3F-DB56FFF22253}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,24 +27,9 @@ Global
 		{B82C190A-642B-465B-BD3F-DB56FFF22253}.Release|x64.Build.0 = Release|Any CPU
 		{B82C190A-642B-465B-BD3F-DB56FFF22253}.Release|x86.ActiveCfg = Release|Any CPU
 		{B82C190A-642B-465B-BD3F-DB56FFF22253}.Release|x86.Build.0 = Release|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Debug|x64.Build.0 = Debug|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Debug|x86.Build.0 = Debug|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Release|x64.ActiveCfg = Release|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Release|x64.Build.0 = Release|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Release|x86.ActiveCfg = Release|Any CPU
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{3CFA13D6-1D29-4C87-B0C1-01A6901A50EF} = {6A4DE7B1-03F3-4EE0-BF73-A0BAEF88BA2B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {88F2ACC7-6A5A-425A-81EA-7EC63893AB55}

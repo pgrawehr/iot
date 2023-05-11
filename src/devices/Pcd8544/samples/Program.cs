@@ -15,9 +15,9 @@ using Iot.Device.Display;
 using Iot.Device.Ft4222;
 using Iot.Device.CharacterLcd;
 using Iot.Device.Graphics;
-using Iot.Device.Graphics.SkiaSharpConnector;
+using Iot.Device.Graphics.SkiaSharpAdapter;
 
-SkiaSharpConnector.Register();
+SkiaSharpAdapter.Register();
 Console.WriteLine("Hello PCD8544, screen of Nokia 5110!");
 Console.WriteLine("Please select the platform you want to use:");
 Console.WriteLine("  1. Native device like a Raspberry Pi");
