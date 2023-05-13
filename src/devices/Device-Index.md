@@ -103,7 +103,7 @@
 * [SHT4x - Temperature & Humidity Sensor](Sht4x/README.md)
 * [SHTC3 - Temperature & Humidity Sensor](Shtc3/README.md)
 * [Si7021 - Temperature & Humidity Sensor](Si7021/README.md)
-* [SkiaSharp graphics library adapter](SkiaSharpConnector/README.md)
+* [SkiaSharp graphics library adapter](SkiaSharpAdapter/README.md)
 * [SN74HC595 -- 8-bit shift register](Sn74hc595/README.md)
 * [SocketCan - CAN BUS library (Linux only)](SocketCan/README.md)
 * [Software PWM](SoftPwm/README.md)

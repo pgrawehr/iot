@@ -204,7 +204,7 @@ Our vision: the majority of .NET bindings are written completely in .NET languag
 * [PCD8544 - 48 × 84 pixels matrix LCD, famous Nokia 5110 screen](Pcd8544/README.md)
 * [RGBLedMatrix - RGB LED Matrix](RGBLedMatrix/README.md)
 * [Sense HAT](SenseHat/README.md)
-* [SkiaSharp graphics library adapter](SkiaSharpConnector/README.md)
+* [SkiaSharp graphics library adapter](SkiaSharpAdapter/README.md)
 * [Solomon Systech Ssd1351 - CMOS OLED](Ssd1351/README.md)
 * [Solomon Systech SSD13xx OLED display family](Ssd13xx/README.md)
 * [TM1637 - Segment Display](Tm1637/README.md)
@@ -268,7 +268,7 @@ Our vision: the majority of .NET bindings are written completely in .NET languag
 ### Media libraries
 
 * [Buzzer - Piezo Buzzer Controller](Buzzer/README.md)
-* [SkiaSharp graphics library adapter](SkiaSharpConnector/README.md)
+* [SkiaSharp graphics library adapter](SkiaSharpAdapter/README.md)
 * [Still image recording library](Media/README.md)
 
 ### USB devices
