@@ -133,7 +133,13 @@ namespace Iot.Device.Ili934x.Samples
                 {
                     ClockFrequency = 50_000_000
                 });
-                spiBufferSize = 200; // requires extended Firmata firmware, default is 25
+                spiBufferSize = 25; // Default
+
+                if (board.GetSystemVariable(SystemVariable.InputBufferSize, out int messageSize))
+                {
+                    spiBufferSize = int.MaxValue; // The underlying infrastructure will take care of it
+                }
+
                 powerControl = new M5ToughPowerControl(board);
                 powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
                 powerControl.Sleep(false);

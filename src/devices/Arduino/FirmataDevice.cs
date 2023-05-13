@@ -654,7 +654,7 @@ namespace Iot.Device.Arduino
                         }
 
                         sequencesWithAck[s2.Key] = true;
-                        break;
+                        // Don't break here, because isMatchingAck can return true for more than one element (e.g. if an ack is only required at the end of several commands)
                     }
                 }
             }
@@ -1394,14 +1394,42 @@ namespace Iot.Device.Arduino
             SendCommand(disableSpi);
         }
 
-        public void SpiWrite(int csPin, ReadOnlySpan<byte> writeBytes, bool waitForReply)
+        public void SpiWrite(int csPin, ReadOnlySpan<byte> writeBytes, int maxSysexSize, int maxBufferSize)
         {
             // When the command is SPI_WRITE, the device answer is already discarded in the firmware.
-            if (waitForReply)
+            List<FirmataCommandSequence> sequences = new();
+            int bytesWritten = 0;
+            int maxPayloadSizePerMsg = Encoder7Bit.Num8BitOutBytes(maxSysexSize - 6);
+            int maxTotalMessageSize = maxSysexSize + 2;
+            int maxMessagesForBuffer = maxBufferSize / maxTotalMessageSize;
+            maxMessagesForBuffer = MathExtensions.Clamp(maxMessagesForBuffer, 1, sbyte.MaxValue - 1);
+            while (bytesWritten < writeBytes.Length)
             {
-                FirmataCommandSequence command = SpiWrite(csPin, FirmataSpiCommand.SPI_WRITE_ACK, writeBytes, out byte requestId);
-                byte[] response = SendCommandAndWait(command, DefaultReplyTimeout, (sequence, bytes) =>
+                while (bytesWritten < writeBytes.Length)
                 {
+                    int remaining = writeBytes.Length - bytesWritten;
+                    int nextChunkLength = Math.Min(remaining, maxPayloadSizePerMsg);
+                    ReadOnlySpan<byte> chunk = writeBytes.Slice(bytesWritten, nextChunkLength);
+
+                    bool needAck = sequences.Count >= (maxMessagesForBuffer - 1) || // sends once when buffer is full
+                                   nextChunkLength < maxPayloadSizePerMsg; // or when last message of block
+                    sequences.Add(SpiWrite(csPin, needAck ? FirmataSpiCommand.SPI_WRITE_ACK : FirmataSpiCommand.SPI_WRITE, chunk, out byte requestId));
+
+                    bytesWritten += nextChunkLength;
+                    if (needAck)
+                    {
+                        break;
+                    }
+                }
+
+                bool ret = SendCommandsAndWait(sequences, DefaultReplyTimeout, (sequence, bytes) =>
+                {
+                    // The sequences that require no ack will automatically be marked as matching with this test
+                    if (sequence.Sequence[2] == (byte)FirmataSpiCommand.SPI_WRITE)
+                    {
+                        return true;
+                    }
+
                     if (bytes.Length < 5)
                     {
                         return false;
@@ -1412,28 +1440,20 @@ namespace Iot.Device.Arduino
                         return false;
                     }
 
-                    if (bytes[3] != (byte)requestId)
+                    if (bytes[3] != (byte)sequence.Sequence[4])
                     {
                         return false;
                     }
 
                     return true;
-                }, out _lastCommandError);
+                }, (sequence, bytes) => CommandError.None, out _lastCommandError);
 
-                if (response[0] != (byte)FirmataSysexCommand.SPI_DATA || response[1] != (byte)FirmataSpiCommand.SPI_REPLY)
+                if (!ret)
                 {
-                    throw new IOException("Firmata protocol error: received incorrect query response");
+                    throw new IOException("Error sending SPI data: No valid reply received.");
                 }
 
-                if (response[3] != (byte)requestId)
-                {
-                    throw new IOException($"Firmata protocol sequence error.");
-                }
-            }
-            else
-            {
-                FirmataCommandSequence command = SpiWrite(csPin, FirmataSpiCommand.SPI_WRITE, writeBytes, out _);
-                SendCommand(command);
+                sequences.Clear();
             }
         }
 

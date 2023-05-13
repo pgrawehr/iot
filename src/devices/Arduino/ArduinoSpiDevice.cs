@@ -10,12 +10,26 @@ namespace Iot.Device.Arduino
 {
     internal sealed class ArduinoSpiDevice : SpiDevice
     {
+        private const int SPI_MESSAGE_HEADER_SIZE = 6; // Excluding the SYSEX and END_SYSEX bytes
+        private int _maxSysexSize;
+        private int _maxBufferSize;
+
         public ArduinoSpiDevice(ArduinoBoard board, SpiConnectionSettings connectionSettings)
         {
             Board = board;
             ConnectionSettings = connectionSettings;
             board.EnableSpi();
             board.Firmata.ConfigureSpiDevice(connectionSettings);
+
+            if (!board.GetSystemVariable(SystemVariable.MaxSysexSize, out _maxSysexSize))
+            {
+                _maxSysexSize = 25;
+            }
+
+            if (!board.GetSystemVariable(SystemVariable.InputBufferSize, out _maxBufferSize))
+            {
+                _maxBufferSize = _maxSysexSize;
+            }
         }
 
         public ArduinoBoard Board
@@ -34,7 +48,7 @@ namespace Iot.Device.Arduino
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
-            Board.Firmata.SpiWrite(ConnectionSettings.ChipSelectLine, buffer, !Board.StreamUsesHardwareFlowControl);
+            Board.Firmata.SpiWrite(ConnectionSettings.ChipSelectLine, buffer, _maxSysexSize, _maxBufferSize);
         }
 
         public override void TransferFullDuplex(ReadOnlySpan<byte> writeBuffer, Span<byte> readBuffer)
