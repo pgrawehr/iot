@@ -3,6 +3,20 @@
 <Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Suppression>
     <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:BuildHat.Models.BuildHatInformation</Target>
+    <Left>lib/net6.0/Iot.Device.Bindings.dll</Left>
+    <Right>lib/net6.0/Iot.Device.Bindings.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:BuildHat.Models.LedMode</Target>
+    <Left>lib/net6.0/Iot.Device.Bindings.dll</Left>
+    <Right>lib/net6.0/Iot.Device.Bindings.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
     <Target>T:Iot.Device.Common.ValueArray`1</Target>
     <Left>lib/net6.0/Iot.Device.Bindings.dll</Left>
     <Right>lib/net6.0/Iot.Device.Bindings.dll</Right>
@@ -164,6 +178,20 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:BuildHat.Models.BuildHatInformation</Target>
+    <Left>lib/netcoreapp3.1/Iot.Device.Bindings.dll</Left>
+    <Right>lib/netstandard2.0/Iot.Device.Bindings.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:BuildHat.Models.LedMode</Target>
+    <Left>lib/netcoreapp3.1/Iot.Device.Bindings.dll</Left>
+    <Right>lib/netstandard2.0/Iot.Device.Bindings.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
     <Target>T:Iot.Device.Display.BarColor</Target>
     <Left>lib/netcoreapp3.1/Iot.Device.Bindings.dll</Left>
     <Right>lib/netstandard2.0/Iot.Device.Bindings.dll</Right>
@@ -187,6 +215,20 @@
     <DiagnosticId>CP0001</DiagnosticId>
     <Target>T:Iot.Device.Media.PixelFormat</Target>
     <Left>lib/netcoreapp3.1/Iot.Device.Bindings.dll</Left>
+    <Right>lib/netstandard2.0/Iot.Device.Bindings.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:BuildHat.Models.BuildHatInformation</Target>
+    <Left>lib/netstandard2.0/Iot.Device.Bindings.dll</Left>
+    <Right>lib/netstandard2.0/Iot.Device.Bindings.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0001</DiagnosticId>
+    <Target>T:BuildHat.Models.LedMode</Target>
+    <Left>lib/netstandard2.0/Iot.Device.Bindings.dll</Left>
     <Right>lib/netstandard2.0/Iot.Device.Bindings.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>
   </Suppression>
