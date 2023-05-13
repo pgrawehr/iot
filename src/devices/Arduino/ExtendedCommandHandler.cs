@@ -148,7 +148,7 @@ namespace Iot.Device.Arduino
                 throw new InvalidOperationException("Command handler not registered");
             }
 
-            return _firmata.SendCommandsAndWait(commandSequences, timeout, IsMatchingAck, HasCommandError, out error);
+            return _firmata.SendCommandsAndWait(commandSequences, timeout, NeedsAck, IsMatchingAck, HasCommandError, out error);
         }
 
         /// <summary>
@@ -199,6 +199,14 @@ namespace Iot.Device.Arduino
         /// <param name="reply">The reply</param>
         /// <returns>True if this reply matches the sequence. True is the default, for backwards compatibility</returns>
         protected virtual bool IsMatchingAck(FirmataCommandSequence sequence, byte[] reply) => true;
+
+        /// <summary>
+        /// This method can be overriden to check whether the given message needs an ack. Helpful when chaining together several
+        /// messages for sending with <see cref="SendCommandsAndWait"/>, but only for some an answer is sent.
+        /// </summary>
+        /// <param name="sequence">The sequence that is sent</param>
+        /// <returns>True if it requires an ack, false otherwise. The base implementation returns true.</returns>
+        protected virtual bool NeedsAck(FirmataCommandSequence sequence) => true;
 
         /// <summary>
         /// Callback function that returns whether the given reply indicates an error

@@ -592,13 +592,16 @@ namespace Iot.Device.Arduino
         /// </summary>
         /// <param name="sequences">The command sequences to send, typically starting with <see cref="FirmataCommand.START_SYSEX"/> and ending with <see cref="FirmataCommand.END_SYSEX"/></param>
         /// <param name="timeout">A non-default timeout</param>
+        /// <param name="needsAck">A callback function determining whether the given message needs an ack. Defaults to true.</param>
         /// <param name="isMatchingAck">A callback function that should return true if the given reply is the one this command should wait for. The default is true, because asynchronous replies
         /// are rather the exception than the rule</param>
         /// <param name="errorFunc">A callback that determines a possible error in the reply message</param>
         /// <param name="error">An error code in case of failure</param>
         /// <returns>The raw sequence of sysex reply bytes. The reply does not include the START_SYSEX byte, but it does include the terminating END_SYSEX byte. The first byte is the
         /// <see cref="FirmataSysexCommand"/> command number of the corresponding request</returns>
-        public bool SendCommandsAndWait(IList<FirmataCommandSequence> sequences, TimeSpan timeout, Func<FirmataCommandSequence, byte[], bool> isMatchingAck,
+        public bool SendCommandsAndWait(IList<FirmataCommandSequence> sequences, TimeSpan timeout,
+            Func<FirmataCommandSequence, bool> needsAck,
+            Func<FirmataCommandSequence, byte[], bool> isMatchingAck,
             Func<FirmataCommandSequence, byte[], CommandError> errorFunc, out CommandError error)
         {
             if (sequences.Any(s => s.Validate() == false))
@@ -632,6 +635,11 @@ namespace Iot.Device.Arduino
 
             _firmataStream.Flush();
 
+            foreach (KeyValuePair<FirmataCommandSequence, bool> s1 in sequencesWithAck)
+            {
+                sequencesWithAck[s1.Key] = !needsAck(s1.Key);
+            }
+
             byte[]? response;
             do
             {
@@ -654,7 +662,7 @@ namespace Iot.Device.Arduino
                         }
 
                         sequencesWithAck[s2.Key] = true;
-                        // Don't break here, because isMatchingAck can return true for more than one element (e.g. if an ack is only required at the end of several commands)
+                        break;
                     }
                 }
             }
@@ -1422,14 +1430,18 @@ namespace Iot.Device.Arduino
                     }
                 }
 
-                bool ret = SendCommandsAndWait(sequences, DefaultReplyTimeout, (sequence, bytes) =>
-                {
-                    // The sequences that require no ack will automatically be marked as matching with this test
-                    if (sequence.Sequence[2] == (byte)FirmataSpiCommand.SPI_WRITE)
+                bool ret = SendCommandsAndWait(sequences, DefaultReplyTimeout, seq =>
                     {
-                        return true;
-                    }
+                        // The sequences that require no ack will automatically be marked as matching with this test
+                        if (seq.Sequence[2] == (byte)FirmataSpiCommand.SPI_WRITE)
+                        {
+                            return false;
+                        }
 
+                        return true;
+                    },
+                    (sequence, bytes) =>
+                {
                     if (bytes.Length < 5)
                     {
                         return false;
