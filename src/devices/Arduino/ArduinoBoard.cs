@@ -455,7 +455,7 @@ namespace Iot.Device.Arduino
                 else
                 {
                     Logger.LogInformation("System variable support detected");
-                    GetSystemVariable(SystemVariable.QueryInputBufferSize, -1, out int bufferSize);
+                    GetSystemVariable(SystemVariable.MaxSysexSize, -1, out int bufferSize);
                     // Should be excluding the SYSEX byte itself and the terminator, but see https://github.com/firmata/ConfigurableFirmata/issues/136
                     Logger.LogInformation($"Maximum SYSEX message size: {bufferSize}");
                 }

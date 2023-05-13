@@ -20,9 +20,14 @@ namespace Iot.Device.Arduino
         FunctionSupportCheck = 0,
 
         /// <summary>
-        /// Query the input buffer size (maximum size of sysex messages)
+        /// Query the maximum size of sysex messages
         /// </summary>
-        QueryInputBufferSize = 1,
+        MaxSysexSize = 1,
+
+        /// <summary>
+        /// Query the input buffer size (might be larger than the above, in which case messages can be sent in larger chunks)
+        /// </summary>
+        InputBufferSize = 2,
 
         /// <summary>
         /// Enter sleep mode (after a timeout). The argument is in minutes. A value of 0 disables an active timer.
