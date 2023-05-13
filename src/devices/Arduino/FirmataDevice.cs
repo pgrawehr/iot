@@ -1421,7 +1421,7 @@ namespace Iot.Device.Arduino
 
                     bool needAck = sequences.Count >= (maxMessagesForBuffer - 1) || // sends once when buffer is full
                                    nextChunkLength < maxPayloadSizePerMsg; // or when last message of block
-                    sequences.Add(SpiWrite(csPin, needAck ? FirmataSpiCommand.SPI_WRITE_ACK : FirmataSpiCommand.SPI_WRITE, chunk, out byte requestId));
+                    sequences.Add(SpiWrite(csPin, FirmataSpiCommand.SPI_WRITE, chunk, out byte requestId));
 
                     bytesWritten += nextChunkLength;
                     if (needAck)
