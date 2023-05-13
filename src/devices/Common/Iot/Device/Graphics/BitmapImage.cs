@@ -14,6 +14,10 @@ namespace Iot.Device.Graphics
     /// The image factory must implement <see cref="IImageFactory"/> and must be registered using a call to
     /// <see cref="RegisterImageFactory"/>.
     /// </summary>
+    /// <remarks>
+    /// This class does not have an implementation within Iot.Device.Bindings.dll. You can use the Iot.Device.Bindings.SkiaSharpAdapter.dll
+    /// as a supported operating-system independent implementation of this class or write your own implementation.
+    /// </remarks>
     public abstract class BitmapImage : IDisposable
     {
         /// <summary>
@@ -83,7 +87,8 @@ namespace Iot.Device.Graphics
         }
 
         /// <summary>
-        /// Creates a bitmap using the active factory
+        /// Creates a bitmap using the active factory. This requires an implementation to be registered.
+        /// See <see cref="BitmapImage"/> for details.
         /// </summary>
         /// <param name="width">Width of the image, in pixels</param>
         /// <param name="height">Height of the image, in pixels</param>
@@ -99,12 +104,13 @@ namespace Iot.Device.Graphics
         {
             if (s_currentFactory == null)
             {
-                throw new InvalidOperationException("No image factory registered. Call BitmapImager.RegisterImageFactory() with a suitable implementation first");
+                throw new InvalidOperationException("No image factory registered. Call BitmapImage.RegisterImageFactory() with a suitable implementation first. Consult the documentation for further information");
             }
         }
 
         /// <summary>
-        /// Create a bitmap from a file
+        /// Create a bitmap from a file. This requires an implementation to be registered.
+        /// See <see cref="BitmapImage"/> for details.
         /// </summary>
         /// <param name="filename">The file to load</param>
         /// <returns>A bitmap</returns>
@@ -116,7 +122,8 @@ namespace Iot.Device.Graphics
         }
 
         /// <summary>
-        /// Create a bitmap from an open stream
+        /// Create a bitmap from an open stream. This requires an implementation to be registered.
+        /// See <see cref="BitmapImage"/> for details.
         /// </summary>
         /// <param name="data">The data stream</param>
         /// <returns>A bitmap</returns>
@@ -125,14 +132,6 @@ namespace Iot.Device.Graphics
             VerifyFactoryAvailable();
             return s_currentFactory!.CreateFromStream(data);
         }
-
-        /// <summary>
-        /// Sets pixel at specific position
-        /// </summary>
-        /// <param name="x">X coordinate of the pixel</param>
-        /// <param name="y">Y coordinate of the pixel</param>
-        /// <param name="color">Color to set the pixel to</param>
-        public abstract void SetPixel(int x, int y, Color color);
 
         /// <summary>
         /// Clears the image to specific color
@@ -150,11 +149,23 @@ namespace Iot.Device.Graphics
         }
 
         /// <summary>
+        /// Sets pixel at specific position
+        /// </summary>
+        /// <param name="x">X coordinate of the pixel</param>
+        /// <param name="y">Y coordinate of the pixel</param>
+        /// <param name="color">Color to set the pixel to</param>
+        /// <remarks>The use of <see cref="SetPixel"/> and <see cref="GetPixel"/> is usually slow. For fast image updates, grab the underlying
+        /// raw buffer by calling <see cref="AsByteSpan"/> or use the <see cref="GetDrawingApi"/> method and use high-level drawing functions.</remarks>
+        public abstract void SetPixel(int x, int y, Color color);
+
+        /// <summary>
         /// Gets the color of the pixel at the given position
         /// </summary>
         /// <param name="x">X coordinate of the pixel</param>
         /// <param name="y">Y coordinate of the pixel</param>
-        /// <returns></returns>
+        /// <returns>The color of the pixel</returns>
+        /// <remarks>The use of <see cref="SetPixel"/> and <see cref="GetPixel"/> is usually slow. For fast image updates, grab the underlying
+        /// raw buffer by calling <see cref="AsByteSpan"/> or use the <see cref="GetDrawingApi"/> method and use high-level drawing functions.</remarks>
         public abstract Color GetPixel(int x, int y);
 
         /// <summary>

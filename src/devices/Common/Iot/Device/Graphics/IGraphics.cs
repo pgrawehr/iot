@@ -11,6 +11,7 @@ namespace Iot.Device.Graphics
 {
     /// <summary>
     /// This declarative interface provides the basis for drawing functions using image specific APIs.
+    /// This interface is empty. The implementation is provided via extension methods.
     /// </summary>
     public interface IGraphics : IDisposable
     {
