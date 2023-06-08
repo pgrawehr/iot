@@ -26,7 +26,9 @@ namespace Iot.Device.Pn532
     /// </summary>
     public class Pn532 : CardTransceiver, IDisposable
     {
-        private const int I2cMaxBuffer = 1024;
+        // Host-controller frame size
+        private const int MaxPacketData = 264;      // maximum length of packet data
+        private const int MaxPacketFraming = 12;    // maximum additional number of bytes for framing
         // Communication way
         private const byte ToHostCheckSumD5 = 0xD5;
         private const byte FromHostCheckSumD4 = 0xD4;
@@ -544,7 +546,7 @@ namespace Iot.Device.Pn532
             }
 
             // TODO: check what is the real maximum size
-            Span<byte> listData = stackalloc byte[1024];
+            Span<byte> listData = stackalloc byte[MaxPacketData];
             ret = ReadResponse(CommandSet.InListPassiveTarget, listData);
             _logger.LogDebug($"{nameof(ListPassiveTarget)}: {ret}, number tags: {listData[0]}");
             if ((ret >= 0) && (listData[0] > 0))
@@ -627,7 +629,10 @@ namespace Iot.Device.Pn532
         {
             try
             {
-                if ((toDecode[1] != 18) || (toDecode[1] != 20))
+                // toDecode[1] is POL_RES, which specifies the packet length.
+                // 20 means the packet contains a system code.
+                // See https://nxp.com/docs/en/user-guide/141520.pdf page 116 for more details.
+                if ((toDecode[1] != 18) && (toDecode[1] != 20))
                 {
                     return null;
                 }
@@ -879,7 +884,7 @@ namespace Iot.Device.Pn532
                 return null;
             }
 
-            Span<byte> receivedData = stackalloc byte[1024];
+            Span<byte> receivedData = stackalloc byte[MaxPacketData];
             ret = ReadResponse(CommandSet.InAutoPoll, receivedData);
             _logger.LogDebug($"{nameof(AutoPoll)}, success: {ret}");
             if (ret >= 0)
@@ -925,7 +930,7 @@ namespace Iot.Device.Pn532
                 return (null, null);
             }
 
-            Span<byte> receivedData = stackalloc byte[1024];
+            Span<byte> receivedData = stackalloc byte[MaxPacketData];
             ret = ReadResponse(CommandSet.TgInitAsTarget, receivedData);
             _logger.LogDebug($"{nameof(InitAsTarget)}, success: {ret}");
             if (ret >= 0)
@@ -1200,9 +1205,7 @@ namespace Iot.Device.Pn532
             // For example if you write on a register that is creating an output
             // So this buffer is here only to avoid having an exception when writing to
             // A register that will create an output
-            // The maximum amount of data return if 260 but writing specific register can
-            // Generate a larger amount
-            Span<byte> returnVal = stackalloc byte[1024];
+            Span<byte> returnVal = stackalloc byte[MaxPacketData];
             ret = ReadResponse(CommandSet.ReadRegister, returnVal);
             _logger.LogDebug($"{nameof(WriteRegister)}: {ret}");
             return ret >= 0;
@@ -1998,9 +2001,9 @@ namespace Iot.Device.Pn532
                 }
             }
 
-            // For I2C, we need to read at least 2 bytes other wise it things we're still trying
+            // For I2C, we need to read at least 2 bytes other wise it thinks we're still trying
             // to check the status
-            byte[] preamb = new byte[I2cMaxBuffer];
+            Span<byte> preamb = stackalloc byte[readData.Length + MaxPacketFraming];
             _i2cDevice.Read(preamb);
             int idxPreamb = 0;
             // Dropping the first byte, it is 0x01 and read previously in the pooling
@@ -2069,7 +2072,7 @@ namespace Iot.Device.Pn532
             // Finally, we can read the data
             if (length - 2 > 0)
             {
-                preamb.AsSpan().Slice(idxPreamb, length - 2).CopyTo(readData);
+                preamb.Slice(idxPreamb, length - 2).CopyTo(readData);
                 idxPreamb += length - 2;
             }
 
