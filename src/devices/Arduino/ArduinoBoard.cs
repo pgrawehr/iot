@@ -448,6 +448,19 @@ namespace Iot.Device.Arduino
 
                 _firmata.EnableDigitalReporting();
 
+                string? result = _firmata.CheckSystemVariablesSupported();
+                if (result != null)
+                {
+                    Logger.LogInformation($"System variable support not available in firmware. Error: {result}");
+                }
+                else
+                {
+                    Logger.LogInformation("System variable support detected");
+                    GetSystemVariable(SystemVariable.MaxSysexSize, -1, out int bufferSize);
+                    // Should be excluding the SYSEX byte itself and the terminator, but see https://github.com/firmata/ConfigurableFirmata/issues/136
+                    Logger.LogInformation($"Maximum SYSEX message size: {bufferSize}");
+                }
+
                 foreach (ExtendedCommandHandler e in _extendedCommandHandlers)
                 {
                     e.Registered(_firmata, this);
@@ -458,23 +471,72 @@ namespace Iot.Device.Arduino
             }
         }
 
+        /// <summary>
+        /// Queries the given system variable.
+        /// </summary>
+        /// <param name="variableId">The variable to query</param>
+        /// <param name="value">Receives the value</param>
+        /// <returns>True on success, false otherwise (value not supported, etc. Check the log output)</returns>
+        /// <exception cref="IOException">There was an error sending the command</exception>
+        public bool GetSystemVariable(SystemVariable variableId, out int value)
+        {
+            value = 0;
+            return Firmata.GetOrSetSystemVariable(variableId, -1, true, ref value);
+        }
+
+        /// <summary>
+        /// Queries the given system variable.
+        /// </summary>
+        /// <param name="variableId">The variable to query</param>
+        /// <param name="pinNumber">The pin number to use (-1 if not applicable for the given parameter)</param>
+        /// <param name="value">Receives the value</param>
+        /// <returns>True on success, false otherwise (value not supported, etc. Check the log output)</returns>
+        /// <exception cref="IOException">There was an error sending the command</exception>
+        public bool GetSystemVariable(SystemVariable variableId, int pinNumber, out int value)
+        {
+            value = 0;
+            return Firmata.GetOrSetSystemVariable(variableId, pinNumber, true, ref value);
+        }
+
+        /// <summary>
+        /// Update the given system variable.
+        /// </summary>
+        /// <param name="variableId">The variable to update</param>
+        /// <param name="value">The new value</param>
+        /// <returns>True on success, false otherwise (check the log output)</returns>
+        /// <exception cref="IOException">There was a communication error</exception>
+        public bool SetSystemVariable(SystemVariable variableId, int value)
+        {
+            return Firmata.GetOrSetSystemVariable(variableId, -1, false, ref value);
+        }
+
+        /// <summary>
+        /// Update the given system variable.
+        /// </summary>
+        /// <param name="variableId">The variable to update</param>
+        /// <param name="pinNumber">The pin number to use, or -1 if not relevant</param>
+        /// <param name="value">The new value</param>
+        /// <returns>True on success, false otherwise (check the log output)</returns>
+        /// <exception cref="IOException">There was a communication error</exception>
+        public bool SetSystemVariable(SystemVariable variableId, int pinNumber, int value)
+        {
+            return Firmata.GetOrSetSystemVariable(variableId, pinNumber, false, ref value);
+        }
+
         private void RegisterCommandHandlers()
         {
-            lock (_commandHandlersLock)
-            {
+            _commandHandlersLock.EnterWriteLock();
                 _extendedCommandHandlers.Add(new DhtSensor());
                 _extendedCommandHandlers.Add(new FrequencySensor());
-                _extendedCommandHandlers.Add(new Esp32Sleep());
+            _commandHandlersLock.ExitWriteLock();
             }
-        }
 
         /// <summary>
         /// Registers the known supported modes. Should only be called once from Initialize.
         /// </summary>
         private void RegisterKnownSupportedModes()
         {
-            lock (_commandHandlersLock)
-            {
+            _commandHandlersLock.EnterWriteLock();
                 // We add all known modes to the list, even though we don't really support them all in the core
                 _knownSupportedModes.Add(SupportedMode.DigitalInput);
                 _knownSupportedModes.Add(SupportedMode.DigitalOutput);
@@ -493,8 +555,8 @@ namespace Iot.Device.Arduino
                 _knownSupportedModes.Add(SupportedMode.Tone);
                 _knownSupportedModes.Add(SupportedMode.Dht);
                 _knownSupportedModes.Add(SupportedMode.Frequency);
+            _commandHandlersLock.ExitWriteLock();
             }
-        }
 
         /// <summary>
         /// Firmware version on the device

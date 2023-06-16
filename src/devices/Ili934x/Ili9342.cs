@@ -8,8 +8,6 @@ using System.Device.Spi;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Ili934x
 {
@@ -22,13 +20,13 @@ namespace Iot.Device.Ili934x
         /// Initializes new instance of ILI9342 device that will communicate using SPI bus.
         /// </summary>
         /// <param name="spiDevice">The SPI device used for communication. This Spi device will be displayed along with the ILI9341 device.</param>
-        /// <param name="dataCommandPin">The id of the GPIO pin used to control the DC line (data/command).</param>
-        /// <param name="resetPin">The id of the GPIO pin used to control the /RESET line (RST).</param>
+        /// <param name="dataCommandPin">The id of the GPIO pin used to control the DC line (data/command). This pin must be provided.</param>
+        /// <param name="resetPin">The id of the GPIO pin used to control the /RESET line (RST). Can be -1 if not connected</param>
         /// <param name="backlightPin">The pin for turning the backlight on and off, or -1 if not connected.</param>
         /// <param name="spiBufferSize">The size of the SPI buffer. If data larger than the buffer is sent then it is split up into multiple transmissions. The default value is 4096.</param>
         /// <param name="gpioController">The GPIO controller used for communication and controls the the <paramref name="resetPin"/> and the <paramref name="dataCommandPin"/>
         /// If no Gpio controller is passed in then a default one will be created and disposed when ILI9341 device is disposed.</param>
-        /// <param name="shouldDispose">True to dispose the Gpio Controller</param>
+        /// <param name="shouldDispose">True to dispose the Gpio Controller when done</param>
         public Ili9342(SpiDevice spiDevice, int dataCommandPin, int resetPin, int backlightPin = -1, int spiBufferSize = 4096, GpioController? gpioController = null, bool shouldDispose = true)
             : base(spiDevice, dataCommandPin, resetPin, backlightPin, spiBufferSize, gpioController, shouldDispose)
         {

@@ -3,12 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using static Interop;
 
 namespace Iot.Device.Graphics
@@ -17,20 +16,16 @@ namespace Iot.Device.Graphics
     {
         private IntPtr _display;
 
-        private Configuration _imageConfiguration;
-
         private unsafe void InitLinux()
         {
             _display = XOpenDisplay();
-            _imageConfiguration = Configuration.Default.Clone();
-            _imageConfiguration.PreferContiguousImageBuffers = true;
             if (_display == IntPtr.Zero)
             {
                 throw new NotSupportedException("Unable to open display");
             }
         }
 
-        private unsafe Image<Rgba32> GetScreenContentsLinux(Rectangle area)
+        private BitmapImage GetScreenContentsLinux(Rectangle area)
         {
             var root = XDefaultRootWindow(_display);
 
@@ -43,9 +38,8 @@ namespace Iot.Device.Graphics
                 throw new NotSupportedException("Unable to get screen image pointer");
             }
 
-            var resultImage = new Image<Rgba32>(_imageConfiguration, area.Width, area.Height);
-
-            resultImage.DangerousTryGetSinglePixelMemory(out var memory);
+            var resultImage = BitmapImage.CreateBitmap(area.Width, area.Height, PixelFormat.Format32bppXrgb);
+            Span<int> targetImage = MemoryMarshal.Cast<byte, int>(resultImage.AsByteSpan());
 
             nuint red_mask = image.red_mask;
             nuint green_mask = image.green_mask;
@@ -57,12 +51,13 @@ namespace Iot.Device.Graphics
                 {
                     UInt32 pixel = XGetPixel(rawImage, x, y);
 
-                    nuint blue = pixel & blue_mask;
+                    // Swap R and B (similar to windows, but since the display of directly loaded images is right, I still think the error is here)
+                    nuint red = pixel & blue_mask;
                     nuint green = (pixel & green_mask) >> 8;
-                    nuint red = (pixel & red_mask) >> 16;
+                    nuint blue = (pixel & red_mask) >> 16;
 
-                    var color = new Rgba32((byte)red, (byte)green, (byte)blue);
-                    memory.Span[area.Width * y + x] = color;
+                    var color = Color.FromArgb(255, (int)red, (int)green, (int)blue);
+                    targetImage[area.Width * y + x] = color.ToArgb();
                 }
             }
 
@@ -70,7 +65,7 @@ namespace Iot.Device.Graphics
             return resultImage!;
         }
 
-        private SixLabors.ImageSharp.Rectangle ScreenSizeLinux()
+        private Rectangle ScreenSizeLinux()
         {
             var root = XDefaultRootWindow(_display);
             Interop.XWindowAttributes gwa = default;

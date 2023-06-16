@@ -64,7 +64,7 @@ namespace Iot.Device.Ili934x.Samples
                     return true;
                 }
 
-                bool ret = Math.Abs(newValue.Value - _lastValue.Value) > tolerance;
+                bool ret = Math.Abs((double)newValue.Value - (double)_lastValue.Value) > tolerance;
                 _lastValue = newValue;
 
                 return ret;

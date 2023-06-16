@@ -3,19 +3,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Ili934x
 {
     /// <summary>
-    /// This is the image format used by the Ili934X internally
-    /// It is similar to the default format <see cref="Bgr565"/>, but uses a different byte ordering
+    /// This is the image format used by the Ili934X internally. It's similar to the (meanwhile otherwise rather obsolete) 16-bit RGB format with
+    /// 5 bits for red, 6 bits for green and 5 bits for blue.
     /// </summary>
-    internal struct Rgb565 : IPixel<Rgb565>, IEquatable<Rgb565>
+    internal struct Rgb565 : IEquatable<Rgb565>
     {
         private ushort _value;
 
@@ -30,14 +30,52 @@ namespace Iot.Device.Ili934x
             InitFrom(r, g, b);
         }
 
-        public int R => (Swap(_value) >> 8) | 0x7;
+        public int R
+        {
+            get
+            {
+                // Ensure full black is a possible result
+                int lowByte = _value & 0xF8;
+                if (lowByte == 0)
+                {
+                    return 0;
+                }
 
-        public int G => ((Swap(_value) & 0x7E0) >> 3) | 0x7;
+                return lowByte | 0x7;
+            }
+        }
 
-        public int B => ((Swap(_value) & 0x1F) << 3) | 0x7;
+        public int G
+        {
+            get
+            {
+                int gbyte = ((Swap(_value) & 0x7E0) >> 3);
+                if (gbyte == 0)
+                {
+                    return 0;
+                }
+
+                return gbyte | 0x7;
+            }
+        }
+
+        public int B
+        {
+            get
+            {
+                int bbyte = (_value >> 5) & 0xF8;
+                if (bbyte == 0)
+                {
+                    return 0;
+                }
+
+                return bbyte | 0x7;
+            }
+        }
 
         private void InitFrom(ushort r, ushort g, ushort b)
         {
+            // get the top 5 MSB of the blue or red value
             UInt16 retval = (UInt16)(r >> 3);
             // shift right to make room for the green Value
             retval <<= 6;
@@ -47,7 +85,8 @@ namespace Iot.Device.Ili934x
             retval <<= 5;
             // combine with the 6 MSB if the red or blue value
             retval |= (UInt16)(b >> 3);
-            _value = retval;
+
+            _value = Swap(retval);
         }
 
         /// <summary>
@@ -60,15 +99,11 @@ namespace Iot.Device.Ili934x
         /// byte    11111111 00000000
         /// bit     76543210 76543210
         ///
-        /// For ColorSequence.RGB
-        ///         RRRRRGGG GGGBBBBB
-        ///         43210543 21043210
-        ///
-        /// For ColorSequence.BGR
-        ///         BBBBBGGG GGGRRRRR
+        /// For ColorSequence.RGB (inversed!, the LSB is the top byte)
+        ///         GGGBBBBB RRRRRGGG
         ///         43210543 21043210
         /// </returns>
-        public static Rgb565 FromRgba32(Rgba32 color)
+        public static Rgb565 FromRgba32(Color color)
         {
             // get the top 5 MSB of the blue or red value
             UInt16 retval = (UInt16)(color.R >> 3);
@@ -96,101 +131,6 @@ namespace Iot.Device.Ili934x
             {
                 _value = value;
             }
-        }
-
-        public PixelOperations<Rgb565> CreatePixelOperations()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromScaledVector4(Vector4 vector)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Vector4 ToScaledVector4()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromVector4(Vector4 vector)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Vector4 ToVector4()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromArgb32(Argb32 source)
-        {
-            InitFrom(source.R, source.G, source.B);
-        }
-
-        public void FromBgra5551(Bgra5551 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromBgr24(Bgr24 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromBgra32(Bgra32 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromAbgr32(Abgr32 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromL8(L8 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromL16(L16 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromLa16(La16 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromLa32(La32 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromRgb24(Rgb24 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        void IPixel.FromRgba32(Rgba32 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void ToRgba32(ref Rgba32 dest)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromRgb48(Rgb48 source)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void FromRgba64(Rgba64 source)
-        {
-            throw new NotImplementedException();
         }
 
         public bool Equals(Rgb565 other)
@@ -249,6 +189,11 @@ namespace Iot.Device.Ili934x
             }
 
             return true;
+        }
+
+        public Color ToColor()
+        {
+            return Color.FromArgb(255, R, G, B);
         }
     }
 }

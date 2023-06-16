@@ -3,26 +3,42 @@
 
 using System;
 using System.Collections.Generic;
+using System.Device.Analog;
 using System.Device.Gpio;
 using System.Device.I2c;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.Arduino;
 using Iot.Device.Common;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Axp192
 {
+    /// <summary>
+    /// High-level abstraction for the AXP192 in an M5Tough enclosure.
+    /// This binding knows the hardware connections from the ESP32 CPU to the AXP192 and the connected hardware and directly offers to toggle named devices (e.g. switch the
+    /// display backlight on and off.
+    /// </summary>
+    /// <remarks>
+    /// This binding is useful together with the Arduino/Firmata binding or the Arduino Compiler.
+    /// </remarks>
     public class M5ToughPowerControl : IDisposable
     {
         private Axp192 _axp;
         private ILogger _logger;
+        private Board.Board _board;
 
+        /// <summary>
+        /// Create an instance of this class
+        /// </summary>
+        /// <param name="board">The board connection (typically an instance of ArduinoBoard)</param>
         public M5ToughPowerControl(Board.Board board)
         {
+            _board = board;
             var bus = board.CreateOrGetI2cBus(0, new int[]
             {
                 21, 22
@@ -34,6 +50,9 @@ namespace Iot.Device.Axp192
             Init();
         }
 
+        /// <summary>
+        /// True to enable the speaker, false to mute it.
+        /// </summary>
         public bool EnableSpeaker
         {
             get
@@ -46,6 +65,10 @@ namespace Iot.Device.Axp192
             }
         }
 
+        /// <summary>
+        /// Configures the AXP hardware to default operational settings.
+        /// Enables the LCD and sets the default charging mode for the optional battery.
+        /// </summary>
         protected virtual void Init()
         {
             _axp.SetVbusSettings(true, false, VholdVoltage.V4_0, false, VbusCurrentLimit.MilliAmper500);
@@ -101,6 +124,22 @@ namespace Iot.Device.Axp192
         }
 
         /// <summary>
+        /// Beeps using the speaker for the given time, using a fixed frequency
+        /// </summary>
+        /// <param name="duration">The duration of the beep</param>
+        public void Beep(TimeSpan duration)
+        {
+            bool isEnabled = EnableSpeaker;
+            EnableSpeaker = true;
+            using var pwm = _board.CreatePwmChannel(0, 2);
+            pwm.DutyCycle = 0.5f;
+            pwm.Start();
+            Thread.Sleep(duration);
+            pwm.Stop();
+            EnableSpeaker = isEnabled;
+        }
+
+        /// <summary>
         /// Set LCD backlight voltage. Valid values range from 1.8 - 3.3V. Low values switch off the backlight completely
         /// </summary>
         /// <param name="voltage">The voltage to set</param>
@@ -122,20 +161,55 @@ namespace Iot.Device.Axp192
         /// <summary>
         /// Enter and leave low-power mode.
         /// The physical power button that is normally used to recover the AXP from sleep mode is not accessible on the M5Tough when the case is closed.
-        /// Therefore the CPU must be kept running and the screen interrupt is used to wake up the device.
+        /// After setting the AXP to sleep, we send the CPU to sleep as well. It will only wake up on tapping the screen.
         /// </summary>
         /// <param name="enterSleep">True to enter sleep, false to recover from sleep.</param>
         /// <remarks>After recovering from sleep mode, some peripheral devices might need to be restarted (such as the display controller)</remarks>
         public void Sleep(bool enterSleep)
         {
             _axp.SetSleep(enterSleep, false);
+            if (enterSleep)
+            {
+                SendCpuToSleep();
+            }
         }
 
+        private void SendCpuToSleep()
+        {
+            // Sends the board to sleep mode
+            TimeSpan sleepDelay = TimeSpan.FromSeconds(10);
+            const int wakeupPin = 39; // The screen interrupt is connected to this pin
+
+            if (!(_board is ArduinoBoard ab))
+            {
+                return;
+            }
+
+            // Trigger value is low-active on the M5Tough
+            if (!ab.SetSystemVariable(SystemVariable.SleepModeInterruptEnable, wakeupPin, 0))
+            {
+                return;
+            }
+
+            if (!ab.SetSystemVariable(SystemVariable.EnterSleepMode, wakeupPin, (int)sleepDelay.TotalSeconds))
+            {
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Gets a data set of current power parameters (power consumption, battery level, etc.)
+        /// </summary>
+        /// <returns></returns>
         public PowerControlData GetPowerControlData()
         {
             return _axp.GetPowerControlData();
         }
 
+        /// <summary>
+        /// Default dispose implementation
+        /// </summary>
+        /// <param name="disposing">True to dispose managed resources, false to dispose only unmanaged resources</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
@@ -144,6 +218,7 @@ namespace Iot.Device.Axp192
             }
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             Dispose(true);

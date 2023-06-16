@@ -4,32 +4,46 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Iot.Device.Graphics
 {
     public partial class ScreenCapture
     {
-        private Image<Rgba32>? GetScreenContentsWindows(SixLabors.ImageSharp.Rectangle area)
+        [SuppressMessage("Interoperability", "CA1416", Justification = "Only used on windows, see call site")]
+        private static unsafe BitmapImage? GetScreenContentsWindows(Rectangle area)
         {
             try
             {
-                using (Bitmap bitmap = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppArgb))
+                using (Bitmap bitmap = new Bitmap(area.Width, area.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
                 {
                     using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(bitmap))
                     {
                         g.CopyFromScreen(new System.Drawing.Point(area.Left, area.Top), System.Drawing.Point.Empty, new System.Drawing.Size(area.Width, area.Height));
                     }
 
-                    var image = Converters.ToImage(bitmap);
                     // For some reason, we need to swap R and B here. Strange...
-                    Converters.ColorTransform(image, (i, j, c) => new Rgba32(c.B, c.G, c.R, c.A));
+                    var bmd = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.ReadWrite, bitmap.PixelFormat);
+                    int totalPixels = bmd.Width * bmd.Height;
+                    Span<uint> pixels = new Span<uint>(bmd.Scan0.ToPointer(), totalPixels);
+                    for (int pix = 0; pix < totalPixels; pix++)
+                    {
+                        uint origColor = pixels[pix];
+                        // Swap byte 3 with 1
+                        uint r = (origColor << 16) & 0x00FF0000;
+                        uint b = (origColor >> 16) & 0x000000FF;
+                        uint ag = (origColor & 0xFF00FF00); // A and G stay where they are
+                        pixels[pix] = r | ag | b;
+                    }
+
+                    bitmap.UnlockBits(bmd);
+
+                    var image = Converters.ToBitmapImage(bitmap);
                     return image;
                 }
             }
@@ -39,9 +53,9 @@ namespace Iot.Device.Graphics
             }
         }
 
-        private SixLabors.ImageSharp.Rectangle ScreenSizeWindows()
+        private Rectangle ScreenSizeWindows()
         {
-            return new SixLabors.ImageSharp.Rectangle(Interop.GetSystemMetrics(Interop.SystemMetric.SM_XVIRTUALSCREEN),
+            return new Rectangle(Interop.GetSystemMetrics(Interop.SystemMetric.SM_XVIRTUALSCREEN),
                 Interop.GetSystemMetrics(Interop.SystemMetric.SM_YVIRTUALSCREEN),
                 Interop.GetSystemMetrics(Interop.SystemMetric.SM_CXVIRTUALSCREEN),
                 Interop.GetSystemMetrics(Interop.SystemMetric.SM_CYVIRTUALSCREEN));

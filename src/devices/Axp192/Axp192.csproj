@@ -10,6 +10,7 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Arduino\Arduino.csproj" />
     <ProjectReference Include="..\Board\Board.csproj" />
   </ItemGroup>
 </Project>
