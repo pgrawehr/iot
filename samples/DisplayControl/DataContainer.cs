@@ -986,5 +986,14 @@ namespace DisplayControl
                 _adcSensors.ButtonsEnabled = !displayLocked;
             }
         }
+
+        public void SendAisTestMessage()
+        {
+            if (_nmeaSensor != null)
+            {
+                string msg = DateTime.Now.ToShortTimeString();
+                _nmeaSensor.SendWarningMessage("TEST_" + msg, $"It is now {msg}");
+            }
+        }
     }
 }

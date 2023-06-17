@@ -246,6 +246,11 @@ namespace DisplayControl.ViewModels
             DataContainer.LockDisplay(DisplayLocked);
         }
 
+        public void SendTestMessage()
+        {
+            DataContainer.SendAisTestMessage();
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && DataContainer != null)
