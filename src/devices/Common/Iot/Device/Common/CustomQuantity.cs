@@ -32,14 +32,6 @@ namespace Iot.Device.Common
             _value = value;
         }
 
-        public QuantityType Type
-        {
-            get
-            {
-                return QuantityType.Undefined;
-            }
-        }
-
         public BaseDimensions Dimensions
         {
             get
@@ -52,7 +44,7 @@ namespace Iot.Device.Common
         {
             get
             {
-                return new QuantityInfo(Type, new UnitInfo[] { new UnitInfo(NoUnitEnum.None, BaseUnits.Undefined) }, NoUnitEnum.None,
+                return new QuantityInfo("Custom", typeof(double), new UnitInfo[] { new UnitInfo(NoUnitEnum.None, "Custom", BaseUnits.Undefined) }, NoUnitEnum.None,
                     Zero, BaseDimensions.Dimensionless);
             }
         }
@@ -68,11 +60,11 @@ namespace Iot.Device.Common
         /// <summary>
         /// Note: Not supposed to be called.
         /// </summary>
-        double IQuantity.Value
+        QuantityValue IQuantity.Value
         {
             get
             {
-                return 0;
+                return QuantityValue.Zero;
             }
         }
 

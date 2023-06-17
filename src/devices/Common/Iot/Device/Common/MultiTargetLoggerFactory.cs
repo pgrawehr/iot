@@ -45,7 +45,7 @@ namespace Iot.Device.Common
                 }
             }
 
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
             {
                 foreach (var l in _loggers)
                 {
@@ -64,11 +64,13 @@ namespace Iot.Device.Common
             }
 
             public IDisposable BeginScope<TState>(TState state)
+                where TState : notnull
             {
                 return new InnerScopeDisposable<TState>(state, _loggers);
             }
 
             private sealed class InnerScopeDisposable<TState> : IDisposable
+                where TState : notnull
             {
                 private readonly List<IDisposable> _disposables;
 
@@ -77,7 +79,11 @@ namespace Iot.Device.Common
                     _disposables = new List<IDisposable>();
                     foreach (var l in loggers)
                     {
-                        _disposables.Add(l.BeginScope(state));
+                        var disp = l.BeginScope(state);
+                        if (disp != null)
+                        {
+                            _disposables.Add(disp);
+                        }
                     }
                 }
 

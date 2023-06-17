@@ -526,10 +526,10 @@ namespace Iot.Device.Arduino
         private void RegisterCommandHandlers()
         {
             _commandHandlersLock.EnterWriteLock();
-                _extendedCommandHandlers.Add(new DhtSensor());
-                _extendedCommandHandlers.Add(new FrequencySensor());
+            _extendedCommandHandlers.Add(new DhtSensor());
+            _extendedCommandHandlers.Add(new FrequencySensor());
             _commandHandlersLock.ExitWriteLock();
-            }
+        }
 
         /// <summary>
         /// Registers the known supported modes. Should only be called once from Initialize.
@@ -537,26 +537,26 @@ namespace Iot.Device.Arduino
         private void RegisterKnownSupportedModes()
         {
             _commandHandlersLock.EnterWriteLock();
-                // We add all known modes to the list, even though we don't really support them all in the core
-                _knownSupportedModes.Add(SupportedMode.DigitalInput);
-                _knownSupportedModes.Add(SupportedMode.DigitalOutput);
-                _knownSupportedModes.Add(SupportedMode.AnalogInput);
-                _knownSupportedModes.Add(SupportedMode.Pwm);
-                _knownSupportedModes.Add(SupportedMode.Servo);
-                _knownSupportedModes.Add(SupportedMode.Shift);
-                _knownSupportedModes.Add(SupportedMode.I2c);
-                _knownSupportedModes.Add(SupportedMode.OneWire);
-                _knownSupportedModes.Add(SupportedMode.Stepper);
-                _knownSupportedModes.Add(SupportedMode.Encoder);
-                _knownSupportedModes.Add(SupportedMode.Serial);
-                _knownSupportedModes.Add(SupportedMode.InputPullup);
-                _knownSupportedModes.Add(SupportedMode.Spi);
-                _knownSupportedModes.Add(SupportedMode.Sonar);
-                _knownSupportedModes.Add(SupportedMode.Tone);
-                _knownSupportedModes.Add(SupportedMode.Dht);
-                _knownSupportedModes.Add(SupportedMode.Frequency);
+            // We add all known modes to the list, even though we don't really support them all in the core
+            _knownSupportedModes.Add(SupportedMode.DigitalInput);
+            _knownSupportedModes.Add(SupportedMode.DigitalOutput);
+            _knownSupportedModes.Add(SupportedMode.AnalogInput);
+            _knownSupportedModes.Add(SupportedMode.Pwm);
+            _knownSupportedModes.Add(SupportedMode.Servo);
+            _knownSupportedModes.Add(SupportedMode.Shift);
+            _knownSupportedModes.Add(SupportedMode.I2c);
+            _knownSupportedModes.Add(SupportedMode.OneWire);
+            _knownSupportedModes.Add(SupportedMode.Stepper);
+            _knownSupportedModes.Add(SupportedMode.Encoder);
+            _knownSupportedModes.Add(SupportedMode.Serial);
+            _knownSupportedModes.Add(SupportedMode.InputPullup);
+            _knownSupportedModes.Add(SupportedMode.Spi);
+            _knownSupportedModes.Add(SupportedMode.Sonar);
+            _knownSupportedModes.Add(SupportedMode.Tone);
+            _knownSupportedModes.Add(SupportedMode.Dht);
+            _knownSupportedModes.Add(SupportedMode.Frequency);
             _commandHandlersLock.ExitWriteLock();
-            }
+        }
 
         /// <summary>
         /// Firmware version on the device
