@@ -7,10 +7,7 @@ using System.Device.Spi;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using Color = SixLabors.ImageSharp.Color;
+using Iot.Device.Graphics;
 
 namespace Iot.Device.Ili934x
 {
@@ -42,23 +39,23 @@ namespace Iot.Device.Ili934x
         private SpiDevice _spiDevice;
         private GpioController _gpioDevice;
 
-        private SixLabors.ImageSharp.Image<Rgb565> _screenBuffer;
-        private SixLabors.ImageSharp.Image<Rgb565> _previousBuffer;
+        private Rgb565[] _screenBuffer;
+        private Rgb565[] _previousBuffer;
 
         private double _fps;
         private DateTimeOffset _lastUpdate;
 
         /// <summary>
-        /// Initializes new instance of ILI9341 device that will communicate using SPI bus.
+        /// Initializes new instance of ILI9342 device that will communicate using SPI bus.
         /// </summary>
         /// <param name="spiDevice">The SPI device used for communication. This Spi device will be displayed along with the ILI9341 device.</param>
-        /// <param name="dataCommandPin">The id of the GPIO pin used to control the DC line (data/command).</param>
-        /// <param name="resetPin">The id of the GPIO pin used to control the /RESET line (RST).</param>
+        /// <param name="dataCommandPin">The id of the GPIO pin used to control the DC line (data/command). This pin must be provided.</param>
+        /// <param name="resetPin">The id of the GPIO pin used to control the /RESET line (RST). Can be -1 if not connected</param>
         /// <param name="backlightPin">The pin for turning the backlight on and off, or -1 if not connected.</param>
         /// <param name="spiBufferSize">The size of the SPI buffer. If data larger than the buffer is sent then it is split up into multiple transmissions. The default value is 4096.</param>
         /// <param name="gpioController">The GPIO controller used for communication and controls the the <paramref name="resetPin"/> and the <paramref name="dataCommandPin"/>
         /// If no Gpio controller is passed in then a default one will be created and disposed when ILI9341 device is disposed.</param>
-        /// <param name="shouldDispose">True to dispose the Gpio Controller</param>
+        /// <param name="shouldDispose">True to dispose the Gpio Controller when done</param>
         public Ili9341(SpiDevice spiDevice, int dataCommandPin, int resetPin, int backlightPin = -1, int spiBufferSize = DefaultSPIBufferSize, GpioController? gpioController = null, bool shouldDispose = true)
         {
             if (spiBufferSize <= 0)
@@ -101,14 +98,11 @@ namespace Iot.Device.Ili934x
             Thread.Sleep(100);
             SendCommand(Ili9341Command.MemoryWrite);
 
-            var cfg = Configuration.Default;
+            _screenBuffer = new Rgb565[ScreenWidth * ScreenHeight];
+            _previousBuffer = new Rgb565[ScreenWidth * ScreenHeight];
 
-            Configuration imageConfiguration = cfg.Clone();
-            imageConfiguration.PreferContiguousImageBuffers = true;
-            _screenBuffer = new Image<Rgb565>(imageConfiguration, ScreenWidth, ScreenHeight, new Rgb565(0, 0, 0));
-            _previousBuffer = new Image<Rgb565>(imageConfiguration, ScreenWidth, ScreenHeight, new Rgb565(0, 0, 0));
-            // Init screen to black
-            FillRect(Color.Black, 0, 0, ScreenWidth, ScreenHeight);
+            // And clear the display
+            SendFrame(true);
         }
 
         /// <summary>
@@ -165,7 +159,7 @@ namespace Iot.Device.Ili934x
         /// <param name="w">The width of the rectangle in pixels.</param>
         /// <param name="h">The height of the rectangle in pixels.</param>
         /// <param name="doRefresh">True to immediately update the screen, false to only update the back buffer</param>
-        public void FillRect(Rgba32 color, int x, int y, int w, int h, bool doRefresh = true)
+        public void FillRect(Color color, int x, int y, int w, int h, bool doRefresh = true)
         {
             Span<byte> colourBytes = stackalloc byte[2]; // create a short span that holds the colour data to be sent to the display
 
@@ -178,7 +172,7 @@ namespace Iot.Device.Ili934x
             {
                 for (int i = x; i < x + w; i++)
                 {
-                    _screenBuffer[i, j] = c;
+                    _screenBuffer[i + j * ScreenWidth] = c;
                 }
             }
 
@@ -189,19 +183,22 @@ namespace Iot.Device.Ili934x
         }
 
         /// <summary>
-        /// Clears screen to a specific color
+        /// Clears the screen to a specific color
         /// </summary>
-        public void ClearScreen(Rgba32 color, bool doRefresh = false)
+        /// <param name="color">The color to clear the screen to</param>
+        /// <param name="doRefresh">Immediately force an update of the screen. If false, only the backbuffer is cleared.</param>
+        public void ClearScreen(Color color, bool doRefresh = false)
         {
             FillRect(color, 0, 0, ScreenWidth, ScreenHeight, doRefresh);
         }
 
         /// <summary>
-        /// Clears screen
+        /// Clears the screen to black
         /// </summary>
+        /// <param name="doRefresh">Immediately force an update of the screen. If false, only the backbuffer is cleared.</param>
         public void ClearScreen(bool doRefresh = false)
         {
-            FillRect(new Rgba32(0, 0, 0), 0, 0, ScreenWidth, ScreenHeight, doRefresh);
+            FillRect(Color.FromArgb(0, 0, 0), 0, 0, ScreenWidth, ScreenHeight, doRefresh);
         }
 
         /// <summary>
@@ -340,9 +337,9 @@ namespace Iot.Device.Ili934x
         /// Creates an image with the correct size and color depth to be sent to the screen
         /// </summary>
         /// <returns>An image instance</returns>
-        public virtual Image<Rgba32> CreateBackBuffer()
+        public virtual BitmapImage CreateBackBuffer()
         {
-            return new Image<Rgba32>((int)ScreenWidth, (int)ScreenWidth, new Rgba32(0, 0, 0));
+            return BitmapImage.CreateBitmap(ScreenWidth, ScreenHeight, PixelFormat.Format32bppArgb);
         }
 
         /// <inheritdoc cref="Dispose()"/>

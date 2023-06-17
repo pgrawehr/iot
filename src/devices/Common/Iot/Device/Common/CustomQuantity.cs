@@ -66,7 +66,7 @@ namespace Iot.Device.Common
         {
             get
             {
-                return 0;
+                return QuantityValue.Zero;
             }
         }
 

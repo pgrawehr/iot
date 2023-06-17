@@ -6,6 +6,7 @@ using System.Device.Gpio;
 using System.Device.I2c;
 using System.Device.Spi;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -17,13 +18,8 @@ using Iot.Device.Axp192;
 using Iot.Device.Common;
 using Iot.Device.Ft4222;
 using Iot.Device.Graphics;
+using Iot.Device.Graphics.SkiaSharpAdapter;
 using Iot.Device.Ili934x;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Drawing;
-using SixLabors.ImageSharp.Drawing.Processing;
 using UnitsNet;
 
 namespace Iot.Device.Ili934x.Samples
@@ -37,7 +33,7 @@ namespace Iot.Device.Ili934x.Samples
             bool isFt4222 = false;
             bool isArduino = false;
             IPAddress address = IPAddress.None;
-
+            SkiaSharpAdapter.Register();
             string nmeaSourceAddress = "localhost";
 
             if (args.Length < 2)
@@ -137,7 +133,13 @@ namespace Iot.Device.Ili934x.Samples
                 {
                     ClockFrequency = 50_000_000
                 });
-                spiBufferSize = 200; // requires extended Firmata firmware, default is 25
+                spiBufferSize = 25;
+                if (board.GetSystemVariable(SystemVariable.MaxSysexSize, out int maxSize))
+                {
+                    int maxPayloadSizePerMsg = Encoder7Bit.Num8BitOutBytes(maxSize - 6);
+                    spiBufferSize = maxPayloadSizePerMsg;
+                }
+
                 powerControl = new M5ToughPowerControl(board);
                 powerControl.EnableSpeaker = false; // With my current firmware, it's used instead of the status led. Noisy!
                 powerControl.Sleep(false);
@@ -148,11 +150,11 @@ namespace Iot.Device.Ili934x.Samples
                 displaySPI = GetSpiFromDefault();
             }
 
-            using Ili9342 ili9341 = new(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio, spiBufferSize: spiBufferSize, shouldDispose: false);
+            Ili9342 display = new Ili9342(displaySPI, pinDC, pinReset, backlightPin: pinLed, gpioController: gpio, spiBufferSize: spiBufferSize, shouldDispose: false);
 
             if (board != null)
             {
-                touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), new Size(ili9341.ScreenWidth, ili9341.ScreenHeight), 39, board.CreateGpioController(), false);
+                touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), new Size(display.ScreenWidth, display.ScreenHeight), 39, board.CreateGpioController(), false);
                 touch.UpdateInterval = TimeSpan.FromMilliseconds(100);
                 touch.EnableEvents();
             }
@@ -169,31 +171,19 @@ namespace Iot.Device.Ili934x.Samples
                 touchSimulator = new MouseClickSimulatorUInput(screenCapture.ScreenSize().Width, screenCapture.ScreenSize().Height);
             }
 
-            using RemoteControl ctrol = new RemoteControl(touch, ili9341, powerControl, touchSimulator, screenCapture, nmeaSourceAddress);
+            using RemoteControl ctrol = new RemoteControl(touch, display, powerControl, touchSimulator, screenCapture, nmeaSourceAddress);
             ctrol.DisplayFeatures();
 
-            ili9341.ClearScreen(true);
+            display.ClearScreen(true);
             if (powerControl != null)
             {
                 powerControl.SetLcdVoltage(ElectricPotential.Zero);
                 powerControl.Sleep(true);
-                if (board != null)
-                {
-                    Esp32Sleep? sleepMode = board.GetCommandHandler<Esp32Sleep>();
-                    if (sleepMode != null)
-                    {
-                        sleepMode.EnterSleepMode(1);
-                    }
-                    else
-                    {
-                        Console.WriteLine("ESP32 will not enter deep sleep mode - command handler not found");
-                    }
-                }
             }
 
             touch?.Dispose();
 
-            ili9341.Dispose();
+            display.Dispose();
 
             powerControl?.Dispose();
             board?.Dispose();

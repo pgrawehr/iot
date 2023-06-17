@@ -338,9 +338,9 @@ namespace Iot.Device.Common
                 return;
             }
 
-            if (_value.QuantityInfo.BaseDimensions != value.QuantityInfo.BaseDimensions)
+            if (_value.QuantityInfo.ValueType != value.QuantityInfo.ValueType)
             {
-                throw new InvalidOperationException($"The quantity of '{Name}' is {_value.QuantityInfo.BaseDimensions}, you cannot change it.");
+                throw new InvalidOperationException($"The unit of '{Name}' is {_value.QuantityInfo.ValueType}, you cannot change it to {value.QuantityInfo.ValueType}.");
             }
 
             if (!value.Equals(_value) || status != _measurementStatus)

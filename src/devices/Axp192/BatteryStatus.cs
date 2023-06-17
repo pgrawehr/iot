@@ -28,7 +28,7 @@ namespace Iot.Device.Axp192
         /// <summary>Battery Activation Mode</summary>
         BatteryActivationMode = 0b0000_1000,
 
-        /// <summary>Charging CurrentLess Than Expected</summary>
+        /// <summary>Charging Current Less Than Expected</summary>
         ChargingCurrentLessThanExpected = 0b0000_0100,
 
         /// <summary>Mode B, when not present, the Mode A (sleep) is activated</summary>

@@ -88,6 +88,7 @@ namespace DisplayControl
         private readonly SensorMeasurement _forwardRearSeparation;
         private readonly SensorMeasurement _forwardRearAngle;
         private AisManager _aisManager;
+        private PositionProvider _positionProvider;
 
         public NmeaSensor(MeasurementManager manager)
         {
@@ -126,7 +127,7 @@ namespace DisplayControl
 
             // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] {"AIS"}, true, true));
-            rules.Add(new FilterRule("*", TalkerId.Ais, AisParser.VdoId, new []{ShipSourceName}, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new []{ShipSourceName}, true, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
             // GGA messages from the ship are normally discarded, but the cache shall decide (may use a fallback)
@@ -363,8 +364,7 @@ namespace DisplayControl
             _router.AddEndPoint(_udpServer);
             _router.AddEndPoint(_parserForwardInterface);
             _router.AddEndPoint(_aisManager);
-
-            // _router.AddEndPoint(_signalKClientParser);
+            _positionProvider = new PositionProvider(_cache);
 
             _router.OnNewSequence += ParserOnNewSequence;
             foreach (var rule in ConstructRules())
@@ -445,12 +445,11 @@ namespace DisplayControl
                         if (gga.Valid)
                         {
                             _rearPosition.UpdateValue(gga.Position);
-                            if (_cache.TryGetCurrentPosition(out var forwardPos, AuxiliaryGps,
+                            if (_positionProvider.TryGetCurrentPosition(out var forwardPos, AuxiliaryGps,
                                     false,
                                     out _, out _, out _, out var time1) && forwardPos!.ContainsValidPosition() 
-                                && _cache.TryGetCurrentPosition(out var handheldPosition, HandheldSourceName, false, out _, out _, out _, out _) && handheldPosition.ContainsValidPosition())
+                                && _positionProvider.TryGetCurrentPosition(out var handheldPosition, HandheldSourceName, false, out _, out _, out _, out _) && handheldPosition.ContainsValidPosition())
                             {
-                                Angle expectedInHarbor = Angle.FromDegrees(251); // For testing: This value is derived from the map
                                 GreatCircle.DistAndDir(gga.Position, forwardPos, out var distance, out var anglerf);
                                 GreatCircle.DistAndDir(gga.Position, handheldPosition, out var distance2, out var anglerh);
                                 GreatCircle.DistAndDir(handheldPosition, forwardPos, out var distance3, out var anglehf);
@@ -604,7 +603,7 @@ namespace DisplayControl
                     _manager.UpdateValue(SensorMeasurement.UtcTime, zda.DateTime.UtcDateTime);
                     break;
                 case SatellitesInView gsv when gsv.Valid && gsv.Sequence == gsv.TotalSequences:
-                    var sats = _cache.GetSatellitesInView(out int totalSats);
+                    var sats = _positionProvider.GetSatellitesInView(out int totalSats);
                     _manager.UpdateValue(_numSatellites, totalSats);
                     string data = string.Join(", ", sats.Select(x => x.Id));
                     _manager.UpdateValue(_satStatus, data);
@@ -625,7 +624,7 @@ namespace DisplayControl
                     _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
                         rmb.DistanceToWayPoint.HasValue ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData);
                     if (rmb.DistanceToWayPoint.HasValue &&
-                        _cache.TryGetCurrentPosition(out var position, AuxiliaryGps, false, out var track, out var sog, out var heading, out var time))
+                        _positionProvider.TryGetCurrentPosition(out var position, AuxiliaryGps, false, out var track, out var sog, out var heading, out var time))
                     {
                         if (sog.MetersPerSecond < 0.01)
                         {
@@ -668,7 +667,7 @@ namespace DisplayControl
             HeadingMagnetic mag = new HeadingMagnetic(value.X);
             _router.SendSentence(mag);
 
-            if (_magneticVariation != null)
+            if (_magneticVariation is not null)
             {
                 HeadingTrue hdt = new HeadingTrue(value.X + _magneticVariation.Value.Degrees);
                 _router.SendSentence(hdt);
@@ -737,7 +736,7 @@ namespace DisplayControl
 
         public void SendTrueWind(Angle windDirectionTrue, Speed windSpeed)
         {
-            if (_magneticVariation == null)
+            if (_magneticVariation is not null)
             {
                 return;
             }

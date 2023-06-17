@@ -3,18 +3,18 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SixLabors.ImageSharp;
 using static Interop;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Graphics
 {
     /// <summary>
-    /// Creates and maintains a window in an operating-system independent way
+    /// Creates and maintains a low-level window on X11 based systems. This class is experimental.
     /// </summary>
     public class LowLevelX11Window : IDisposable
     {
