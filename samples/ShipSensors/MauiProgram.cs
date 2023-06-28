@@ -19,5 +19,12 @@ namespace ShipSensors
 
             return builder.Build();
         }
+
+#if !WINDOWS
+        public static int Main(string[] args)
+        {
+            return 0;
+        }
+#endif
     }
 }
