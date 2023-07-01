@@ -46,6 +46,7 @@ namespace DisplayControl
         private PersistentTimeSpan _engineOperatingTime;
         private PersistentTimeSpan _engineOperatingTimeAtLastRefill;
         private PersistentDouble _engineRpmFactor;
+        private PersistentDouble _engineArduinoRpmFactor;
         private long _lastTickForUpdate;
         private PersistenceFile _enginePersistenceFile;
         private I2cDevice _device;
@@ -58,6 +59,9 @@ namespace DisplayControl
         private int _totalCounterValue;
 
         public SensorMeasurement Engine0OperatingTimeSinceRefill = new SensorMeasurement("Engine 0 operating time since refill", Duration.Zero, SensorSource.Engine, 0);
+
+        public SensorMeasurement Engine0PrimaryRpmSensor =
+            new SensorMeasurement("Engine 0 Primary RPM Sensor", RotationalSpeed.Zero, SensorSource.Engine, 100);
 
         private object _counterLock;
         private ILogger _logger;
@@ -83,6 +87,8 @@ namespace DisplayControl
             _engineOperatingTime = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours", TimeSpan.Zero, TimeSpan.FromMinutes(1));
             _engineOperatingTimeAtLastRefill = new PersistentTimeSpan(_enginePersistenceFile, "Operating Hours at last refill", new TimeSpan(0, 15, 33, 0), TimeSpan.Zero);
             _engineRpmFactor = new PersistentDouble(_enginePersistenceFile, "Engine RPM correction factor", 1.87, TimeSpan.Zero);
+            _engineArduinoRpmFactor =
+                new PersistentDouble(_enginePersistenceFile, "Arduino Engine RPM factor", 1.87, TimeSpan.Zero);
         }
 
         // Todo: Better interface (maybe some generic data provider interface)
@@ -102,6 +108,14 @@ namespace DisplayControl
             }
         }
 
+        public double EngineArduinoRpmCorrectionFactor
+        {
+            get
+            {
+                return _engineArduinoRpmFactor.Value;
+            }
+        }
+
         public override void Init(GpioController gpioController)
         {
             _inSelfTest = true;
@@ -113,7 +127,7 @@ namespace DisplayControl
 
             Manager.AddRange(new []
             {
-                SensorMeasurement.Engine0On, SensorMeasurement.Engine0Rpm, SensorMeasurement.Engine0OperatingTime, 
+                SensorMeasurement.Engine0On, Engine0PrimaryRpmSensor, SensorMeasurement.Engine0OperatingTime, 
                 Engine0OperatingTimeSinceRefill,
             });
 
@@ -346,7 +360,7 @@ namespace DisplayControl
             // Final step: Send values to UI
             if (!_inSelfTest)
             {
-                Manager.UpdateValue(SensorMeasurement.Engine0Rpm, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
+                Manager.UpdateValue(Engine0PrimaryRpmSensor, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
                 Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn);
                 TimeSpan timeSinceRefill = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
                 Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
@@ -365,7 +379,14 @@ namespace DisplayControl
                 engineTemp = Temperature.FromKelvins(0);
             }
 
-            var msg = new EngineData((int)now, 0, RotationalSpeed.FromRevolutionsPerMinute(umin), Ratio.FromPercent(100),
+            RotationalSpeed rs;
+            // Prefer the Arduino rev counter, is now more accurate
+            if (!SensorMeasurement.Engine0Rpm.TryGetAs(out rs))
+            {
+                rs = RotationalSpeed.FromRevolutionsPerMinute(umin);
+            }
+
+            var msg = new EngineData((int)now, 0, rs, Ratio.FromPercent(100),
                 _engineOperatingTime.Value, engineTemp); // Pitch unknown so far
             DataChanged?.Invoke(msg);
         }
@@ -378,6 +399,8 @@ namespace DisplayControl
             _mcp23017.DisableInterruptOnChange((int)PinUsage.Q4);
             _engineOperatingTime?.Dispose();
             _engineOperatingTimeAtLastRefill?.Dispose();
+            _engineRpmFactor?.Dispose();
+            _engineArduinoRpmFactor?.Dispose();
             MainController.UnregisterCallbackForPinValueChangedEvent(InterruptPin, Interrupt);
             _controllerUsingMcp.Dispose();
             _mcp23017.Dispose();

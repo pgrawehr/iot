@@ -96,6 +96,7 @@ namespace DisplayControl
                 TimeSpan.FromSeconds(3));
 
             Manager.AddMeasurement(_frequencyMeasurement);
+            Manager.AddMeasurement(SensorMeasurement.Engine0Rpm);
 
             // The value is valid until a new measurement arives (it is kept even if the tank sensor is switched off)
             _tankFillLevelRaw = new SensorMeasurement("Fuel tank raw value", ElectricPotential.Zero, SensorSource.Fuel, 1, TimeSpan.FromDays(100));
@@ -114,7 +115,8 @@ namespace DisplayControl
         protected override void UpdateSensors()
         {
             var freq = _frequencySensor.GetMeasuredFrequency();
-            freq = freq / _engine.EngineRpmCorrectionFactor;
+            freq = freq / _engine.EngineArduinoRpmCorrectionFactor;
+            SensorMeasurement.Engine0Rpm.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
             _frequencyMeasurement.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
 
             var engOnV = (CustomData<bool>)SensorMeasurement.Engine0On;
