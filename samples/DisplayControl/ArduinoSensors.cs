@@ -24,7 +24,6 @@ namespace DisplayControl
         private FrequencySensor _frequencySensor;
         private SensorMeasurement _frequencyMeasurement;
         private SensorMeasurement _tankFillLevelRaw;
-        private SensorMeasurement _tankFillLevel;
         private GpioController _gpioController;
         private bool _tankSensorIsOn;
         private HysteresisFilter _tankSensorEnableFilter;
@@ -102,9 +101,7 @@ namespace DisplayControl
             _tankFillLevelRaw = new SensorMeasurement("Fuel tank raw value", ElectricPotential.Zero, SensorSource.Fuel, 1, TimeSpan.FromDays(100));
             Manager.AddMeasurement(_tankFillLevelRaw);
 
-            _tankFillLevel = new SensorMeasurement("Fuel tank level", Ratio.Zero, SensorSource.Fuel, 2,
-                TimeSpan.FromDays(100));
-            Manager.AddMeasurement(_tankFillLevel);
+            Manager.AddMeasurement(SensorMeasurement.FuelTank0Level);
 
             _analogController = _board.CreateAnalogController(0);
             _tankSensorValuePin = _analogController.OpenPin(18); // A4
@@ -161,7 +158,7 @@ namespace DisplayControl
                     }
 
                     // no clamping of percentage, so we would see out-of-bounds values.
-                    _tankFillLevel.UpdateValue(Ratio.FromPercent(percentage), SensorMeasurementStatus.None, false);
+                    SensorMeasurement.FuelTank0Level.UpdateValue(Ratio.FromPercent(percentage), SensorMeasurementStatus.None, false);
                 }
             }
         }

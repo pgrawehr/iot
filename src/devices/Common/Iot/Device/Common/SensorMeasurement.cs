@@ -155,6 +155,9 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement Engine1OperatingTime = new SensorMeasurement("Engine 1 operating time", Duration.Zero, SensorSource.Engine, 1);
         public static readonly SensorMeasurement Engine1Temperature = new SensorMeasurement("Engine 1 Temperature", Temperature.Zero, Common.SensorSource.Engine, 1);
 
+        public static readonly SensorMeasurement FuelTank0Level =
+            new SensorMeasurement("Fuel Tank 0 level", Ratio.FromPercent(0), SensorSource.Fuel, 0, TimeSpan.MaxValue);
+
         public static readonly SensorMeasurement Windchill = new SensorMeasurement("Windchill temperature", Temperature.Zero, SensorSource.Air);
 
         public static readonly SensorMeasurement WindForce =

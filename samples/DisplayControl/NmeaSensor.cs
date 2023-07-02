@@ -821,6 +821,15 @@ namespace DisplayControl
             _router.SendSentence(fast);
             var slow = new SeaSmartEngineDetail(engineData);
             _router.SendSentence(slow);
+
+            Ratio level = Ratio.Zero;
+            if (!SensorMeasurement.FuelTank0Level.TryGetAs(out level))
+            {
+                level = Ratio.Zero;
+            }
+            FluidData fuel = new FluidData(FluidType.Fuel, level, Volume.FromLiters(55), 0, true);
+            var tankLevel = new SeaSmartFluidLevel(fuel);
+            _router.SendSentence(tankLevel);
         }
     }
 }

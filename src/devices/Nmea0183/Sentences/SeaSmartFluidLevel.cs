@@ -8,43 +8,32 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnitsNet;
+using UnitsNet.Units;
 
+#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
     /// An extended engine data message, using a PCDIN sequence (supported by some NMEA0183 to NMEA2000 bridges)
-    /// This message mostly provides the RPM value and can be sent with a high frequency.
+    /// PCDIN message 01F201 Engine status data (temperatures, oil pressure, operating time)
     /// </summary>
-    public class SeaSmartEngineFast : ProprietaryMessage
+    public class SeaSmartFluidLevel : ProprietaryMessage
     {
         /// <summary>
         /// Hexadecimal identifier for this message
         /// </summary>
-        public const int HexId = 0x01F200;
+        public const int HexId = 0x01F211;
 
         /// <summary>
         /// Constructs a new sentence
         /// </summary>
-        public SeaSmartEngineFast(RotationalSpeed speed, int engineNumber, Ratio pitch)
-            : base()
+        public SeaSmartFluidLevel(FluidData data)
         {
-            RotationalSpeed = speed;
-            EngineNumber = engineNumber;
-            PropellerPitch = pitch;
+            Level = data.Level;
+            Type = data.Type;
+            TankNumber = data.TankNumber;
             Valid = true;
-            MessageTimeStamp = Environment.TickCount;
-        }
-
-        /// <summary>
-        /// Constructs a new sentence
-        /// </summary>
-        public SeaSmartEngineFast(EngineData data)
-        {
-            RotationalSpeed = data.Revolutions;
-            EngineNumber = data.EngineNo;
-            PropellerPitch = data.Pitch;
-            MessageTimeStamp = data.MessageTimeStamp;
-            Valid = true;
+            TankVolume = data.Volume;
         }
 
         /// <summary>
@@ -52,7 +41,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         /// <param name="sentence">The sentence</param>
         /// <param name="time">The current time</param>
-        public SeaSmartEngineFast(TalkerSentence sentence, DateTimeOffset time)
+        public SeaSmartFluidLevel(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
@@ -63,7 +52,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <param name="talkerId">The source talker id</param>
         /// <param name="fields">The parameters</param>
         /// <param name="time">The current time</param>
-        public SeaSmartEngineFast(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+        public SeaSmartFluidLevel(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
@@ -86,19 +75,19 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 2, false, out int engineNo))
+            if (ReadFromHexString(data, 0, 2, false, out int tankNumber))
             {
-                EngineNumber = engineNo;
+                TankNumber = tankNumber;
             }
 
-            if (ReadFromHexString(data, 2, 4, false, out int rpm))
+            if (ReadFromHexString(data, 2, 4, false, out int level))
             {
-                RotationalSpeed = RotationalSpeed.FromRevolutionsPerMinute(rpm * 64);
+                Level = Ratio.FromPercent(level);
             }
 
-            if (ReadFromHexString(data, 10, 2, false, out int pitch))
+            if (ReadFromHexString(data, 6, 8, false, out int volume))
             {
-                PropellerPitch = Ratio.FromPercent(pitch);
+                TankVolume = Volume.FromCubicMeters(volume);
             }
 
             Valid = true;
@@ -119,36 +108,46 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Engine revolutions per time, typically RPM (revolutions per minute) is used
-        /// as unit for engine speed.
+        /// Total engine operating time (typically displayed in hours)
         /// </summary>
-        public RotationalSpeed RotationalSpeed
+        public TimeSpan OperatingTime
         {
             get;
             private set;
         }
 
         /// <summary>
-        /// Number of the engine.
+        /// Engine temperature
         /// </summary>
-        public int EngineNumber
+        public Ratio? Level
         {
             get;
             private set;
         }
 
         /// <summary>
-        /// Pitch of the propeller. Propellers with changeable pitch are very rare for pleasure boats, with the exception of folding propellers
-        /// for sailboats, but these fold only when the engine is not in use and there's no sensor to detect the state.
+        /// Number of the engine
         /// </summary>
-        public Ratio PropellerPitch
+        public int TankNumber
+        {
+            get;
+            private set;
+        }
+
+        public FluidType Type
+        {
+            get;
+            private set;
+        }
+
+        public Volume? TankVolume
         {
             get;
             private set;
         }
 
         /// <summary>
-        /// Returns false for this message, as PCDIN messages can mean different things
+        /// Returns false for this message (because PCDIN messages are identified based on their inner message)
         /// </summary>
         public override bool ReplacesOlderInstance => false;
 
@@ -157,17 +156,23 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                // Example data set: (bad example from the docs, since the engine is just not running here)
-                // $PCDIN,01F200,000C7A4F,02,000000FFFF7FFFFF*21
-                // Unfortunately, the resolution of the RPM value is quite low, as 1 RPS ~ 64RPM
-                int rpm = (int)RotationalSpeed.RevolutionsPerSecond;
-                string engineNoText = EngineNumber.ToString("X2", CultureInfo.InvariantCulture);
-                string rpmText = rpm.ToString("X4", CultureInfo.InvariantCulture);
-                int pitchPercent = (int)PropellerPitch.Percent;
-                string pitchText = pitchPercent.ToString("X2", CultureInfo.InvariantCulture);
                 string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
+                // $PCDIN,01F211,000C7E1B,02,000000FFFF407FFF*XX
+                //                           1-2---3-------4-
+                // 1) Fluid type // 0 = fuel
+                // 2) Level in %
+                // 3) Capacity in 0.1 liters
+                // 4) Reserved
+                // Status = 0 is ok, anything else seems to indicate a fault
+                string ftypeString = TankNumber.ToString("X2", CultureInfo.InvariantCulture);
+                int l = (int)Math.Round(Level.HasValue ? Level.Value.Percent : 0);
+                string level = l.ToString("X4", CultureInfo.InvariantCulture);
+                int vol = (int)Math.Round(TankVolume.HasValue ? TankVolume.Value.Liters * 10 : 0);
+                string capacity = vol.ToString("X8", CultureInfo.InvariantCulture);
+                string capacitySwapped = capacity.Substring(6, 2) + capacity.Substring(4, 2) +
+                                         capacity.Substring(2, 2) + capacity.Substring(0, 2);
+                return "01F211," + timeStampText + ",02," + ftypeString + level + capacitySwapped + "FF";
 
-                return "01F200," + timeStampText + ",02," + engineNoText + rpmText + "FFFF" + pitchText + "FFFF";
             }
 
             return string.Empty;
@@ -178,10 +183,10 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"Engine {EngineNumber} RPM: {RotationalSpeed.RevolutionsPerMinute}";
+                return $"Tank for {Type} number {TankNumber}: Remaining capacity {Level}";
             }
 
-            return "No valid data (or engine off)";
+            return "No valid data";
         }
     }
 }
