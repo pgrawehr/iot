@@ -346,7 +346,7 @@ namespace Iot.Device.Common
                 throw new InvalidOperationException($"The unit of '{Name}' is {_value.QuantityInfo.ValueType}, you cannot change it to {value.QuantityInfo.ValueType}.");
             }
 
-            if (!value.Equals(_value) || status != _measurementStatus)
+            // if (!value.Equals(_value) || status != _measurementStatus)
             {
                 _value = value;
                 _measurementStatus = status;
