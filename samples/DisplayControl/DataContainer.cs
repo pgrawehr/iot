@@ -216,10 +216,6 @@ namespace DisplayControl
                 WriteLineToConsoleAndDisplay("Remote display not connected: " + x.Message);
             }
 
-            WriteLineToConsoleAndDisplay("DHT...");
-            _dhtSensors = new DhtSensors(_sensorManager);
-            _dhtSensors.Init(Controller);
-
             WriteLineToConsoleAndDisplay("Wetter...");
             _weatherSensor = new Bmp680Environment(_sensorManager);
             _weatherSensor.Init(Controller);
@@ -240,6 +236,10 @@ namespace DisplayControl
             WriteLineToConsoleAndDisplay("Arduino...");
             _arduino = new ArduinoSensors(_sensorManager, _engine);
             _arduino.Init(Controller);
+
+            WriteLineToConsoleAndDisplay("DHT...");
+            _dhtSensors = new DhtSensors(_sensorManager, _arduino.DhtInterface);
+            _dhtSensors.Init(Controller);
 
             _engine.DataChanged += NewEngineData;
 

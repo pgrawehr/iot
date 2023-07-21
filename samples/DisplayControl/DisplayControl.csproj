@@ -39,7 +39,6 @@
     <ProjectReference Include="..\..\src\devices\Bmxx80\Bmxx80.csproj" />
     <ProjectReference Include="..\..\src\devices\Common\Common.csproj" />
     <ProjectReference Include="..\..\src\devices\CpuTemperature\CpuTemperature.csproj" />
-    <ProjectReference Include="..\..\src\devices\Dhtxx\Dhtxx.csproj" />
     <ProjectReference Include="..\..\src\devices\IG-500A\IG-500A.csproj" />
     <ProjectReference Include="..\..\src\devices\Nmea0183\Nmea0183.csproj" />
     <ProjectReference Include="..\..\src\devices\CharacterLcd\CharacterLcd.csproj" />

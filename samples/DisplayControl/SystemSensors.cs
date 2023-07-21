@@ -1,5 +1,4 @@
 ﻿using Iot.Device.Ads1115;
-using Iot.Device.DHTxx;
 using System;
 using System.Collections.Generic;
 using System.Device.Gpio;

@@ -48,6 +48,8 @@ namespace DisplayControl
             set;
         }
 
+        public DhtSensor DhtInterface { get; set; }
+
         public override void Init(GpioController gpioController)
         {
             if (!ArduinoBoard.TryFindBoard(new string[] { "/dev/ttyACM0", "/dev/ttyUSB0", "/dev/ttyS0" }, new int[] { 115200 }, out _board))
@@ -105,6 +107,9 @@ namespace DisplayControl
 
             _analogController = _board.CreateAnalogController(0);
             _tankSensorValuePin = _analogController.OpenPin(18); // A4
+
+            DhtInterface = _board.GetCommandHandler<DhtSensor>();
+            _board.SetPinMode(3, SupportedMode.Dht);
 
             base.Init(gpioController);
         }
