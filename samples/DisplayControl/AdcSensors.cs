@@ -26,6 +26,7 @@ namespace DisplayControl
         private SensorMeasurement _button3;
         private SensorMeasurement _button4;
         private SensorMeasurement _buttonTriggerLimit;
+        private HysteresisFilter _buttonEnableFilter;
         private bool _atLeastOneButtonPressed = false;
         private int _count;
         private ILogger _logger;
@@ -35,6 +36,9 @@ namespace DisplayControl
         {
             _count = 0;
             _logger = this.GetCurrentClassLogger();
+            _buttonEnableFilter = new HysteresisFilter(false);
+            _buttonEnableFilter.FallingDelayTime = TimeSpan.FromMilliseconds(500);
+            _buttonEnableFilter.RisingDelayTime = TimeSpan.FromMilliseconds(500);
         }
 
         public event Action<DisplayButton, bool> ButtonPressed;
@@ -139,10 +143,11 @@ namespace DisplayControl
                 double max = Math.Max(Math.Max(b1High, b2High), Math.Max(b3High, b4High));
                 double averageHigh = (b1High + b2High + b3High + b4High - max) / 3;
                 bool sunIsShining = averageLow > 0.9;
+                _buttonEnableFilter.Update(sunIsShining);
                 // Find out which button might be pressed (obstructed)
                 // if the low average is high the LED might not have an effect at all. 
                 // if the low average equals the high average, the led has no effect (or is broken)
-                if (!sunIsShining)
+                if (!_buttonEnableFilter.Output)
                 {
                     // The "normal" button mode: buttons are pressed when the voltage rises
                     double triggerValue = averageHigh + 0.3;
