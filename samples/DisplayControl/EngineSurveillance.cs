@@ -127,7 +127,7 @@ namespace DisplayControl
 
             Manager.AddRange(new []
             {
-                SensorMeasurement.Engine0On, Engine0PrimaryRpmSensor, SensorMeasurement.Engine0OperatingTime, 
+                SensorMeasurement.Engine0Status, Engine0PrimaryRpmSensor, SensorMeasurement.Engine0OperatingTime, 
                 Engine0OperatingTimeSinceRefill,
             });
 
@@ -352,25 +352,12 @@ namespace DisplayControl
 
             _rpm = umin;
             _lastTickForUpdate = now;
-
+            
             if (_engineOn)
             {
                 _logger.LogInformation($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
             }
-            // Final step: Send values to UI
-            if (!_inSelfTest)
-            {
-                Manager.UpdateValue(Engine0PrimaryRpmSensor, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
-                Manager.UpdateValue(SensorMeasurement.Engine0On, _engineOn);
-                TimeSpan timeSinceRefill = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
-                Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
-                    new IQuantity[]
-                    {
-                        Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds).ToUnit(DurationUnit.Hour),
-                        Duration.FromSeconds(timeSinceRefill.TotalSeconds).ToUnit(DurationUnit.Hour)
-                    });
-            }
-
+            
             Temperature engineTemp;
 
             if (!SensorMeasurement.Engine0Temperature.TryGetAs(out engineTemp))
@@ -386,7 +373,23 @@ namespace DisplayControl
                 rs = RotationalSpeed.FromRevolutionsPerMinute(umin);
             }
 
-            var msg = new EngineData((int)now, 0, rs, Ratio.FromPercent(100),
+            EngineStatus status = rs > RotationalSpeed.Zero ? EngineStatus.None : EngineStatus.CheckEngine;
+
+            // Final step: Send values to UI and NMEA clients
+            if (!_inSelfTest)
+            {
+                Manager.UpdateValue(Engine0PrimaryRpmSensor, RotationalSpeed.FromRevolutionsPerMinute(_rpm));
+                Manager.UpdateValue(SensorMeasurement.Engine0Status, status.ToString());
+                TimeSpan timeSinceRefill = _engineOperatingTime.Value - _engineOperatingTimeAtLastRefill.Value;
+                Manager.UpdateValues(new[] { SensorMeasurement.Engine0OperatingTime, Engine0OperatingTimeSinceRefill },
+                    new IQuantity[]
+                    {
+                        Duration.FromSeconds(_engineOperatingTime.Value.TotalSeconds).ToUnit(DurationUnit.Hour),
+                        Duration.FromSeconds(timeSinceRefill.TotalSeconds).ToUnit(DurationUnit.Hour)
+                    });
+            }
+
+            var msg = new EngineData((int)now, status, 0, rs, Ratio.FromPercent(100),
                 _engineOperatingTime.Value, engineTemp); // Pitch unknown so far
             DataChanged?.Invoke(msg);
         }

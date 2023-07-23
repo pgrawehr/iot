@@ -144,13 +144,12 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement Pitch = new SensorMeasurement("Pitch", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
         public static readonly SensorMeasurement Roll = new SensorMeasurement("Roll", Angle.FromDegrees(0), SensorSource.Compass, 1, TimeSpan.FromSeconds(5));
 
-        // Just a bool actually
-        public static readonly SensorMeasurement Engine0On = new CustomData<bool>("Engine 0 operation status", false, SensorSource.Engine);
+        public static readonly SensorMeasurement Engine0Status = new CustomData<string>("Engine 0 operation status", "Not set", SensorSource.Engine);
         public static readonly SensorMeasurement Engine0Rpm = new SensorMeasurement("Engine 0 RPM", RotationalSpeed.FromRevolutionsPerMinute(0), SensorSource.Engine, 0, TimeSpan.FromSeconds(10));
         public static readonly SensorMeasurement Engine0OperatingTime = new SensorMeasurement("Engine 0 operating time", Duration.Zero, SensorSource.Engine, 0);
         public static readonly SensorMeasurement Engine0Temperature = new SensorMeasurement("Engine 0 Temperature", Temperature.Zero, Common.SensorSource.Engine, 0);
 
-        public static readonly SensorMeasurement Engine1On = new CustomData<bool>("Engine 1 operation status", false, SensorSource.Engine);
+        public static readonly SensorMeasurement Engine1Status = new CustomData<string>("Engine 1 operation status", "Not set", SensorSource.Engine);
         public static readonly SensorMeasurement Engine1Rpm = new SensorMeasurement("Engine 1 RPM", RotationalSpeed.FromRevolutionsPerMinute(0), SensorSource.Engine, 1, TimeSpan.FromSeconds(10));
         public static readonly SensorMeasurement Engine1OperatingTime = new SensorMeasurement("Engine 1 operating time", Duration.Zero, SensorSource.Engine, 1);
         public static readonly SensorMeasurement Engine1Temperature = new SensorMeasurement("Engine 1 Temperature", Temperature.Zero, Common.SensorSource.Engine, 1);

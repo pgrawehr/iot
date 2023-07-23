@@ -19,7 +19,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructs an instance containing all relevant data
         /// </summary>
-        public EngineData(int messageTimeStamp, int engineNo, RotationalSpeed revolutions, Ratio pitch, TimeSpan operatingTime, Temperature? engineTemperature)
+        public EngineData(int messageTimeStamp, EngineStatus status, int engineNo, RotationalSpeed revolutions, Ratio pitch, TimeSpan operatingTime, Temperature? engineTemperature)
         {
             MessageTimeStamp = messageTimeStamp;
             EngineNo = engineNo;
@@ -43,7 +43,7 @@ namespace Iot.Device.Nmea0183.Sentences
                 throw new InvalidOperationException("The two messages are not for the same engine");
             }
 
-            return new EngineData(fast.MessageTimeStamp, fast.EngineNumber, fast.RotationalSpeed, fast.PropellerPitch,
+            return new EngineData(fast.MessageTimeStamp, detail.Status, fast.EngineNumber, fast.RotationalSpeed, fast.PropellerPitch,
                 detail.OperatingTime, detail.Temperature);
         }
 
@@ -51,6 +51,11 @@ namespace Iot.Device.Nmea0183.Sentences
         /// The NMEA2000 bus timestamp (not really relevant, I think)
         /// </summary>
         public int MessageTimeStamp { get; }
+
+        /// <summary>
+        /// Any error flags
+        /// </summary>
+        public EngineStatus Status { get; }
 
         /// <summary>
         /// The number of the engine. 0 = Single / Starboard, 1 = Port, 2 = Center

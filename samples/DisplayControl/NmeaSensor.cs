@@ -624,7 +624,7 @@ namespace DisplayControl
                     _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
                         rmb.DistanceToWayPoint.HasValue ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData);
                     if (rmb.DistanceToWayPoint.HasValue &&
-                        _positionProvider.TryGetCurrentPosition(out var position, AuxiliaryGps, false, out var track, out var sog, out var heading, out var time))
+                        _positionProvider.TryGetCurrentPosition(out var position, HandheldSourceName, false, out var track, out var sog, out var heading, out var time))
                     {
                         if (sog.MetersPerSecond < 0.01)
                         {
@@ -636,7 +636,10 @@ namespace DisplayControl
                         {
                             _manager.UpdateValue(SensorMeasurement.TimeToNextWaypoint, Duration.Zero, SensorMeasurementStatus.NoData);
                         }
-                        _manager.UpdateValue(SensorMeasurement.TimeToNextWaypoint, timeToWp);
+                        else
+                        {
+                            _manager.UpdateValue(SensorMeasurement.TimeToNextWaypoint, timeToWp);
+                        }
                     }
 
                     break;

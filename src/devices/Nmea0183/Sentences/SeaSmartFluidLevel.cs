@@ -10,12 +10,11 @@ using System.Threading.Tasks;
 using UnitsNet;
 using UnitsNet.Units;
 
-#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
-    /// An extended engine data message, using a PCDIN sequence (supported by some NMEA0183 to NMEA2000 bridges)
-    /// PCDIN message 01F201 Engine status data (temperatures, oil pressure, operating time)
+    /// SeaSmart message for fluid levels of a tank (Wrapped NMEA2000 message)
+    /// For format, see also https://github.com/ttlappalainen/NMEA2000
     /// </summary>
     public class SeaSmartFluidLevel : ProprietaryMessage
     {
@@ -108,16 +107,7 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Total engine operating time (typically displayed in hours)
-        /// </summary>
-        public TimeSpan OperatingTime
-        {
-            get;
-            private set;
-        }
-
-        /// <summary>
-        /// Engine temperature
+        /// Tank level in percent (100% = Full, 0% = empty)
         /// </summary>
         public Ratio? Level
         {
@@ -126,7 +116,7 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Number of the engine
+        /// Instance number of the tank
         /// </summary>
         public int TankNumber
         {
@@ -134,12 +124,18 @@ namespace Iot.Device.Nmea0183.Sentences
             private set;
         }
 
+        /// <summary>
+        /// The type of fluid in the tank
+        /// </summary>
         public FluidType Type
         {
             get;
             private set;
         }
 
+        /// <summary>
+        /// The volume of the tank if full.
+        /// </summary>
         public Volume? TankVolume
         {
             get;
@@ -159,12 +155,12 @@ namespace Iot.Device.Nmea0183.Sentences
                 string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
                 // $PCDIN,01F211,000C7E1B,02,000000FFFF407FFF*XX
                 //                           1-2---3-------4-
-                // 1) Fluid type // 0 = fuel
+                // 1) Fluid type and tank number (4 bit each)
                 // 2) Level in %
                 // 3) Capacity in 0.1 liters
                 // 4) Reserved
-                // Status = 0 is ok, anything else seems to indicate a fault
-                string ftypeString = TankNumber.ToString("X2", CultureInfo.InvariantCulture);
+                int combination = (((int)Type << 4) & 0xF0) | ((int)TankNumber & 0x0F);
+                string ftypeString = combination.ToString("X2", CultureInfo.InvariantCulture);
                 int l = (int)Math.Round(Level.HasValue ? Level.Value.Percent : 0);
                 string level = l.ToString("X4", CultureInfo.InvariantCulture);
                 int vol = (int)Math.Round(TankVolume.HasValue ? TankVolume.Value.Liters * 10 : 0);

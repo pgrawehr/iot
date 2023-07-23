@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Arduino;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 
@@ -35,9 +36,9 @@ namespace DisplayControl
         {
             _engine = engine;
             _logger = this.GetCurrentClassLogger();
-            _tankSensorEnableFilter = new HysteresisFilter(false);
+            _tankSensorEnableFilter = new HysteresisFilter(true); // Switch on for a first measurement during startup
             _tankSensorEnableFilter.RisingDelayTime = TimeSpan.FromSeconds(2);
-            _tankSensorEnableFilter.FallingDelayTime = TimeSpan.FromSeconds(30);
+            _tankSensorEnableFilter.FallingDelayTime = TimeSpan.FromSeconds(60);
             ForceTankSensorEnable = false;
             _tankSensorIsOn = false;
         }
@@ -121,9 +122,7 @@ namespace DisplayControl
             SensorMeasurement.Engine0Rpm.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
             _frequencyMeasurement.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
 
-            var engOnV = (CustomData<bool>)SensorMeasurement.Engine0On;
-            bool engOn = engOnV.Value;
-            _tankSensorEnableFilter.Update(engOn);
+            _tankSensorEnableFilter.Update(freq.CyclesPerMinute > 0);
             bool newSensorValue = ForceTankSensorEnable || _tankSensorEnableFilter.Output;
 
             if (newSensorValue != _tankSensorIsOn)
