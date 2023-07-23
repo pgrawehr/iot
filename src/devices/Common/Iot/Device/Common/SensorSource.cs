@@ -34,6 +34,8 @@ namespace Iot.Device.Common
             get;
         }
 
+        public static readonly SensorSource Ais = new SensorSource("AIS");
+
         public static readonly SensorSource Air = new SensorSource("Air");
         public static readonly SensorSource Engine = new SensorSource("Engine, generic");
         public static readonly SensorSource EngineOil = new SensorSource("Engine, Oil");

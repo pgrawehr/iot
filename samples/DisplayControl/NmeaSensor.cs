@@ -87,6 +87,11 @@ namespace DisplayControl
         private SerialPort _serialPortForward;
         private readonly SensorMeasurement _forwardRearSeparation;
         private readonly SensorMeasurement _forwardRearAngle;
+
+        private readonly CustomData<int> _aisNumberOfTargets;
+        private readonly CustomData<string> _aisNearestShip;
+        private readonly SensorMeasurement _aisDistanceToNearestShip;
+
         private AisManager _aisManager;
         private PositionProvider _positionProvider;
 
@@ -104,6 +109,11 @@ namespace DisplayControl
                 SensorSource.Position);
             _rearPosition = new CustomData<GeographicPosition>("Rear antenna position", new GeographicPosition(),
                 SensorSource.Position);
+
+            _aisNumberOfTargets = new CustomData<int>("Number of AIS targets in range", 0, SensorSource.Ais);
+            _aisNearestShip = new CustomData<string>("Name of nearest ship", string.Empty, SensorSource.Ais);
+            _aisDistanceToNearestShip =
+                new SensorMeasurement("Distance to nearest ship", Length.Zero, SensorSource.Ais);
 
             _aisManager = new AisManager("AIS", false, 269110660, "CIRRUS");
 
@@ -126,8 +136,8 @@ namespace DisplayControl
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
 
             // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
-            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] {"AIS"}, true, true));
-            rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new []{ShipSourceName}, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager }, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new []{ ShipSourceName }, true, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
             // GGA messages from the ship are normally discarded, but the cache shall decide (may use a fallback)
@@ -304,7 +314,7 @@ namespace DisplayControl
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint,
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus, _rearPosition, _forwardPosition,
-                _forwardRearSeparation, _forwardRearAngle
+                _forwardRearSeparation, _forwardRearAngle, _aisNumberOfTargets, _aisNearestShip, _aisDistanceToNearestShip
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -355,6 +365,9 @@ namespace DisplayControl
             _autopilot = new AutopilotController(_router, _router, _cache);
             _autopilot.NmeaSourceName = HandheldSourceName;
 
+            var tse = new TrackEstimationParameters();
+            _aisManager.EnableAisAlarms(true, tse);
+            _aisManager.RelativePositionsUpdated += OnAisPositionsUpdated;
             _aisManager.StartDecode();
 
             _router.AddEndPoint(_parserShipInterface);
@@ -648,6 +661,34 @@ namespace DisplayControl
             if (sw.ElapsedMilliseconds > 50)
             {
                 _logger.LogError($"Processing message {sentence.GetType().Name} took {sw.ElapsedMilliseconds}");
+            }
+        }
+
+        private void OnAisPositionsUpdated()
+        {
+            var targets = _aisManager.GetTargets().ToList();
+            _aisNumberOfTargets.UpdateValue(targets.Count, SensorMeasurementStatus.None);
+
+            if (targets.Count > 0)
+            {
+                var nearestTarget = targets.OrderBy(x =>
+                {
+                    if (x.RelativePosition == null)
+                    {
+                        return Length.FromAstronomicalUnits(1); // Far away
+                    }
+
+                    return x.RelativePosition.Distance;
+                }).First();
+
+                _aisDistanceToNearestShip.UpdateValue(
+                    nearestTarget.RelativePosition != null ? nearestTarget.RelativePosition.Distance : Length.Zero);
+                _aisNearestShip.UpdateValue(nearestTarget.Name);
+            }
+            else
+            {
+                _aisDistanceToNearestShip.UpdateValue(Length.Zero, SensorMeasurementStatus.NoData, false);
+                _aisNearestShip.UpdateValue(string.Empty, SensorMeasurementStatus.NoData);
             }
         }
 

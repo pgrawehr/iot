@@ -80,6 +80,11 @@ namespace Iot.Device.Nmea0183
         private PositionProvider _positionProvider;
 
         /// <summary>
+        /// This event fires after the ship relative positions have been updated (AIS alarms must be enabled)
+        /// </summary>
+        public event Action? RelativePositionsUpdated;
+
+        /// <summary>
         /// Creates an instance of an <see cref="AisManager"/>
         /// </summary>
         /// <param name="interfaceName">Name of the manager, used for message routing</param>
@@ -923,6 +928,8 @@ namespace Iot.Device.Nmea0183
 
                     Thread.Sleep(remaining);
                 }
+
+                RelativePositionsUpdated?.Invoke();
             }
             while (_aisAlarmsEnabled);
         }
