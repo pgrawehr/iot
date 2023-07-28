@@ -91,6 +91,7 @@ namespace DisplayControl
         private readonly CustomData<int> _aisNumberOfTargets;
         private readonly CustomData<string> _aisNearestShip;
         private readonly SensorMeasurement _aisDistanceToNearestShip;
+        private readonly CustomData<string> _aisDangerousTargets;
 
         private AisManager _aisManager;
         private PositionProvider _positionProvider;
@@ -117,6 +118,8 @@ namespace DisplayControl
 
             _forwardRearSeparation = new SensorMeasurement("Antenna separation", Length.Zero, SensorSource.Position, 3);
             _forwardRearAngle = new SensorMeasurement("GNSS derived heading", Angle.Zero, SensorSource.Position, 4);
+
+            _aisDangerousTargets = new CustomData<string>("AIS dangerous targets", "None", SensorSource.Ais);
 
             _logger = this.GetCurrentClassLogger();
 
@@ -312,7 +315,8 @@ namespace DisplayControl
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint,
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus, _rearPosition, _forwardPosition,
-                _forwardRearSeparation, _forwardRearAngle, _aisNumberOfTargets, _aisNearestShip, _aisDistanceToNearestShip
+                _forwardRearSeparation, _forwardRearAngle, _aisNumberOfTargets, _aisNearestShip, _aisDistanceToNearestShip,
+                _aisDangerousTargets,
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -690,12 +694,25 @@ namespace DisplayControl
                     _aisNearestShip.UpdateValue(nearestTarget.NameOrMssi());
                     updated = true;
                 }
+
+                var dangerousTargets = targets.Where(x =>
+                {
+                    if (x.RelativePosition == null)
+                    {
+                        return false;
+                    }
+
+                    return x.RelativePosition.SafetyState == AisSafetyState.Dangerous;
+                }).Select(x => x.NameOrMssi());
+
+                _aisDangerousTargets.UpdateValue(string.Join(", ", dangerousTargets));
             }
             
             if (!updated)
             {
                 _aisDistanceToNearestShip.UpdateValue(Length.Zero, SensorMeasurementStatus.NoData, false);
                 _aisNearestShip.UpdateValue(string.Empty, SensorMeasurementStatus.NoData);
+                _aisDangerousTargets.UpdateValue("No ships", SensorMeasurementStatus.NoData);
             }
         }
 

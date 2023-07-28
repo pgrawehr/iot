@@ -928,13 +928,18 @@ namespace Iot.Device.Nmea0183
 
                 foreach (var difference in differences)
                 {
-                    var timeToClosest = difference.TimeToClosestPointOfApproach(time);
-                    if (difference.ClosestPointOfApproach < TrackEstimationParameters.WarningDistance &&
-                        timeToClosest > -TimeSpan.FromMinutes(1) && timeToClosest < TrackEstimationParameters.WarningTime)
+                    string name = difference.To.NameOrMssi();
+                    if (difference.SafetyState == AisSafetyState.Dangerous)
                     {
                         // Warn if the ship will be closer than the warning distance in less than the WarningTime
-                        string name = difference.To.Name ?? difference.To.FormatMmsi();
-                        SendWarningMessage("DANGEROUS VESSEL-" + difference.To.Mmsi, difference.To.Mmsi, $"{name} is dangerously close. CPA {difference.ClosestPointOfApproach}; TCPA {timeToClosest:mm\\:ss}", time);
+                        SendWarningMessage("DANGEROUS VESSEL-" + difference.To.Mmsi, difference.To.Mmsi, $"{name} is dangerously close. CPA {difference.ClosestPointOfApproach}; TCPA {difference.TimeToClosestPointOfApproach(time):mm\\:ss}", time);
+                    }
+
+                    if (difference.SafetyState == AisSafetyState.Lost &&
+                        WarnAboutLostTarget(difference))
+                    {
+                        // The vessel was lost
+                        SendWarningMessage("VESSEL LOST-" + difference.To.Mmsi, difference.To.Mmsi, $"{name} lost. CPA {difference.ClosestPointOfApproach}; TCPA {difference.TimeToClosestPointOfApproach(time):mm\\:ss}", time);
                     }
                 }
 
@@ -965,6 +970,30 @@ namespace Iot.Device.Nmea0183
                 RelativePositionsUpdated?.Invoke();
             }
             while (_aisAlarmsEnabled);
+        }
+
+        private bool WarnAboutLostTarget(ShipRelativePosition difference)
+        {
+            if (difference.Distance < TrackEstimationParameters.VesselLostWarningRange)
+            {
+                if (difference.To is MovingTarget mvt && TrackEstimationParameters.VesselLostMinSpeed.HasValue)
+                {
+                    // if it's a moving target and we have a value for the min speed, only warn if the vessel was faster
+                    if (mvt.SpeedOverGround > TrackEstimationParameters.VesselLostMinSpeed.Value)
+                    {
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                // If not a moving target, always warn when it was in range (these are AToN targets and similar, they're
+                // not supposed to fail)
+                return true;
+            }
+
+            // if not within warning range, never warn
+            return false;
         }
     }
 }
