@@ -53,18 +53,24 @@ namespace Iot.Device.Nmea0183
 
         private readonly bool _throwOnUnknownMessage;
 
-        private AisParser _aisParser;
+        private readonly AisParser _aisParser;
 
         /// <summary>
         /// We keep our own position cache, as we need to calculate CPA and TCPA values.
+        /// The position provider can also be specified externally
         /// </summary>
-        private SentenceCache _cache;
+        private readonly SentenceCache? _cache;
 
-        private ConcurrentDictionary<uint, AisTarget> _targets;
+        /// <summary>
+        /// Position provider, to get position data about the own ship
+        /// </summary>
+        private readonly PositionProvider _positionProvider;
 
-        private ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)> _activeWarnings;
+        private readonly ConcurrentDictionary<uint, AisTarget> _targets;
 
-        private object _lock;
+        private readonly ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)> _activeWarnings;
+
+        private readonly object _lock;
 
         private DateTimeOffset? _lastCleanupCheck;
 
@@ -76,8 +82,6 @@ namespace Iot.Device.Nmea0183
         private bool _aisAlarmsEnabled;
 
         private Thread? _aisBackgroundThread;
-
-        private PositionProvider _positionProvider;
 
         /// <summary>
         /// This event fires after the ship relative positions have been updated (AIS alarms must be enabled)
@@ -96,6 +100,23 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
+        /// Creates an instance of an <see cref="AisManager"/> using an internal positon provider.
+        /// </summary>
+        /// <param name="interfaceName">Name of the manager, used for message routing</param>
+        /// <param name="throwOnUnknownMessage">True if an exception should be thrown when parsing an unknown message type. This parameter
+        /// is mainly intended for test scenarios where a data stream should be scanned for rare messages</param>
+        /// <param name="ownMmsi">The MMSI of the own ship</param>
+        /// <param name="ownShipName">The name of the own ship</param>
+        /// <remarks>
+        /// For the position update to work, the AisManager must be externally fed with parsed NMEA sentences.
+        /// Raw position sequences are not sufficient.
+        /// </remarks>
+        public AisManager(string interfaceName, bool throwOnUnknownMessage, uint ownMmsi, string ownShipName)
+            : this(interfaceName, throwOnUnknownMessage, ownMmsi, ownShipName, null)
+        {
+        }
+
+        /// <summary>
         /// Creates an instance of an <see cref="AisManager"/>
         /// </summary>
         /// <param name="interfaceName">Name of the manager, used for message routing</param>
@@ -103,15 +124,25 @@ namespace Iot.Device.Nmea0183
         /// is mainly intended for test scenarios where a data stream should be scanned for rare messages</param>
         /// <param name="ownMmsi">The MMSI of the own ship</param>
         /// <param name="ownShipName">The name of the own ship</param>
-        public AisManager(string interfaceName, bool throwOnUnknownMessage, uint ownMmsi, string ownShipName)
+        /// <param name="externalPositionProvider">External position provider (e.g. the one from a <see cref="MessageRouter"/>)</param>
+        public AisManager(string interfaceName, bool throwOnUnknownMessage, uint ownMmsi, string ownShipName,
+            PositionProvider? externalPositionProvider)
             : base(interfaceName)
         {
             OwnMmsi = ownMmsi;
             OwnShipName = ownShipName;
             _throwOnUnknownMessage = throwOnUnknownMessage;
             _aisParser = new AisParser(throwOnUnknownMessage);
-            _cache = new SentenceCache(this);
-            _positionProvider = new PositionProvider(_cache);
+            if (externalPositionProvider == null)
+            {
+                _cache = new SentenceCache(this);
+                _positionProvider = new PositionProvider(_cache);
+            }
+            else
+            {
+                _positionProvider = externalPositionProvider;
+            }
+
             _targets = new ConcurrentDictionary<uint, AisTarget>();
             _lock = new object();
             _activeWarnings = new ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)>();
@@ -349,7 +380,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="sentence">The new sentence</param>
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
-            _cache.Add(sentence);
+            _cache?.Add(sentence);
 
             DoCleanup(sentence.DateTime);
 
@@ -781,6 +812,8 @@ namespace Iot.Device.Nmea0183
                             _targets.TryRemove(t.Mmsi, out _);
                         }
                     }
+
+                    _lastCleanupCheck = currentTime;
                 }
             }
         }

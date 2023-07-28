@@ -115,8 +115,6 @@ namespace DisplayControl
             _aisDistanceToNearestShip =
                 new SensorMeasurement("Distance to nearest ship", Length.Zero, SensorSource.Ais);
 
-            _aisManager = new AisManager("AIS", false, 269110660, "CIRRUS");
-
             _forwardRearSeparation = new SensorMeasurement("Antenna separation", Length.Zero, SensorSource.Position, 3);
             _forwardRearAngle = new SensorMeasurement("GNSS derived heading", Angle.Zero, SensorSource.Position, 4);
 
@@ -366,6 +364,11 @@ namespace DisplayControl
             _autopilot.NmeaSourceName = HandheldSourceName;
 
             var tse = new TrackEstimationParameters();
+
+            _positionProvider = new PositionProvider(_cache);
+
+            _aisManager = new AisManager("AIS", false, 269110660, "CIRRUS", _positionProvider);
+
             _aisManager.EnableAisAlarms(true, tse);
             _aisManager.RelativePositionsUpdated += OnAisPositionsUpdated;
             _aisManager.StartDecode();
@@ -377,7 +380,6 @@ namespace DisplayControl
             _router.AddEndPoint(_udpServer);
             _router.AddEndPoint(_parserForwardInterface);
             _router.AddEndPoint(_aisManager);
-            _positionProvider = new PositionProvider(_cache);
 
             _router.OnNewSequence += ParserOnNewSequence;
             foreach (var rule in ConstructRules())
@@ -668,7 +670,7 @@ namespace DisplayControl
         {
             var targets = _aisManager.GetTargets().ToList();
             _aisNumberOfTargets.UpdateValue(targets.Count, SensorMeasurementStatus.None);
-
+            bool updated = false;
             if (targets.Count > 0)
             {
                 var nearestTarget = targets.OrderBy(x =>
@@ -681,11 +683,16 @@ namespace DisplayControl
                     return x.RelativePosition.Distance;
                 }).First();
 
-                _aisDistanceToNearestShip.UpdateValue(
-                    nearestTarget.RelativePosition != null ? nearestTarget.RelativePosition.Distance : Length.Zero);
-                _aisNearestShip.UpdateValue(nearestTarget.Name);
+                var relPos = nearestTarget.RelativePosition;
+                if (relPos != null) // Should never be false
+                {
+                    _aisDistanceToNearestShip.UpdateValue(relPos.Distance.ToUnit(LengthUnit.NauticalMile));
+                    _aisNearestShip.UpdateValue(nearestTarget.NameOrMssi());
+                    updated = true;
+                }
             }
-            else
+            
+            if (!updated)
             {
                 _aisDistanceToNearestShip.UpdateValue(Length.Zero, SensorMeasurementStatus.NoData, false);
                 _aisNearestShip.UpdateValue(string.Empty, SensorMeasurementStatus.NoData);
