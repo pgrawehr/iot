@@ -93,7 +93,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (ReadFromHexString(data, 2, 4, false, out int rpm))
             {
-                RotationalSpeed = RotationalSpeed.FromRevolutionsPerMinute(rpm * 64);
+                RotationalSpeed = RotationalSpeed.FromRevolutionsPerSecond(rpm);
             }
 
             if (ReadFromHexString(data, 10, 2, false, out int pitch))
@@ -160,7 +160,7 @@ namespace Iot.Device.Nmea0183.Sentences
                 // Example data set: (bad example from the docs, since the engine is just not running here)
                 // $PCDIN,01F200,000C7A4F,02,000000FFFF7FFFFF*21
                 // Unfortunately, the resolution of the RPM value is quite low, as 1 RPS ~ 64RPM
-                int rpm = (int)RotationalSpeed.RevolutionsPerSecond;
+                int rpm = (int)Math.Round(RotationalSpeed.RevolutionsPerSecond);
                 string engineNoText = EngineNumber.ToString("X2", CultureInfo.InvariantCulture);
                 string rpmText = rpm.ToString("X4", CultureInfo.InvariantCulture);
                 int pitchPercent = (int)PropellerPitch.Percent;

@@ -27,6 +27,7 @@ namespace Iot.Device.Nmea0183.Sentences
             Pitch = pitch;
             OperatingTime = operatingTime;
             EngineTemperature = engineTemperature;
+            Status = status;
         }
 
         /// <summary>

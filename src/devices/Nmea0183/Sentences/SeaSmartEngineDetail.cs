@@ -111,7 +111,7 @@ namespace Iot.Device.Nmea0183.Sentences
                 OperatingTime = TimeSpan.FromSeconds(operatingTime);
             }
 
-            if (ReadFromHexString(data, 40, 4, true, out int status))
+            if (ReadFromHexString(data, 40, 4, false, out int status))
             {
                 Status = (EngineStatus)status;
             }
