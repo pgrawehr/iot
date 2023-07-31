@@ -13,6 +13,7 @@ namespace Iot.Device.Nmea0183.Ais
     /// <summary>
     /// Configurable parameters that define the behavior of the AIS target movement estimation.
     /// </summary>
+    [Serializable]
     public record TrackEstimationParameters
     {
         /// <summary>
@@ -72,5 +73,12 @@ namespace Iot.Device.Nmea0183.Ais
         /// people switching off their AIS while moored. Set to null to disable.
         /// </summary>
         public Speed? VesselLostMinSpeed { get; set; } = Speed.FromKnots(0.5);
+
+        /// <summary>
+        /// If a target has not been updated for this time, it is deleted from the list of valid targets.
+        /// Additionally, client software should consider targets as lost whose <see cref="AisTarget.LastSeen"/> value is older than a minute or so.
+        /// A value of 0 or less means infinite.
+        /// </summary>
+        public TimeSpan DeleteTargetAfterTimeout { get; set; } = TimeSpan.FromMinutes(20);
     }
 }

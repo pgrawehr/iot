@@ -179,7 +179,7 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                     if ((msgCount++ % 60) == 0)
                     {
                         // Call directly, so our test is deterministic
-                        _manager.AisAlarmThread(msg.DateTime);
+                        _manager.AisAlarmThreadOperation(msg.DateTime);
                     }
                 }
             };
@@ -302,14 +302,14 @@ namespace Iot.Device.Nmea0183.Tests.Ais
         {
             const string logToParse = "Nmea-2023-07-29-07-03.txt";
             using NmeaLogDataReader reader = new NmeaLogDataReader("Reader", TestDataHelper.GetResourceStream(logToParse));
-            int messagesParsed = 0;
+            _manager.TrackEstimationParameters.AisSafetyCheckInterval = TimeSpan.Zero;
+            _manager.TrackEstimationParameters.MaximumPositionAge = TimeSpan.FromDays(1); // Let's always do this
             bool wasValid = false;
             bool wasValid2 = false;
-            reader.OnNewSequence += (source, msg) =>
-            {
-                _manager.SendSentence(source, msg);
-                _manager.AisAlarmThread(msg.DateTime);
+            NmeaSentence? lastSentence = null;
 
+            void RunCheck(DateTimeOffset currentTime)
+            {
                 var listOfShips = _manager.GetTargets();
                 foreach (var t in listOfShips)
                 {
@@ -317,21 +317,36 @@ namespace Iot.Device.Nmea0183.Tests.Ais
                     {
                         Assert.False(t.RelativePosition.Distance > Length.FromNauticalMiles(10), $"Distance to {t.NameOrMssi()} was {t.RelativePosition.Distance}");
                         wasValid2 = true;
+                        Assert.True(_manager.GetOwnShipData(out var own, currentTime));
+                        var staticDist = own.DistanceTo(t);
+                        Assert.True((staticDist - t.RelativePosition.Distance).Abs() < Length.FromNauticalMiles(1));
                     }
 
-                    if (t.Name == "ORION")
+                    if (t.Name == "WILD CHINOOK")
                     {
                         wasValid = true;
                     }
                 }
+            }
 
-                messagesParsed++;
+            reader.OnNewSequence += (source, msg) =>
+            {
+                _manager.SendSentence(source, msg);
+                lastSentence = msg;
             };
+
+            reader.StartDecode();
+            reader.StopDecode();
+            Assert.NotNull(lastSentence);
+            DateTimeOffset currentTime = lastSentence!.DateTime;
+            _manager.AisAlarmThreadOperation(currentTime);
+            RunCheck(currentTime);
 
             Assert.True(wasValid);
             Assert.True(wasValid2);
-            reader.StartDecode();
-            reader.StopDecode();
+            currentTime = currentTime + TimeSpan.FromMinutes(3);
+            _manager.AisAlarmThreadOperation(currentTime); // Almost lost the vessels
+            RunCheck(currentTime);
 
         }
 

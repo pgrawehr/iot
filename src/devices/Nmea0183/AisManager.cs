@@ -15,6 +15,7 @@ using Iot.Device.Common;
 using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.AisSentences;
 using Iot.Device.Nmea0183.Sentences;
+using Microsoft.Extensions.Logging;
 using UnitsNet;
 using NavigationStatus = Iot.Device.Nmea0183.Ais.NavigationStatus;
 
@@ -88,6 +89,8 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public event Action? RelativePositionsUpdated;
 
+        private ILogger _logger;
+
         /// <summary>
         /// Creates an instance of an <see cref="AisManager"/>
         /// </summary>
@@ -129,6 +132,7 @@ namespace Iot.Device.Nmea0183
             PositionProvider? externalPositionProvider)
             : base(interfaceName)
         {
+            _logger = this.GetCurrentClassLogger();
             OwnMmsi = ownMmsi;
             OwnShipName = ownShipName;
             _throwOnUnknownMessage = throwOnUnknownMessage;
@@ -148,7 +152,6 @@ namespace Iot.Device.Nmea0183
             _activeWarnings = new ConcurrentDictionary<string, (string Message, DateTimeOffset TimeStamp)>();
             AutoSendWarnings = true;
             _lastCleanupCheck = null;
-            DeleteTargetAfterTimeout = TimeSpan.Zero;
             _aisAlarmsEnabled = false;
             TrackEstimationParameters = new TrackEstimationParameters();
         }
@@ -188,13 +191,6 @@ namespace Iot.Device.Nmea0183
         /// such as an AIS-Sart target)
         /// </summary>
         public bool AutoSendWarnings { get; set; }
-
-        /// <summary>
-        /// If a target has not been updated for this time, it is deleted from the list of targets.
-        /// Additionally, client software should consider targets as lost whose <see cref="AisTarget.LastSeen"/> value is older than a minute or so.
-        /// A value of 0 or less means infinite.
-        /// </summary>
-        public TimeSpan DeleteTargetAfterTimeout { get; set; }
 
         /// <summary>
         /// Set of parameters that control track estimation.
@@ -243,7 +239,8 @@ namespace Iot.Device.Nmea0183
             s.DimensionToStern = DimensionToStern;
             s.DimensionToPort = DimensionToPort;
             s.DimensionToStarboard = DimensionToStarboard;
-            if (!_positionProvider.TryGetCurrentPosition(out var position, null, true, out var track, out var sog, out var heading,
+            // TODO: Enable extrapolation, but maybe it's the reason for the current bug (distances are far to big)
+            if (!_positionProvider.TryGetCurrentPosition(out var position, null, false, out var track, out var sog, out var heading,
                     out var messageTime, currentTime) || (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
             {
                 s.Position = position ?? new GeographicPosition();
@@ -252,6 +249,7 @@ namespace Iot.Device.Nmea0183
                 s.TrueHeading = heading;
                 s.LastSeen = messageTime;
                 ownShip = s;
+                _logger.LogWarning("AISManager: No position for own ship");
                 return false;
             }
 
@@ -261,6 +259,7 @@ namespace Iot.Device.Nmea0183
             s.TrueHeading = heading;
             s.LastSeen = messageTime;
 
+            _logger.LogWarning($"AISManager: Position of own ship: {position}, speed: {sog}, course {track}");
             ownShip = s;
             return true;
         }
@@ -709,6 +708,7 @@ namespace Iot.Device.Nmea0183
         public void SendBroadcastMessage(uint sourceMmsi, string text)
         {
             SafetyRelatedBroadcastMessage msg = new SafetyRelatedBroadcastMessage();
+            _logger.LogWarning($"Sending broadcast message from {sourceMmsi}: {text}");
             msg.Mmsi = sourceMmsi;
             msg.Text = text;
             OnMessage?.Invoke(false, sourceMmsi, 0, text);
@@ -795,7 +795,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="currentTime">The time of the last packet</param>
         private void DoCleanup(DateTimeOffset currentTime)
         {
-            if (DeleteTargetAfterTimeout <= TimeSpan.Zero)
+            if (TrackEstimationParameters.DeleteTargetAfterTimeout <= TimeSpan.Zero)
             {
                 return;
             }
@@ -807,7 +807,7 @@ namespace Iot.Device.Nmea0183
                 {
                     foreach (var t in _targets.Values)
                     {
-                        if (t.Age(currentTime) > DeleteTargetAfterTimeout)
+                        if (t.Age(currentTime) > TrackEstimationParameters.DeleteTargetAfterTimeout)
                         {
                             _targets.TryRemove(t.Mmsi, out _);
                         }
@@ -884,76 +884,16 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// This operation may be very expensive, so we need to do it in its own thread
+        /// This thread calculates CPA and TCPA between vessels and generates corresponding warnings. 
         /// </summary>
         private void AisAlarmThread()
-        {
-            AisAlarmThread(DateTimeOffset.UtcNow);
-        }
-
-        /// <summary>
-        /// This operation may be very expensive, so we need to do it in its own thread
-        /// </summary>
-        /// <param name="time">The current time (used mainly for testing)</param>
-        internal void AisAlarmThread(DateTimeOffset time)
         {
             Stopwatch sw = new Stopwatch();
             // This uses a do-while for easier testability
             do
             {
-                Ship ownShip;
-                if (GetOwnShipData(out ownShip, time) == false)
-                {
-                    if (TrackEstimationParameters.WarnIfGnssMissing)
-                    {
-                        if (ownShip.Position.ContainsValidPosition())
-                        {
-                            // Data is valid, but old
-                            SendWarningMessage("GNSSOLD", ownShip.Mmsi, "GNSS fix lost. No current position");
-                        }
-                        else
-                        {
-                            SendWarningMessage("NOGNSS", ownShip.Mmsi, "No GNSS data");
-                        }
-                    }
-
-                    Thread.Sleep(TrackEstimationParameters.AisSafetyCheckInterval);
-                    goto nextloop;
-                }
-
                 sw.Restart();
-
-                // it's a ConcurrentDictionary, so iterating over it without a lock is fine
-                List<ShipRelativePosition> differences = ownShip.RelativePositionsTo(_targets.Values, time, TrackEstimationParameters);
-
-                foreach (var difference in differences)
-                {
-                    string name = difference.To.NameOrMssi();
-                    if (difference.SafetyState == AisSafetyState.Dangerous)
-                    {
-                        // Warn if the ship will be closer than the warning distance in less than the WarningTime
-                        SendWarningMessage("DANGEROUS VESSEL-" + difference.To.Mmsi, difference.To.Mmsi, $"{name} is dangerously close. CPA {difference.ClosestPointOfApproach}; TCPA {difference.TimeToClosestPointOfApproach(time):mm\\:ss}", time);
-                    }
-
-                    if (difference.SafetyState == AisSafetyState.Lost &&
-                        WarnAboutLostTarget(difference))
-                    {
-                        // The vessel was lost
-                        SendWarningMessage("VESSEL LOST-" + difference.To.Mmsi, difference.To.Mmsi, $"{name} lost. CPA {difference.ClosestPointOfApproach}; TCPA {difference.TimeToClosestPointOfApproach(time):mm\\:ss}", time);
-                    }
-                }
-
-                lock (_lock)
-                {
-                    // Separate loop, because this one requires a lock and is cheaper than the above (sending a message may be expensive and could potentially be recursive)
-                    foreach (var difference in differences)
-                    {
-                        // Good we keep the target ship in the type, otherwise this would require an O(n^2) iteration
-                        difference.To.RelativePosition = difference;
-                    }
-                }
-
-                nextloop:
+                AisAlarmThreadOperation(DateTimeOffset.UtcNow);
                 // Restart the loop every check interval if the current interval used less time than allocated.
                 // We always wait at least 20ms, so that we don't fully block the CPU (even thought that could be really a small amount)
                 if (TrackEstimationParameters.AisSafetyCheckInterval > TimeSpan.Zero)
@@ -966,10 +906,100 @@ namespace Iot.Device.Nmea0183
 
                     Thread.Sleep(remaining);
                 }
-
-                RelativePositionsUpdated?.Invoke();
             }
             while (_aisAlarmsEnabled);
+        }
+
+        /// <summary>
+        /// Calculate TCPA and CPA for all vessels in range.
+        /// </summary>
+        /// <param name="time">The current time (provide externally in case we're replaying a recorded log)</param>
+        internal void AisAlarmThreadOperation(DateTimeOffset time)
+        {
+            Ship ownShip;
+            if (GetOwnShipData(out ownShip, time) == false)
+            {
+                if (TrackEstimationParameters.WarnIfGnssMissing)
+                {
+                    if (ownShip.Position.ContainsValidPosition())
+                    {
+                        // Data is valid, but old
+                        SendWarningMessage("GNSSOLD", ownShip.Mmsi, "GNSS fix lost. No current position");
+                    }
+                    else
+                    {
+                        SendWarningMessage("NOGNSS", ownShip.Mmsi, "No GNSS data");
+                    }
+                }
+
+                Thread.Sleep(TrackEstimationParameters.AisSafetyCheckInterval);
+                goto nextloop;
+            }
+
+            // it's a ConcurrentDictionary, so iterating over it without a lock is fine
+            List<ShipRelativePosition> differences =
+                ownShip.RelativePositionsTo(_targets.Values, time, TrackEstimationParameters);
+
+            foreach (var difference in differences)
+            {
+                string name = difference.To.NameOrMssi();
+                Length? cpa = difference.ClosestPointOfApproach;
+                TimeSpan? tcpa = difference.TimeToClosestPointOfApproach(time);
+                if (cpa.HasValue && tcpa.HasValue)
+                {
+                    if (difference.SafetyState == AisSafetyState.Dangerous)
+                    {
+                        // Warn if the ship will be closer than the warning distance in less than the WarningTime
+                        SendWarningMessage("DANGEROUS VESSEL-" + difference.To.Mmsi, difference.To.Mmsi,
+                            $"PROXIMITY WARN: CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
+                            time);
+                    }
+
+                    if (difference.SafetyState == AisSafetyState.Lost &&
+                        WarnAboutLostTarget(difference))
+                    {
+                        // The vessel was lost
+                        SendWarningMessage("VESSEL LOST-" + difference.To.Mmsi, difference.To.Mmsi,
+                            $"LOST: CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
+                            time);
+                    }
+                }
+            }
+
+            lock (_lock)
+            {
+                // Separate loop, because this one requires a lock and is cheaper than the above (sending a message may be expensive and could potentially be recursive)
+                foreach (var difference in differences)
+                {
+                    // Good we keep the target ship in the type, otherwise this would require an O(n^2) iteration
+                    difference.To.RelativePosition = difference;
+                }
+            }
+
+            nextloop:
+            LogCurrentState(time);
+            RelativePositionsUpdated?.Invoke();
+        }
+
+        private void LogCurrentState(DateTimeOffset now)
+        {
+            List<AisTarget> targets;
+            lock (_lock)
+            {
+                targets = GetTargets().ToList();
+            }
+
+            foreach (var target in targets)
+            {
+                _logger.LogInformation($"{target.NameOrMssi()}: Last known position {target.Position} at {target.LastSeen:T}");
+                var rel = target.RelativePosition;
+                if (rel != null)
+                {
+                    var cpa = rel.ClosestPointOfApproach.GetValueOrDefault();
+                    var tcpa = rel.TimeToClosestPointOfApproach(now).GetValueOrDefault();
+                    _logger.LogInformation($"MMSI {target.Mmsi}. Distance {rel.Distance}, Bearing {rel.Bearing}, CPA: {cpa.NauticalMiles}nm, TCPA:{tcpa:g}");
+                }
+            }
         }
 
         private bool WarnAboutLostTarget(ShipRelativePosition difference)
