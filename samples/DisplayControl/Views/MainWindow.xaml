@@ -32,7 +32,7 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
     <StackPanel>
-        <Menu DockPanel.Dock="Top" MinHeight="30">
+        <Menu Name="MenuBar" DockPanel.Dock="Top" MinHeight="30">
             <MenuItem Header="_File" VerticalAlignment="Center">
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}"/>
             </MenuItem>
@@ -81,7 +81,16 @@
             </MenuItem>
         </Menu>
             <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
-                <TextBlock Name="StatusBar" Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" />
+                <TextBlock Name="StatusBar" Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" 
+                           Height ="{Binding HeaderHeight}"/>
+                <Button Name="ShowAll" Content="No Filter" Width="150" Command="{Binding FilterShowAll}">
+                </Button>
+                <Button Name="EngineFilter" Content="Engine" Width="100" Command="{Binding FilterForEngine}">
+                </Button>
+                <Button Name="AisFilter" Content="AIS" Width="100" Command="{Binding FilterForAis}">
+                </Button>
+                <Button Name="WeatherFilter" Content="Weather" Width="100" Command="{Binding FilterForWeather}">
+                </Button>
             </StackPanel>
         <Panel ClipToBounds="True" Height="{Binding ClientHeight}">
             <ScrollViewer VerticalScrollBarVisibility="Visible" DockPanel.Dock="Bottom" ClipToBounds="True">

@@ -37,22 +37,14 @@ namespace Iot.Device.Common
         public static readonly SensorSource Ais = new SensorSource("AIS");
 
         public static readonly SensorSource Air = new SensorSource("Air");
-        public static readonly SensorSource Engine = new SensorSource("Engine, generic");
-        public static readonly SensorSource EngineOil = new SensorSource("Engine, Oil");
-        public static readonly SensorSource EngineWater = new SensorSource("Engine, Water");
-        public static readonly SensorSource WindRelative = new SensorSource("Wind, relative angle"); // Ship relative
-        public static readonly SensorSource WindTrue = new SensorSource("Wind, true angle"); // Ship relative angle
-        public static readonly SensorSource WindAbsolute = new SensorSource("Wind, geographic angle"); // geographic angle
+        public static readonly SensorSource Engine = new SensorSource("Engine");
+        public static readonly SensorSource Wind = new SensorSource("Wind");
 
         /// <summary>
         /// Use i.e. for speed trough water or water temperature
         /// </summary>
-        public static readonly SensorSource WaterRelative = new SensorSource("Water, Relative");
+        public static readonly SensorSource Water = new SensorSource("Water");
 
-        /// <summary>
-        /// Use for water temperature (alternative) or for absolute water speed (estimated or from tidal prediction)
-        /// </summary>
-        public static readonly SensorSource WaterAbsolute = new SensorSource("Water, Absolute");
         public static readonly SensorSource MainPower = new SensorSource("Main Power Source");
         public static readonly SensorSource AuxiliaryPower = new SensorSource("Auxiliary power Source");
         public static readonly SensorSource Fuel = new SensorSource("Fuel");

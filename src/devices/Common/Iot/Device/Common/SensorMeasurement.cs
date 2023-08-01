@@ -94,27 +94,27 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement AirPressureRawInside = new SensorMeasurement("Inside Raw Pressure", Pressure.Zero, SensorSource.Air, -1);
         public static readonly SensorMeasurement AirHumidityInside = new SensorMeasurement("Inside Humidity", RelativeHumidity.Zero, SensorSource.Air, -1);
         public static readonly SensorMeasurement AirSpeed = new SensorMeasurement("Air Speed", Angle.Zero, SensorSource.Air, 1, TimeSpan.FromSeconds(5));
-        public static readonly SensorMeasurement WindSpeedApparent = new SensorMeasurement("Apparent Wind Speed", Speed.Zero, SensorSource.WindRelative, 1, TimeSpan.FromSeconds(5));
-        public static readonly SensorMeasurement WindDirectionApparent = new SensorMeasurement("Apparent Wind Direction", Angle.Zero, SensorSource.WindRelative, 1, TimeSpan.FromSeconds(5));
-        public static readonly SensorMeasurement WindSpeedTrue = new SensorMeasurement("True Wind Speed", Speed.Zero, SensorSource.WindRelative, 1, TimeSpan.FromSeconds(10));
+        public static readonly SensorMeasurement WindSpeedApparent = new SensorMeasurement("Apparent Wind Speed", Speed.Zero, SensorSource.Wind, 1, TimeSpan.FromSeconds(5));
+        public static readonly SensorMeasurement WindDirectionApparent = new SensorMeasurement("Apparent Wind Direction", Angle.Zero, SensorSource.Wind, 1, TimeSpan.FromSeconds(5));
+        public static readonly SensorMeasurement WindSpeedTrue = new SensorMeasurement("True Wind Speed", Speed.Zero, SensorSource.Wind, 1, TimeSpan.FromSeconds(10));
 
         /// <summary>
         /// True wind direction, ship-relative direction (i.e. 60° from port)
         /// </summary>
-        public static readonly SensorMeasurement WindDirectionTrue = new SensorMeasurement("True Wind Direction", Angle.Zero, SensorSource.WindRelative, 1, TimeSpan.FromSeconds(10));
+        public static readonly SensorMeasurement WindDirectionTrue = new SensorMeasurement("True Wind Direction", Angle.Zero, SensorSource.Wind, 1, TimeSpan.FromSeconds(10));
 
-        public static readonly SensorMeasurement WindSpeedAbsolute = new SensorMeasurement("Geographic Wind Speed", Speed.Zero, SensorSource.WindRelative, 1, TimeSpan.FromSeconds(10));
+        public static readonly SensorMeasurement WindSpeedAbsolute = new SensorMeasurement("Geographic Wind Speed", Speed.Zero, SensorSource.Wind, 1, TimeSpan.FromSeconds(10));
 
         /// <summary>
         /// True wind direction, fixed orientation (i.e. 0° = from north)
         /// </summary>
-        public static readonly SensorMeasurement WindDirectionAbsolute = new SensorMeasurement("Geographic Wind Direction", Angle.Zero, SensorSource.WindRelative, 1, TimeSpan.FromSeconds(10));
+        public static readonly SensorMeasurement WindDirectionAbsolute = new SensorMeasurement("Geographic Wind Direction", Angle.Zero, SensorSource.Wind, 1, TimeSpan.FromSeconds(10));
 
-        public static readonly SensorMeasurement WaterDepth = new SensorMeasurement("Water depth below surface", Length.Zero, SensorSource.WaterAbsolute, 1, TimeSpan.FromSeconds(5));
+        public static readonly SensorMeasurement WaterDepth = new SensorMeasurement("Water depth below surface", Length.Zero, SensorSource.Water, 1, TimeSpan.FromSeconds(5));
 
         public static readonly SensorMeasurement WaterTemperature =
-            new SensorMeasurement("Water temperature", Temperature.Zero, SensorSource.WaterAbsolute);
-        public static readonly SensorMeasurement SpeedTroughWater = new SensorMeasurement("Speed trough water", Speed.Zero, SensorSource.WaterRelative, 1, TimeSpan.FromSeconds(5));
+            new SensorMeasurement("Water temperature", Temperature.Zero, SensorSource.Water);
+        public static readonly SensorMeasurement SpeedTroughWater = new SensorMeasurement("Speed trough water", Speed.Zero, SensorSource.Water, 1, TimeSpan.FromSeconds(5));
 
         // Prefer an instance of GeographicPosition, but these make things more compatible to the unit system
         public static readonly SensorMeasurement Latitude = new SensorMeasurement("Latitude", Angle.Zero, SensorSource.Position, 0, TimeSpan.FromSeconds(5));

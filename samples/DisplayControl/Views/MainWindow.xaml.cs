@@ -44,11 +44,11 @@ namespace DisplayControl.Views
                 {
                     if (args.Property.Name == "ClientSize")
                     {
-                        m_viewModel.Size = ClientSize;
+                        OnSizeChanged();
                     }
                 };
 
-                m_viewModel.Size = ClientSize;
+                m_viewModel.SetSize(ClientSize, 100);
             }
         }
 
@@ -62,6 +62,14 @@ namespace DisplayControl.Views
             {
                 ViewModel = (MainWindowViewModel)value;
             }
+        }
+
+        private void OnSizeChanged()
+        {
+            var statusBar = this.FindControl<TextBlock>("StatusBar");
+            // ClientSize seems to be the whole window, and Bounds is not set up properly initially.
+            // So we just need to guess about the size of the title bar and the menu
+            m_viewModel.SetSize(ClientSize, (int)Math.Ceiling(statusBar.Height + 50));
         }
 
         private void InitializeComponent()

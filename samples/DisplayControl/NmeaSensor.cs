@@ -100,8 +100,8 @@ namespace DisplayControl
         {
             _manager = manager;
             _magneticVariation = null;
-            _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.WindTrue);
-            _maxWindGusts = new SensorMeasurement("Wind Gusts", Speed.Zero, SensorSource.WindTrue);
+            _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.Wind);
+            _maxWindGusts = new SensorMeasurement("Wind Gusts", Speed.Zero, SensorSource.Wind);
             _position = new CustomData<GeographicPosition>("Geographic Position", new GeographicPosition(), SensorSource.Position);
             _numSatellites = new CustomData<int>("Number of Sats in view", 0, SensorSource.Position) { CustomFormatOperation = x => x.ToString(CultureInfo.CurrentCulture) };
             _satStatus = new CustomData<string>("Satellites in View", string.Empty, SensorSource.Position);
