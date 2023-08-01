@@ -884,7 +884,7 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// This thread calculates CPA and TCPA between vessels and generates corresponding warnings. 
+        /// This thread calculates CPA and TCPA between vessels and generates corresponding warnings.
         /// </summary>
         private void AisAlarmThread()
         {

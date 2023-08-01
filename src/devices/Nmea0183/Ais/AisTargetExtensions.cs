@@ -111,8 +111,9 @@ namespace Iot.Device.Nmea0183.Ais
                         relativeDirection = (direction - self1.TrueHeading.Value).Normalize(false);
                     }
 
-                    // The other is not a ship - Assume static position
-                    if (distance < parameters.WarningDistance)
+                    // The other is not a ship - Assume static position (but make sure a lost target doesn't become a
+                    // dangerous target - we warn about lost targets separately)
+                    if (distance < parameters.WarningDistance && state != AisSafetyState.Lost)
                     {
                         state = AisSafetyState.Dangerous;
                     }
