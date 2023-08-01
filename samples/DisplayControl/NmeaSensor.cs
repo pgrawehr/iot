@@ -429,7 +429,7 @@ namespace DisplayControl
             fusionEngine.RegisterHistoryOperation(SensorMeasurement.WindSpeedTrue,
                 (input, manager) =>
                 {
-                    var list = manager.ObtainHistory(input, TimeSpan.FromSeconds(30), TimeSpan.Zero);
+                    var list = manager.ObtainHistory(input, TimeSpan.FromSeconds(60), TimeSpan.Zero);
                     if (list.Count == 0)
                     {
                         return null;
