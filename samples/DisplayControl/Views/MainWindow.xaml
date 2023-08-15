@@ -89,7 +89,9 @@
                 </Button>
                 <Button Name="AisFilter" Content="AIS" Width="100" Command="{Binding FilterForAis}">
                 </Button>
-                <Button Name="WeatherFilter" Content="Weather" Width="100" Command="{Binding FilterForWeather}">
+                <Button Name="WeatherFilter" Content="Weather" Width="120" Command="{Binding FilterForWeather}">
+                </Button>
+                <Button Name="WarningFilter" Content="Warn" Width="100" Command="{Binding FilterForWarn}">
                 </Button>
             </StackPanel>
         <Panel ClipToBounds="True" Height="{Binding ClientHeight}">

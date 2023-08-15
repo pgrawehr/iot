@@ -252,7 +252,16 @@ namespace Iot.Device.Imu
 
                     // We have processed this many bytes
                     _robinBuffer.ConsumeBytes(length + 8);
-                    DecodePacket((CommandIds)command, currentDataSection, length);
+                    try
+                    {
+                        DecodePacket((CommandIds)command, currentDataSection, length);
+                    }
+                    catch (ObjectDisposedException e)
+                    {
+                        // The output channel is gone when trying to configure the sensor after we get the first
+                        // replies.
+                        AddParserError($"Exception sending configuration message: {e.Message}");
+                    }
                 }
             }
         }

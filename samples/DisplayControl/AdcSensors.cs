@@ -227,9 +227,9 @@ namespace DisplayControl
                     */
                 }
             }
-            catch (IOException x)
+            catch (Exception x) when (x is IOException || x is TimeoutException)
             {
-                _logger.LogError(x, $"Remote ADC communication error: {x.Message}");
+                _logger.LogError(x, $"Remote ADC communication error: {x.Message}. Remote display disconnected?");
             }
         }
 

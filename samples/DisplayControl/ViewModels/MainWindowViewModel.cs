@@ -287,6 +287,14 @@ namespace DisplayControl.ViewModels
             UpdateVisibleModels();
         }
 
+        public void FilterForWarn()
+        {
+            // Note: This does not auto-update. So if one is now in error state, it won't go away
+            // and also the other way round
+            m_filterFunc = x => x.Source.Status != SensorMeasurementStatus.None;
+            UpdateVisibleModels();
+        }
+
         public void FilterShowAll()
         {
             m_filterFunc = x => true;
