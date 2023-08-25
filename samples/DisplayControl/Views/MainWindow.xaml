@@ -93,10 +93,18 @@
                 </Button>
                 <Button Name="WarningFilter" Content="Warn" Width="100" Command="{Binding FilterForWarn}">
                 </Button>
+                <Button Name="AisTargets" Content="AisTargets" Width="120" Command="{Binding ShowAisTargets}" IsVisible="{Binding AisTargetsVisible}"/>
+                <Button Name="Sensors" Content="Sensors" Width="120" Command="{Binding ShowSensors}" IsVisible="{Binding SensorsVisible}"/>
             </StackPanel>
-        <Panel ClipToBounds="True" Height="{Binding ClientHeight}">
+        <Panel ClipToBounds="True" Height="{Binding ClientHeight}" IsVisible="{Binding SensorsVisible}">
             <ScrollViewer VerticalScrollBarVisibility="Visible" DockPanel.Dock="Bottom" ClipToBounds="True">
                 <ItemsControl Items="{Binding SensorValues}">
+                </ItemsControl>
+            </ScrollViewer>
+        </Panel>
+        <Panel ClipToBounds="True" Height="{Binding ClientHeight}" IsVisible="{Binding AisTargetsVisible}">
+            <ScrollViewer VerticalScrollBarVisibility="Visible" DockPanel.Dock="Bottom" ClipToBounds="True">
+                <ItemsControl Items="{Binding AisTargets}">
                 </ItemsControl>
             </ScrollViewer>
         </Panel>

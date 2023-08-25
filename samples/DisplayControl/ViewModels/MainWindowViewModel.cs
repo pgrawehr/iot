@@ -19,6 +19,7 @@ namespace DisplayControl.ViewModels
         private bool m_cancel;
         private ObservableCollection<SensorValueViewModel> m_allViewModels;
         private ObservableCollection<SensorValueViewModel> m_sensorValueViewModels;
+        private ObservableCollection<AisTargetViewModel> m_aisTargetViewModels;
         private Size _size;
         private double _clientHeight;
         private double _headerHeight;
@@ -26,12 +27,14 @@ namespace DisplayControl.ViewModels
         private bool _deviationEnabled;
         private bool _useHeadingFromHandheld;
         private bool _forceTankSensorEnable;
+        private bool _aisTargetsVisible;
         private Func<SensorValueViewModel, bool> m_filterFunc;
 
         public MainWindowViewModel()
         {
             m_allViewModels = new ObservableCollection<SensorValueViewModel>();
             m_sensorValueViewModels = new ObservableCollection<SensorValueViewModel>();
+            m_aisTargetViewModels = new ObservableCollection<AisTargetViewModel>();
             m_filterFunc = (x) => true;
             Status = "System initialized";
             StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
@@ -109,6 +112,14 @@ namespace DisplayControl.ViewModels
             get
             {
                 return m_sensorValueViewModels;
+            }
+        }
+
+        public ObservableCollection<AisTargetViewModel> AisTargets
+        {
+            get
+            {
+                return m_aisTargetViewModels;
             }
         }
 
@@ -194,6 +205,31 @@ namespace DisplayControl.ViewModels
             set
             {
                 this.RaiseAndSetIfChanged(ref _forceTankSensorEnable, value);
+            }
+        }
+
+        public bool AisTargetsVisible
+        {
+            get
+            {
+                return _aisTargetsVisible;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _aisTargetsVisible, value);
+                this.RaisePropertyChanged(nameof(SensorsVisible));
+            }
+        }
+
+        public bool SensorsVisible
+        {
+            get
+            {
+                return !_aisTargetsVisible;
+            }
+            set
+            {
+                AisTargetsVisible = !value;
             }
         }
 
@@ -298,6 +334,18 @@ namespace DisplayControl.ViewModels
         public void FilterShowAll()
         {
             m_filterFunc = x => true;
+            UpdateVisibleModels();
+        }
+
+        public void ShowAisTargets()
+        {
+            AisTargetsVisible = true;
+            this.RaisePropertyChanged(nameof(AisTargets));
+        }
+
+        public void ShowSensors()
+        {
+            AisTargetsVisible = false;
             UpdateVisibleModels();
         }
 
