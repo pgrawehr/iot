@@ -20,7 +20,11 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 <ItemGroup>
+  <AvaloniaResource Remove="Views\AisTargetViewControl.xaml" />
   <AvaloniaResource Remove="Views\SensorValueControl.xaml" />
+</ItemGroup>
+<ItemGroup>
+  <None Remove="Views\AisTargetViewControl.xaml" />
 </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="0.10.6" />
@@ -29,6 +33,9 @@
     <PackageReference Include="System.IO.Ports" Version="5.0.1" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Views\AisTargetViewControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </EmbeddedResource>
     <EmbeddedResource Include="Views\SensorValueControl.xaml">
       <Generator>MSBuild:Compile</Generator>
     </EmbeddedResource>
@@ -43,6 +50,11 @@
     <ProjectReference Include="..\..\src\devices\Nmea0183\Nmea0183.csproj" />
     <ProjectReference Include="..\..\src\devices\CharacterLcd\CharacterLcd.csproj" />
     <ProjectReference Include="..\..\src\devices\Mcp23xxx\Mcp23xxx.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Views\AisTargetViewControl.xaml.cs">
+      <DependentUpon>AisTargetViewControl.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Update="Calibration_Cirrus.xml">
