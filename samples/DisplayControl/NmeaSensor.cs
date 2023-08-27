@@ -75,6 +75,7 @@ namespace DisplayControl
         private SensorMeasurement _smoothedTrueWindSpeed;
         private SensorMeasurement _maxWindGusts;
         private SensorMeasurement _hdgFromHandheld;
+        private CustomData<int> _aisTrigger; // A dummy measurement that updates whenever any AIS target changes
         private CustomData<GeographicPosition> _position;
         private CustomData<int> _numSatellites;
         private CustomData<string> _satStatus;
@@ -95,11 +96,13 @@ namespace DisplayControl
 
         private AisManager _aisManager;
         private PositionProvider _positionProvider;
+        private int _aisUpdates;
 
         public NmeaSensor(MeasurementManager manager)
         {
             _manager = manager;
             _magneticVariation = null;
+            _aisUpdates = 0;
             _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.Wind);
             _maxWindGusts = new SensorMeasurement("Wind Gusts", Speed.Zero, SensorSource.Wind);
             _position = new CustomData<GeographicPosition>("Geographic Position", new GeographicPosition(), SensorSource.Position);
@@ -120,6 +123,7 @@ namespace DisplayControl
             _forwardRearAngle = new SensorMeasurement("GNSS derived heading", Angle.Zero, SensorSource.Position, 4);
 
             _aisDangerousTargets = new CustomData<string>("AIS dangerous targets", "None", SensorSource.Ais);
+            _aisTrigger = new CustomData<int>("Ais update counter", 0, SensorSource.Ais, 1);
 
             _logger = this.GetCurrentClassLogger();
 
@@ -127,6 +131,10 @@ namespace DisplayControl
             // Don't use dashes in the following line, as it makes evaluating in excel more difficult (the dash is used as main separator in the logs)
             _valueLogger.LogDebug($"Compass | Handheld | Rear to Forward | Rear to Handheld | Handheld to Forward | COG | Dist RF | Dist RH | Dist HF");
         }
+
+        public AisManager AisManger => _aisManager;
+
+        public SensorMeasurement AisDataUpdateTrigger => _aisTrigger;
 
         public IList<FilterRule> ConstructRules()
         {
@@ -316,7 +324,7 @@ namespace DisplayControl
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint,
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus, _rearPosition, _forwardPosition,
                 _forwardRearSeparation, _forwardRearAngle, _aisNumberOfTargets, _aisNearestShip, _aisDistanceToNearestShip,
-                _aisDangerousTargets,
+                _aisDangerousTargets, _aisTrigger,
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
@@ -714,6 +722,8 @@ namespace DisplayControl
                 _aisNearestShip.UpdateValue(string.Empty, SensorMeasurementStatus.NoData);
                 _aisDangerousTargets.UpdateValue("No ships", SensorMeasurementStatus.NoData);
             }
+
+            _aisTrigger.UpdateValue(++_aisUpdates, SensorMeasurementStatus.None);
         }
 
         private void OnParserError(NmeaSinkAndSource source, string error, NmeaError errorCode)

@@ -3,7 +3,7 @@
         xmlns:vm="clr-namespace:DisplayControl.ViewModels;assembly=DisplayControl"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="850" d:DesignHeight="500"
+        mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="500"
         x:Class="DisplayControl.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
         Title="Main Data Display">
@@ -93,8 +93,8 @@
                 </Button>
                 <Button Name="WarningFilter" Content="Warn" Width="100" Command="{Binding FilterForWarn}">
                 </Button>
-                <Button Name="AisTargets" Content="AisTargets" Width="120" Command="{Binding ShowAisTargets}" IsVisible="{Binding AisTargetsVisible}"/>
-                <Button Name="Sensors" Content="Sensors" Width="120" Command="{Binding ShowSensors}" IsVisible="{Binding SensorsVisible}"/>
+                <Button Name="AisTargets" Content="AisTargets" Width="120" Command="{Binding ShowAisTargets}" IsVisible="{Binding SensorsVisible}"/>
+                <Button Name="Sensors" Content="Sensors" Width="120" Command="{Binding ShowSensors}" IsVisible="{Binding AisTargetsVisible}"/>
             </StackPanel>
         <Panel ClipToBounds="True" Height="{Binding ClientHeight}" IsVisible="{Binding SensorsVisible}">
             <ScrollViewer VerticalScrollBarVisibility="Visible" DockPanel.Dock="Bottom" ClipToBounds="True">

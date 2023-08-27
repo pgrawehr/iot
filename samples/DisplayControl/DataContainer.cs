@@ -17,6 +17,8 @@ using Avalonia.Threading;
 using Iot.Device.CharacterLcd;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Ais;
 using UnitsNet;
 
 namespace DisplayControl
@@ -84,9 +86,19 @@ namespace DisplayControl
             _displayUpdateTaskLock = new object();
         }
 
+        public event Action<int> AisTargetsUpdated;
+
         public GpioController Controller { get; }
 
         public List<SensorMeasurement> SensorValueSources => _sensorManager.Measurements();
+
+        public AisManager AisManager
+        {
+            get
+            {
+                return _nmeaSensor.AisManger;
+            }
+        }
 
         public SensorMeasurement ActiveValueSourceUpper
         {
@@ -254,6 +266,11 @@ namespace DisplayControl
                     m.CustomFormatOperation = x => x.Value.ToString("F2", CultureInfo.CurrentCulture); // No unit
                 }
             }
+
+            _nmeaSensor.AisDataUpdateTrigger.ValueChanged += (measurement, b) =>
+            {
+                AisTargetsUpdated?.Invoke(0); // Value doesn't really matter
+            };
 
             WriteLineToConsoleAndDisplay($"Found {_sensorManager.Measurements().Count} sensors.");
         }

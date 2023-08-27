@@ -37,11 +37,19 @@ namespace DisplayControl.ViewModels
             }
         }
 
-        public string Mmsi
+        public string FormattedMmsi
         {
             get
             {
                 return _target.FormatMmsi();
+            }
+        }
+
+        public uint Mmsi
+        {
+            get
+            {
+                return _target.Mmsi;
             }
         }
 
@@ -83,6 +91,20 @@ namespace DisplayControl.ViewModels
             this.RaisePropertyChanged(nameof(StatusColor));
             this.RaisePropertyChanged(nameof(Mmsi));
             this.RaisePropertyChanged(nameof(NameOrMmsi));
+        }
+
+        public void UpdateFrom(AisTarget copyFrom)
+        {
+            _target = copyFrom;
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                UpdateValuesFromSource();
+                return;
+            }
+            Dispatcher.UIThread.Post(() =>
+            {
+                UpdateValuesFromSource();
+            });
         }
     }
 }

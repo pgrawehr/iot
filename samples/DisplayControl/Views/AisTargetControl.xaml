@@ -4,7 +4,7 @@
              xmlns:vm="clr-namespace:DisplayControl.ViewModels;assembly=DisplayControl"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="850" d:DesignHeight="450"
-             x:Class="DisplayControl.Views.AisTargetViewControl">
+             x:Class="DisplayControl.Views.AisTargetControl">
     <Design.DataContext>
         <vm:AisTargetViewModel/>
     </Design.DataContext>
@@ -12,7 +12,7 @@
         <Border Background="{Binding StatusColor}">
             <StackPanel Orientation="Horizontal" Spacing="5">
                 <TextBlock VerticalAlignment="Center" Text="{Binding NameOrMmsi}" Width="150"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding Mmsi}" Width="90"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding FormattedMmsi}" Width="90"/>
             </StackPanel>
         </Border>
      </StackPanel>

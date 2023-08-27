@@ -20,11 +20,11 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 <ItemGroup>
-  <AvaloniaResource Remove="Views\AisTargetViewControl.xaml" />
+  <AvaloniaResource Remove="Views\AisTargetControl.xaml" />
   <AvaloniaResource Remove="Views\SensorValueControl.xaml" />
 </ItemGroup>
 <ItemGroup>
-  <None Remove="Views\AisTargetViewControl.xaml" />
+  <None Remove="Views\AisTargetControl.xaml" />
 </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="0.10.6" />
@@ -33,7 +33,7 @@
     <PackageReference Include="System.IO.Ports" Version="5.0.1" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Views\AisTargetViewControl.xaml">
+    <EmbeddedResource Include="Views\AisTargetControl.xaml">
       <Generator>MSBuild:Compile</Generator>
     </EmbeddedResource>
     <EmbeddedResource Include="Views\SensorValueControl.xaml">
@@ -52,8 +52,8 @@
     <ProjectReference Include="..\..\src\devices\Mcp23xxx\Mcp23xxx.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Update="Views\AisTargetViewControl.xaml.cs">
-      <DependentUpon>AisTargetViewControl.xaml</DependentUpon>
+    <Compile Update="Views\AisTargetControl.xaml.cs">
+      <DependentUpon>AisTargetControl.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>

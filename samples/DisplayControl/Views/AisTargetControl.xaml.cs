@@ -4,9 +4,9 @@ using Avalonia.Markup.Xaml;
 
 namespace DisplayControl.Views
 {
-    public class SensorValueControl : UserControl
+    public class AisTargetControl : UserControl
     {
-        public SensorValueControl()
+        public AisTargetControl()
         {
             this.InitializeComponent();
         }

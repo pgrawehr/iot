@@ -7,6 +7,7 @@ using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using DynamicData;
 using Iot.Device.Common;
 using ReactiveUI;
 
@@ -36,7 +37,7 @@ namespace DisplayControl.ViewModels
             m_sensorValueViewModels = new ObservableCollection<SensorValueViewModel>();
             m_aisTargetViewModels = new ObservableCollection<AisTargetViewModel>();
             m_filterFunc = (x) => true;
-            Status = "System initialized";
+            Status = "Ok";
             StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
             Cancel = false;
             DisplayLocked = false;
@@ -61,6 +62,7 @@ namespace DisplayControl.ViewModels
 
             UseHeadingFromHandheld = DataContainer.IsHandheldHeadingEnabled();
             UpdateVisibleModels();
+            DataContainer.AisTargetsUpdated += UpdateTargets;
         }
 
         public event Action DoClose;
@@ -347,6 +349,32 @@ namespace DisplayControl.ViewModels
         {
             AisTargetsVisible = false;
             UpdateVisibleModels();
+        }
+
+        public void UpdateTargets(int dummy)
+        {
+            var newData = DataContainer.AisManager.GetTargets().ToList();
+            for (int index = 0; index < m_aisTargetViewModels.Count; index++)
+            {
+                AisTargetViewModel x = m_aisTargetViewModels[index];
+                var copyFrom = newData.FirstOrDefault(y => y.Mmsi == x.Mmsi);
+                if (copyFrom != null)
+                {
+                    x.UpdateFrom(copyFrom);
+                    newData.Remove(copyFrom);
+                }
+                else
+                {
+                    m_aisTargetViewModels.Remove(x);
+                    index--;
+                }
+            }
+
+            foreach (var newelem in newData) // What is still left is new
+            {
+                var newViewModel = new AisTargetViewModel(newelem);
+                m_aisTargetViewModels.Add(newViewModel);
+            }
         }
 
         protected override void Dispose(bool disposing)
