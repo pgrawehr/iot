@@ -11,8 +11,12 @@
     <StackPanel Orientation="Horizontal" Margin="5">
         <Border Background="{Binding StatusColor}">
             <StackPanel Orientation="Horizontal" Spacing="5">
-                <TextBlock VerticalAlignment="Center" Text="{Binding NameOrMmsi}" Width="150"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding FormattedMmsi}" Width="90"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding NameOrMmsi}" 
+                           Width="200" FontSize="30" Margin="5"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding FormattedMmsi}" 
+                           Width="90" FontSize="30" Margin="5"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding Data}"
+                           Width="500" FontSize="30" Margin="5" TextWrapping="WrapWithOverflow"/>
             </StackPanel>
         </Border>
      </StackPanel>

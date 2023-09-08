@@ -53,6 +53,14 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public string Data
+        {
+            get
+            {
+                return GetInformationAsString();
+            }
+        }
+
         public IBrush StatusColor
         {
             get
@@ -91,6 +99,28 @@ namespace DisplayControl.ViewModels
             this.RaisePropertyChanged(nameof(StatusColor));
             this.RaisePropertyChanged(nameof(Mmsi));
             this.RaisePropertyChanged(nameof(NameOrMmsi));
+            this.RaisePropertyChanged(nameof(Data));
+        }
+
+        public string GetInformationAsString()
+        {
+            StringBuilder sb = new StringBuilder();
+            var now = DateTimeOffset.Now;
+            sb.Append($"Age: {_target.Age(now).TotalSeconds}s ");
+            var relPos = _target.RelativePosition;
+            if (relPos != null && _target.Position.ContainsValidPosition())
+            {
+                sb.Append($"Dist: {relPos.Distance} ");
+                sb.Append($"CPA: {relPos.ClosestPointOfApproach} ");
+                sb.Append($"TCPA: {relPos.TimeToClosestPointOfApproach(now)}");
+                sb.Append($"Status: {relPos.SafetyState}");
+            }
+            else
+            {
+                sb.Append("No relative data or no valid target position");
+            }
+
+            return sb.ToString();
         }
 
         public void UpdateFrom(AisTarget copyFrom)
