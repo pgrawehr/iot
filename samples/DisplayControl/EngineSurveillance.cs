@@ -50,7 +50,7 @@ namespace DisplayControl
         private long _lastTickForUpdate;
         private PersistenceFile _enginePersistenceFile;
         private I2cDevice _device;
-        private Mcp23017Ex _mcp23017;
+        private Mcp23017 _mcp23017;
         private GpioController _controllerUsingMcp;
         private double _rpm;
         private bool _inSelfTest;
@@ -122,7 +122,7 @@ namespace DisplayControl
             MainController = gpioController;
             _device = I2cDevice.Create(new I2cConnectionSettings(1, 0x21));
             // Interrupt pin B is connected to GPIO pin 22
-            _mcp23017 = new Mcp23017Ex(_device, -1, -1, InterruptPin, gpioController, false);
+            _mcp23017 = new Mcp23017(_device, -1, -1, InterruptPin, gpioController, false);
             _controllerUsingMcp = new GpioController(PinNumberingScheme.Logical, _mcp23017);
 
             Manager.AddRange(new []

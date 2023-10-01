@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Device.Gpio;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -18,6 +20,7 @@ namespace Iot.Device.Mcp23xxx
         private readonly int _interruptA;
         private readonly int _interruptB;
         private readonly Dictionary<int, PinValue> _pinValues = new Dictionary<int, PinValue>();
+        private readonly ConcurrentDictionary<int, PinChangeEventHandler> _eventHandlers = new ConcurrentDictionary<int, PinChangeEventHandler>();
         private BankStyle _bankStyle;
         private GpioController? _controller;
         private bool _shouldDispose;
@@ -177,7 +180,7 @@ namespace Iot.Device.Mcp23xxx
         /// Read a byte from the given register.
         /// </summary>
         /// <remarks>
-        /// Writes to the A port registers on 16 bit devices.
+        /// Reads from the A port registers on 16 bit devices.
         /// </remarks>
         public byte ReadByte(Register register) => InternalReadByte(register, Port.PortA);
 
@@ -627,6 +630,17 @@ namespace Iot.Device.Mcp23xxx
             InternalWriteByte(Register.IOCON, newValue, Port.PortA);
         }
 
+        private static Port GetPortForPinNumber(int pinNumber)
+        {
+            Port port = Port.PortA;
+            if (pinNumber >= 8)
+            {
+                port = Port.PortB;
+            }
+
+            return port;
+        }
+
         /// <summary>
         /// Disables triggering interrupts on a certain pin
         /// </summary>
@@ -649,20 +663,175 @@ namespace Iot.Device.Mcp23xxx
             }
         }
 
-        /// <inheritdoc/>
+        private void InterruptHandler(object sender, PinValueChangedEventArgs e)
+        {
+            Port port = e.PinNumber == _interruptA ? Port.PortA : Port.PortB;
+            int interruptPending = InternalReadByte(Register.INTF, port);
+            int newValues = InternalReadByte(Register.GPIO, port);
+            int offset = 0;
+            if (port == Port.PortB)
+            {
+                offset = 8;
+            }
+
+            int mask = 1;
+            int pin = 0;
+
+            while (mask < 0x10)
+            {
+                if ((interruptPending & mask) != 0)
+                {
+                    CallHandlerOnPin(pin + offset, newValues & mask);
+                }
+
+                mask = mask << 1;
+                pin++;
+            }
+        }
+
+        /// <summary>
+        /// Calls the event handler for the given pin, if any.
+        /// </summary>
+        /// <param name="pin">Pin to call the event handler on (if any exists)</param>
+        /// <param name="valueFlag">Non-zero if the value is currently high (therefore assuming the pin value was rising), otherwise zero</param>
+        private void CallHandlerOnPin(int pin, int valueFlag)
+        {
+            if (_eventHandlers.TryGetValue(pin, out var handler))
+            {
+                handler.Invoke(this, new PinValueChangedEventArgs(valueFlag != 0 ? PinEventTypes.Rising : PinEventTypes.Falling, pin));
+            }
+        }
+
+        /// <summary>
+        /// Calls an event handler if the given pin changes.
+        /// </summary>
+        /// <param name="pinNumber">Pin number of the MCP23xxx</param>
+        /// <param name="eventTypes">Whether the handler should trigger on rising, falling or both edges</param>
+        /// <param name="callback">The method to call when an interrupt is triggered</param>
+        /// <exception cref="InvalidOperationException">There's no GPIO controller for the master interrupt configured, or no interrupt lines are configured for the
+        /// required port.</exception>
+        /// <remarks>Only one event handler can be registered per pin. Calling this again with a different handler for the same pin replaces the handler</remarks>
         protected override void AddCallbackForPinValueChangedEvent(int pinNumber, PinEventTypes eventTypes,
-            PinChangeEventHandler callback) => throw new NotImplementedException();
+            PinChangeEventHandler callback)
+        {
+            if (_controller == null)
+            {
+                throw new InvalidOperationException("No GPIO controller available. Specify a GPIO controller and the relevant interrupt line numbers in the constructor");
+            }
+
+            EnableInterruptOnChange(pinNumber, eventTypes);
+            Port port = GetPortForPinNumber(pinNumber);
+            if (port == Port.PortA)
+            {
+                if (_interruptA < 0)
+                {
+                    throw new InvalidOperationException("No GPIO pin defined for interrupt line A. Please specify an interrupt line in the constructor.");
+                }
+
+                if (!_eventHandlers.Any(x => x.Key <= 7))
+                {
+                    _controller.RegisterCallbackForPinValueChangedEvent(_interruptA, PinEventTypes.Falling, InterruptHandler);
+                }
+
+                _eventHandlers[pinNumber] = callback;
+                InternalReadByte(Register.GPIO, Port.PortA); // Clear the interrupt flags
+            }
+            else
+            {
+                if (_interruptB < 0)
+                {
+                    throw new InvalidOperationException("No GPIO pin defined for interrupt line B. Please specify an interrupt line in the constructor.");
+                }
+
+                if (!_eventHandlers.Any(x => x.Key >= 8))
+                {
+                    _controller.RegisterCallbackForPinValueChangedEvent(_interruptB, PinEventTypes.Falling, InterruptHandler);
+                }
+
+                _eventHandlers[pinNumber] = callback;
+                InternalReadByte(Register.GPIO, Port.PortB); // Clear the interrupt flags
+            }
+        }
 
         /// <inheritdoc/>
-        protected override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback) =>
-            throw new NotImplementedException();
+        protected override void RemoveCallbackForPinValueChangedEvent(int pinNumber, PinChangeEventHandler callback)
+        {
+            if (_controller == null)
+            {
+                // If we had any callbacks registered, this would have thrown up earlier.
+                throw new InvalidOperationException("No valid GPIO controller defined. And no callbacks registered either.");
+            }
+
+            if (_eventHandlers.TryRemove(pinNumber, out _))
+            {
+                Port port = GetPortForPinNumber(pinNumber);
+                if (port == Port.PortA)
+                {
+                    if (_eventHandlers.Any(x => x.Key <= 7))
+                    {
+                        _controller.UnregisterCallbackForPinValueChangedEvent(_interruptA, InterruptHandler);
+                    }
+                }
+                else
+                {
+                    if (_eventHandlers.Any(x => x.Key >= 8))
+                    {
+                        _controller.UnregisterCallbackForPinValueChangedEvent(_interruptB, InterruptHandler);
+                    }
+                }
+            }
+        }
 
         /// <inheritdoc/>
         protected override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber) => pinNumber;
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Waits for an event to occur on the given pin.
+        /// </summary>
+        /// <param name="pinNumber">The pin on which to wait</param>
+        /// <param name="eventTypes">The event to wait for (rising, falling or either)</param>
+        /// <param name="cancellationToken">A timeout token</param>
+        /// <returns>The wait result</returns>
+        /// <remarks>This method should only be used on pins that are not otherwise used in event handling, as it clears any
+        /// existing event handlers for the same pin.</remarks>
         protected override WaitForEventResult WaitForEvent(int pinNumber, PinEventTypes eventTypes,
-            CancellationToken cancellationToken) => throw new NotImplementedException();
+            CancellationToken cancellationToken)
+        {
+            ManualResetEventSlim slim = new ManualResetEventSlim();
+            slim.Reset();
+            PinEventTypes eventTypes1 = PinEventTypes.None;
+            void InternalHandler(object sender, PinValueChangedEventArgs pinValueChangedEventArgs)
+            {
+                if (pinValueChangedEventArgs.PinNumber != pinNumber)
+                {
+                    return;
+                }
+
+                if ((pinValueChangedEventArgs.ChangeType & eventTypes) != 0)
+                {
+                    slim.Set();
+                }
+
+                eventTypes1 = pinValueChangedEventArgs.ChangeType;
+            }
+
+            AddCallbackForPinValueChangedEvent(pinNumber, eventTypes, InternalHandler);
+            slim.Wait(cancellationToken);
+            RemoveCallbackForPinValueChangedEvent(pinNumber, InternalHandler);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return new WaitForEventResult()
+                {
+                    EventTypes = PinEventTypes.None, TimedOut = true
+                };
+            }
+
+            return new WaitForEventResult()
+            {
+                EventTypes = eventTypes1, TimedOut = false
+            };
+        }
 
         /// <inheritdoc/>
         protected override bool IsPinModeSupported(int pinNumber, PinMode mode) =>

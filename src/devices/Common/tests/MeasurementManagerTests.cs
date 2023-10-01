@@ -28,11 +28,11 @@ namespace Iot.Device.Common.Tests
         [Fact]
         public void InsertAndRetrieveMeasurements()
         {
-            SensorMeasurement handle = new SensorMeasurement("Wind", Speed.FromMetersPerSecond(10.0), SensorSource.WindRelative);
+            SensorMeasurement handle = new SensorMeasurement("Wind", Speed.FromMetersPerSecond(10.0), SensorSource.Wind);
             Assert.Empty(_manager.Measurements());
             _manager.AddMeasurement(handle);
             Assert.NotEmpty(_manager.Measurements());
-            var existing = _manager.Measurements(x => x.SensorSource == SensorSource.WindRelative).ToList();
+            var existing = _manager.Measurements(x => x.SensorSource == SensorSource.Wind).ToList();
             Assert.NotEmpty(existing);
             Assert.Equal(handle, existing.First());
         }
@@ -51,16 +51,16 @@ namespace Iot.Device.Common.Tests
         [Fact]
         public void WindHistory()
         {
-            SensorMeasurement handle = new SensorMeasurement("RelativeWind", Speed.FromMetersPerSecond(10.0), SensorSource.WindRelative);
+            SensorMeasurement handle = new SensorMeasurement("RelativeWind", Speed.FromMetersPerSecond(10.0), SensorSource.Wind);
             _manager.AddMeasurement(handle, TimeSpan.FromMinutes(1), TimeSpan.FromDays(1));
             Assert.NotEmpty(_manager.Measurements()); // Returns the measurements, not necessarily with meaningful data!
 
-            var existing = _manager.Measurements(x => x.SensorSource == SensorSource.WindRelative).ToList();
+            var existing = _manager.Measurements(x => x.SensorSource == SensorSource.Wind).ToList();
             Assert.Single(existing);
             Assert.Null(existing[0].Value);
             handle.UpdateValue(Speed.FromMetersPerSecond(15.0));
             handle.UpdateValue(Speed.FromMetersPerSecond(11));
-            existing = _manager.Measurements(x => x.SensorSource == SensorSource.WindRelative).ToList();
+            existing = _manager.Measurements(x => x.SensorSource == SensorSource.Wind).ToList();
             Assert.Single(existing);
             Assert.NotNull(existing[0].Value);
             var history = _manager.ObtainHistory(handle, TimeSpan.FromDays(1), TimeSpan.FromHours(1));
@@ -71,7 +71,7 @@ namespace Iot.Device.Common.Tests
         [Fact]
         public void ReconfigureHistory()
         {
-            SensorMeasurement handle = new SensorMeasurement("SpeedTroughWater", Speed.FromMetersPerSecond(10.0), SensorSource.WaterRelative);
+            SensorMeasurement handle = new SensorMeasurement("SpeedTroughWater", Speed.FromMetersPerSecond(10.0), SensorSource.Water);
             _manager.AddMeasurement(handle, TimeSpan.FromMinutes(1), TimeSpan.FromDays(1));
             handle.UpdateValue(Speed.FromMetersPerSecond(20));
             handle.UpdateValue(Speed.FromMetersPerSecond(30));
@@ -83,7 +83,7 @@ namespace Iot.Device.Common.Tests
         [Fact]
         public void DeleteHistory()
         {
-            SensorMeasurement handle = new SensorMeasurement("WindSpeed", Speed.FromMetersPerSecond(10.0), SensorSource.WindRelative);
+            SensorMeasurement handle = new SensorMeasurement("WindSpeed", Speed.FromMetersPerSecond(10.0), SensorSource.Wind);
             _manager.AddMeasurement(handle, TimeSpan.FromMinutes(1), TimeSpan.FromDays(1));
             handle.UpdateValue(Speed.FromMetersPerSecond(1));
             Assert.NotEmpty(_manager.ObtainHistory(handle, TimeSpan.FromDays(1), TimeSpan.Zero));
