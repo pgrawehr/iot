@@ -8,6 +8,8 @@ using Avalonia.Threading;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Ais;
 using ReactiveUI;
+using UnitsNet;
+using UnitsNet.Units;
 
 namespace DisplayControl.ViewModels
 {
@@ -106,13 +108,13 @@ namespace DisplayControl.ViewModels
         {
             StringBuilder sb = new StringBuilder();
             var now = DateTimeOffset.Now;
-            sb.Append($"Age: {_target.Age(now).TotalSeconds}s ");
+            sb.Append($"Age: {_target.Age(now).TotalSeconds:F0}s ");
             var relPos = _target.RelativePosition;
             if (relPos != null && _target.Position.ContainsValidPosition())
             {
-                sb.Append($"Dist: {relPos.Distance} ");
-                sb.Append($"CPA: {relPos.ClosestPointOfApproach} ");
-                sb.Append($"TCPA: {relPos.TimeToClosestPointOfApproach(now)}");
+                sb.Append($"Dist: {FormatLength(relPos.Distance)} ");
+                sb.Append($"CPA: {FormatLength(relPos.ClosestPointOfApproach)} ");
+                sb.Append($"TCPA: {relPos.TimeToClosestPointOfApproach(now)} ");
                 sb.Append($"Status: {relPos.SafetyState}");
             }
             else
@@ -121,6 +123,40 @@ namespace DisplayControl.ViewModels
             }
 
             return sb.ToString();
+        }
+
+        private string FormatLength(Length? length)
+        {
+            if (length.HasValue)
+            {
+                return FormatLength(length.Value);
+            }
+
+            return "N/A";
+        }
+
+        private string FormatLength(Length length)
+        {
+            if (length < Length.FromMeters(500))
+            {
+                length = length.ToUnit(LengthUnit.Meter);
+                return length.Value.ToString("F1", CultureInfo.CurrentCulture) + "m";
+            }
+            length = length.ToUnit(LengthUnit.NauticalMile);
+            double value = length.Value;
+            // This shows the "magic number effect", meaning that at 999.9 nm, we get 5 digits instead of 4.
+            if (value >= 1000)
+            {
+                return value.ToString("F0", CultureInfo.CurrentCulture) + "nm";
+            }
+            else if (value > 100)
+            {
+                return value.ToString("F1", CultureInfo.CurrentCulture) + "nm";
+            }
+            else
+            {
+                return value.ToString("F2", CultureInfo.CurrentCulture) + "nm";
+            }
         }
 
         public void UpdateFrom(AisTarget copyFrom)
