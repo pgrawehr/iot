@@ -383,6 +383,7 @@ namespace DisplayControl
 
             _aisManager.EnableAisAlarms(true, tse);
             _aisManager.RelativePositionsUpdated += OnAisPositionsUpdated;
+            _aisManager.PreferredPositionSource = HandheldSourceName;
             _aisManager.StartDecode();
 
             _router.AddEndPoint(_parserShipInterface);

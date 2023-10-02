@@ -18,7 +18,7 @@
                                Width="200" FontSize="30" Margin="5"/>
                 </StackPanel>
                 <TextBlock Text="{Binding Data}"
-                           FontSize="30" Margin="5" TextWrapping="WrapWithOverflow"/>
+                           Width="700" FontSize="30" Margin="5" TextWrapping="WrapWithOverflow"/>
             </StackPanel>
         </Border>
      </StackPanel>

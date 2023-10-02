@@ -193,6 +193,12 @@ namespace Iot.Device.Nmea0183
         public bool AutoSendWarnings { get; set; }
 
         /// <summary>
+        /// Set to the name of a GNSS source to prefer this for getting the current position.
+        /// Will fall back to all if not successful (and alternatives are available)
+        /// </summary>
+        public string? PreferredPositionSource { get; set; }
+
+        /// <summary>
         /// Set of parameters that control track estimation.
         /// </summary>
         public TrackEstimationParameters TrackEstimationParameters { get; private set; }
@@ -239,18 +245,28 @@ namespace Iot.Device.Nmea0183
             s.DimensionToStern = DimensionToStern;
             s.DimensionToPort = DimensionToPort;
             s.DimensionToStarboard = DimensionToStarboard;
-            // TODO: Enable extrapolation, but maybe it's the reason for the current bug (distances are far to big)
-            if (!_positionProvider.TryGetCurrentPosition(out var position, null, false, out var track, out var sog, out var heading,
-                    out var messageTime, currentTime) || (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
+            // Try the preferred position source first (might already be null though)
+            if (!_positionProvider.TryGetCurrentPosition(out var position, PreferredPositionSource, false,
+                    out var track, out var sog, out var heading,
+                    out var messageTime, currentTime) ||
+                (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
             {
-                s.Position = position ?? new GeographicPosition();
-                s.CourseOverGround = track;
-                s.SpeedOverGround = sog;
-                s.TrueHeading = heading;
-                s.LastSeen = messageTime;
-                ownShip = s;
-                _logger.LogWarning("AISManager: No position for own ship");
-                return false;
+                // then use any source
+                if (PreferredPositionSource == null || !_positionProvider.TryGetCurrentPosition(out position, null, false,
+                        out track, out sog, out heading,
+                        out messageTime, currentTime) ||
+                    (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
+                {
+                    s.Position = position ?? new GeographicPosition();
+
+                    s.CourseOverGround = track;
+                    s.SpeedOverGround = sog;
+                    s.TrueHeading = heading;
+                    s.LastSeen = messageTime;
+                    ownShip = s;
+                    _logger.LogWarning("AISManager: No position for own ship");
+                    return false;
+                }
             }
 
             s.Position = position!;
