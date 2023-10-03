@@ -43,6 +43,10 @@ namespace DisplayControl.ViewModels
         {
             get
             {
+                if (_target is Ship s)
+                {
+                    return _target.FormatMmsi() + " (" + s.TransceiverClass + ")";
+                }
                 return _target.FormatMmsi();
             }
         }
