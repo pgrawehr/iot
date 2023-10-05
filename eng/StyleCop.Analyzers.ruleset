@@ -139,10 +139,10 @@
     <Rule Id="SA1518" Action="Error" />
     <Rule Id="SA1519" Action="Error" />
     <Rule Id="SA1520" Action="Error" />
-    <Rule Id="SA1600" Action="None" />  <!-- Elements should be documented -->
-    <Rule Id="SA1601" Action="None" /> <!-- Partial elements should be documented -->
-    <Rule Id="SA1602" Action="None" /> <!-- Enumeration items should be documented -->
-    <Rule Id="SA1604" Action="None" /> <!-- Element documentation should have summary -->
+    <Rule Id="SA1600" Action="Error" />  <!-- Elements should be documented -->
+    <Rule Id="SA1601" Action="Error" /> <!-- Partial elements should be documented -->
+    <Rule Id="SA1602" Action="Error" /> <!-- Enumeration items should be documented -->
+    <Rule Id="SA1604" Action="Error" /> <!-- Element documentation should have summary -->
     <Rule Id="SA1605" Action="Error" />
     <Rule Id="SA1606" Action="Error" />
     <Rule Id="SA1607" Action="Error" />
@@ -153,8 +153,8 @@
     <Rule Id="SA1612" Action="Error" />
     <Rule Id="SA1613" Action="Error" />
     <Rule Id="SA1614" Action="Error" />
-    <Rule Id="SA1615" Action="None" /> <!-- Element return value should be documented -->
-    <Rule Id="SA1616" Action="None" /> <!-- Element return value documentation should have text -->
+    <Rule Id="SA1615" Action="Error" /> <!-- Element return value should be documented -->
+    <Rule Id="SA1616" Action="Error" /> <!-- Element return value documentation should have text -->
     <Rule Id="SA1617" Action="Error" />
     <Rule Id="SA1618" Action="None" /> <!-- The documentation for type parameter is missing -->
     <Rule Id="SA1619" Action="None" /> <!-- The documentation for type parameter is missing -->
@@ -163,9 +163,9 @@
     <Rule Id="SA1622" Action="Error" />
     <Rule Id="SA1623" Action="None" /> <!-- Property documentation text -->
     <Rule Id="SA1624" Action="None" /> <!-- Because the property only contains a visible get accessor, the documentation summary text should begin with 'Gets' -->
-    <Rule Id="SA1625" Action="None" /> <!-- Maybe not so important: Element documentation should not be copy-pasted -->
+    <Rule Id="SA1625" Action="Error" /> <!-- Maybe not so important: Element documentation should not be copy-pasted -->
     <Rule Id="SA1626" Action="None" /> <!-- Single-line comments should not use documentation style slashes -->
-    <Rule Id="SA1627" Action="None" /> <!-- The documentation text within the \'exception\' tag should not be empty -->
+    <Rule Id="SA1627" Action="Error" /> <!-- The documentation text within the \'exception\' tag should not be empty -->
     <Rule Id="SA1629" Action="None" /> <!-- Documentation text should end with a period -->
     <Rule Id="SA1633" Action="Error" /> <!-- File should have header -->
     <Rule Id="SA1634" Action="None" /> <!-- File Header must show copyright. -->
