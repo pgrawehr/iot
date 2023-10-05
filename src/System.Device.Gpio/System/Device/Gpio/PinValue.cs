@@ -58,6 +58,7 @@ public readonly struct PinValue : IEquatable<PinValue>
     /// <summary>
     /// Returns true if the other instance represents the same <see cref="PinValue"/> than this.
     /// </summary>
+    /// <returns>True on equality, false otherwise.</returns>
     public bool Equals(PinValue other) => other._value == _value;
 
     /// <inheritdoc cref="ValueType.Equals(object)"/>
@@ -94,5 +95,6 @@ public readonly struct PinValue : IEquatable<PinValue>
     /// <summary>
     /// Returns "Low" for Low and "High" for High
     /// </summary>
+    /// <returns>A string representation of this instance. Either "Low" or "High"</returns>
     public override string ToString() => _value == 0 ? "Low" : "High";
 }

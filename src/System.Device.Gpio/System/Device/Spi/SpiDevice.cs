@@ -114,10 +114,11 @@ public abstract partial class SpiDevice : IDisposable
     };
 
     /// <summary>
-    /// Reverse the byte
+    /// Reverse the byte.
+    /// The most-significant bit becomes the least-significant, bit 1 becomes bit 6 etc.
     /// </summary>
     /// <param name="toReverse">The byte to reverse</param>
-    /// <returns></returns>
+    /// <returns>The bit-wise inverse of the given byte</returns>
     internal static byte ReverseByte(byte toReverse) => BitReverseTable[toReverse];
 
     /// <summary>

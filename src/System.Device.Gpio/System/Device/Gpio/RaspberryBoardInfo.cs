@@ -146,7 +146,7 @@ internal class RaspberryBoardInfo
     /// Get board model from firmware revision
     /// See http://www.raspberrypi-spy.co.uk/2012/09/checking-your-raspberry-pi-board-version/ for information.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>The model of the Raspberry Pi that was detected.</returns>
     private Model GetBoardModel() => (Firmware & 0xFFFF) switch
     {
         0x2 or 0x3 => Model.RaspberryPiBRev1,

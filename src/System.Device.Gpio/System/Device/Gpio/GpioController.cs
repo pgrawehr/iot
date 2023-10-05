@@ -103,6 +103,8 @@ public class GpioController : IDisposable
     /// The driver attempts to open the pin without changing its mode or value.
     /// </summary>
     /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
+    /// <returns>An object of type <see cref="GpioPin"/> that can be used to perform operations on the pin. This can be used
+    /// instead of the methods of this class that take the pin number.</returns>
     public GpioPin OpenPin(int pinNumber)
     {
         if (IsPinOpen(pinNumber))
@@ -131,6 +133,8 @@ public class GpioController : IDisposable
     /// </summary>
     /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
     /// <param name="mode">The mode to be set.</param>
+    /// <returns>An object of type <see cref="GpioPin"/> that can be used to perform operations on the pin. This can be used
+    /// instead of the methods of this class that take the pin number.</returns>
     public GpioPin OpenPin(int pinNumber, PinMode mode)
     {
         var pin = OpenPin(pinNumber);
@@ -145,6 +149,8 @@ public class GpioController : IDisposable
     /// <param name="mode">The mode to be set.</param>
     /// <param name="initialValue">The initial value to be set if the mode is output. The driver will attempt to set the mode without causing glitches to the other value.
     /// (if <paramref name="initialValue"/> is <see cref="PinValue.High"/>, the pin should not glitch to low during open)</param>
+    /// <returns>An object of type <see cref="GpioPin"/> that can be used to perform operations on the pin. This can be used
+    /// instead of the methods of this class that take the pin number.</returns>
     public GpioPin OpenPin(int pinNumber, PinMode mode, PinValue initialValue)
     {
         var pin = OpenPin(pinNumber);

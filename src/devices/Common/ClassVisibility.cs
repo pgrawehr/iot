@@ -13,12 +13,18 @@ using System.Threading.Tasks;
 // The default visibility is "internal" so they stay hidden if this section is removed for the final library build.
 #if !BUILDING_IOT_DEVICE_BINDINGS
 
+/// <content>
+/// Visibility declaration only
+/// </content>
 public partial class Interop
 {
 }
 
 namespace Iot.Device.Common
 {
+    /// <content>
+    /// Visibility declaration only
+    /// </content>
     public partial class NumberHelper
     {
     }
@@ -26,6 +32,9 @@ namespace Iot.Device.Common
 
 namespace System.Device
 {
+    /// <content>
+    /// Visibility declaration only
+    /// </content>
     public partial class DelayHelper
     {
     }
@@ -33,10 +42,16 @@ namespace System.Device
 
 namespace System.Device.Gpio
 {
+    /// <content>
+    /// Visibility declaration only
+    /// </content>
     public partial struct PinVector32
     {
     }
 
+    /// <content>
+    /// Visibility declaration only
+    /// </content>
     public partial struct PinVector64
     {
     }
@@ -44,12 +59,18 @@ namespace System.Device.Gpio
 
 #else
 
+/// <content>
+/// Visibility declaration only
+/// </content>
 internal partial class Interop
 {
 }
 
 namespace Iot.Device.Common
 {
+    /// <content>
+    /// Visibility declaration only
+    /// </content>
     internal partial class NumberHelper
     {
     }
@@ -57,6 +78,9 @@ namespace Iot.Device.Common
 
 namespace System.Device
 {
+    /// <content>
+    /// Visibility declaration only
+    /// </content>
     internal partial class DelayHelper
     {
     }
@@ -64,10 +88,16 @@ namespace System.Device
 
 namespace System.Device.Gpio
 {
+    /// <content>
+    /// Visibility declaration only
+    /// </content>
     internal partial struct PinVector32
     {
     }
 
+    /// <content>
+    /// Visibility declaration only
+    /// </content>
     internal partial struct PinVector64
     {
     }

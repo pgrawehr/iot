@@ -139,7 +139,7 @@
     <Rule Id="SA1518" Action="Error" />
     <Rule Id="SA1519" Action="Error" />
     <Rule Id="SA1520" Action="Error" />
-    <Rule Id="SA1600" Action="Error" />  <!-- Elements should be documented -->
+    <Rule Id="SA1600" Action="None" />  <!-- Elements should be documented (not necessary, due to rule CS1591, which requires documentation of all public members) -->
     <Rule Id="SA1601" Action="Error" /> <!-- Partial elements should be documented -->
     <Rule Id="SA1602" Action="Error" /> <!-- Enumeration items should be documented -->
     <Rule Id="SA1604" Action="Error" /> <!-- Element documentation should have summary -->
