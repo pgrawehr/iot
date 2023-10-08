@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 
 #pragma warning disable SA1300 // Element name must start with capital letters
 #pragma warning disable CS1591 // Public members must have XML documentation
+#pragma warning disable SA1602 // Enum members should be documented
 
 partial class Interop
 {

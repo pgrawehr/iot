@@ -4,6 +4,7 @@
 // Disable these StyleCop rules for this file, as we are using native names here.
 #pragma warning disable SA1300 // Element should begin with upper-case letter
 #pragma warning disable CS1591 // Public member is not documented - These members are not public in the final package
+#pragma warning disable SA1602 // Enum members should be documented
 
 using System;
 using System.IO;

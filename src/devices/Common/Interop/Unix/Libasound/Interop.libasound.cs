@@ -9,6 +9,9 @@
 using System;
 using System.Runtime.InteropServices;
 
+/// <content>
+/// Interop declarations
+/// </content>
 partial class Interop
 {
     [DllImport(AlsaLibrary)]

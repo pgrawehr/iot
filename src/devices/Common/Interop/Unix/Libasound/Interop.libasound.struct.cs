@@ -5,6 +5,7 @@
 #pragma warning disable SA1300 // Element should begin with upper-case letter
 #pragma warning disable SA1307 // Field should begin with upper-case letter
 #pragma warning disable CS1591 // Public members must have XML documentation
+#pragma warning disable SA1602 // Enum members should be documented
 
 partial class Interop
 {

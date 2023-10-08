@@ -138,6 +138,7 @@ namespace Iot.Device.Common
         /// <summary>
         /// This operation is unsupported.
         /// </summary>
+        /// <returns>This method always throws an exception</returns>
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException();

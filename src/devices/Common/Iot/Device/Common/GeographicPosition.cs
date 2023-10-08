@@ -240,7 +240,7 @@ namespace Iot.Device.Common
         /// <summary>
         /// Creates a copy of this instance
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A clone of this instance</returns>
         public GeographicPosition Clone()
         {
             return new GeographicPosition(this);

@@ -20,6 +20,7 @@ namespace Iot.Device.Common
         /// </summary>
         /// <param name="self">Instance to normalize</param>
         /// <param name="toFullCircle">Set to true to normalize to 0-360°, otherwise normalizes to +/-180°</param>
+        /// <returns>The normalized angle value</returns>
         public static Angle Normalize(this Angle self, bool toFullCircle)
         {
             double r = self.Radians;
