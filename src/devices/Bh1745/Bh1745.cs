@@ -306,6 +306,7 @@ namespace Iot.Device.Bh1745
         /// <summary>
         /// Reads whether the last measurement is valid.
         /// </summary>
+        /// <returns>True when the last sensor output was valid, false otherwise</returns>
         public bool ReadMeasurementIsValid()
         {
             var valid = Read8BitsFromRegister((byte)Register.MODE_CONTROL2);
@@ -316,31 +317,31 @@ namespace Iot.Device.Bh1745
         /// <summary>
         /// Reads the red data register of the sensor.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The value of the red color register</returns>
         public ushort ReadRedDataRegister() => Read16BitsFromRegister((byte)Register.RED_DATA);
 
         /// <summary>
         /// Reads the green data register of the sensor.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The value of the green color register</returns>
         public ushort ReadGreenDataRegister() => Read16BitsFromRegister((byte)Register.GREEN_DATA);
 
         /// <summary>
         /// Reads the blue data register of the sensor.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The value of the blue color register</returns>
         public ushort ReadBlueDataRegister() => Read16BitsFromRegister((byte)Register.BLUE_DATA);
 
         /// <summary>
         /// Reads the clear data register of the sensor.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Value of the clear register</returns>
         public ushort ReadClearDataRegister() => Read16BitsFromRegister((byte)Register.CLEAR_DATA);
 
         /// <summary>
         /// Gets the compensated color reading from the sensor.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The compensated color measured</returns>
         [Telemetry]
         public Color GetCompensatedColor()
         {

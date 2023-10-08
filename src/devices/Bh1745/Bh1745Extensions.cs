@@ -15,7 +15,7 @@ namespace Iot.Device.Bh1745
         /// </summary>
         /// <param name="time">The MeasurementTime.</param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when a not supported MeasurementTime is used.</exception>
-        /// <returns></returns>
+        /// <returns>The provided argument as milliseconds</returns>
         public static int ToMilliseconds(this MeasurementTime time) =>
             time switch
             {
@@ -29,11 +29,11 @@ namespace Iot.Device.Bh1745
             };
 
         /// <summary>
-        /// Converts the enum Measurement time to a TimeSpan.
+        /// Converts Measurement time to a TimeSpan.
         /// </summary>
         /// <param name="bh1745">The BH1745 device.</param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when a not supported MeasurementTime is used.</exception>
-        /// <returns></returns>
+        /// <returns>The measurement time of the provided device</returns>
         public static TimeSpan MeasurementTimeAsTimeSpan(this Bh1745 bh1745) => new TimeSpan(bh1745.MeasurementTime.ToMilliseconds());
     }
 }
