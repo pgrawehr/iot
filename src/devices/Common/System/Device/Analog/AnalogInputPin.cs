@@ -98,6 +98,7 @@ namespace System.Device.Analog
         /// <summary>
         /// Converts an input raw value to a voltage
         /// </summary>
+        /// <returns>The raw value converted to an electric potential (voltage)</returns>
         protected virtual ElectricPotential ConvertToVoltage(uint rawValue)
         {
             if (MinVoltage >= ElectricPotential.Zero)

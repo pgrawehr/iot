@@ -14,6 +14,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Generates a string representation of this object
         /// </summary>
+        /// <returns>A string for this point</returns>
         public override string ToString()
         {
             return String.Format(CultureInfo.CurrentCulture, "Heading {0}, Deviation {1}", MagneticHeading, Deviation);

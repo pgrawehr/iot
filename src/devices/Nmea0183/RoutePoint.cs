@@ -106,6 +106,7 @@ namespace Iot.Device.Nmea0183
         /// Two points are considered equal if the name and the position are equal. The other properties are NMEA-internals and are
         /// not directly related to the function of the waypoint for the user
         /// </summary>
+        /// <returns>True on equality, false otherwise</returns>
         public bool Equals(RoutePoint? other)
         {
             if (ReferenceEquals(null, other))
@@ -124,6 +125,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Equality comparer
         /// </summary>
+        /// <returns>True or false</returns>
         public override bool Equals(object? obj)
         {
             return ReferenceEquals(this, obj) || (obj is RoutePoint other && Equals(other));
@@ -132,6 +134,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Standard hash function
         /// </summary>
+        /// <returns>A hash value</returns>
         public override int GetHashCode()
         {
             return HashCode.Combine(WaypointName, Position);

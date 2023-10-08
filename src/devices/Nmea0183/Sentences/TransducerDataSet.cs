@@ -94,6 +94,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Content formatted as NMEA message part
         /// </summary>
+        /// <returns>Value and unit formatted for NMEA output</returns>
         public override string ToString()
         {
             string formattedValue;
@@ -123,6 +124,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Content as readable text
         /// </summary>
+        /// <returns>Argument part of this NMEA message</returns>
         public string ToReadableContent()
         {
             return FormattableString.Invariant($"{DataName}: {Value:F2} {Unit}");

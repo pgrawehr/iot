@@ -520,6 +520,7 @@ namespace Iot.Device.Graphics
         /// Creates the given letter for the given ROM type.
         /// Overwrite this only if an alternate ROM is used.
         /// </summary>
+        /// <returns>The pixel bitmap for the given character or null for an unsupported character</returns>
         protected virtual byte[]? CreateLetter(char character, string romName) => romName switch
         {
             "A00" => CreateLetterA00(character),
@@ -904,6 +905,7 @@ namespace Iot.Device.Graphics
         ///            0b_00000)
         /// </code>
         /// </example>
+        /// <returns>The arguments concatenated into an array</returns>
         protected byte[] CreateCustomCharacter(byte byte0, byte byte1, byte byte2, byte byte3, byte byte4, byte byte5, byte byte6, byte byte7) =>
             new byte[] { byte0, byte1, byte2, byte3, byte4, byte5, byte6, byte7 };
 

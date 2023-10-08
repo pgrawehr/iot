@@ -304,6 +304,7 @@ namespace Iot.Device.Common
         /// <summary>
         /// Convert a value to radians.
         /// </summary>
+        /// <returns>The given value in radians</returns>
         public static double DegreesToRadians(double val)
         {
             double ret = ((2 * Math.PI * val) / 360);

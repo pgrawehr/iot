@@ -82,6 +82,7 @@ namespace System.Device.Analog
         /// Opens a pin in order for it to be ready to use.
         /// </summary>
         /// <param name="pinNumber">The pin number to open (not the analog channel!).</param>
+        /// <returns>An analog input pin handle</returns>
         public AnalogInputPin OpenPin(int pinNumber)
         {
             // This does the number conversion itself, therefore done first

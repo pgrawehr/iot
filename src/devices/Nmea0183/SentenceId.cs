@@ -50,6 +50,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Equality member
         /// </summary>
+        /// <returns>True or false</returns>
         public override bool Equals(object? obj)
         {
             if (obj is SentenceId other)
@@ -63,6 +64,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Hash function
         /// </summary>
+        /// <returns>Hash value</returns>
         public override int GetHashCode()
         {
             return Id.GetHashCode();
@@ -71,6 +73,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Equality member
         /// </summary>
+        /// <returns>True or false</returns>
         public bool Equals(SentenceId other)
         {
             return Id == other.Id;

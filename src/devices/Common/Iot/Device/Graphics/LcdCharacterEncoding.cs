@@ -79,7 +79,10 @@ namespace Iot.Device.Graphics
         /// </summary>
         public string ReadOnlyMemoryName { get; }
 
-        /// <inheritDoc/>
+        /// <summary>
+        /// Returns the number of bytes that are required to encode the given characters
+        /// </summary>
+        /// <returns>This implementation always returns count.</returns>
         public override int GetByteCount(char[] chars, int index, int count)
         {
             if (index + count > chars.Length || index < 0 || count < 0)
@@ -90,7 +93,15 @@ namespace Iot.Device.Graphics
             return count;
         }
 
-        /// <inheritDoc/>
+        /// <summary>
+        /// Encodes the given characters
+        /// </summary>
+        /// <param name="chars">Characters to encode</param>
+        /// <param name="charIndex">First character to encode</param>
+        /// <param name="charCount">Number of characters to encode</param>
+        /// <param name="bytes">Output byte array</param>
+        /// <param name="byteIndex">Offset at which to start writing</param>
+        /// <returns>The number of bytes written</returns>
         public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
         {
             for (int i = 0; i < charCount; i++)
@@ -116,19 +127,33 @@ namespace Iot.Device.Graphics
             return charCount;
         }
 
-        /// <inheritDoc/>
+        /// <summary>
+        /// Returns the number of characters that will be generated from the input set.
+        /// </summary>
+        /// <param name="bytes">Input bytes</param>
+        /// <param name="index">Start index</param>
+        /// <param name="count">Number of bytes to decode</param>
+        /// <returns>The number of characters that would be generated</returns>
         public override int GetCharCount(byte[] bytes, int index, int count) => Math.Min(bytes.Length, count);
 
         /// <summary>
         /// Reverse mapping is not supported for this encoding.
         /// </summary>
+        /// <returns>Never returns</returns>
         public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex) => throw new NotSupportedException("Reverse conversion not supported");
 
-        /// <inheritDoc/>
-        // This encoder always does a 1:1 mapping
+        /// <summary>
+        /// Returns the maximum number of bytes for the given character count.
+        /// </summary>
+        /// <param name="charCount">Input character count</param>
+        /// <returns>The input value. This encoding always uses an 1:1 mapping</returns>
         public override int GetMaxByteCount(int charCount) => charCount;
 
-        /// <inheritDoc/>
+        /// <summary>
+        /// Returns the maximum number of characters for the given byte count.
+        /// </summary>
+        /// <param name="byteCount">Input byte count</param>
+        /// <returns>The input value. This encoding always uses an 1:1 mapping</returns>
         public override int GetMaxCharCount(int byteCount) => byteCount;
     }
 }

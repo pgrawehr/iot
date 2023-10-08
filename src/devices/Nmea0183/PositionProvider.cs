@@ -351,7 +351,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="totalNumberOfSatellites">Total number of satellites reported.
         /// This number might be larger than the number of elements in the list, as there might not be enough
         /// slots to transfer the whole status for all satellites</param>
-        /// <returns></returns>
+        /// <returns>A list of <see cref="SatelliteInfo"/> structures</returns>
         public List<SatelliteInfo> GetSatellitesInView(out int totalNumberOfSatellites)
         {
             int maxSats = 0;

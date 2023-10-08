@@ -66,7 +66,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Get the default IP address to bind to
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The default IP address of the local machine.</returns>
         public static IPAddress GetLocalIPAddress()
         {
             var host = Dns.GetHostEntry(Dns.GetHostName());

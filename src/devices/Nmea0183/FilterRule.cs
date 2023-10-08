@@ -96,8 +96,11 @@ namespace Iot.Device.Nmea0183
         public bool ContinueAfterMatch { get; }
 
         /// <summary>
-        /// True if this filter matches the given sentence and source
+        /// Checks whether the given sentence matches this filter.
         /// </summary>
+        /// <returns>
+        /// True if this filter matches the given sentence and source
+        /// </returns>
         public bool SentenceMatch(string nmeaSource, NmeaSentence sentence)
         {
             if (sentence.Valid)

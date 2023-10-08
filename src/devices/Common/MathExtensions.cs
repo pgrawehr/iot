@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace Iot.Device
 {
     /// <summary>
-    /// Implementations of some functions missing in older .NET versions
+    /// Implementations of some functions missing in older .NET versions.
     /// </summary>
 #if BUILDING_IOT_DEVICE_BINDINGS
     internal
@@ -23,6 +23,7 @@ namespace Iot.Device
         /// <summary>
         /// Returns val, limited to the range min-max (inclusive)
         /// </summary>
+        /// <returns>The input value clamped between min and max</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static double Clamp(double val, double min, double max)
         {
@@ -46,6 +47,7 @@ namespace Iot.Device
         /// <summary>
         /// Returns val, limited to the range min-max (inclusive)
         /// </summary>
+        /// <returns>The input value clamped between min and max</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float Clamp(float val, float min, float max)
         {
@@ -69,6 +71,7 @@ namespace Iot.Device
         /// <summary>
         /// Returns val, limited to the range min-max (inclusive)
         /// </summary>
+        /// <returns>The input value clamped between min and max</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Clamp(int val, int min, int max)
         {
@@ -92,6 +95,7 @@ namespace Iot.Device
         /// <summary>
         /// Returns val, limited to the range min-max (inclusive)
         /// </summary>
+        /// <returns>The input value clamped between min and max</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static byte Clamp(byte val, byte min, byte max)
         {
@@ -115,6 +119,7 @@ namespace Iot.Device
         /// <summary>
         /// Returns val, limited to the range min-max (inclusive)
         /// </summary>
+        /// <returns>The input value clamped between min and max</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long Clamp(long val, long min, long max)
         {
@@ -138,6 +143,7 @@ namespace Iot.Device
         /// <summary>
         /// Returns val, limited to the range min-max (inclusive)
         /// </summary>
+        /// <returns>The input value clamped between min and max</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint Clamp(uint val, uint min, uint max)
         {

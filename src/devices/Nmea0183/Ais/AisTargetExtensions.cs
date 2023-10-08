@@ -33,7 +33,7 @@ namespace Iot.Device.Nmea0183.Ais
         /// </summary>
         /// <param name="self">The target under investigation</param>
         /// <param name="toTime">The time to compare to (often <see cref="DateTimeOffset.UtcNow"/>)</param>
-        /// <returns></returns>
+        /// <returns>The age of the last message from this target</returns>
         public static TimeSpan Age(this AisTarget self, DateTimeOffset toTime)
         {
             return toTime - self.LastSeen;

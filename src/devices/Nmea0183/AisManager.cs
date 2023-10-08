@@ -726,7 +726,7 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="transceiverClass">Transceiver class to simulate</param>
         /// <param name="ship">The ship whose position data to send</param>
-        /// <returns></returns>
+        /// <returns>The message that was sent</returns>
         /// <exception cref="InvalidOperationException">An internal inconsistency occurred</exception>
         /// <exception cref="NotSupportedException">This message type is not currently supported for encoding</exception>
         public NmeaSentence SendShipPositionReport(AisTransceiverClass transceiverClass, Ship ship)

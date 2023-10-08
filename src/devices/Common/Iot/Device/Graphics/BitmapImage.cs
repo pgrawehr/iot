@@ -215,6 +215,7 @@ namespace Iot.Device.Graphics
         /// <summary>
         /// Returns an abstraction interface for drawing to this bitmap.
         /// </summary>
+        /// <returns>Abstraction API (handle only)</returns>
         public abstract IGraphics GetDrawingApi();
     }
 }

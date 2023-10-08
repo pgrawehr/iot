@@ -23,6 +23,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// The talker ID
         /// </summary>
+        /// <returns>The string representation of this talker ID (two characters)</returns>
         public override string ToString() => $"{Id1}{Id2}";
 
         /// <summary>
@@ -39,6 +40,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Equality member
         /// </summary>
+        /// <returns>True or false</returns>
         public override bool Equals(object? obj)
         {
             if (obj is SentenceId other)
@@ -52,6 +54,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Hashcode function
         /// </summary>
+        /// <returns>Hash code</returns>
         public override int GetHashCode()
         {
             return HashCode.Combine(Id1, Id2);
@@ -60,6 +63,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Equality member
         /// </summary>
+        /// <returns>True or false</returns>
         public bool Equals(TalkerId other)
         {
             return Id1 == other.Id1 && Id2 == other.Id2;

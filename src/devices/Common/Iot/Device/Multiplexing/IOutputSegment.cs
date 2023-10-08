@@ -58,6 +58,7 @@ namespace Iot.Device.Multiplexing
         /// Displays current state of segment.
         /// Segment is displayed at least until token receives a cancellation signal, possibly due to a specified duration expiring.
         /// </summary>
+        /// <returns>Async task</returns>
         Task DisplayAsync(CancellationToken token);
     }
 }

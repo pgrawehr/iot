@@ -140,6 +140,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Parses a date and a time field or any possible combinations of those
         /// </summary>
+        /// <returns>The parsed date and time as a <see cref="DateTimeOffset"/> instance</returns>
         protected static DateTimeOffset ParseDateTime(string date, string time)
         {
             DateTimeOffset d1;
@@ -174,6 +175,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Parses a date and a time field or any possible combinations of those
         /// </summary>
+        /// <returns>An updated instance of <see cref="DateTimeOffset"/> with the new time</returns>
         protected static DateTimeOffset ParseDateTime(DateTimeOffset lastSeenDate, string time)
         {
             DateTimeOffset dateTime;
@@ -198,6 +200,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Decodes the next field into a string
         /// </summary>
+        /// <returns>The next field of the message, as string</returns>
         protected string ReadString(IEnumerator<string> field)
         {
             if (!field.MoveNext())
@@ -211,6 +214,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Decodes the next field into a char
         /// </summary>
+        /// <returns>The next field of the message, as char, or null if it's not a single character</returns>
         protected char? ReadChar(IEnumerator<string> field)
         {
             string val = ReadString(field);
@@ -232,6 +236,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Decodes the next field into a double
         /// </summary>
+        /// <returns>The next field as double or null if the value couldn't be parsed or is empty</returns>
         protected double? ReadValue(IEnumerator<string> field)
         {
             string val = ReadString(field);
@@ -248,6 +253,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Decodes the next field into an int
         /// </summary>
+        /// <returns>The next field as integer or null if it wasn't a number or if it was empty</returns>
         protected int? ReadInt(IEnumerator<string> field)
         {
             string val = ReadString(field);
@@ -271,6 +277,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Gets an user-readable string about this message
         /// </summary>
+        /// <returns>Argument part of this NMEA message</returns>
         public abstract string ToReadableContent();
 
         /// <summary>
