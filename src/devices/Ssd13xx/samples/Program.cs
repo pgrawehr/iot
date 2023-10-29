@@ -205,8 +205,13 @@ void DisplayClock(Ssd1306 ssd1306)
 
     foreach (var i in Enumerable.Range(0, 100))
     {
-        using (Image<Rgba32> image = new Image<Rgba32>(128, 32, Color.Black))
+        using (Image<Rgba32> image = new Image<Rgba32>(128, 32))
         {
+            if (image.TryGetSinglePixelSpan(out Span<Rgba32> imageSpan))
+            {
+                imageSpan.Fill(Color.Black);
+            }
+
             image.Mutate(ctx => ctx
                 .DrawText(DateTime.Now.ToString("HH:mm:ss"), fontsys, Color.White,
                     new SixLabors.ImageSharp.PointF(0, y)));

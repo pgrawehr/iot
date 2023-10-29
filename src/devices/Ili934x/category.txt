@@ -1,7 +1,3 @@
 led
 display
-<<<<<<<< HEAD:src/devices/Is31fl3730/category.txt
-
-========
 touch
->>>>>>>> main:src/devices/Ili934x/category.txt
