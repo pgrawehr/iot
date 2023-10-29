@@ -36,6 +36,11 @@ namespace Iot.Device.Mcp23xxx
         private bool _cacheValid;
         private bool _disabled;
 
+        private object _interruptHandlerLock = new object();
+
+        private byte[] _interruptPins;
+        private byte[] _interruptLastInputValues;
+
         /// <summary>
         /// A general purpose parallel I/O expansion for I2C or SPI applications.
         /// </summary>
@@ -62,6 +67,9 @@ namespace Iot.Device.Mcp23xxx
             _reset = reset;
             _interruptA = interruptA;
             _interruptB = interruptB;
+
+            _interruptPins = new byte[2];
+            _interruptLastInputValues = new byte[2];
 
             // Only need master controller if there are external pins provided.
             if (_reset != -1 || _interruptA != -1 || _interruptB != -1)
@@ -329,26 +337,44 @@ namespace Iot.Device.Mcp23xxx
         /// <param name="mode">The mode to be set.</param>
         protected override void SetPinMode(int pinNumber, PinMode mode)
         {
-            if (mode != PinMode.Input && mode != PinMode.Output)
+            lock (_interruptHandlerLock)
             {
-                throw new ArgumentException("The Mcp controller supports Input and Output modes only.");
-            }
+                if (mode != PinMode.Input && mode != PinMode.Output && mode != PinMode.InputPullUp)
+                {
+                    throw new ArgumentException("The Mcp controller supports the following pin modes: Input, Output and InputPullUp.");
+                }
 
-            ValidatePin(pinNumber);
+                ValidatePin(pinNumber);
 
-            if (pinNumber < 8)
-            {
-                byte value = mode == PinMode.Output
-                    ? ClearBit(InternalReadByte(Register.IODIR, Port.PortA), pinNumber)
-                    : SetBit(InternalReadByte(Register.IODIR, Port.PortA), pinNumber);
-                InternalWriteByte(Register.IODIR, value, Port.PortA);
-            }
-            else
-            {
-                byte value = mode == PinMode.Output
-                    ? ClearBit(InternalReadByte(Register.IODIR, Port.PortB), pinNumber - 8)
-                    : SetBit(InternalReadByte(Register.IODIR, Port.PortB), pinNumber - 8);
-                InternalWriteByte(Register.IODIR, value, Port.PortB);
+                Port port = GetPortForPinNumber(pinNumber);
+                if (port == Port.PortB)
+                {
+                    pinNumber -= 8;
+                }
+
+                byte value;
+                if (mode == PinMode.Output)
+                {
+                    value = ClearBit(InternalReadByte(Register.IODIR, port), pinNumber);
+                }
+                else
+                {
+                    value = SetBit(InternalReadByte(Register.IODIR, port), pinNumber);
+                }
+
+                InternalWriteByte(Register.IODIR, value, port);
+
+                byte value2;
+                if (mode == PinMode.InputPullUp)
+                {
+                    value2 = SetBit(InternalReadByte(Register.GPPU, port), pinNumber);
+                }
+                else
+                {
+                    value2 = ClearBit(InternalReadByte(Register.GPPU, port), pinNumber);
+                }
+
+                InternalWriteByte(Register.GPPU, value2, port);
             }
         }
 
@@ -359,14 +385,17 @@ namespace Iot.Device.Mcp23xxx
         /// <returns>High or low pin value.</returns>
         protected override PinValue Read(int pinNumber)
         {
-            ValidatePin(pinNumber);
-            Span<PinValuePair> pinValuePairs = stackalloc PinValuePair[]
+            lock (_interruptHandlerLock)
             {
-                new PinValuePair(pinNumber, default)
-            };
-            Read(pinValuePairs);
-            _pinValues[pinNumber] = pinValuePairs[0].PinValue;
-            return _pinValues[pinNumber];
+                ValidatePin(pinNumber);
+                Span<PinValuePair> pinValuePairs = stackalloc PinValuePair[]
+                {
+                    new PinValuePair(pinNumber, default)
+                };
+                Read(pinValuePairs);
+                _pinValues[pinNumber] = pinValuePairs[0].PinValue;
+                return _pinValues[pinNumber];
+            }
         }
 
         /// <inheritdoc/>
@@ -377,34 +406,37 @@ namespace Iot.Device.Mcp23xxx
         /// </summary>
         protected void Read(Span<PinValuePair> pinValuePairs)
         {
-            (uint pins, _) = new PinVector32(pinValuePairs);
-            if ((pins >> PinCount) > 0)
+            lock (_interruptHandlerLock)
             {
-                ThrowBadPin(nameof(pinValuePairs));
-            }
+                (uint pins, _) = new PinVector32(pinValuePairs);
+                if ((pins >> PinCount) > 0)
+                {
+                    ThrowBadPin(nameof(pinValuePairs));
+                }
 
-            ushort result;
-            if (pins < 0xFF + 1)
-            {
-                // Only need to get the first 8 pins (PortA)
-                result = InternalReadByte(Register.GPIO, Port.PortA);
-            }
-            else if ((pins & 0xFF) == 0)
-            {
-                // Only need to get the second 8 pins (PortB)
-                result = (ushort)(InternalReadByte(Register.GPIO, Port.PortB) << 8);
-            }
-            else
-            {
-                // Need to get both
-                result = InternalReadUInt16(Register.GPIO);
-            }
+                ushort result;
+                if (pins < 0xFF + 1)
+                {
+                    // Only need to get the first 8 pins (PortA)
+                    result = InternalReadByte(Register.GPIO, Port.PortA);
+                }
+                else if ((pins & 0xFF) == 0)
+                {
+                    // Only need to get the second 8 pins (PortB)
+                    result = (ushort)(InternalReadByte(Register.GPIO, Port.PortB) << 8);
+                }
+                else
+                {
+                    // Need to get both
+                    result = InternalReadUInt16(Register.GPIO);
+                }
 
-            for (int i = 0; i < pinValuePairs.Length; i++)
-            {
-                int pin = pinValuePairs[i].PinNumber;
-                pinValuePairs[i] = new PinValuePair(pin, result & (1 << pin));
-                _pinValues[pin] = pinValuePairs[i].PinValue;
+                for (int i = 0; i < pinValuePairs.Length; i++)
+                {
+                    int pin = pinValuePairs[i].PinNumber;
+                    pinValuePairs[i] = new PinValuePair(pin, result & (1 << pin));
+                    _pinValues[pin] = pinValuePairs[i].PinValue;
+                }
             }
         }
 
@@ -415,13 +447,16 @@ namespace Iot.Device.Mcp23xxx
         /// <param name="value">The value to be written.</param>
         protected override void Write(int pinNumber, PinValue value)
         {
-            ValidatePin(pinNumber);
-            Span<PinValuePair> pinValuePairs = stackalloc PinValuePair[]
+            lock (_interruptHandlerLock)
             {
-                new PinValuePair(pinNumber, value)
-            };
-            Write(pinValuePairs);
-            _pinValues[pinNumber] = value;
+                ValidatePin(pinNumber);
+                Span<PinValuePair> pinValuePairs = stackalloc PinValuePair[]
+                {
+                    new PinValuePair(pinNumber, value)
+                };
+                Write(pinValuePairs);
+                _pinValues[pinNumber] = value;
+            }
         }
 
         /// <summary>
@@ -429,44 +464,47 @@ namespace Iot.Device.Mcp23xxx
         /// </summary>
         protected void Write(ReadOnlySpan<PinValuePair> pinValuePairs)
         {
-            (uint mask, uint newBits) = new PinVector32(pinValuePairs);
-            if ((mask >> PinCount) > 0)
+            lock (_interruptHandlerLock)
             {
-                ThrowBadPin(nameof(pinValuePairs));
-            }
+                (uint mask, uint newBits) = new PinVector32(pinValuePairs);
+                if ((mask >> PinCount) > 0)
+                {
+                    ThrowBadPin(nameof(pinValuePairs));
+                }
 
-            if (!_cacheValid)
-            {
-                UpdateCache();
-            }
+                if (!_cacheValid)
+                {
+                    UpdateCache();
+                }
 
-            ushort cachedValue = _gpioCache;
-            ushort newValue = SetBits(cachedValue, (ushort)newBits, (ushort)mask);
-            if (cachedValue == newValue)
-            {
-                return;
-            }
+                ushort cachedValue = _gpioCache;
+                ushort newValue = SetBits(cachedValue, (ushort)newBits, (ushort)mask);
+                if (cachedValue == newValue)
+                {
+                    return;
+                }
 
-            if (mask < 0xFF + 1)
-            {
-                // Only need to change the first 8 pins (PortA)
-                InternalWriteByte(Register.GPIO, (byte)newValue, Port.PortA);
-            }
-            else if ((mask & 0xFF) == 0)
-            {
-                // Only need to change the second 8 pins (PortB)
-                InternalWriteByte(Register.GPIO, (byte)(newValue >> 8), Port.PortB);
-            }
-            else
-            {
-                // Need to change both
-                InternalWriteUInt16(Register.GPIO, newValue);
-            }
+                if (mask < 0xFF + 1)
+                {
+                    // Only need to change the first 8 pins (PortA)
+                    InternalWriteByte(Register.GPIO, (byte)newValue, Port.PortA);
+                }
+                else if ((mask & 0xFF) == 0)
+                {
+                    // Only need to change the second 8 pins (PortB)
+                    InternalWriteByte(Register.GPIO, (byte)(newValue >> 8), Port.PortB);
+                }
+                else
+                {
+                    // Need to change both
+                    InternalWriteUInt16(Register.GPIO, newValue);
+                }
 
-            _gpioCache = newValue;
-            foreach (PinValuePair pinValuePair in pinValuePairs)
-            {
-                _pinValues[pinValuePair.PinNumber] = pinValuePair.PinValue;
+                _gpioCache = newValue;
+                foreach (PinValuePair pinValuePair in pinValuePairs)
+                {
+                    _pinValues[pinValuePair.PinNumber] = pinValuePair.PinValue;
+                }
             }
         }
 
@@ -573,61 +611,69 @@ namespace Iot.Device.Mcp23xxx
         /// </summary>
         /// <param name="pinNumber">The pin number for which an interrupt shall be triggered</param>
         /// <param name="eventTypes">Event(s) that should trigger the interrupt on the given pin</param>
-        /// <exception cref="ArgumentException">eventTypes is not valid</exception>
+        /// <exception cref="ArgumentException">EventTypes is not valid (must have at least one event type selected)</exception>
+        /// <remarks>After calling this method, call <see cref="Read(int)"/> once to make sure the interrupt flag for the given port is cleared</remarks>
         public void EnableInterruptOnChange(int pinNumber, PinEventTypes eventTypes)
         {
+            ValidatePin(pinNumber);
             byte oldValue, newValue;
-            if (eventTypes == PinEventTypes.None)
+            lock (_interruptHandlerLock)
             {
-                throw new ArgumentException("No event type specified");
-            }
+                if (eventTypes == PinEventTypes.None)
+                {
+                    throw new ArgumentException("No event type specified");
+                }
 
-            Port port = Port.PortA;
-            if (pinNumber >= 8)
-            {
-                pinNumber -= 8;
-                port = Port.PortB;
-            }
+                Port port = Port.PortA;
+                if (pinNumber >= 8)
+                {
+                    pinNumber -= 8;
+                    port = Port.PortB;
+                }
 
-            // Set the corresponding bit in the GPINTEN (Interrupt-on-Change) register
-            oldValue = InternalReadByte(Register.GPINTEN, port);
-            newValue = SetBit(oldValue, pinNumber);
-            InternalWriteByte(Register.GPINTEN, newValue, port);
-            oldValue = InternalReadByte(Register.INTCON, port);
-            // If the interrupt shall happen on either edge, we clear the INTCON (Interrupt-on-Change-Control) register,
-            // which will trigger an interrupt on every change. Otherwise, set the INTCON register bit and set the
-            // DefVal register.
-            if (eventTypes == (PinEventTypes.Falling | PinEventTypes.Rising))
-            {
-                newValue = ClearBit(oldValue, pinNumber);
-            }
-            else
-            {
+                // Set the corresponding bit in the GPINTEN (Interrupt-on-Change) register
+                oldValue = InternalReadByte(Register.GPINTEN, port);
                 newValue = SetBit(oldValue, pinNumber);
+                InternalWriteByte(Register.GPINTEN, newValue, port);
+                oldValue = InternalReadByte(Register.INTCON, port);
+                // If the interrupt shall happen on either edge, we clear the INTCON (Interrupt-on-Change-Control) register,
+                // which will trigger an interrupt on every change. Otherwise, set the INTCON register bit and set the
+                // DefVal register.
+                if (eventTypes == (PinEventTypes.Falling | PinEventTypes.Rising))
+                {
+                    newValue = ClearBit(oldValue, pinNumber);
+                }
+                else
+                {
+                    newValue = SetBit(oldValue, pinNumber);
+                }
+
+                InternalWriteByte(Register.INTCON, newValue, port);
+
+                oldValue = InternalReadByte(Register.DEFVAL, port);
+                // If we clear the bit, the interrupt occurs on a rising edge, if we set it, it occurs on a falling edge.
+                // If INTCON is clear, the value is ignored.
+                if (eventTypes == PinEventTypes.Rising)
+                {
+                    newValue = ClearBit(oldValue, pinNumber);
+                }
+                else
+                {
+                    newValue = SetBit(oldValue, pinNumber);
+                }
+
+                InternalWriteByte(Register.DEFVAL, newValue, port);
+
+                // Finally make sure that IOCON.ODR is low and IOCON.INTPOL is low, too (interrupt is low-active, the default)
+                // For this register, it doesn't matter which port we use, it exists only once.
+                oldValue = InternalReadByte(Register.IOCON, Port.PortA);
+                newValue = ClearBit(oldValue, 1);
+                newValue = ClearBit(newValue, 2);
+                InternalWriteByte(Register.IOCON, newValue, Port.PortA);
+
+                _interruptPins[(int)port] = SetBit(_interruptPins[(int)port], pinNumber);
+                _interruptLastInputValues[(int)port] = InternalReadByte(Register.GPIO, port);
             }
-
-            InternalWriteByte(Register.INTCON, newValue, port);
-
-            oldValue = InternalReadByte(Register.DEFVAL, port);
-            // If we clear the bit, the interrupt occurs on a rising edge, if we set it, it occurs on a falling edge.
-            // If INTCON is clear, the value is ignored.
-            if (eventTypes == PinEventTypes.Rising)
-            {
-                newValue = ClearBit(oldValue, pinNumber);
-            }
-            else
-            {
-                newValue = SetBit(oldValue, pinNumber);
-            }
-
-            InternalWriteByte(Register.DEFVAL, newValue, port);
-
-            // Finally make sure that IOCON.ODR is low and IOCON.INTPOL is low, too (interrupt is low-active, the default)
-            // For this register, it doesn't matter which port we use, it exists only once.
-            oldValue = InternalReadByte(Register.IOCON, Port.PortA);
-            newValue = ClearBit(oldValue, 1);
-            newValue = ClearBit(newValue, 2);
-            InternalWriteByte(Register.IOCON, newValue, Port.PortA);
         }
 
         private static Port GetPortForPinNumber(int pinNumber)
@@ -647,27 +693,49 @@ namespace Iot.Device.Mcp23xxx
         /// <param name="pinNumber">The pin number</param>
         public void DisableInterruptOnChange(int pinNumber)
         {
+            ValidatePin(pinNumber);
             byte oldValue, newValue;
-            if (pinNumber < 8)
+            lock (_interruptHandlerLock)
             {
-                // Set the corresponding bit in the GPINTEN (Interrupt-on-Change) register
-                oldValue = InternalReadByte(Register.GPINTEN, Port.PortA);
-                newValue = ClearBit(oldValue, pinNumber);
-                InternalWriteByte(Register.GPINTEN, newValue, Port.PortA);
-            }
-            else
-            {
-                oldValue = InternalReadByte(Register.GPINTEN, Port.PortB);
-                newValue = ClearBit(oldValue, pinNumber);
-                InternalWriteByte(Register.GPINTEN, newValue, Port.PortB);
+                if (pinNumber < 8)
+                {
+                    // Set the corresponding bit in the GPINTEN (Interrupt-on-Change) register
+                    oldValue = InternalReadByte(Register.GPINTEN, Port.PortA);
+                    newValue = ClearBit(oldValue, pinNumber);
+                    InternalWriteByte(Register.GPINTEN, newValue, Port.PortA);
+                    _interruptPins[0] = ClearBit(_interruptPins[0], pinNumber);
+                }
+                else
+                {
+                    oldValue = InternalReadByte(Register.GPINTEN, Port.PortB);
+                    newValue = ClearBit(oldValue, pinNumber - 8);
+                    InternalWriteByte(Register.GPINTEN, newValue, Port.PortB);
+                    _interruptPins[1] = ClearBit(_interruptPins[1], pinNumber - 8);
+                }
             }
         }
 
         private void InterruptHandler(object sender, PinValueChangedEventArgs e)
         {
-            Port port = e.PinNumber == _interruptA ? Port.PortA : Port.PortB;
-            int interruptPending = InternalReadByte(Register.INTF, port);
-            int newValues = InternalReadByte(Register.GPIO, port);
+            Port port;
+            int interruptPending;
+            int newValues;
+
+            lock (_interruptHandlerLock)
+            {
+                port = e.PinNumber == _interruptA ? Port.PortA : Port.PortB;
+
+                // It seems that this register has at most 1 bit set - the one that triggered the interrupt.
+                // If another pin which has interrupt handling enabled changes until we clear the interrupt flag, that
+                // interrupt is lost.
+                int pinThatCausedInterrupt = InternalReadByte(Register.INTF, port);
+                newValues = InternalReadByte(Register.GPIO, port);
+
+                interruptPending = (newValues ^ _interruptLastInputValues[(int)port]) & _interruptPins[(int)port]; // Which values changed?
+                interruptPending |= pinThatCausedInterrupt; // this one certainly did (even if the value is now the same)
+                _interruptLastInputValues[(int)port] = (byte)newValues;
+            }
+
             int offset = 0;
             if (port == Port.PortB)
             {
@@ -767,14 +835,14 @@ namespace Iot.Device.Mcp23xxx
                 Port port = GetPortForPinNumber(pinNumber);
                 if (port == Port.PortA)
                 {
-                    if (_eventHandlers.Any(x => x.Key <= 7))
+                    if (!_eventHandlers.Any(x => x.Key <= 7))
                     {
                         _controller.UnregisterCallbackForPinValueChangedEvent(_interruptA, InterruptHandler);
                     }
                 }
                 else
                 {
-                    if (_eventHandlers.Any(x => x.Key >= 8))
+                    if (!_eventHandlers.Any(x => x.Key >= 8))
                     {
                         _controller.UnregisterCallbackForPinValueChangedEvent(_interruptB, InterruptHandler);
                     }
@@ -835,6 +903,6 @@ namespace Iot.Device.Mcp23xxx
 
         /// <inheritdoc/>
         protected override bool IsPinModeSupported(int pinNumber, PinMode mode) =>
-            (mode == PinMode.Input || mode == PinMode.Output);
+            (mode == PinMode.Input || mode == PinMode.Output || mode == PinMode.InputPullUp);
     }
 }
