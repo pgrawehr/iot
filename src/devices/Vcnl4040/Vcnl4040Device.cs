@@ -32,7 +32,7 @@ namespace Iot.Device.Vcnl4040
         /// <summary>
         /// Get the proximity sensor of the VCNL4040 device.
         /// </summary>
-        public ProximitySensor ProximitySensor { get; private init; }
+        public ProximitySensor ProximitySensor { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Vcnl4040Device"/> binding.

@@ -17,6 +17,7 @@
     * [Application note](https://www.vishay.com/docs/84307/designingvcnl4040.pdf)
 
     ## Additional information and hints
+
     For a comprehensive description of the VCNL4040, please refer to the datasheet and, in particular, the application note. The following contains only some additional information about features and behaviors that may not be immediately apparent.
 
     Consider also the documentation of the API classes for further information.
