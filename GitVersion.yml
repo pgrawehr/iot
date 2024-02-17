@@ -1,0 +1,17 @@
+mode: ContinuousDeployment
+next-version: 3.2.0
+assembly-versioning-scheme: MajorMinorPatchTag
+assembly-file-versioning-scheme: MajorMinorPatchTag
+build-metadata-padding: 6
+commits-since-version-source-padding: 6
+branches: {
+  master:
+    regex: ^main$
+    tag: dev
+  pull-request:
+    regex: (pull|pull\-requests|pr)[/-]
+    tag: -pr
+    source-branches: ['main']
+}
+
+merge-message-formats: {}
