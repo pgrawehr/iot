@@ -16,9 +16,9 @@ namespace Iot.Device.Serial
     /// </summary>
     public sealed class SoftwareSerial : MarshalByRefObject, IDisposable
     {
+        private readonly bool _shouldDispose;
         private GpioPin _txPin;
         private GpioPin _rxPin;
-        private readonly bool _shouldDispose;
         private GpioController _gpioController;
 
         private int _frameNumberOfBits;
@@ -26,7 +26,7 @@ namespace Iot.Device.Serial
 
         public SoftwareSerial(int txPinNo, int rxPinNo, bool ttlOutput, int baudRate, Parity parity, int dataBits, StopBits stopBits, GpioController gpioController, bool shouldDispose = true)
         {
-            _shouldDispose = shouldDispose || gpioController is null;
+            _shouldDispose = shouldDispose;
             _gpioController = gpioController ?? throw new ArgumentNullException(nameof(gpioController));
 
             TtlOutput = ttlOutput;
@@ -45,6 +45,8 @@ namespace Iot.Device.Serial
             }
 
             CalculateFrameLength();
+
+            BaseStream = new SerialPortStream(this);
 
             _txPin = _gpioController.OpenPin(txPinNo, PinMode.Output);
             _rxPin = _gpioController.OpenPin(rxPinNo, PinMode.Input);
@@ -66,6 +68,7 @@ namespace Iot.Device.Serial
         public Parity Parity { get; }
         public int DataBits { get; }
         public StopBits StopBits { get; }
+        public Stream BaseStream { get; private set; }
 
         private void CalculateFrameLength()
         {
@@ -125,6 +128,7 @@ namespace Iot.Device.Serial
                 Clock();
             }
 
+            // TODO: Parity
             _txPin.Write(!TtlOutput); // Stop bit
         }
 
