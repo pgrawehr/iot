@@ -14,6 +14,7 @@ using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Seatalk1;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
@@ -29,6 +30,7 @@ namespace DisplayControl
         private const string OpenCpn = "OpenCpn";
         private const string Udp = "Udp";
         private const string AuxiliaryGps = "AuxiliaryGps";
+        private const string Seatalk1Name = "Seatalk1";
         
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -97,6 +99,7 @@ namespace DisplayControl
         private AisManager _aisManager;
         private PositionProvider _positionProvider;
         private int _aisUpdates;
+        private SeatalkToNmeaConverter _seatalkPort;
 
         public NmeaSensor(MeasurementManager manager)
         {
@@ -220,6 +223,14 @@ namespace DisplayControl
             // The messages VWR and VHW (Wind measurement / speed trough water) come from the ship and need to go to the autopilot
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VWR"), new[] { HandheldSourceName }, true, true));
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { HandheldSourceName }, true, true));
+
+            // Messages from the Autopilot go everywhere
+            rules.Add(new FilterRule(Seatalk1Name, TalkerId.Any, SentenceId.Any, new List<string>() { OpenCpn, ShipSourceName, MessageRouter.LocalMessageSource }, false, true));
+            // Command messages to the autopilot
+            rules.Add(new FilterRule("*", TalkerId.Seatalk, SeatalkNmeaMessage.Id, new List<string>()
+            {
+                Seatalk1Name
+            }, false, true));
 
             return rules;
         }
@@ -352,6 +363,11 @@ namespace DisplayControl
             _parserForwardInterface.OnParserError += OnParserError;
             _parserForwardInterface.StartDecode();
 
+            _seatalkPort = new SeatalkToNmeaConverter("/dev/ttyAMA4", Seatalk1Name);
+            _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControlStatus.Id);
+            _seatalkPort.SentencesToTranslate.Add(RudderSensorAngle.Id);
+            _seatalkPort.StartDecode();
+
             _openCpnServer = new NmeaTcpServer(OpenCpn, IPAddress.Any, 10100);
             _openCpnServer.OnParserError += OnParserError;
             _openCpnServer.StartDecode();
@@ -393,6 +409,7 @@ namespace DisplayControl
             _router.AddEndPoint(_udpServer);
             _router.AddEndPoint(_parserForwardInterface);
             _router.AddEndPoint(_aisManager);
+            _router.AddEndPoint(_seatalkPort);
 
             _router.OnNewSequence += ParserOnNewSequence;
             foreach (var rule in ConstructRules())

@@ -50,6 +50,7 @@
     <ProjectReference Include="..\..\src\devices\Nmea0183\Nmea0183.csproj" />
     <ProjectReference Include="..\..\src\devices\CharacterLcd\CharacterLcd.csproj" />
     <ProjectReference Include="..\..\src\devices\Mcp23xxx\Mcp23xxx.csproj" />
+    <ProjectReference Include="..\..\src\devices\Seatalk1\Seatalk1.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Update="Views\AisTargetControl.xaml.cs">

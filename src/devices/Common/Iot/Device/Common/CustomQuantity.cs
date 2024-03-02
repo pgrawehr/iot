@@ -154,5 +154,20 @@ namespace Iot.Device.Common
 
             return _value.ToString()!;
         }
+
+        public bool Equals(IQuantity? other, IQuantity tolerance)
+        {
+            if (Value == null)
+            {
+                return other == null;
+            }
+
+            if (other == null)
+            {
+                return false;
+            }
+
+            return Value.Equals(other.Value);
+        }
     }
 }
