@@ -2,7 +2,8 @@
   <PropertyGroup>
     <TargetFrameworks>$(DefaultBindingTfms)</TargetFrameworks>
     <EnableDefaultItems>false</EnableDefaultItems>
-    <RootNamespace></RootNamespace>
+    <RootNamespace>
+    </RootNamespace>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- SA1205: Partial elements should declare access modifier (allows adjusting class visibility in a single source file)-->
