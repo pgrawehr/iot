@@ -41,11 +41,12 @@ namespace Iot.Device.Nmea0183.Tests
                     DateTimeOffset.Parse("2023-10-22T13:40:00", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal),
                     DateTimeOffset.Parse("2023-10-22T13:50:00", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal));
 
-                dev.Save("Calibration_Cirrus_v5.xml", "Cirrus", "HBY5127", "269110660");
+                dev.Save("Calibration_Cirrus_test.xml", "Cirrus", "HBY5127", "269110660");
 
-                var expected = new MagneticDeviationCorrection(TestDataHelper.GetResourceStream("Calibration_Cirrus_v3.xml"));
-                var actual = new MagneticDeviationCorrection("Calibration_Cirrus_v5.xml");
+                var expected = new MagneticDeviationCorrection(TestDataHelper.GetResourceStream("Calibration_Cirrus_v5.xml"));
+                var actual = new MagneticDeviationCorrection("Calibration_Cirrus_test.xml");
                 Assert.Equal(expected, actual);
+                File.Delete("Calibration_Cirrus_test.xml");
             }
         }
 
