@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using Iot.Device;
@@ -102,9 +103,44 @@ namespace Nmea.Simulator
                 _tcpServer.StartDecode();
                 _tcpServer.OnNewSequence += OnNewSequenceFromServer;
 
+                // This code block tries to determine the broadcast address of the local master ethernet adapter.
+                // This needs adjustment if the main adapter is a WIFI port.
+                string broadcastAddress = string.Empty;
+                var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+                foreach (var a in interfaces)
+                {
+                    if (a.OperationalStatus == OperationalStatus.Up && a.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+                    {
+                        var properties = a.GetIPProperties();
+                        if (properties.DhcpServerAddresses.Count == 0)
+                        {
+                            // An address that has no dhcp servers is a fixed one - here we assume that means it's a virtual address
+                            continue;
+                        }
+
+                        foreach (var unicast in properties.UnicastAddresses)
+                        {
+                            if (unicast.Address.AddressFamily == AddressFamily.InterNetwork)
+                            {
+                                byte[] ipBytes = unicast.Address.GetAddressBytes();
+                                byte[] maskBytes = unicast.IPv4Mask.GetAddressBytes();
+                                for (int i = 0; i < ipBytes.Length; i++)
+                                {
+                                    // Make all bits 1 that are NOT set in the mask
+                                    ipBytes[i] |= (byte)~maskBytes[i];
+                                }
+
+                                broadcastAddress = new IPAddress(ipBytes).ToString();
+                            }
+                        }
+
+                        break;
+                    }
+                }
+
                 // Outgoing port is 10110, the incoming port is irrelevant (but we choose it differently here, so that a
                 // receiver can bind to 10110 on the same computer)
-                _udpServer = new NmeaUdpServer("UdpServer", 10111, 10110);
+                _udpServer = new NmeaUdpServer("UdpServer", 10110, 10110, broadcastAddress);
                 _udpServer.StartDecode();
                 _udpServer.OnNewSequence += OnNewSequenceFromServer;
 
