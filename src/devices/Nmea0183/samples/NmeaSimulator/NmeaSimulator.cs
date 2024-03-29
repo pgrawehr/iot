@@ -241,6 +241,15 @@ namespace Nmea.Simulator
                 SeaSmartEngineDetail detail = new SeaSmartEngineDetail(engineData);
                 SendSentence(detail);
 
+                GeographicPosition target = new GeographicPosition(47.54, 9.48, 0);
+                GreatCircle.DistAndDir(data.Position, target, out var distance, out var direction);
+                Speed vmg = Math.Cos(AngleExtensions.Difference(data.Course, direction).Radians) * data.SpeedOverGround;
+                Length xtError = Length.FromNauticalMiles(0.2);
+                var rmb = new RecommendedMinimumNavToDestination(zda.DateTime, xtError, "Start", "FH", target, distance, direction, vmg, false);
+                SendSentence(rmb);
+
+                var xte = new CrossTrackError(xtError);
+                SendSentence(xte);
                 // Test Seatalk message (understood by some OpenCPN plugins)
                 ////RawSentence sentence = new RawSentence(new TalkerId('S', 'T'), new SentenceId("ALK"), new string[]
                 ////{
