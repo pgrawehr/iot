@@ -26,5 +26,12 @@ namespace Nmea.Simulator
             get;
             set;
         }
+
+        [Option("debug", Default = false, HelpText = "Wait for debugger on startup")]
+        public bool Debug
+        {
+            get;
+            set;
+        }
     }
 }

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -65,6 +66,15 @@ namespace Nmea.Simulator
                 return 1;
             }
 
+            if (parsed.Value.Debug)
+            {
+                Console.WriteLine("Waiting for debugger...");
+                while (!Debugger.IsAttached)
+                {
+                    Thread.Sleep(100);
+                }
+            }
+
             var sim = new Simulator();
             if (!string.IsNullOrWhiteSpace(parsed.Value.ReplayFiles))
             {
@@ -105,24 +115,24 @@ namespace Nmea.Simulator
 
                 // This code block tries to determine the broadcast address of the local master ethernet adapter.
                 // This needs adjustment if the main adapter is a WIFI port.
-                string broadcastAddress = string.Empty;
+                string broadcastAddress = "255.255.255.255";
                 var interfaces = NetworkInterface.GetAllNetworkInterfaces();
                 foreach (var a in interfaces)
                 {
                     if (a.OperationalStatus == OperationalStatus.Up && a.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
                     {
                         var properties = a.GetIPProperties();
-                        if (properties.DhcpServerAddresses.Count == 0)
-                        {
-                            // An address that has no dhcp servers is a fixed one - here we assume that means it's a virtual address
-                            continue;
-                        }
-
                         foreach (var unicast in properties.UnicastAddresses)
                         {
                             if (unicast.Address.AddressFamily == AddressFamily.InterNetwork)
                             {
                                 byte[] ipBytes = unicast.Address.GetAddressBytes();
+                                // A virtual address usually looks like a router address, that means it's last part is .1
+                                if (ipBytes[3] == 1)
+                                {
+                                    continue;
+                                }
+
                                 byte[] maskBytes = unicast.IPv4Mask.GetAddressBytes();
                                 for (int i = 0; i < ipBytes.Length; i++)
                                 {
