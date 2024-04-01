@@ -99,7 +99,7 @@ namespace Iot.Device.Nmea0183.Sentences
             // If override is active ("A"), then we treat this as standby
             if (manualOverride == "A")
             {
-                Status = "A";
+                Status = "M";
                 Valid = true;
             }
             else
