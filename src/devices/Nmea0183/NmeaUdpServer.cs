@@ -252,7 +252,7 @@ namespace Iot.Device.Nmea0183
                     {
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                         {
-#if NET6_O_OR_GREATER
+#if NET6_0_OR_GREATER
                             var result = _client.ReceiveAsync(_cancellationToken).GetAwaiter().GetResult();
                             datagram = result.Buffer;
 #else
