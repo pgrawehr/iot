@@ -249,6 +249,7 @@ namespace Iot.Device.Seatalk1
         {
             if (Status == newStatus && CourseComputerStatus == 0)
             {
+                _logger.LogInformation("Not setting status {NewStatus} because already set.", newStatus);
                 return true; // nothing to do
             }
 
@@ -265,6 +266,8 @@ namespace Iot.Device.Seatalk1
                 AutopilotStatus.Wind => AutopilotButtons.Auto | AutopilotButtons.StandBy,
                 _ => throw new ArgumentException($"Status {newStatus} is not valid", nameof(newStatus)),
             };
+
+            _logger.LogInformation("Setting status {Status} by pressing button(s) {Button}", newStatus, buttonToPress);
 
             // For setting wind or track modes, we need to first set auto mode.
             // Setting wind mode without auto works (and is returned as status 0x4), but has no visible effect.
@@ -308,6 +311,11 @@ namespace Iot.Device.Seatalk1
                 }
 
                 ret = Status == AutopilotStatus.Track && CourseComputerStatus == CourseComputerWarnings.None;
+            }
+
+            if (!ret)
+            {
+                _logger.LogError("Status was not set correctly");
             }
 
             return ret;

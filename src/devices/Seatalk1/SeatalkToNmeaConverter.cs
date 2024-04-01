@@ -112,12 +112,19 @@ namespace Iot.Device.Seatalk1
 
         private void ProcessSendQueue()
         {
-            while (!_terminatingCancellationTokenSource.IsCancellationRequested)
+            try
             {
-                if (_sendQueue.TryTake(out var item, -1, _terminatingCancellationTokenSource.Token))
+                while (!_terminatingCancellationTokenSource.IsCancellationRequested)
                 {
-                    item();
+                    if (_sendQueue.TryTake(out var item, -1, _terminatingCancellationTokenSource.Token))
+                    {
+                        item();
+                    }
                 }
+            }
+            catch (OperationCanceledException x)
+            {
+                _logger.LogDebug(x, "Send task terminating, caught OperationCancelledException");
             }
         }
 

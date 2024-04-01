@@ -18,6 +18,7 @@ using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1;
 using UnitsNet;
 using CommandLine;
+using Microsoft.Extensions.Logging;
 
 namespace Nmea.Simulator
 {
@@ -73,6 +74,11 @@ namespace Nmea.Simulator
                 {
                     Thread.Sleep(100);
                 }
+            }
+
+            if (parsed.Value.Verbose)
+            {
+                LogDispatcher.LoggerFactory = new SimpleConsoleLoggerFactory(LogLevel.Trace);
             }
 
             var sim = new Simulator();
