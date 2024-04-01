@@ -25,7 +25,7 @@ namespace Iot.Device.Seatalk1
     /// </remarks>
     public class AutoPilotRemoteController : MarshalByRefObject
     {
-        private const double AngleEpsilon = 1.1; // The protocol can only give angles in whole degrees
+        private const double AngleEpsilon = 0.9; // The protocol can only give angles in whole degrees
         private static readonly TimeSpan MaximumTimeout = TimeSpan.FromSeconds(6);
         private readonly SeatalkInterface _parentInterface;
         private readonly object _lock = new object();
