@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace ArduinoCsCompiler
 {
-    internal class IlCode
+    public class IlCode
     {
         public IlCode(EquatableMethod method, byte[]? ilBytes)
         {

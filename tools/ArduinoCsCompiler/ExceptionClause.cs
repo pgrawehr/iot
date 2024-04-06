@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace ArduinoCsCompiler
 {
-    internal class ExceptionClause
+    public class ExceptionClause
     {
         public ExceptionClause(ExceptionHandlingClauseOptions clause, ushort tryOffset, ushort tryLength, ushort handlerOffset, ushort handlerLength, int exceptionFilterToken)
         {
