@@ -67,6 +67,16 @@ namespace ArduinoCsCompiler
 
         public static string DecodedAssembly(ArduinoMethodDeclaration method, ExecutionSet set, int currentPc, string rangeArgument)
         {
+            return DecodedAssembly(method, set, currentPc, rangeArgument, false);
+        }
+
+        public static string DecodedAssembly(ArduinoMethodDeclaration method, ExecutionSet set)
+        {
+            return DecodedAssembly(method, set, -1, string.Empty, true);
+        }
+
+        public static string DecodedAssembly(ArduinoMethodDeclaration method, ExecutionSet set, int currentPc, string rangeArgument, bool forRecompile)
+        {
             var instructions = DecodeMethod(method);
             StringBuilder sb = new StringBuilder();
 
@@ -97,7 +107,7 @@ namespace ArduinoCsCompiler
                     sb.Append("   ");
                 }
 
-                sb.Append($"{instruction.Pc:X4} ");
+                sb.Append($"IL_{instruction.Pc:X4}: ");
 
                 var opCode = instruction.OpCode;
                 sb.Append($"{instruction.Name.PadRight(10)} ");

@@ -15,26 +15,41 @@ namespace ArduinoCsCompiler
     {
         public static void WriteMethodHeader(TextWriter w, ArduinoMethodDeclaration code)
         {
-            string returnType = string.Empty;
-            string methodName = code.Name;
-            if (code.Flags.HasFlag(MethodFlags.Ctor) == false) // Otherwise, there is no return type
+            string signature = code.MethodBase.MethodSignature(false, true);
+            w.WriteLine($"{signature} cil managed");
+
+        }
+
+        public static void WriteClassHeader(TextWriter w, ClassDeclaration cls)
+        {
+            w.WriteLine($".class public auto ansi beforefieldinit {cls.Name} extends {cls.TheType.BaseType}");
+        }
+
+        public static void WriteClass(TextWriter w, ClassDeclaration cls, ExecutionSet executionSet)
+        {
+            WriteClassHeader(w, cls);
+            w.WriteLine("{");
+            foreach (var member in cls.Members)
             {
-                returnType = code.MethodInfo.ReturnType.ToString();
-            }
-            else
-            {
-                methodName = "specialname rtspecialname instance void .ctor";
+                if (member.Method != null)
+                {
+                    var method = executionSet.Methods().FirstOrDefault(x => x.MethodBase == new EquatableMethod(member.Method));
+                    if (method != null)
+                    {
+                        WriteMethod(w, method, executionSet);
+                    }
+                }
             }
 
-            w.WriteLine($".method public hidebysig {(code.Flags.HasFlag(MethodFlags.Static) ? "static" : string.Empty)} {returnType} {methodName}() cil managed");
-
+            w.WriteLine("}");
         }
 
         public static void WriteMethod(TextWriter w, ArduinoMethodDeclaration code, ExecutionSet executionSet)
         {
             WriteMethodHeader(w, code);
             w.WriteLine("{");
-            string methodBody = IlCodeParser.DecodedAssembly(code, executionSet, 0, String.Empty);
+            w.WriteLine($".maxstack {code.MaxStack}");
+            string methodBody = IlCodeParser.DecodedAssembly(code, executionSet);
             w.WriteLine(methodBody);
             w.WriteLine("}");
         }

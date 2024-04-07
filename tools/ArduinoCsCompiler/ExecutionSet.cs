@@ -1507,9 +1507,9 @@ namespace ArduinoCsCompiler
         public void WritePatchedCodeFile(string file, IlCapabilities ilCapabilities)
         {
             using TextWriter tw = new StreamWriter("output.il");
-            foreach (var method in _methods)
+            foreach (var cls in _classes)
             {
-                IlWriter.WriteMethod(tw, method, this);
+                IlWriter.WriteClass(tw, cls, this);
             }
         }
 

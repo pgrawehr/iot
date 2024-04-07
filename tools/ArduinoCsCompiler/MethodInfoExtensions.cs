@@ -18,10 +18,16 @@ namespace ArduinoCsCompiler
         /// </summary>
         /// <param name="me">A MethodInfo instance</param>
         /// <param name="useFullNamespaces">True to print full namespace info, false to omit them</param>
+        /// <param name="forIl">True to print the signature so that it is part of a valid IL method declaration</param>
         /// <returns></returns>
-        public static string MethodSignature(this MethodBase me, bool useFullNamespaces = true)
+        public static string MethodSignature(this MethodBase me, bool useFullNamespaces = true, bool forIl = false)
         {
             StringBuilder b = new StringBuilder();
+            if (forIl)
+            {
+                b.Append(".method ");
+            }
+
             if (me.IsPublic)
             {
                 b.Append("public ");
@@ -57,6 +63,11 @@ namespace ArduinoCsCompiler
                 b.Append("virtual ");
             }
 
+            if (forIl)
+            {
+                b.Append("hidebysig ");
+            }
+
             if (me is MethodInfo mi)
             {
                 if (mi.ReturnType == typeof(void))
@@ -74,7 +85,7 @@ namespace ArduinoCsCompiler
                 // Is a ctor
             }
 
-            if (me.DeclaringType != null)
+            if (me.DeclaringType != null && forIl == false)
             {
                 b.Append(ClassSignature(me.DeclaringType, useFullNamespaces));
                 b.Append(".");
@@ -119,9 +130,9 @@ namespace ArduinoCsCompiler
             return b.ToString();
         }
 
-        public static string MethodSignature(this EquatableMethod em, bool useFullNamespaces = true)
+        public static string MethodSignature(this EquatableMethod em, bool useFullNamespaces = true, bool forIl = false)
         {
-            return MethodSignature(em.Method, useFullNamespaces);
+            return MethodSignature(em.Method, useFullNamespaces, forIl);
         }
 
         public static string MemberInfoSignature(this EquatableMethod em, bool useFullNamespaces = true)

@@ -310,6 +310,7 @@ namespace ArduinoCsCompiler
                 }
 
                 set.WriteMapFile(CommandLineOptions.TokenMapFile, caps);
+                set.WritePatchedCodeFile("output.il", caps);
             }
         }
 
