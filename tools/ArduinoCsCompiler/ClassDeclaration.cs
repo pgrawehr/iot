@@ -21,6 +21,8 @@ namespace ArduinoCsCompiler
             NewToken = newToken;
             _interfaces = interfaces;
             Name = type.ClassSignature(true);
+            Namespace = type.Namespace ?? string.Empty;
+            SimpleName = type.Name;
             ReadOnly = false;
         }
 
@@ -37,6 +39,10 @@ namespace ArduinoCsCompiler
             get;
             internal set;
         }
+
+        public string Namespace { get; }
+
+        public string SimpleName { get; }
 
         public int NewToken
         {

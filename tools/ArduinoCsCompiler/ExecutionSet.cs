@@ -1506,11 +1506,8 @@ namespace ArduinoCsCompiler
 
         public void WritePatchedCodeFile(string file, IlCapabilities ilCapabilities)
         {
-            using TextWriter tw = new StreamWriter("output.il");
-            foreach (var cls in _classes)
-            {
-                IlWriter.WriteClass(tw, cls, this);
-            }
+            var writer = new IlWriter(this, ilCapabilities);
+            writer.Write(CompilerSettings.ProcessName, file);
         }
 
         public void WriteMapFile(string tokenMapFile, IlCapabilities ilCapabilities)
@@ -1728,6 +1725,16 @@ namespace ArduinoCsCompiler
             }
 
             _logger.LogDebug($"Got {fieldOrCtorTokenToClass.Count} members in reverse lookup index");
+        }
+
+        /// <summary>
+        /// Returns the class declaration for a standard class type
+        /// </summary>
+        /// <param name="type">The type to search</param>
+        /// <returns>The class or null</returns>
+        public ClassDeclaration? GetClass(Type? type)
+        {
+            return Classes.FirstOrDefault(x => x.TheType == type);
         }
     }
 }

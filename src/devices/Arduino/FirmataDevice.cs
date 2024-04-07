@@ -1209,7 +1209,7 @@ namespace Iot.Device.Arduino
                     pwmCommandSequence.WriteByte((byte)0);
                     pwmCommandSequence.WriteByte((byte)FirmataCommand.END_SYSEX);
                     SendCommand(pwmCommandSequence);
-        }
+                }
             }
         }
 

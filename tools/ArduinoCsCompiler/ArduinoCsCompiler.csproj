@@ -24,6 +24,7 @@
    </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="ICSharpCode.Decompiler" Version="9.0.0.7618-preview1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.8.0" />
   </ItemGroup>
   <ItemGroup Condition="$(Configuration)=='Debug'">
@@ -31,14 +32,19 @@
     <ProjectReference Include="..\..\src\System.Device.Gpio\System.Device.Gpio.csproj" />
   </ItemGroup>
   <ItemGroup Condition="$(Configuration)!='Debug'">
-    <ProjectReference Include="..\..\src\System.Device.Gpio\System.Device.Gpio.csproj"/>
-    <ProjectReference Include="..\..\src\Iot.Device.Bindings\Iot.Device.Bindings.csproj"/>
+    <ProjectReference Include="..\..\src\System.Device.Gpio\System.Device.Gpio.csproj" />
+    <ProjectReference Include="..\..\src\Iot.Device.Bindings\Iot.Device.Bindings.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>$(AssemblyName).Tests</_Parameter1>
     </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="NanoGenerator\ClassWrapper.cs" />
+    <Compile Include="NanoGenerator\FieldWrapper.cs" />
   </ItemGroup>
 
 </Project>
