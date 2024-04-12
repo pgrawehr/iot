@@ -79,7 +79,7 @@ namespace ArduinoCsCompiler
                 UseSdkStyleProjectFormat = false,
             };
 
-            using TextWriter tw = new StreamWriter("output.cs");
+            using TextWriter tw = new StreamWriter("C:\\projects\\iot4\\tools\\ArduinoCsCompiler\\samples\\BlinkingLedNano\\generated.cs");
             SyntaxTree tree = new SyntaxTree();
             var node = new NamespaceDeclaration("Decompiled");
             tree.AddChild(node, SyntaxTree.MemberRole);

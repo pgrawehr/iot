@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -47,7 +50,7 @@ namespace ArduinoCsCompiler.NanoGenerator
             return _memberField.Field.GetValue(null); // Expect a constant here
         }
 
-        public string Name => _memberField.Name;
+        public string Name => _memberField.FieldName;
         public bool IsReadOnly => _memberField.Field.IsInitOnly;
         public bool ReturnTypeIsRefReadOnly { get; }
         public bool IsVolatile { get; }
@@ -67,9 +70,9 @@ namespace ArduinoCsCompiler.NanoGenerator
 
         public IEnumerable<IMember> ExplicitlyImplementedInterfaceMembers { get; }
         public bool IsExplicitInterfaceImplementation { get; }
-        public bool IsVirtual { get; }
-        public bool IsOverride { get; }
-        public bool IsOverridable { get; }
+        public bool IsVirtual => false;
+        public bool IsOverride => false;
+        public bool IsOverridable => false;
         public TypeParameterSubstitution Substitution { get; }
 
         public IMember Specialize(TypeParameterSubstitution substitution)
@@ -88,10 +91,10 @@ namespace ArduinoCsCompiler.NanoGenerator
         IType? IEntity.DeclaringType => Type;
 
         public IModule? ParentModule { get; }
-        public Accessibility Accessibility { get; }
-        public bool IsStatic { get; }
-        public bool IsAbstract { get; }
-        public bool IsSealed { get; }
+        public Accessibility Accessibility => Accessibility.Public;
+        public bool IsStatic => _memberField.Field.IsStatic;
+        public bool IsAbstract => false;
+        public bool IsSealed => false;
         public string ReflectionName { get; }
         public string Namespace { get; }
         public ICompilation Compilation { get; }

@@ -27,6 +27,7 @@ namespace ArduinoCsCompiler
             Field = field;
             StaticFieldSize = staticFieldSize;
             Name = $"Field: {field.MemberInfoSignature()}";
+            FieldName = field.Name;
         }
 
         public ClassMember(MethodBase method, VariableKind variableType, int token, List<int> baseTokens)
@@ -37,6 +38,7 @@ namespace ArduinoCsCompiler
             SizeOfField = 0;
             Method = method;
             Name = $"Method: {method.MethodSignature()}";
+            FieldName = "(not a field)";
         }
 
         public string Name
@@ -50,6 +52,11 @@ namespace ArduinoCsCompiler
         }
 
         public FieldInfo? Field
+        {
+            get;
+        }
+
+        public string FieldName
         {
             get;
         }
