@@ -10,7 +10,7 @@
     },
     "BlinkingLed": {
       "commandName": "Project",
-      "commandLineArgs": "compile --run ..\\..\\..\\..\\samples\\BlinkingLed\\bin\\$(Configuration)\\net6.0\\BlinkingLed.exe --network localhost --mapfile ..\\..\\..\\..\\samples\\BlinkingLed\\bin\\$(Configuration)\\net6.0\\BlinkingLed-tokenmap.txt --compileonly"
+      "commandLineArgs": "compile --run ..\\..\\..\\..\\samples\\BlinkingLed\\bin\\$(Configuration)\\net6.0\\BlinkingLed.exe --network localhost --mapfile ..\\..\\..\\..\\samples\\BlinkingLedNano\\BlinkingLed-tokenmap.txt --compileonly"
     },
     "Help": {
       "commandName": "Project",

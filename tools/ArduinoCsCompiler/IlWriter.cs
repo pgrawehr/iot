@@ -17,6 +17,8 @@ using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.OutputVisitor;
 using ICSharpCode.Decompiler.CSharp.Syntax;
 using ICSharpCode.Decompiler.TypeSystem;
+using Microsoft.CodeAnalysis;
+using SyntaxTree = ICSharpCode.Decompiler.CSharp.Syntax.SyntaxTree;
 
 namespace ArduinoCsCompiler
 {
@@ -73,6 +75,21 @@ namespace ArduinoCsCompiler
             w.WriteLine("}");
         }
 
+        public static bool ClassToIgnoreAsParent(ClassDeclaration t)
+        {
+            if (t.TheType == typeof(object))
+            {
+                return true;
+            }
+
+            if (t.TheType == typeof(ValueType))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public void Write(string sourceFile, string outFile)
         {
             var settings = new DecompilerSettings()
@@ -87,6 +104,12 @@ namespace ArduinoCsCompiler
 
             foreach (var cls in _executionSet.Classes)
             {
+                // Don't write the definition of System.Object.
+                if (cls.NewToken == (int)KnownTypeTokens.Object)
+                {
+                    continue;
+                }
+
                 var typeSystemAstBuilder = new TypeSystemAstBuilder();
                 var wrapped = new ClassWrapper(cls, _executionSet);
                 EntityDeclaration decl = typeSystemAstBuilder.ConvertEntity(wrapped);
@@ -98,8 +121,17 @@ namespace ArduinoCsCompiler
                     if (member.Field != null)
                     {
                         var fieldWrapped = new FieldWrapper(cls, member, _executionSet);
+                        decl.AddChild(new Comment($"<summary>{member.Name}</summary>", CommentType.Documentation), Roles.Comment);
                         EntityDeclaration fld = typeSystemAstBuilder.ConvertEntity(fieldWrapped);
                         decl.AddChild(fld, Roles.TypeMemberRole);
+                    }
+
+                    if (member.Method != null)
+                    {
+                        var methodWrapped = new MethodWrapper(cls, member, _executionSet);
+                        decl.AddChild(new Comment($"<summary>{member.Name}</summary>", CommentType.Documentation), Roles.Comment);
+                        EntityDeclaration method = typeSystemAstBuilder.ConvertEntity(methodWrapped);
+                        decl.AddChild(method, Roles.TypeMemberRole);
                     }
                 }
             }

@@ -204,7 +204,7 @@ namespace ArduinoCsCompiler.NanoGenerator
             {
                 List<IType> baseTypes = new List<IType>();
                 var myBase = _executionSet.Classes.FirstOrDefault(x => x.TheType == _cls.TheType.BaseType);
-                if (myBase != null && myBase.TheType != typeof(object))
+                if (myBase != null && !IlWriter.ClassToIgnoreAsParent(myBase))
                 {
                     baseTypes.Add(new ClassWrapper(myBase, _executionSet));
                 }

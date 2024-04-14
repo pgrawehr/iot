@@ -45,6 +45,8 @@
   <ItemGroup>
     <Compile Include="NanoGenerator\ClassWrapper.cs" />
     <Compile Include="NanoGenerator\FieldWrapper.cs" />
+    <Compile Include="NanoGenerator\MethodWrapper.cs" />
+    <Compile Include="NanoGenerator\ParameterWrapper.cs" />
   </ItemGroup>
 
 </Project>

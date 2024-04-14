@@ -923,6 +923,37 @@ namespace ArduinoCsCompiler
             return true;
         }
 
+        /// <summary>
+        /// Gets the argument type list of a method. Only works after the class list is generated
+        /// </summary>
+        internal List<ClassDeclaration> GetArgumentTypes(EquatableMethod methodInfo)
+        {
+            List<ClassDeclaration> ret = new List<ClassDeclaration>();
+            var param1 = methodInfo.Method.GetParameters();
+            for (int i = 0; i < param1.Length; i++)
+            {
+                var p1 = param1[i].ParameterType;
+                ClassDeclaration cls;
+                if (p1.IsArray)
+                {
+                    cls = GetClass(p1.GetElementType()) ?? throw new InvalidOperationException($"Could not find original type of array {p1}");
+                }
+                else if (p1.IsByRef)
+                {
+                    var elem = p1.GetElementType();
+                    cls = GetClass(elem) ?? throw new InvalidOperationException($"Could not find real type of ref argument {p1}");
+                }
+                else
+                {
+                    cls = GetClass(p1) ?? throw new InvalidOperationException($"Could not find type of parameter {param1[i]}");
+                }
+
+                ret.Add(cls);
+            }
+
+            return ret;
+        }
+
         internal bool IsSuppressed(Type t)
         {
             return _classesToSuppress.Contains(t);
@@ -1409,9 +1440,14 @@ namespace ArduinoCsCompiler
             return entry.StringData;
         }
 
-        internal ArduinoMethodDeclaration GetMethod(EquatableMethod methodInfo)
+        internal ArduinoMethodDeclaration? GetMethod(EquatableMethod methodInfo, bool throwOnError = true)
         {
-            return _methods.First(x => EquatableMethod.AreMethodsIdentical(x.MethodBase, methodInfo));
+            if (throwOnError)
+            {
+                return _methods.First(x => EquatableMethod.AreMethodsIdentical(x.MethodBase, methodInfo));
+            }
+
+            return _methods.FirstOrDefault(x => EquatableMethod.AreMethodsIdentical(x.MethodBase, methodInfo));
         }
 
         private static int Xor(IEnumerable<int> inputs)

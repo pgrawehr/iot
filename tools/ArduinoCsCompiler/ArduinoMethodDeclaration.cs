@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Iot.Device.Arduino;
@@ -27,7 +28,8 @@ namespace ArduinoCsCompiler
             NativeMethod = 0;
             Code = code;
             ArgumentCount = methodBase.GetParameters().Length;
-            if (methodBase.CallingConvention.HasFlag(CallingConventions.HasThis))
+            HasThis = methodBase.CallingConvention.HasFlag(CallingConventions.HasThis);
+            if (HasThis)
             {
                 ArgumentCount += 1;
             }
@@ -48,7 +50,7 @@ namespace ArduinoCsCompiler
             Code = code;
             Flags = extraFlags;
             Token = token;
-
+            HasThis = methodBase.CallingConvention.HasFlag(CallingConventions.HasThis);
             var attribs = methodBase.GetCustomAttributes(typeof(ArduinoImplementationAttribute)).Cast<ArduinoImplementationAttribute>().ToList();
 
             if (methodBase.IsAbstract)
@@ -81,7 +83,7 @@ namespace ArduinoCsCompiler
             }
 
             ArgumentCount = methodBase.GetParameters().Length;
-            if (methodBase.CallingConvention.HasFlag(CallingConventions.HasThis))
+            if (HasThis)
             {
                 ArgumentCount += 1;
             }
@@ -126,8 +128,12 @@ namespace ArduinoCsCompiler
             Name = $"{MethodBase.MethodSignature()} (Token 0x{Token:X})";
         }
 
+        /// <summary>
+        /// This is only used for declaring native members
+        /// </summary>
         public ArduinoMethodDeclaration(int token, EquatableMethod methodBase, ArduinoMethodDeclaration? requestedBy, MethodFlags flags, int nativeMethod)
         {
+            HasThis = methodBase.CallingConvention.HasFlag(CallingConventions.HasThis);
             Index = -1;
             Token = token;
             MethodBase = methodBase;
@@ -166,6 +172,11 @@ namespace ArduinoCsCompiler
             }
 
             Name = $"{MethodBase.MethodSignature()} (Special Method, Token 0x{Token:X})";
+        }
+
+        public bool HasThis
+        {
+            get;
         }
 
         public bool HasBody

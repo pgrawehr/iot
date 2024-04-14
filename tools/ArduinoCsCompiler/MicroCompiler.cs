@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Threading;
 using ArduinoCsCompiler.Runtime;
+using ICSharpCode.Decompiler.IL;
 using Iot.Device.Arduino;
 using Iot.Device.Common;
 using Microsoft.CodeAnalysis;

@@ -58,6 +58,7 @@ namespace ArduinoCsCompiler.NanoGenerator
                 return $"Field_{_memberField.Token:X8}";
             }
         }
+
         public bool IsReadOnly => _memberField.Field.IsInitOnly;
         public bool ReturnTypeIsRefReadOnly { get; }
         public bool IsVolatile { get; }
