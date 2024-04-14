@@ -22,6 +22,7 @@ namespace ArduinoCsCompiler
 {
     public class IlWriter
     {
+        public const string GENERATED_NAMESPACE = "NanoInput";
         private readonly ExecutionSet _executionSet;
         private readonly IlCapabilities _ilCapabilities;
 
@@ -81,7 +82,7 @@ namespace ArduinoCsCompiler
 
             using TextWriter tw = new StreamWriter("C:\\projects\\iot4\\tools\\ArduinoCsCompiler\\samples\\BlinkingLedNano\\generated.cs");
             SyntaxTree tree = new SyntaxTree();
-            var node = new NamespaceDeclaration("Decompiled");
+            var node = new NamespaceDeclaration(GENERATED_NAMESPACE);
             tree.AddChild(node, SyntaxTree.MemberRole);
 
             foreach (var cls in _executionSet.Classes)
@@ -89,6 +90,8 @@ namespace ArduinoCsCompiler
                 var typeSystemAstBuilder = new TypeSystemAstBuilder();
                 var wrapped = new ClassWrapper(cls, _executionSet);
                 EntityDeclaration decl = typeSystemAstBuilder.ConvertEntity(wrapped);
+
+                node.AddChild(new Comment($"<summary>{cls.Name}</summary>", CommentType.Documentation), Roles.Comment);
                 node.AddChild(decl, SyntaxTree.MemberRole);
                 foreach (var member in cls.Members)
                 {

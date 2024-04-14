@@ -38,7 +38,7 @@ namespace ArduinoCsCompiler.NanoGenerator
 
         public SymbolKind SymbolKind => SymbolKind.TypeDefinition;
 
-        public string FullName => _cls.Name;
+        public string FullName => $"Class_{_cls.NewToken:X8}";
 
         public IEnumerable<IAttribute> GetAttributes()
         {
@@ -57,7 +57,7 @@ namespace ArduinoCsCompiler.NanoGenerator
 
         public EntityHandle MetadataToken => throw new NotImplementedException();
 
-        public string Name => _cls.SimpleName;
+        public string Name => $"Class_{_cls.NewToken:X8}";
 
         public ITypeDefinition? DeclaringTypeDefinition => null;
 
@@ -235,7 +235,7 @@ namespace ArduinoCsCompiler.NanoGenerator
 
         public string ReflectionName => _cls.TheType.Name;
 
-        public string Namespace => _cls.TheType.Namespace ?? string.Empty;
+        public string Namespace => IlWriter.GENERATED_NAMESPACE;
 
         public ICompilation Compilation => throw new NotImplementedException();
         public bool Equals(IType? other)

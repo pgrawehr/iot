@@ -50,7 +50,14 @@ namespace ArduinoCsCompiler.NanoGenerator
             return _memberField.Field.GetValue(null); // Expect a constant here
         }
 
-        public string Name => _memberField.FieldName;
+        public string Name
+        {
+            get
+            {
+                // memberfied.FieldName
+                return $"Field_{_memberField.Token:X8}";
+            }
+        }
         public bool IsReadOnly => _memberField.Field.IsInitOnly;
         public bool ReturnTypeIsRefReadOnly { get; }
         public bool IsVolatile { get; }
