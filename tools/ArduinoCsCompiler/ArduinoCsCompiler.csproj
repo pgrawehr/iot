@@ -47,6 +47,7 @@
     <Compile Include="NanoGenerator\FieldWrapper.cs" />
     <Compile Include="NanoGenerator\MethodWrapper.cs" />
     <Compile Include="NanoGenerator\ParameterWrapper.cs" />
+    <Compile Include="NanoGenerator\VoidParameterWrapper.cs" />
   </ItemGroup>
 
 </Project>

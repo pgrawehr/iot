@@ -938,10 +938,17 @@ namespace ArduinoCsCompiler
                 {
                     cls = GetClass(p1.GetElementType()) ?? throw new InvalidOperationException($"Could not find original type of array {p1}");
                 }
-                else if (p1.IsByRef)
+                else if (p1.IsByRef || p1.IsPointer)
                 {
                     var elem = p1.GetElementType();
-                    cls = GetClass(elem) ?? throw new InvalidOperationException($"Could not find real type of ref argument {p1}");
+                    if (elem == typeof(void))
+                    {
+                        cls = null; // Special type
+                    }
+                    else
+                    {
+                        cls = GetClass(elem) ?? throw new InvalidOperationException($"Could not find real type of ref argument {p1}");
+                    }
                 }
                 else
                 {
@@ -1768,9 +1775,25 @@ namespace ArduinoCsCompiler
         /// </summary>
         /// <param name="type">The type to search</param>
         /// <returns>The class or null</returns>
-        public ClassDeclaration? GetClass(Type? type)
+        public ClassDeclaration? GetClass(Type type)
         {
-            return Classes.FirstOrDefault(x => x.TheType == type);
+            if (type.IsEnum)
+            {
+                // TODO: We probably need to regenerate the real enums, as otherwise we might get method overload ambiguities
+                return Classes.FirstOrDefault(x => x.TheType == typeof(int));
+            }
+
+            var ret = Classes.FirstOrDefault(x => x.TheType == type);
+            if (ret == null)
+            {
+                var t2 = GetReplacement(type);
+                if (t2 != null)
+                {
+                    ret = Classes.FirstOrDefault(x => x.TheType == t2);
+                }
+            }
+
+            return ret;
         }
     }
 }

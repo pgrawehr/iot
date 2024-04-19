@@ -25,7 +25,7 @@ namespace ArduinoCsCompiler.NanoGenerator
             _memberField = memberField;
             _executionSet = executionSet;
             _declaringType = new ClassWrapper(owner, executionSet);
-            _name = $"Method_{memberField.Token:X8}";
+            _name = memberField.OriginalName;
             _arduinoMethod = executionSet.GetMethod(memberField.Method, false);
         }
 
@@ -51,6 +51,12 @@ namespace ArduinoCsCompiler.NanoGenerator
                     }
 
                     return SymbolKind.Method;
+                }
+
+                if (_memberField.Method is ConstructorInfo cf)
+                {
+                    // Static cctors do not have the IsConstructor flag set
+                    return SymbolKind.Constructor;
                 }
 
                 throw new NotSupportedException("Invalid type detected");
@@ -87,8 +93,8 @@ namespace ArduinoCsCompiler.NanoGenerator
         public bool ReturnTypeIsRefReadOnly { get; }
         public bool IsInitOnly { get; }
         public bool ThisIsRefReadOnly { get; }
-        public IReadOnlyList<ITypeParameter> TypeParameters { get; }
-        public IReadOnlyList<IType> TypeArguments { get; }
+        public IReadOnlyList<ITypeParameter> TypeParameters => new List<ITypeParameter>();
+        public IReadOnlyList<IType> TypeArguments => new List<IType>();
         public bool IsExtensionMethod { get; }
         public bool IsLocalFunction { get; }
         public bool IsConstructor => _memberField.Method.IsConstructor;
@@ -111,7 +117,26 @@ namespace ArduinoCsCompiler.NanoGenerator
         }
 
         public IMember MemberDefinition { get; }
-        public IType ReturnType { get; }
+
+        public IType ReturnType
+        {
+            get
+            {
+                if (_arduinoMethod == null || _arduinoMethod.Flags.HasFlag(MethodFlags.Ctor))
+                {
+                    return SpecialType.NoType;
+                }
+
+                Type returnType = _arduinoMethod.MethodInfo.ReturnType;
+
+                if (returnType == typeof(void))
+                {
+                    return SpecialType.NoType; // TODO: Why don't we have a "void" type here?
+                }
+
+                return new ClassWrapper(_executionSet.GetClass(returnType), _executionSet);
+            }
+        }
 
         IType? IEntity.DeclaringType => _declaringType;
 
@@ -157,7 +182,14 @@ namespace ArduinoCsCompiler.NanoGenerator
                     var input = _executionSet.GetArgumentTypes(_arduinoMethod.MethodBase);
                     for (int i = 0; i < input.Count; i++)
                     {
-                        ret.Add(new ParameterWrapper(input[i], i, _executionSet));
+                        if (input[i] == null)
+                        {
+                            ret.Add(new VoidParameterWrapper());
+                        }
+                        else
+                        {
+                            ret.Add(new ParameterWrapper(input[i], i, _executionSet));
+                        }
                     }
                 }
 
