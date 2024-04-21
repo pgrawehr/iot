@@ -95,6 +95,7 @@ namespace ArduinoCsCompiler
             var settings = new DecompilerSettings()
             {
                 UseSdkStyleProjectFormat = false,
+                DecompileMemberBodies = true,
             };
 
             using TextWriter tw = new StreamWriter("C:\\projects\\iot4\\tools\\ArduinoCsCompiler\\samples\\BlinkingLedNano\\generated.cs");
@@ -110,7 +111,13 @@ namespace ArduinoCsCompiler
                     continue;
                 }
 
+                if (cls.NewToken == (int)KnownTypeTokens.ValueType)
+                {
+                    continue;
+                }
+
                 var typeSystemAstBuilder = new TypeSystemAstBuilder();
+                typeSystemAstBuilder.GenerateBody = true;
                 var wrapped = new ClassWrapper(cls, _executionSet);
                 EntityDeclaration decl = typeSystemAstBuilder.ConvertEntity(wrapped);
 
@@ -128,8 +135,20 @@ namespace ArduinoCsCompiler
 
                     if (member.Method != null)
                     {
-                        var methodWrapped = new MethodWrapper(cls, member, _executionSet);
-                        decl.AddChild(new Comment($"<summary>{member.Name}</summary>", CommentType.Documentation), Roles.Comment);
+                        var arduinoMethod = _executionSet.GetMethod(member.Method, false);
+                        if (arduinoMethod == null)
+                        {
+                            var rep = _executionSet.GetReplacement(member.Method, member.Method);
+                            if (rep != null)
+                            {
+                                arduinoMethod = _executionSet.GetMethod(rep, false);
+                            }
+
+                            // arduinoMethod can still be null, e.g. for implicit ctors.
+                        }
+
+                        var methodWrapped = new MethodWrapper(cls, member, arduinoMethod, _executionSet);
+                        decl.AddChild(new Comment($"<summary>{member.Name}, Token {member.Token:X8}</summary>", CommentType.Documentation), Roles.Comment);
                         EntityDeclaration method = typeSystemAstBuilder.ConvertEntity(methodWrapped);
                         decl.AddChild(method, Roles.TypeMemberRole);
                     }

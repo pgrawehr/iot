@@ -10,13 +10,18 @@ using ICSharpCode.Decompiler.TypeSystem;
 
 namespace ArduinoCsCompiler.NanoGenerator
 {
+    /// <summary>
+    /// This is for wrapping void*.
+    /// </summary>
     internal class VoidParameterWrapper : IParameter
     {
         private string _name;
+        private IType _voidType;
 
-        public VoidParameterWrapper()
+        public VoidParameterWrapper(string name)
         {
-            _name = "void";
+            _name = name;
+            _voidType = new VoidTypeWrapper(SymbolKind.Parameter, true);
         }
 
         public SymbolKind SymbolKind => SymbolKind.Parameter;
@@ -27,7 +32,7 @@ namespace ArduinoCsCompiler.NanoGenerator
 
         string IVariable.Name => _name;
 
-        public IType Type => SpecialType.NoType;
+        public IType Type => _voidType;
         public bool IsConst => false;
 
         string ISymbol.Name => _name;

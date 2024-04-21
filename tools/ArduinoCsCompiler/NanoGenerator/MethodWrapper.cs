@@ -20,13 +20,13 @@ namespace ArduinoCsCompiler.NanoGenerator
         private string _name;
         private IType _declaringType;
 
-        public MethodWrapper(ClassDeclaration owner, ClassMember memberField, ExecutionSet executionSet)
+        public MethodWrapper(ClassDeclaration owner, ClassMember memberField, ArduinoMethodDeclaration? methodDeclaration, ExecutionSet executionSet)
         {
             _memberField = memberField;
             _executionSet = executionSet;
             _declaringType = new ClassWrapper(owner, executionSet);
             _name = memberField.OriginalName;
-            _arduinoMethod = executionSet.GetMethod(memberField.Method, false);
+            _arduinoMethod = methodDeclaration;
         }
 
         public SymbolKind SymbolKind
@@ -44,7 +44,7 @@ namespace ArduinoCsCompiler.NanoGenerator
                     {
                         if (mf.Name.StartsWith("get_") || mf.Name.StartsWith("set_"))
                         {
-                            return SymbolKind.Accessor;
+                            // return SymbolKind.Accessor;
                         }
 
                         // TODO: Operators, Destructors, etc.
@@ -102,7 +102,7 @@ namespace ArduinoCsCompiler.NanoGenerator
         public bool IsOperator { get; }
         public bool HasBody => _arduinoMethod != null && _arduinoMethod.HasBody;
         public bool IsAccessor { get; }
-        public IMember? AccessorOwner { get; }
+        public IMember? AccessorOwner => null;
         public MethodSemanticsAttributes AccessorKind { get; }
         public IMethod? ReducedFrom { get; }
 
@@ -131,7 +131,7 @@ namespace ArduinoCsCompiler.NanoGenerator
 
                 if (returnType == typeof(void))
                 {
-                    return SpecialType.NoType; // TODO: Why don't we have a "void" type here?
+                    return new VoidTypeWrapper(SymbolKind.ReturnType, false);
                 }
 
                 return new ClassWrapper(_executionSet.GetClass(returnType), _executionSet);
@@ -184,7 +184,7 @@ namespace ArduinoCsCompiler.NanoGenerator
                     {
                         if (input[i] == null)
                         {
-                            ret.Add(new VoidParameterWrapper());
+                            ret.Add(new VoidParameterWrapper($"Arg_{i}"));
                         }
                         else
                         {

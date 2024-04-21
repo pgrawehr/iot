@@ -165,6 +165,11 @@ namespace ArduinoCsCompiler.NanoGenerator
                     return TypeKind.Interface;
                 }
 
+                if (_cls.TheType.IsPointer)
+                {
+                    return TypeKind.Pointer;
+                }
+
                 return TypeKind.Class;
             }
         }
