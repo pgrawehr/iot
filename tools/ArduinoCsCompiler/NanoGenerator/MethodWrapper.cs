@@ -16,11 +16,11 @@ namespace ArduinoCsCompiler.NanoGenerator
     {
         private readonly ClassMember _memberField;
         private readonly ExecutionSet _executionSet;
-        private readonly ArduinoMethodDeclaration? _arduinoMethod;
+        private readonly ArduinoMethodDeclaration _arduinoMethod;
         private string _name;
         private IType _declaringType;
 
-        public MethodWrapper(ClassDeclaration owner, ClassMember memberField, ArduinoMethodDeclaration? methodDeclaration, ExecutionSet executionSet)
+        public MethodWrapper(ClassDeclaration owner, ClassMember memberField, ArduinoMethodDeclaration methodDeclaration, ExecutionSet executionSet)
         {
             _memberField = memberField;
             _executionSet = executionSet;
@@ -97,7 +97,7 @@ namespace ArduinoCsCompiler.NanoGenerator
         public IReadOnlyList<IType> TypeArguments => new List<IType>();
         public bool IsExtensionMethod { get; }
         public bool IsLocalFunction { get; }
-        public bool IsConstructor => _memberField.Method.IsConstructor;
+        public bool IsConstructor => _arduinoMethod.Flags.HasFlag(MethodFlags.Ctor);
         public bool IsDestructor { get; }
         public bool IsOperator { get; }
         public bool HasBody => _arduinoMethod != null && _arduinoMethod.HasBody;
@@ -131,7 +131,7 @@ namespace ArduinoCsCompiler.NanoGenerator
 
                 if (returnType == typeof(void))
                 {
-                    return new VoidTypeWrapper(SymbolKind.ReturnType, false);
+                    return new VoidTypeWrapper(SymbolKind.ReturnType);
                 }
 
                 return new ClassWrapper(_executionSet.GetClass(returnType), _executionSet);
@@ -141,8 +141,20 @@ namespace ArduinoCsCompiler.NanoGenerator
         IType? IEntity.DeclaringType => _declaringType;
 
         public IModule? ParentModule { get; }
-        public Accessibility Accessibility { get; }
-        public bool IsStatic { get; }
+        public Accessibility Accessibility => Accessibility.Public;
+        public bool IsStatic
+        {
+            get
+            {
+                if (_arduinoMethod == null)
+                {
+                    return false;
+                }
+
+                return _arduinoMethod.Flags.HasFlag(MethodFlags.Static);
+            }
+        }
+
         public bool IsAbstract { get; }
         public bool IsSealed { get; }
         public string FullName { get; }

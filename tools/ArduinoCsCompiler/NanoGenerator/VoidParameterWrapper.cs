@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ICSharpCode.Decompiler.TypeSystem;
+using ICSharpCode.Decompiler.TypeSystem.Implementation;
 
 namespace ArduinoCsCompiler.NanoGenerator
 {
@@ -21,7 +22,7 @@ namespace ArduinoCsCompiler.NanoGenerator
         public VoidParameterWrapper(string name)
         {
             _name = name;
-            _voidType = new VoidTypeWrapper(SymbolKind.Parameter, true);
+            _voidType = new PointerType(new VoidTypeWrapper(SymbolKind.Parameter));
         }
 
         public SymbolKind SymbolKind => SymbolKind.Parameter;

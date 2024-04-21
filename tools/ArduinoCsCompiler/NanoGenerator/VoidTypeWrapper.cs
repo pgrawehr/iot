@@ -11,12 +11,10 @@ namespace ArduinoCsCompiler.NanoGenerator
     internal class VoidTypeWrapper : IEntity, ITypeDefinition
     {
         private readonly string _name = "void";
-        private readonly bool _isPointer;
 
-        public VoidTypeWrapper(SymbolKind symbolKind, bool isPointer)
+        public VoidTypeWrapper(SymbolKind symbolKind)
         {
             SymbolKind = symbolKind;
-            _isPointer = isPointer;
         }
 
         public SymbolKind SymbolKind { get; }
@@ -115,11 +113,6 @@ namespace ArduinoCsCompiler.NanoGenerator
         {
             get
             {
-                if (_isPointer)
-                {
-                    return TypeKind.Pointer;
-                }
-
                 return TypeKind.Void;
             }
         }
@@ -187,11 +180,6 @@ namespace ArduinoCsCompiler.NanoGenerator
         {
             get
             {
-                if (_isPointer)
-                {
-                    return new FullTypeName("System.Void*");
-                }
-
                 return new FullTypeName("System.Void");
             }
         }

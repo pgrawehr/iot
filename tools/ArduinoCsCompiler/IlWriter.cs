@@ -147,10 +147,14 @@ namespace ArduinoCsCompiler
                             // arduinoMethod can still be null, e.g. for implicit ctors.
                         }
 
-                        var methodWrapped = new MethodWrapper(cls, member, arduinoMethod, _executionSet);
-                        decl.AddChild(new Comment($"<summary>{member.Name}, Token {member.Token:X8}</summary>", CommentType.Documentation), Roles.Comment);
-                        EntityDeclaration method = typeSystemAstBuilder.ConvertEntity(methodWrapped);
-                        decl.AddChild(method, Roles.TypeMemberRole);
+                        // Assume we don't need to generated implicit methods
+                        if (arduinoMethod != null)
+                        {
+                            var methodWrapped = new MethodWrapper(cls, member, arduinoMethod, _executionSet);
+                            decl.AddChild(new Comment($"<summary>{member.Name}, Token {member.Token:X8}</summary>", CommentType.Documentation), Roles.Comment);
+                            EntityDeclaration method = typeSystemAstBuilder.ConvertEntity(methodWrapped);
+                            decl.AddChild(method, Roles.TypeMemberRole);
+                        }
                     }
                 }
             }
