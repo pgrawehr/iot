@@ -24,7 +24,7 @@
    </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ICSharpCode.Decompiler" Version="9.0.0.7618-preview1" />
+    <PackageReference Include="ICSharpCode.Decompiler" Version="9.0.0.7622-preview1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.8.0" />
   </ItemGroup>
   <ItemGroup Condition="$(Configuration)=='Debug'">
@@ -44,8 +44,13 @@
 
   <ItemGroup>
     <Compile Include="NanoGenerator\ClassWrapper.cs" />
+    <Compile Include="NanoGenerator\CompilationWrapper.cs" />
+    <Compile Include="NanoGenerator\DecompilerTypeSystemWrapper.cs" />
     <Compile Include="NanoGenerator\FieldWrapper.cs" />
+    <Compile Include="NanoGenerator\MetadataFileWrapper.cs" />
+    <Compile Include="NanoGenerator\MetadataModuleWrapper.cs" />
     <Compile Include="NanoGenerator\MethodWrapper.cs" />
+    <Compile Include="NanoGenerator\NoDocumentationProvider.cs" />
     <Compile Include="NanoGenerator\ParameterWrapper.cs" />
     <Compile Include="NanoGenerator\VoidParameterWrapper.cs" />
     <Compile Include="NanoGenerator\VoidTypeWrapper.cs" />

@@ -16,6 +16,9 @@ using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.OutputVisitor;
 using ICSharpCode.Decompiler.CSharp.Syntax;
+using ICSharpCode.Decompiler.Documentation;
+using ICSharpCode.Decompiler.IL;
+using ICSharpCode.Decompiler.Metadata;
 using ICSharpCode.Decompiler.TypeSystem;
 using Microsoft.CodeAnalysis;
 using SyntaxTree = ICSharpCode.Decompiler.CSharp.Syntax.SyntaxTree;
@@ -90,7 +93,7 @@ namespace ArduinoCsCompiler
             return false;
         }
 
-        public void Write(string sourceFile, string outFile)
+        public unsafe void Write(string sourceFile, string outFile)
         {
             var settings = new DecompilerSettings()
             {
@@ -147,13 +150,20 @@ namespace ArduinoCsCompiler
                             // arduinoMethod can still be null, e.g. for implicit ctors.
                         }
 
-                        // Assume we don't need to generated implicit methods
+                        // Assume we don't need to output generated implicit methods
                         if (arduinoMethod != null)
                         {
+                            var ctx = new GenericContext();
                             var methodWrapped = new MethodWrapper(cls, member, arduinoMethod, _executionSet);
                             decl.AddChild(new Comment($"<summary>{member.Name}, Token {member.Token:X8}</summary>", CommentType.Documentation), Roles.Comment);
                             EntityDeclaration method = typeSystemAstBuilder.ConvertEntity(methodWrapped);
-                            decl.AddChild(method, Roles.TypeMemberRole);
+                            fixed (byte* ptr = arduinoMethod.Code.IlBytes)
+                            {
+                                CSharpDecompiler decomp = new CSharpDecompiler(new DecompilerTypeSystemWrapper(), settings);
+                                decomp.DocumentationProvider = new NoDocumentationProvider();
+                                decomp.Decompile(arduinoMethod.Code.IlBytes, HandleKind.MethodDefinition, methodWrapped);
+                                decl.AddChild(method, Roles.TypeMemberRole);
+                            }
                         }
                     }
                 }

@@ -160,12 +160,12 @@ namespace ArduinoCsCompiler.NanoGenerator
         public string FullName { get; }
         public IEnumerable<IAttribute> GetAttributes()
         {
-            throw new NotImplementedException();
+            return new List<IAttribute>();
         }
 
         public bool HasAttribute(KnownAttribute attribute)
         {
-            throw new NotImplementedException();
+            return false;
         }
 
         public IAttribute? GetAttribute(KnownAttribute attribute)
