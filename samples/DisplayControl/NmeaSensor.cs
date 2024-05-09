@@ -338,7 +338,7 @@ namespace DisplayControl
                 _aisDangerousTargets, _aisTrigger,
             });
 
-            _serialPortShip = new SerialPort("/dev/ttyAMA1", 115200);
+            _serialPortShip = new SerialPort("/dev/ttyAMA2", 115200);
             _serialPortShip.ReadBufferSize = 16 * 1024;
             _serialPortShip.Open();
             _streamShip = _serialPortShip.BaseStream;
@@ -346,10 +346,10 @@ namespace DisplayControl
             _parserShipInterface.OnParserError += OnParserError;
             _parserShipInterface.StartDecode();
 
-            _serialPortHandheld = new SerialPort("/dev/ttyAMA2", 4800);
+            _serialPortHandheld = new SerialPort("/dev/ttyAMA3", 4800);
             _serialPortHandheld.Open();
 
-            _serialPortForward = new SerialPort("/dev/ttyAMA3", 9600);
+            _serialPortForward = new SerialPort("/dev/ttyAMA4", 9600);
             _serialPortForward.Open();
 
             _streamHandheld = _serialPortHandheld.BaseStream;
@@ -363,12 +363,12 @@ namespace DisplayControl
             _parserForwardInterface.OnParserError += OnParserError;
             _parserForwardInterface.StartDecode();
 
-            _seatalkPort = new SeatalkToNmeaConverter("/dev/ttyAMA4", Seatalk1Name);
+            _seatalkPort = new SeatalkToNmeaConverter(Seatalk1Name, "/dev/ttyAMA5");
             _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControlStatus.Id);
             _seatalkPort.SentencesToTranslate.Add(RudderSensorAngle.Id);
             _seatalkPort.StartDecode();
 
-            _openCpnServer = new NmeaTcpServer(OpenCpn, IPAddress.Any, 10100);
+            _openCpnServer = new NmeaTcpServer(OpenCpn, IPAddress.Any, 10110);
             _openCpnServer.OnParserError += OnParserError;
             _openCpnServer.StartDecode();
 

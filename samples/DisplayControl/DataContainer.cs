@@ -237,7 +237,7 @@ namespace DisplayControl
             _imuSensor.Init(Controller);
             _imuSensor.OnNewOrientation += ImuSensorOnNewOrientation;
 
-            WriteLineToConsoleAndDisplay("NMEA Source...");
+            WriteLineToConsoleAndDisplay("NMEA Sources...");
             _nmeaSensor = new NmeaSensor(_sensorManager);
             _nmeaSensor.Initialize(_fusionEngine, _imuSensor);
 
