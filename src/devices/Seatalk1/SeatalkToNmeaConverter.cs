@@ -243,15 +243,23 @@ namespace Iot.Device.Seatalk1
         public override void StopDecode()
         {
             _terminatingCancellationTokenSource.Cancel();
-            _sendQueue.CompleteAdding();
-            if (_sendThread != null)
+            if (!_isDisposed)
             {
-                _sendThread.Join();
-                _sendThread = null;
+                if (!_sendQueue.IsAddingCompleted)
+                {
+                    _sendQueue.CompleteAdding();
+                }
+
+                if (_sendThread != null)
+                {
+                    _sendThread.Join();
+                    _sendThread = null;
+                }
+
+                _sendQueue.Dispose();
+                _seatalkInterface.Dispose();
             }
 
-            _sendQueue.Dispose();
-            _seatalkInterface.Dispose();
             _isDisposed = true;
         }
     }

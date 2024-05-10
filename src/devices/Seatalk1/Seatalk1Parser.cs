@@ -65,6 +65,7 @@ namespace Iot.Device.Seatalk1
                 new ApparentWindSpeed(),
                 new NavigationToWaypoint(),
                 new CourseComputerStatus(),
+                new TargetWaypointName(),
             };
 
             MaxMessageLength = _messageFactories.Select(x => x.ExpectedLength).Max();
@@ -194,8 +195,13 @@ namespace Iot.Device.Seatalk1
                             }
                             else
                             {
-                                var bytesFound = BitConverter.ToString(_buffer.ToArray());
-                                _logger.LogWarning($"Seatalk parser sync lost. Buffer contents: {bytesFound}, trying to resync");
+                                if (isInSync)
+                                {
+                                    var bytesFound = BitConverter.ToString(_buffer.ToArray());
+                                    _logger.LogWarning(
+                                        $"Seatalk parser sync lost. Buffer contents: {bytesFound}, trying to resync");
+                                }
+
                                 _buffer.RemoveAt(0);
                                 // We removed the first byte from the sequence, we need to try again before we add the next byte
                                 isInSync = false;

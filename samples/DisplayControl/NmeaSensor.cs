@@ -814,6 +814,13 @@ namespace DisplayControl
                 _parserForwardInterface = null;
             }
 
+            if (_seatalkPort != null)
+            {
+                _seatalkPort.StopDecode();
+                _seatalkPort.Dispose();
+                _seatalkPort = null;
+            }
+
             _openCpnServer?.Dispose();
             _openCpnServer = null;
 

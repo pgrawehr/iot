@@ -32,6 +32,7 @@
     <Compile Include="Messages\NavigationToWaypoint.cs" />
     <Compile Include="Messages\SeatalkMessage.cs" />
     <Compile Include="Messages\SetLampIntensity.cs" />
+    <Compile Include="Messages\TargetWaypointName.cs" />
     <Compile Include="Messages\TurnDirection.cs" />
     <None Include="README.md" />
   </ItemGroup>
