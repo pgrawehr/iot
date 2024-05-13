@@ -263,16 +263,11 @@ namespace DisplayControl.ViewModels
             get
             {
                 bool isOn = DataContainer.GetTankSensorState(out bool forced);
-                if (isOn && forced)
+                if (forced)
                 {
                     return "Tank sensor forcibly on";
                 }
 
-                if (forced)
-                {
-                    return "Tank sensor forced but not on(???)";
-                }
-                
                 return "Tank sensor auto";
             }
         }
@@ -323,8 +318,9 @@ namespace DisplayControl.ViewModels
 
         public void EnableDisableForceTankSensorEnable()
         {
+            // Call operation first, because the property will update the gui and reflect the actual state
+            DataContainer.ForceTankSensorEnable(!ForceTankSensorEnable);
             ForceTankSensorEnable = !ForceTankSensorEnable;
-            DataContainer.ForceTankSensorEnable(ForceTankSensorEnable);
         }
 
         public void LockDisplay()
