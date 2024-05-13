@@ -66,6 +66,8 @@ namespace Iot.Device.Seatalk1
                 new NavigationToWaypoint(),
                 new CourseComputerStatus(),
                 new TargetWaypointName(),
+                new AutopilotWindStatus(),
+                new SpeedTroughWater(),
             };
 
             MaxMessageLength = _messageFactories.Select(x => x.ExpectedLength).Max();
