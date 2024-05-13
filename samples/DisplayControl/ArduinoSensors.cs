@@ -49,6 +49,14 @@ namespace DisplayControl
             set;
         }
 
+        public bool TankSensorIsOn
+        {
+            get
+            {
+                return _tankSensorIsOn;
+            }
+        }
+
         public DhtSensor DhtInterface { get; set; }
 
         public override void Init(GpioController gpioController)

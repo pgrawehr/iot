@@ -20,6 +20,7 @@ using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Ais;
 using UnitsNet;
+using static Avalonia.OpenGL.GlInterface;
 
 namespace DisplayControl
 {
@@ -994,6 +995,18 @@ namespace DisplayControl
             {
                 _arduino.ForceTankSensorEnable = enable;
             }
+        }
+
+        public bool GetTankSensorState(out bool forced)
+        {
+            if (_arduino != null)
+            {
+                forced = _arduino.ForceTankSensorEnable;
+                return _arduino.TankSensorIsOn;
+            }
+
+            forced = false;
+            return false;
         }
 
         public void LockDisplay(bool displayLocked)

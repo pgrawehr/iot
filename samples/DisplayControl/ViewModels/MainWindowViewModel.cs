@@ -49,8 +49,8 @@ namespace DisplayControl.ViewModels
         public MainWindowViewModel(DataContainer dataContainer)
             : this()
         {
-            _size = new Size(400, 400);
-            _clientHeight = 350;
+            _size = new Size(400, 420);
+            _clientHeight = 320; // The above height - 2 * the height of the toolbars
             _headerHeight = 50;
             DataContainer = dataContainer;
             // Get value from settings
@@ -170,6 +170,7 @@ namespace DisplayControl.ViewModels
             set
             {
                 this.RaiseAndSetIfChanged(ref _displayLocked, value);
+                this.RaisePropertyChanged(nameof(LockDisplayText));
             }
         }
 
@@ -183,6 +184,7 @@ namespace DisplayControl.ViewModels
             set
             {
                 this.RaiseAndSetIfChanged(ref _deviationEnabled, value);
+                this.RaisePropertyChanged(nameof(DeviationButtonColor));
             }
         }
 
@@ -195,6 +197,7 @@ namespace DisplayControl.ViewModels
             set
             {
                 this.RaiseAndSetIfChanged(ref _useHeadingFromHandheld, value);
+                this.RaisePropertyChanged(nameof(HeadingFromHandheldColor));
             }
         }
 
@@ -207,8 +210,13 @@ namespace DisplayControl.ViewModels
             set
             {
                 this.RaiseAndSetIfChanged(ref _forceTankSensorEnable, value);
+                this.RaisePropertyChanged(nameof(TankSensorText));
             }
         }
+
+        public ISolidColorBrush DeviationButtonColor => _deviationEnabled ? Brushes.Green : Brushes.Yellow;
+
+        public ISolidColorBrush HeadingFromHandheldColor => _useHeadingFromHandheld ? Brushes.Green : Brushes.LightGray;
 
         public bool AisTargetsVisible
         {
@@ -232,6 +240,40 @@ namespace DisplayControl.ViewModels
             set
             {
                 AisTargetsVisible = !value;
+            }
+        }
+
+        public string LockDisplayText
+        {
+            get
+            {
+                if (DisplayLocked)
+                {
+                    return "Unlock Display";
+                }
+                else
+                {
+                    return "Lock Display";
+                }
+            }
+        }
+
+        public string TankSensorText
+        {
+            get
+            {
+                bool isOn = DataContainer.GetTankSensorState(out bool forced);
+                if (isOn && forced)
+                {
+                    return "Tank sensor forcibly on";
+                }
+
+                if (forced)
+                {
+                    return "Tank sensor forced but not on(???)";
+                }
+                
+                return "Tank sensor auto";
             }
         }
 

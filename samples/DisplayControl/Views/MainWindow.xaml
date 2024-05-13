@@ -3,7 +3,7 @@
         xmlns:vm="clr-namespace:DisplayControl.ViewModels;assembly=DisplayControl"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="500"
+        mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="530"
         x:Class="DisplayControl.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
         Title="Main Data Display">
@@ -80,7 +80,16 @@
                </MenuItem>
             </MenuItem>
         </Menu>
-            <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
+        <StackPanel Orientation="Horizontal" Spacing="2">
+            <Button Name="Reinit" Height="{Binding HeaderHeight}" Content="Reinit Display" 
+                    Command="{Binding ReinitDisplayCommand}"/>
+            <Button Content="{Binding LockDisplayText}" Command="{Binding LockDisplay}" />
+            <Button Content="{Binding TankSensorText}" Command="{Binding EnableDisableForceTankSensorEnable}"/>
+            <Button Content="Auto Deviation" Command="{Binding EnableDisableDeviationCorrection}" Background="{Binding DeviationButtonColor}"/>
+            <Button Content="HDG from Handheld" Command="{Binding EnableDisableHandheldForHeading}" Background="{Binding HeadingFromHandheldColor}"/>
+
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
                 <TextBlock Name="StatusBar" Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" 
                            Height ="{Binding HeaderHeight}"/>
                 <Button Name="ShowAll" Content="No Filter" Width="150" Command="{Binding FilterShowAll}">
