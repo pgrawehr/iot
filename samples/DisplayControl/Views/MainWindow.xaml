@@ -27,6 +27,10 @@
             <Setter Property="MinHeight" Value="20" />
             <Setter Property="Width" Value="20" />
         </Style>
+        <Style Selector="Button">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
     </Window.Styles>
     <Design.DataContext>
         <vm:MainWindowViewModel/>

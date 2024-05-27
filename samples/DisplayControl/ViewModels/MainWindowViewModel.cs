@@ -9,6 +9,8 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using DynamicData;
 using Iot.Device.Common;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
 using ReactiveUI;
 
 namespace DisplayControl.ViewModels
@@ -272,18 +274,21 @@ namespace DisplayControl.ViewModels
             }
         }
 
-        public void ActivateValueSingle(SensorValueViewModel vm)
+        public void ActivateValueSingle(object sender)
         {
+            SensorValueViewModel vm = (SensorValueViewModel)sender;
             DataContainer.ActiveValueSourceSingle = vm.Source;
         }
 
-        public void ActivateValueUpper(SensorValueViewModel vm)
+        public void ActivateValueUpper(object sender)
         {
+            SensorValueViewModel vm = (SensorValueViewModel)sender;
             DataContainer.ActiveValueSourceUpper = vm.Source;
         }
 
-        public void ActivateValueLower(SensorValueViewModel vm)
+        public void ActivateValueLower(object sender)
         {
+            SensorValueViewModel vm = (SensorValueViewModel)sender;
             DataContainer.ActiveValueSourceLower = vm.Source;
         }
 
@@ -293,8 +298,16 @@ namespace DisplayControl.ViewModels
             Status = text;
         }
 
-        public void ExitCommand()
+        public async void ExitCommand()
         {
+            var box = MessageBoxManager
+                .GetMessageBoxStandard("exit", "Quit Application? Are you sure?",
+                    ButtonEnum.YesNo);
+            var result = await box.ShowAsync();
+            if (result != ButtonResult.Yes)
+            {
+                return;
+            }
             Cancel = true;
             DoClose?.Invoke();
         }
@@ -304,8 +317,19 @@ namespace DisplayControl.ViewModels
             DataContainer.ReinitDisplay();
         }
 
-        public void EnableDisableDeviationCorrection()
+        public async void EnableDisableDeviationCorrection()
         {
+            if (DeviationEnabled)
+            {
+                var box = MessageBoxManager
+                    .GetMessageBoxStandard("Disable deviation correction", "Are you sure you want to disable deviation correction?",
+                        ButtonEnum.YesNo);
+                ButtonResult ret = await box.ShowAsync();
+                if (ret == ButtonResult.No)
+                {
+                    return;
+                }
+            }
             DeviationEnabled = !DeviationEnabled;
             DataContainer.EnableDeviationCorrection(DeviationEnabled);
         }
