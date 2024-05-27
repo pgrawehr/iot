@@ -19,18 +19,16 @@
     </AvaloniaResource>
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
-<ItemGroup>
-  <AvaloniaResource Remove="Views\AisTargetControl.xaml" />
-  <AvaloniaResource Remove="Views\SensorValueControl.xaml" />
-</ItemGroup>
+
 <ItemGroup>
   <None Remove="Views\AisTargetControl.xaml" />
 </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="0.10.6" />
-    <PackageReference Include="Avalonia.Desktop" Version="0.10.6" />
-    <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.6" />
-    <PackageReference Include="System.IO.Ports" Version="5.0.1" />
+    <PackageReference Include="Avalonia" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.10" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Themes.Simple" Version="11.0.10" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Views\AisTargetControl.xaml">

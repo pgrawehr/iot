@@ -15,7 +15,6 @@ using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 using UnitsNet.Units;

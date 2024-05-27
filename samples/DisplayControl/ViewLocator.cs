@@ -9,7 +9,7 @@ namespace DisplayControl
     {
         public bool SupportsRecycling => false;
 
-        public IControl Build(object data)
+        public Control Build(object data)
         {
             var type = data.GetType();
             var viewName = type.FullName!.Replace("ViewModel", "View");
