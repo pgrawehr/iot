@@ -15,6 +15,7 @@ namespace DisplayControl.Views
     {
         private MainWindowViewModel m_viewModel;
         private ListBox m_listBox;
+        private bool m_closingConfirmed = false;
 
         public MainWindow()
         {
@@ -36,6 +37,7 @@ namespace DisplayControl.Views
                 // Subscribe to Cancel, and close the Window when it happens
                 m_viewModel.DoClose += () =>
                 {
+                    m_closingConfirmed = true;
                     Close();
                 };
 
@@ -71,6 +73,16 @@ namespace DisplayControl.Views
             // So we just need to guess about the size of the title bar and the menu
             double height = statusBar == null ? 20 : statusBar.Height;
             m_viewModel.SetSize(ClientSize, (int)Math.Ceiling(height + (2 * 50)));
+        }
+
+        protected override void OnClosing(WindowClosingEventArgs e)
+        {
+            if (!m_closingConfirmed)
+            {
+                e.Cancel = true;
+                return;
+            }
+            base.OnClosing(e);
         }
 
         private void InitializeComponent()
