@@ -32,6 +32,7 @@ namespace Iot.Device.Tests.Seatalk1
         [InlineData("10 01 00 01", typeof(ApparentWindAngle))]
         [InlineData("85 06 00 00 C0 0D 1F 00 E0", typeof(NavigationToWaypoint))]
         [InlineData("11 01 00 00", typeof(ApparentWindSpeed))]
+        [InlineData("82 05 00 ff 00 ff 00 ff", typeof(TargetWaypointName))]
         public void KnownMessageTypeDecode(string msg, Type expectedType)
         {
             msg = msg.Replace(" ", string.Empty);
@@ -188,6 +189,79 @@ namespace Iot.Device.Tests.Seatalk1
 
             var reverse = windSpeed.CreateNewMessage(data);
             Assert.Equal(windSpeed, reverse);
+        }
+
+        [Fact]
+        public void TargetWaypointInvalidSentence()
+        {
+            byte[] data =
+            {
+                0x82, 0x05, 0x00, 0xff, 0x00, 0xff, 0x01, 0xff
+            };
+
+            var actualType = _parser.GetTypeOfNextMessage(data, out int length)!;
+            Assert.Null(actualType);
+        }
+
+        [Fact]
+        public void TargetWaypointNameDecode1()
+        {
+            byte[] data =
+            {
+                0x82, 0x05, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff
+            };
+
+            var actualType = _parser.GetTypeOfNextMessage(data, out int length)!;
+            Assert.NotNull(actualType);
+            var decoded = (TargetWaypointName)actualType.CreateNewMessage(data);
+            Assert.NotNull(decoded);
+            Assert.Equal("0000", decoded.Name);
+        }
+
+        [Fact]
+        public void TargetWaypointNameDecode2()
+        {
+            byte[] data =
+            {
+                0x82, 0x05, 0xAA, 0x55, 0x27, 0xd8, 0xA1, 0x5e
+            };
+
+            var actualType = _parser.GetTypeOfNextMessage(data, out int length)!;
+            Assert.NotNull(actualType);
+            var decoded = (TargetWaypointName)actualType.CreateNewMessage(data);
+            Assert.NotNull(decoded);
+            Assert.Equal("ZNBX", decoded.Name);
+        }
+
+        [Fact]
+        public void TargetWaypointRoundTrip1()
+        {
+            byte[] data =
+            {
+                0x82, 0x05, 0xAA, 0x55, 0x27, 0xd8, 0xA1, 0x5e
+            };
+
+            var actualType = _parser.GetTypeOfNextMessage(data, out int length)!;
+            Assert.NotNull(actualType);
+            var decoded = (TargetWaypointName)actualType.CreateNewMessage(data);
+            Assert.NotNull(decoded);
+
+            var dataEncoded = decoded.CreateDatagram();
+            Assert.Equal(data, dataEncoded);
+        }
+
+        [Theory]
+        [InlineData("AAAA", "AAAA")]
+        [InlineData("", "0000")]
+        [InlineData("Z", "Z000")]
+        [InlineData("abcd", "ABCD")]
+        [InlineData("A_Long_Name2", "AME2")]
+        public void TargetWaypointRoundTrip2(string input, string expected)
+        {
+            TargetWaypointName t1 = new TargetWaypointName(input);
+            var data = t1.CreateDatagram();
+            TargetWaypointName t2 = (TargetWaypointName)t1.CreateNewMessage(data);
+            Assert.Equal(expected, t2.Name);
         }
     }
 }

@@ -486,17 +486,7 @@ namespace Iot.Device.Seatalk1
                 return true;
             }
 
-            if (angle1 >= Angle.FromDegrees(359) && angle2 <= Angle.FromDegrees(1))
-            {
-                return true;
-            }
-
-            if (angle2 >= Angle.FromDegrees(359) && angle1 <= Angle.FromDegrees(1))
-            {
-                return true;
-            }
-
-            return false;
+            return UnitMath.Abs(AngleExtensions.Difference(angle1, angle2)) < Angle.FromDegrees(1.5);
         }
 
         /// <summary>
