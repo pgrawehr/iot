@@ -13,7 +13,7 @@ namespace Iot.Device.Seatalk1.Messages
     {
         internal SpeedTroughWater()
         {
-            Speed = Speed.Zero;
+            Speed = Speed.FromKnots(0); // Because the decoding converts to knots
         }
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace Iot.Device.Seatalk1.Messages
         public SpeedTroughWater(Speed speed)
         {
             Speed = speed;
-            Forwarded = true;
+            Forwarded = false;
         }
 
         /// <summary>
@@ -54,7 +54,10 @@ namespace Iot.Device.Seatalk1.Messages
         {
             double speedvalue = data[2] << 8 | data[3];
             speedvalue /= 10.0;
-            return new SpeedTroughWater(Speed.FromKnots(speedvalue));
+            return new SpeedTroughWater(Speed.FromKnots(speedvalue))
+            {
+                Forwarded = (data[1] & 0x80) != 0
+            };
         }
 
         /// <inheritdoc />

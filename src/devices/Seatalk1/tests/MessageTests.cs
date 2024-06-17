@@ -33,6 +33,7 @@ namespace Iot.Device.Tests.Seatalk1
         [InlineData("85 06 00 00 C0 0D 1F 00 E0", typeof(NavigationToWaypoint))]
         [InlineData("11 01 00 00", typeof(ApparentWindSpeed))]
         [InlineData("82 05 00 ff 00 ff 00 ff", typeof(TargetWaypointName))]
+        [InlineData("20 01 00 12", typeof(SpeedTroughWater))]
         public void KnownMessageTypeDecode(string msg, Type expectedType)
         {
             msg = msg.Replace(" ", string.Empty);
@@ -262,6 +263,17 @@ namespace Iot.Device.Tests.Seatalk1
             var data = t1.CreateDatagram();
             TargetWaypointName t2 = (TargetWaypointName)t1.CreateNewMessage(data);
             Assert.Equal(expected, t2.Name);
+        }
+
+        [Fact]
+        public void SpeedTroughWater1()
+        {
+            SpeedTroughWater stw = new SpeedTroughWater(Speed.FromKnots(5.2));
+            var data = stw.CreateDatagram();
+            SpeedTroughWater stw2 = (SpeedTroughWater)stw.CreateNewMessage(data);
+            Assert.False(stw.Forwarded);
+            Assert.True(stw.Speed.Equals(Speed.FromKnots(5.2), Speed.FromKnots(0.1)));
+            Assert.Equal(stw, stw2);
         }
     }
 }
