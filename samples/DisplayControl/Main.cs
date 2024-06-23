@@ -13,6 +13,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Logging;
 using Avalonia.ReactiveUI;
 using Iot.Device.Common;
+using Microsoft.Extensions.Logging;
 
 namespace DisplayControl
 {
@@ -31,6 +32,22 @@ namespace DisplayControl
                 .UsePlatformDetect()
                 .LogToTrace()
                 .UseReactiveUI();
+        }
+
+        private static bool AlreadyRunning()
+        {
+            Process[] processes = Process.GetProcesses();
+            Process currentProc = Process.GetCurrentProcess();
+            Console.WriteLine("Current process: {0}", currentProc.ProcessName);
+            foreach (Process process in processes)
+            {
+                if (currentProc.ProcessName == process.ProcessName && currentProc.Id != process.Id)
+                {
+                    Console.WriteLine("Another instance of this application is already running as PID {0}", process.Id);
+                    return true;
+                }
+            }
+            return false;
         }
 
         public static void Main(string[] args)
@@ -53,6 +70,11 @@ namespace DisplayControl
                 // Just ignore CTRL+C
                 eventArgs.Cancel = true;
             };
+
+            if (AlreadyRunning())
+            {
+                return;
+            }
 
             Console.WriteLine($"Initializing Hardware...");
             var date = DateTime.Now;
