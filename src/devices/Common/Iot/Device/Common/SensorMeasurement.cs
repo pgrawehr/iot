@@ -87,11 +87,11 @@ namespace Iot.Device.Common
 
         public static readonly SensorMeasurement CpuTemperature = new SensorMeasurement("CPU Temperature", Temperature.Zero, Common.SensorSource.Cpu, 1, TimeSpan.FromSeconds(5));
         public static readonly SensorMeasurement AirTemperatureOutside = new SensorMeasurement("Outside Air temperature", Temperature.Zero, SensorSource.Air);
-        public static readonly SensorMeasurement AirPressureRawOutside = new SensorMeasurement("Outside Raw Pressure", Pressure.Zero, SensorSource.Air);
-        public static readonly SensorMeasurement AirPressureBarometricOutside = new SensorMeasurement("Outside Barometric Pressure", Pressure.Zero, SensorSource.Air, 2);
+        public static readonly SensorMeasurement AirPressureRawOutside = new SensorMeasurement("Outside Effective Pressure", Pressure.Zero, SensorSource.Air);
+        public static readonly SensorMeasurement AirPressureBarometricOutside = new SensorMeasurement("Sea-level Barometric Pressure", Pressure.Zero, SensorSource.Air, 2);
         public static readonly SensorMeasurement AirHumidityOutside = new SensorMeasurement("Outside Humidity", RelativeHumidity.Zero, SensorSource.Air);
         public static readonly SensorMeasurement AirTemperatureInside = new SensorMeasurement("Inside Air Temperature", Temperature.Zero, SensorSource.Air, -1);
-        public static readonly SensorMeasurement AirPressureRawInside = new SensorMeasurement("Inside Raw Pressure", Pressure.Zero, SensorSource.Air, -1);
+        public static readonly SensorMeasurement AirPressureRawInside = new SensorMeasurement("Inside Effective Pressure", Pressure.Zero, SensorSource.Air, -1);
         public static readonly SensorMeasurement AirHumidityInside = new SensorMeasurement("Inside Humidity", RelativeHumidity.Zero, SensorSource.Air, -1);
         public static readonly SensorMeasurement AirSpeed = new SensorMeasurement("Air Speed", Angle.Zero, SensorSource.Air, 1, TimeSpan.FromSeconds(5));
         public static readonly SensorMeasurement WindSpeedApparent = new SensorMeasurement("Apparent Wind Speed", Speed.Zero, SensorSource.Wind, 1, TimeSpan.FromSeconds(5));

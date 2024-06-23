@@ -16,17 +16,17 @@ namespace Iot.Device.Common
         {
             engine.RegisterFusionOperation(new List<SensorMeasurement>()
                 {
-                    SensorMeasurement.AirPressureRawInside,
-                    SensorMeasurement.AirPressureRawOutside, SensorMeasurement.AirTemperatureOutside,
-                    SensorMeasurement.AltitudeGeoid, SensorMeasurement.AirHumidityOutside,
+                    SensorMeasurement.AirPressureRawInside, SensorMeasurement.AirTemperatureInside,
+                    SensorMeasurement.AltitudeGeoid, SensorMeasurement.AirHumidityInside,
                 },
                 (args) =>
                 {
-                    // Take either pressure, and otherwise the outside values. Inside values are not relevant for the atmospheric constellation.
-                    if ((args[0].TryGetAs(out Pressure measuredValue) || args[1].TryGetAs(out measuredValue)) &&
-                        args[2].TryGetAs(out Temperature measuredTemperature) && args[3].TryGetAs(out Length altitude))
+                    // Inside values are usually as good as outside ones, since the "outside" sensor is typically inside as well,
+                    // might be more exposed to direct sunlight and seems to be less reliable.
+                    if (args[0].TryGetAs(out Pressure measuredValue) &&
+                        args[1].TryGetAs(out Temperature measuredTemperature) && args[2].TryGetAs(out Length altitude))
                     {
-                        if (args[4].TryGetAs(out RelativeHumidity humidity))
+                        if (args[3].TryGetAs(out RelativeHumidity humidity))
                         {
                             return (WeatherHelper.CalculateBarometricPressure(measuredValue, measuredTemperature,
                                 altitude, humidity), false);
@@ -41,7 +41,7 @@ namespace Iot.Device.Common
                     return (null, false); // At least one input not available - skip this operation
                 }, SensorMeasurement.AirPressureBarometricOutside);
 
-            engine.RegisterFusionOperation(new List<SensorMeasurement>() { SensorMeasurement.AirTemperatureOutside, SensorMeasurement.AirHumidityOutside },
+            engine.RegisterFusionOperation(new List<SensorMeasurement>() { SensorMeasurement.AirTemperatureInside, SensorMeasurement.AirHumidityInside },
                 (args) =>
                 {
                     if (args[0].TryGetAs(out Temperature temperature) &&
@@ -53,7 +53,10 @@ namespace Iot.Device.Common
                     return (null, false); // At least one input not available - skip this operation
                 }, SensorMeasurement.HeatIndex);
 
-            engine.RegisterFusionOperation(new List<SensorMeasurement>() { SensorMeasurement.AirTemperatureOutside, SensorMeasurement.AirHumidityOutside },
+            engine.RegisterFusionOperation(new List<SensorMeasurement>()
+                {
+                    SensorMeasurement.AirTemperatureInside, SensorMeasurement.AirHumidityInside
+                },
                 (args) =>
                 {
                     if (args[0].TryGetAs(out Temperature temperature) &&
@@ -94,7 +97,7 @@ namespace Iot.Device.Common
             engine.RegisterFusionOperation(new[]
                 {
                     SensorMeasurement.WindSpeedApparent,
-                    SensorMeasurement.AirTemperatureOutside,
+                    SensorMeasurement.AirTemperatureInside,
                 },
                 args =>
                 {
@@ -110,10 +113,10 @@ namespace Iot.Device.Common
 
             engine.RegisterFusionOperation(new[]
                 {
-                    SensorMeasurement.AirHumidityOutside,
+                    SensorMeasurement.AirHumidityInside,
                     SensorMeasurement.WindSpeedApparent,
-                    SensorMeasurement.AirTemperatureOutside,
-                    SensorMeasurement.AirPressureBarometricOutside,
+                    SensorMeasurement.AirTemperatureInside,
+                    SensorMeasurement.AirPressureRawInside,
                 },
                 args =>
                 {

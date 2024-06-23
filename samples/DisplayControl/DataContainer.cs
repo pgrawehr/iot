@@ -573,7 +573,7 @@ namespace DisplayControl
                 }
             }
 
-            if (source == SensorMeasurement.AirTemperatureOutside)
+            if (source == SensorMeasurement.AirTemperatureInside)
             {
                 if (source.TryGetAs(out Temperature temp))
                 {
@@ -581,7 +581,7 @@ namespace DisplayControl
                 }
             }
 
-            if (source == SensorMeasurement.AirPressureBarometricOutside)
+            if (source == SensorMeasurement.AirPressureRawInside)
             {
                 if (source.TryGetAs(out Pressure p))
                 {
@@ -589,7 +589,7 @@ namespace DisplayControl
                 }
             }
 
-            if (source == SensorMeasurement.AirHumidityOutside)
+            if (source == SensorMeasurement.AirHumidityInside)
             {
                 if (source.TryGetAs(out RelativeHumidity humidity))
                 {
