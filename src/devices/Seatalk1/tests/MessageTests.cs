@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1;
 using Iot.Device.Seatalk1.Messages;
 using UnitsNet;
@@ -274,6 +275,24 @@ namespace Iot.Device.Tests.Seatalk1
             Assert.False(stw.Forwarded);
             Assert.True(stw.Speed.Equals(Speed.FromKnots(5.2), Speed.FromKnots(0.1)));
             Assert.Equal(stw, stw2);
+        }
+
+        [Fact]
+        public void CompassHeadingAutopilotCourse1()
+        {
+            CompassHeadingAutopilotCourse hdg = new CompassHeadingAutopilotCourse()
+            {
+                Alarms = AutopilotAlarms.None,
+                AutoPilotCourse = Angle.FromDegrees(124),
+                AutopilotStatus = AutopilotStatus.Auto,
+                AutoPilotType = 0,
+                CompassHeading = Angle.FromDegrees(220),
+                RudderPosition = Angle.FromDegrees(-10),
+                TurnDirection = TurnDirection.Port,
+            };
+            var data = hdg.CreateDatagram();
+            CompassHeadingAutopilotCourse hdg2 = (CompassHeadingAutopilotCourse)hdg.CreateNewMessage(data);
+            Assert.Equal(hdg, hdg2);
         }
     }
 }
