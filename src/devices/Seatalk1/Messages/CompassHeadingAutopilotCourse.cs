@@ -14,8 +14,7 @@ using UnitsNet;
 namespace Iot.Device.Seatalk1.Messages
 {
     /// <summary>
-    /// Compass heading and current autopilot course and parameters. This message contains the same fields as <see cref="CompassHeadingAutopilotCourse"/>,
-    /// plus some more.
+    /// Compass heading and current autopilot course and parameters.
     /// </summary>
     public record CompassHeadingAutopilotCourse : SeatalkMessage
     {

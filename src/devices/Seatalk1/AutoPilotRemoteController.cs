@@ -523,7 +523,7 @@ namespace Iot.Device.Seatalk1
         {
             if (timeout > MaximumTimeout)
             {
-                throw new ArgumentOutOfRangeException(nameof(timeout), $"The maximum timeout is {MaximumTimeout}, see remarks in documentation");
+                throw new ArgumentOutOfRangeException(nameof(timeout), $"The maximum timeout is {MaximumTimeout}, see remarks on AutoPilotRemoteController.SetStatus in the documentation");
             }
 
             _buttonOnApPressed = false;
@@ -552,7 +552,7 @@ namespace Iot.Device.Seatalk1
         {
             lock (_lock)
             {
-                if (_lastUpdateTime + TimeSpan.FromSeconds(5) < DateTime.UtcNow)
+                if (_lastUpdateTime + DefaultTimeout < DateTime.UtcNow)
                 {
                     // The autopilot hasn't sent anything for 5 seconds. Assume it's offline
                     if (Status != AutopilotStatus.Offline) // don't repeat message
