@@ -210,14 +210,14 @@ namespace Iot.Device.Tests.Seatalk1
         {
             byte[] data =
             {
-                0x82, 0x05, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff
+                0x82, 0x05, 0x00, 0xFF, 0x70, 0x8F, 0x05, 0xFA
             };
 
             var actualType = _parser.GetTypeOfNextMessage(data, out int length)!;
             Assert.NotNull(actualType);
             var decoded = (TargetWaypointName)actualType.CreateNewMessage(data);
             Assert.NotNull(decoded);
-            Assert.Equal("0000", decoded.Name);
+            Assert.Equal("00G1", decoded.Name);
         }
 
         [Fact]

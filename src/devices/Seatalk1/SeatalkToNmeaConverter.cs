@@ -63,7 +63,7 @@ namespace Iot.Device.Seatalk1
 
         private void SeatalkMessageReceived(SeatalkMessage stalk)
         {
-            var nmeaMsg = new SeatalkNmeaMessage(stalk.CreateDatagram(), DateTimeOffset.UtcNow);
+            var nmeaMsg = new SeatalkNmeaMessageWithDecoding(stalk.CreateDatagram(), stalk, DateTimeOffset.UtcNow);
             _logger.LogDebug($"Received Seatalk message: {stalk}");
             DispatchSentenceEvents(nmeaMsg);
 
