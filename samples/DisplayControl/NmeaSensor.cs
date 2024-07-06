@@ -67,9 +67,6 @@ namespace DisplayControl
         private SentenceCache _cache;
 
         private Angle? _magneticVariation;
-        private GlobalPositioningSystemFixData _lastGgaMessage;
-        private RecommendedMinimumNavigationInformation _lastRmcMessage;
-        private TrackMadeGood _lastVtgMessage;
         private Temperature? _lastTemperature;
         private RelativeHumidity? _lastHumidity;
         private AutopilotController _autopilot;
@@ -556,12 +553,6 @@ namespace DisplayControl
 
                     if (gga.Valid)
                     {
-                        if (_lastGgaMessage != null && _lastGgaMessage.Age < TimeSpan.FromSeconds(0.5))
-                        {
-                            break;
-                        }
-
-                        _lastGgaMessage = gga;
                         _position.UpdateValue(gga.Position);
                         _manager.UpdateValues(new[] { SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid },
                             new IQuantity[] { Angle.FromDegrees(gga.LatitudeDegrees.GetValueOrDefault(0)), Angle.FromDegrees(gga.LongitudeDegrees.GetValueOrDefault(0)),
@@ -575,20 +566,14 @@ namespace DisplayControl
 
                     break;
                 }
-                case RecommendedMinimumNavigationInformation rmc when _lastRmcMessage != null && _lastRmcMessage.Age < TimeSpan.FromSeconds(0.5):
-                    break;
                 case RecommendedMinimumNavigationInformation rmc:
                 {
-                    _lastRmcMessage = rmc;
                     _manager.UpdateValues(new[] { SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, SensorMeasurement.MagneticVariation }, 
                         new IQuantity[] { rmc.SpeedOverGround, rmc.TrackMadeGoodInDegreesTrue, rmc.MagneticVariationInDegrees });
 
                     break;
                 }
-                case TrackMadeGood vtg when _lastVtgMessage != null && _lastVtgMessage.Age < TimeSpan.FromSeconds(0.5):
-                    break;
                 case TrackMadeGood vtg:
-                    _lastVtgMessage = vtg;
                     _manager.UpdateValues(new[] { SensorMeasurement.SpeedOverGround, SensorMeasurement.Track },
                         new IQuantity[] { vtg.Speed, vtg.CourseOverGroundTrue });
                     break;

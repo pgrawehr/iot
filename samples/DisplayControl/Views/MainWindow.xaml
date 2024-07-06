@@ -52,6 +52,8 @@
                            Height ="{Binding HeaderHeight}"/>
                 <Button Name="ShowAll" Content="No Filter" Width="150" Command="{Binding FilterShowAll}">
                 </Button>
+                <Button Name="Navigation" Content="Navigation" Width="150" Command="{Binding FilterNavigation}">
+                </Button>
                 <Button Name="EngineFilter" Content="Engine" Width="100" Command="{Binding FilterForEngine}">
                 </Button>
                 <Button Name="AisFilter" Content="AIS" Width="100" Command="{Binding FilterForAis}">

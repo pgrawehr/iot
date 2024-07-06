@@ -373,6 +373,14 @@ namespace DisplayControl.ViewModels
             UpdateVisibleModels();
         }
 
+        public void FilterNavigation()
+        {
+            m_filterFunc = x => x.Source.SensorSource == SensorSource.Navigation || 
+                                x.Source.SensorSource == SensorSource.Position || 
+                                x.Source.SensorSource == SensorSource.Compass;
+            UpdateVisibleModels();
+        }
+
         public void FilterForAis()
         {
             m_filterFunc = x => x.Source.SensorSource == SensorSource.Ais;
