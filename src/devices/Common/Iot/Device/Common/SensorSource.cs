@@ -68,6 +68,8 @@ namespace Iot.Device.Common
         /// </summary>
         public static readonly SensorSource Navigation = new SensorSource("Navigation");
 
+        public static readonly SensorSource Autopilot = new SensorSource("Autopilot");
+
         /// <inheritdoc/>
         public override bool Equals(object? obj)
         {

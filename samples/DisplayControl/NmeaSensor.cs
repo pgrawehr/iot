@@ -15,6 +15,7 @@ using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1;
+using Iot.Device.Seatalk1.Messages;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 using UnitsNet.Units;
@@ -96,6 +97,9 @@ namespace DisplayControl
         private PositionProvider _positionProvider;
         private int _aisUpdates;
         private SeatalkToNmeaConverter _seatalkPort;
+        private readonly CustomData<string> _autoPilotStatus;
+        private readonly SensorMeasurement _autoPilotHeading;
+        private readonly SensorMeasurement _autoPilotDesiredHeading;
 
         public NmeaSensor(MeasurementManager manager)
         {
@@ -123,6 +127,10 @@ namespace DisplayControl
 
             _aisDangerousTargets = new CustomData<string>("AIS dangerous targets", "None", SensorSource.Ais);
             _aisTrigger = new CustomData<int>("Ais update counter", 0, SensorSource.Ais, 1);
+            _autoPilotStatus = new CustomData<string>("Autopilot mode", "Offline", SensorSource.Autopilot);
+            _autoPilotHeading = new SensorMeasurement("Autopilot heading", Angle.Zero, SensorSource.Autopilot);
+            _autoPilotDesiredHeading =
+                new SensorMeasurement("Autopilot desired Heading", Angle.Zero, SensorSource.Autopilot);
 
             _logger = this.GetCurrentClassLogger();
 
@@ -331,7 +339,7 @@ namespace DisplayControl
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint,
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus, _rearPosition, _forwardPosition,
                 _forwardRearSeparation, _forwardRearAngle, _aisNumberOfTargets, _aisNearestShip, _aisDistanceToNearestShip,
-                _aisDangerousTargets, _aisTrigger,
+                _aisDangerousTargets, _aisTrigger, _autoPilotStatus, _autoPilotHeading, _autoPilotDesiredHeading
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA2", 115200);
@@ -672,11 +680,36 @@ namespace DisplayControl
                     }
 
                     break;
+                case SeatalkNmeaMessageWithDecoding stalk:
+                {
+                    ParserOnNewStalkMessage(source, stalk);
+                    break;
+                }
             }
 
             if (sw.ElapsedMilliseconds > 50)
             {
                 _logger.LogError($"Processing message {sentence.GetType().Name} took {sw.ElapsedMilliseconds}");
+            }
+        }
+
+        private void ParserOnNewStalkMessage(NmeaSinkAndSource source, SeatalkNmeaMessageWithDecoding stalk)
+        {
+            if (!stalk.Valid)
+            {
+                return;
+            }
+
+            var inner = stalk.SourceMessage;
+            switch (inner)
+            {
+                case CompassHeadingAutopilotCourse course:
+                {
+                    _autoPilotStatus.UpdateValue(course.AutopilotStatus.ToString());
+                    _autoPilotDesiredHeading.UpdateValue(course.AutoPilotCourse, course.AutopilotStatus is AutopilotStatus.Auto or AutopilotStatus.Wind or AutopilotStatus.Track ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData, false);
+                    _autoPilotHeading.UpdateValue(course.CompassHeading);
+                    break;
+                }
             }
         }
 
