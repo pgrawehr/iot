@@ -149,6 +149,8 @@ internal sealed class LibGpiodDriverFactory
     {
         List<FileInfo> files = new();
         Stack<DirectoryInfo> directoriesToProcess = new();
+        // Used to break the recursion in case we have a directory-symlink-loop
+        HashSet<DirectoryInfo> alreadyProcessedDirectories = new();
 
         directoriesToProcess.Push(rootDirectory);
 
@@ -160,12 +162,16 @@ internal sealed class LibGpiodDriverFactory
             {
                 if (currentDirectory.Exists)
                 {
+                    alreadyProcessedDirectories.Add(currentDirectory);
                     files.AddRange(currentDirectory.GetFiles(searchPattern));
 
                     DirectoryInfo[] subdirectories = currentDirectory.GetDirectories();
                     foreach (var subdirectory in subdirectories)
                     {
-                        directoriesToProcess.Push(subdirectory);
+                        if (!alreadyProcessedDirectories.Contains(subdirectory))
+                        {
+                            directoriesToProcess.Push(subdirectory);
+                        }
                     }
                 }
             }
