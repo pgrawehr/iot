@@ -25,7 +25,6 @@ namespace DisplayControl
         private SensorMeasurement _button2;
         private SensorMeasurement _button3;
         private SensorMeasurement _button4;
-        private SensorMeasurement _buttonTriggerLimit;
         private HysteresisFilter _buttonEnableFilter;
         private bool _atLeastOneButtonPressed = false;
         private int _count;
@@ -70,8 +69,6 @@ namespace DisplayControl
             _button2 = new SensorMeasurement("Button 2 voltage", ElectricPotential.Zero, SensorSource.UserInput);
             _button3 = new SensorMeasurement("Button 3 voltage", ElectricPotential.Zero, SensorSource.UserInput);
             _button4 = new SensorMeasurement("Button 4 voltage", ElectricPotential.Zero, SensorSource.UserInput);
-            _buttonTriggerLimit =
-                new SensorMeasurement("Button trigger limit", ElectricPotential.Zero, SensorSource.UserInput);
             _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
 
             Manager.AddRange(new[]
@@ -82,7 +79,6 @@ namespace DisplayControl
                 _button2, 
                 _button3, 
                 _button4, 
-                _buttonTriggerLimit
             });
 
             base.Init(controller);
@@ -125,6 +121,7 @@ namespace DisplayControl
 
             try
             {
+                _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
                 // First, read all four inputs with the led off (default)
                 double b1Low = RetryableReadAdc(InputMultiplexer.AIN0);
                 double b2Low = RetryableReadAdc(InputMultiplexer.AIN1);
@@ -140,9 +137,8 @@ namespace DisplayControl
                 double averageLow = (b1Low + b2Low + b3Low + b4Low) / 4;
 
                 // Calculates the average of the three smaller values
-                double max = Math.Max(Math.Max(b1High, b2High), Math.Max(b3High, b4High));
-                double averageHigh = (b1High + b2High + b3High + b4High - max) / 3;
-                bool sunIsShining = averageLow > 0.9;
+                double averageHigh = (b1High + b2High + b3High + b4High) / 4;
+                bool sunIsShining = averageLow > 0.9 || averageHigh > 0.4;
                 _buttonEnableFilter.Update(sunIsShining);
                 // Find out which button might be pressed (obstructed)
                 // if the low average is high the LED might not have an effect at all. 
@@ -150,27 +146,28 @@ namespace DisplayControl
                 if (!_buttonEnableFilter.Output)
                 {
                     // The "normal" button mode: buttons are pressed when the voltage rises
-                    double triggerValue = averageHigh + 0.3;
                     _button1.UpdateValue(ElectricPotential.FromVolts(b1High));
                     _button2.UpdateValue(ElectricPotential.FromVolts(b2High));
                     _button3.UpdateValue(ElectricPotential.FromVolts(b3High));
                     _button4.UpdateValue(ElectricPotential.FromVolts(b4High));
-                    _buttonTriggerLimit.UpdateValue(ElectricPotential.FromVolts(triggerValue));
 
                     _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.High);
-                    if (b1High > triggerValue)
+
+                    // Individual trigger limits for the buttons, a kind of calibration
+                    double averageLimit = 0.35;
+                    if (b1High > 0.40 && averageHigh < averageLimit)
                     {
                         SendButtonPressedIfOk(DisplayButton.Back);
                     }
-                    else if (b2High > triggerValue)
+                    else if (b2High > 0.53 && averageHigh < averageLimit)
                     {
                         SendButtonPressedIfOk(DisplayButton.Previous);
                     }
-                    else if (b3High > triggerValue)
+                    else if (b3High > 0.45 && averageHigh < averageLimit)
                     {
                         SendButtonPressedIfOk(DisplayButton.Next);
                     }
-                    else if (b4High > triggerValue)
+                    else if (b4High > 0.47 && averageHigh < averageLimit)
                     {
                         SendButtonPressedIfOk(DisplayButton.Enter);
                     }
@@ -184,12 +181,10 @@ namespace DisplayControl
                 {
                     // the environmental light is so high, that the LED has no effect and the input
                     // is more or less saturated regardless of whether buttons are pressed or not
-                    _button1.UpdateValue(
-                        ElectricPotential.FromVolts(-b1Low)); // Negative, so we can distinguish the case
+                    _button1.UpdateValue(ElectricPotential.FromVolts(-b1Low)); // Negative, so we can distinguish the case
                     _button2.UpdateValue(ElectricPotential.FromVolts(-b2Low));
                     _button3.UpdateValue(ElectricPotential.FromVolts(-b3Low));
                     _button4.UpdateValue(ElectricPotential.FromVolts(-b4Low));
-                    _buttonTriggerLimit.UpdateValue(ElectricPotential.FromVolts(0));
                     // Disable the green led 5, meaning the display is locked.
                     _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.Low);
                     /* This intends to do the opposite from the normal behavior: If all sensors get a lot of light,
