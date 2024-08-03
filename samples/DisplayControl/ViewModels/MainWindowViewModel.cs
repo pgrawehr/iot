@@ -301,7 +301,7 @@ namespace DisplayControl.ViewModels
         public async void ExitCommand()
         {
             var box = MessageBoxManager
-                .GetMessageBoxStandard("exit", "Quit Application? Are you sure?",
+                .GetMessageBoxStandard("Quit Application?", "Quit Application? Are you sure?",
                     ButtonEnum.YesNo);
             var result = await box.ShowAsync();
             if (result != ButtonResult.Yes)

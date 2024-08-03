@@ -65,7 +65,8 @@ namespace Iot.Device.Common
         /// than the delay time in either direction.
         /// </summary>
         /// <param name="newValue">The new input value</param>
-        public void Update(bool newValue)
+        /// <returns>The current output value</returns>
+        public bool Update(bool newValue)
         {
             // Reset clock when input value is different from output and we have not already started a wait
             if (newValue != _currentValue && newValue != _lastInputValue)
@@ -89,6 +90,8 @@ namespace Iot.Device.Common
                     _currentValue = false;
                 }
             }
+
+            return _currentValue;
         }
     }
 }

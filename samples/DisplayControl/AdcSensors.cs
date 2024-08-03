@@ -26,7 +26,10 @@ namespace DisplayControl
         private SensorMeasurement _button3;
         private SensorMeasurement _button4;
         private HysteresisFilter _buttonEnableFilter;
-        private bool _atLeastOneButtonPressed = false;
+        private HysteresisFilter _button1Filter;
+        private HysteresisFilter _button2Filter;
+        private HysteresisFilter _button3Filter;
+        private HysteresisFilter _button4Filter;
         private int _count;
         private ILogger _logger;
 
@@ -38,6 +41,15 @@ namespace DisplayControl
             _buttonEnableFilter = new HysteresisFilter(false);
             _buttonEnableFilter.FallingDelayTime = TimeSpan.FromMilliseconds(500);
             _buttonEnableFilter.RisingDelayTime = TimeSpan.FromMilliseconds(500);
+
+            _button1Filter = new HysteresisFilter(false);
+            _button1Filter.RisingDelayTime = TimeSpan.FromMilliseconds(1000);
+            _button2Filter = new HysteresisFilter(false);
+            _button2Filter.RisingDelayTime = TimeSpan.FromMilliseconds(1000);
+            _button3Filter = new HysteresisFilter(false);
+            _button3Filter.RisingDelayTime = TimeSpan.FromMilliseconds(1000);
+            _button4Filter = new HysteresisFilter(false);
+            _button4Filter.RisingDelayTime = TimeSpan.FromMilliseconds(1000);
         }
 
         public event Action<DisplayButton, bool> ButtonPressed;
@@ -155,26 +167,44 @@ namespace DisplayControl
 
                     // Individual trigger limits for the buttons, a kind of calibration
                     double averageLimit = 0.35;
-                    if (b1High > 0.40 && averageHigh < averageLimit)
+                    if (b1High > 0.36 && averageHigh < averageLimit)
                     {
-                        SendButtonPressedIfOk(DisplayButton.Back);
+                        if (_button1Filter.Update(true))
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Back);
+                            _button1Filter.Update(false);
+                        }
                     }
-                    else if (b2High > 0.53 && averageHigh < averageLimit)
+                    else if (b2High > 0.37 && averageHigh < averageLimit)
                     {
-                        SendButtonPressedIfOk(DisplayButton.Previous);
+                        if (_button2Filter.Update(true))
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Previous);
+                            _button2Filter.Update(false);
+                        }
                     }
-                    else if (b3High > 0.45 && averageHigh < averageLimit)
+                    else if (b3High > 0.35 && averageHigh < averageLimit)
                     {
-                        SendButtonPressedIfOk(DisplayButton.Next);
+                        if (_button3Filter.Update(true))
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Next);
+                            _button3Filter.Update(false);
+                        }
                     }
-                    else if (b4High > 0.47 && averageHigh < averageLimit)
+                    else if (b4High > 0.42 && averageHigh < averageLimit)
                     {
-                        SendButtonPressedIfOk(DisplayButton.Enter);
+                        if (_button4Filter.Update(true))
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Enter);
+                            _button4Filter.Update(false);
+                        }
                     }
                     else
                     {
-                        // Reset once no buttons are pressed any more
-                        _atLeastOneButtonPressed = false;
+                        _button1Filter.Update(false);
+                        _button2Filter.Update(false);
+                        _button3Filter.Update(false);
+                        _button4Filter.Update(false);
                     }
                 }
                 else
@@ -217,7 +247,6 @@ namespace DisplayControl
                     else
                     {
                         // Reset once no buttons are pressed any more
-                        _atLeastOneButtonPressed = false;
                     }
                     */
                 }
@@ -252,12 +281,6 @@ namespace DisplayControl
 
         private void SendButtonPressedIfOk(DisplayButton button)
         {
-            if (_atLeastOneButtonPressed)
-            {
-                // Already one button pressed. Wait until released
-                return;
-            }
-
             ExtendedDisplayController.PinUsage usage = ExtendedDisplayController.PinUsage.Led1Green;
             switch (button)
             {
