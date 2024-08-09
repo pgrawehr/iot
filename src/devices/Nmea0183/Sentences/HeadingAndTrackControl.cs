@@ -187,6 +187,24 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <inheritdoc />
         public override bool ReplacesOlderInstance => true;
 
+        /// <summary>
+        /// Returns the status as user-readable string (common name)
+        /// </summary>
+        /// <returns>Name of the mode</returns>
+        public static string UserState(string statusChar)
+        {
+            return statusChar switch
+            {
+                "M" => "Standby",
+                "S" => "Auto",
+                "H" => "External",
+                "T" => "Track",
+                "R" => "Remote",
+                "W" => "Wind",
+                _ => "Unknown",
+            };
+        }
+
         /// <inheritdoc />
         public override string ToNmeaParameterList()
         {
@@ -224,7 +242,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <inheritdoc />
         public override string ToReadableContent()
         {
-            return $"Autopilot command: {Status}, CommandedTrack: {CommandedTrack}, TurnMode: {TurnMode}";
+            return $"Autopilot command: {UserState(Status)}, CommandedTrack: {CommandedTrack}, TurnMode: {TurnMode}";
         }
 
         /// <summary>

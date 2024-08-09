@@ -229,7 +229,9 @@ namespace DisplayControl
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { HandheldSourceName }, true, true));
 
             // Messages from the Autopilot go everywhere
-            rules.Add(new FilterRule(Seatalk1Name, TalkerId.Any, SentenceId.Any, new List<string>() { OpenCpn, ShipSourceName, MessageRouter.LocalMessageSource }, false, true));
+            rules.Add(new FilterRule(Seatalk1Name, TalkerId.Any, SentenceId.Any, new List<string>() { OpenCpn, ShipSourceName, MessageRouter.LocalMessageSource, Udp }, false, true));
+            // This one automatically only takes what he can use
+            rules.Add(new FilterRule(Udp, TalkerId.ElectronicChartDisplayAndInformationSystem, SentenceId.Any, new[] { Seatalk1Name }, false, true));
             // Command messages to the autopilot
             rules.Add(new FilterRule("*", TalkerId.Seatalk, SeatalkNmeaMessage.Id, new List<string>()
             {
@@ -370,18 +372,13 @@ namespace DisplayControl
             _seatalkPort = new SeatalkToNmeaConverter(Seatalk1Name, "/dev/ttyAMA5");
             _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControlStatus.Id);
             _seatalkPort.SentencesToTranslate.Add(RudderSensorAngle.Id);
+            _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControl.Id);
             _seatalkPort.StartDecode();
 
             _openCpnServer = new NmeaTcpServer(OpenCpn, IPAddress.Any, 10110);
             _openCpnServer.OnParserError += OnParserError;
             _openCpnServer.StartDecode();
 
-            // TODO: This source is probably not required
-            //_signalKClient = new TcpClient("127.0.0.1", 10110);
-            //_signalKClientParser = new NmeaParser(SignalKIn, _signalKClient.GetStream(), _signalKClient.GetStream());
-            //_signalKClientParser.OnParserError += OnParserError;
-            // _signalKClientParser.ExclusiveTalkerId = new TalkerId('I', 'I');
-            // _signalKClientParser.StartDecode();
             _udpServer = new NmeaUdpServer(Udp, 10101);
             _udpServer.OnParserError += OnParserError;
             _udpServer.StartDecode();
@@ -469,6 +466,8 @@ namespace DisplayControl
 
             _router.StartDecode();
             _autopilot.Start();
+
+            _logger.LogInformation("NMEA routing setup complete");
         }
 
         /// <summary>

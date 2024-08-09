@@ -79,6 +79,10 @@ namespace Iot.Device.Seatalk1.Messages
             {
                 Logger.LogWarning($"Unknown autopilot status byte {data[4]}");
             }
+            else
+            {
+                Logger.LogInformation($"Current autopilot status: {status}");
+            }
 
             sbyte rudder = (sbyte)data[6];
 
