@@ -179,11 +179,13 @@ namespace Iot.Device.Seatalk1
 
             if (DoTranslate(sentence, out HeadingAndTrackControl? htc) && htc != null)
             {
-                var ap = _seatalkInterface.GetAutopilotRemoteController();
-                if (ap.IsOperating && htc.DesiredHeading.HasValue)
+                // Empty the queue when this (rare) message arrives, so we can directly issue its commands
+                while (_sendQueue.TryTake(out var dispose, TimeSpan.FromSeconds(0.5)))
                 {
-                    _sendQueue.Add(() => ap.TurnTo(htc.DesiredHeading.Value, null));
+                    // Wait
                 }
+
+                var ap = _seatalkInterface.GetAutopilotRemoteController();
 
                 AutopilotStatus desiredStatus = htc.Status switch
                 {
@@ -209,6 +211,11 @@ namespace Iot.Device.Seatalk1
                     else
                     {
                         ap.SetStatus(desiredStatus, ref confirm);
+                    }
+
+                    if (ap.IsOperating && htc.DesiredHeading.HasValue)
+                    {
+                        ap.TurnTo(htc.DesiredHeading.Value, null);
                     }
                 });
 

@@ -275,6 +275,7 @@ namespace Iot.Device.Seatalk1
             {
                 if (!SendMessageAndVerifyStatus(new Keystroke(AutopilotButtons.Auto, 1), timeout, () => Status is AutopilotStatus.Auto or AutopilotStatus.Wind or AutopilotStatus.Track))
                 {
+                    _logger.LogInformation($"Could not transition from Auto to {newStatus} mode");
                     return false;
                 }
             }
@@ -313,7 +314,11 @@ namespace Iot.Device.Seatalk1
                 ret = Status == AutopilotStatus.Track && CourseComputerStatus == CourseComputerWarnings.None;
             }
 
-            if (!ret)
+            if (ret)
+            {
+                _logger.LogInformation($"Status {Status} set successfully");
+            }
+            else
             {
                 _logger.LogError("Status was not set correctly");
             }
@@ -552,7 +557,7 @@ namespace Iot.Device.Seatalk1
         {
             lock (_lock)
             {
-                if (_lastUpdateTime + DefaultTimeout < DateTime.UtcNow)
+                if (_lastUpdateTime + TimeSpan.FromSeconds(10) < DateTime.UtcNow)
                 {
                     // The autopilot hasn't sent anything for 5 seconds. Assume it's offline
                     if (Status != AutopilotStatus.Offline) // don't repeat message
