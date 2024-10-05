@@ -20,11 +20,6 @@ variables:
     - name: DOTNET_MULTILEVEL_LOOKUP
       value: 0
 
-resources:
-  containers:
-  - container: LinuxContainer
-    image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-latest
-
 stages:
 - stage: Build
   jobs:
@@ -97,7 +92,6 @@ stages:
 
   - job: Linux
     displayName: Linux Build
-    container: LinuxContainer
     pool:
       vmImage: ubuntu-latest
 
