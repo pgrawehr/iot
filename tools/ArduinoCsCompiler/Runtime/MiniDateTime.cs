@@ -9,12 +9,6 @@ namespace ArduinoCsCompiler.Runtime
     [ArduinoReplacement(typeof(DateTime), false, IncludingPrivates = true)]
     internal struct MiniDateTime
     {
-        [ArduinoImplementation]
-        public static bool SystemSupportsLeapSeconds()
-        {
-            return false;
-        }
-
         public static DateTime UtcNow
         {
             [ArduinoImplementation("DateTimeUtcNow")]

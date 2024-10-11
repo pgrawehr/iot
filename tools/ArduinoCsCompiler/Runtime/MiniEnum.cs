@@ -9,12 +9,6 @@ namespace ArduinoCsCompiler.Runtime
     [ArduinoReplacement(typeof(System.Enum), IncludingPrivates = true)]
     internal class MiniEnum
     {
-        [ArduinoImplementation(CompareByParameterNames = true)]
-        public static string? InternalFormat(Type enumType, ulong value)
-        {
-            return value.ToString();
-        }
-
         public static object ToObject(Type enumType, sbyte value) =>
             InternalBoxEnum(ValidateRuntimeType(enumType), value);
 
@@ -66,8 +60,8 @@ namespace ArduinoCsCompiler.Runtime
             throw new NotImplementedException();
         }
 
-        [ArduinoImplementation("EnumInternalGetValues", CompareByParameterNames = true)]
-        public static ulong[] InternalGetValues(MiniType enumType)
+        [ArduinoImplementation("EnumToUInt64")]
+        public static ulong ToUInt64(object value)
         {
             throw new NotImplementedException();
         }
@@ -76,29 +70,23 @@ namespace ArduinoCsCompiler.Runtime
         public override string ToString()
         {
             // We don't have the metadata to print the enums as strings, so use their underlying value instead.
-            return ToUInt64().ToString();
+            return ToUInt64(this).ToString();
         }
 
         [ArduinoImplementation]
         public string ToString(string? format)
         {
-            return ToUInt64().ToString();
+            return ToUInt64(this).ToString();
         }
 
         [ArduinoImplementation]
         public string? ToString(string format, IFormatProvider provider)
         {
-            return ToUInt64().ToString();
+            return ToUInt64(this).ToString();
         }
 
         [ArduinoImplementation("EnumGetHashCode")]
         public override int GetHashCode()
-        {
-            throw new NotImplementedException();
-        }
-
-        [ArduinoImplementation("EnumToUInt64")]
-        public ulong ToUInt64()
         {
             throw new NotImplementedException();
         }

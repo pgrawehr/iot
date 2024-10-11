@@ -345,19 +345,21 @@ namespace ArduinoCsCompiler.Runtime
                 throw new ArgumentException("enumType");
             }
 
+            throw new NotImplementedException();
+
             // Get all of the values
-            ulong[] values = MiniEnum.InternalGetValues(this);
+            ////ulong[] values = MiniEnum.InternalGetValues(this);
 
-            // Create a generic Array
-            Array ret = Array.CreateInstance(MiniUnsafe.As<Type>(this), values.Length);
+            ////// Create a generic Array
+            ////Array ret = Array.CreateInstance(MiniUnsafe.As<Type>(this), values.Length);
 
-            for (int i = 0; i < values.Length; i++)
-            {
-                object val = Enum.ToObject(MiniUnsafe.As<Type>(this), values[i]);
-                ret.SetValue(val, i);
-            }
+            ////for (int i = 0; i < values.Length; i++)
+            ////{
+            ////    object val = Enum.ToObject(MiniUnsafe.As<Type>(this), values[i]);
+            ////    ret.SetValue(val, i);
+            ////}
 
-            return ret;
+            ////return ret;
         }
     }
 }
