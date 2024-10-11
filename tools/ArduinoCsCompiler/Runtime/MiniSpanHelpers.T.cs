@@ -761,5 +761,13 @@ namespace ArduinoCsCompiler.Runtime
             }
             return firstLength.CompareTo(secondLength);
         }
+
+        private static unsafe int IndexOfAnyValueType<TValue, TNegator>(ref TValue searchSpace, TValue value0, TValue value1, TValue value2, int length)
+            where TValue : struct
+            where TNegator : struct
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }

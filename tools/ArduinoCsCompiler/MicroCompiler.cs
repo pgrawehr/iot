@@ -39,7 +39,6 @@ namespace ArduinoCsCompiler
             // "System.Private.Corelib.dll",
             ("System.Console", typeof(System.Console)),
             ("System.Diagnostics.Process", typeof(System.Diagnostics.Process)),
-            ("Microsoft.Win32.Primitives", typeof(Win32Exception)),
             // ("System.Net.Primitives", typeof(System.Net.IPAddress)),
             // ("System.Private.Uri", typeof(System.Uri)),
         };
@@ -404,7 +403,7 @@ namespace ArduinoCsCompiler
                             if (ctor == null)
                             {
                                 // That may be ok if it is our own internal implementation, but for now we abort, since we currently have no such case
-                                throw new InvalidOperationException($"A replacement method has nothing to replace: {m.MethodSignature()}");
+                                throw new InvalidOperationException($"A replacement ctor has nothing to replace: {m.MethodSignature()}");
                             }
                             else
                             {
@@ -1814,6 +1813,12 @@ namespace ArduinoCsCompiler
             {
                 sizeOfMember = Math.Max(minSizeOfMember, 8);
                 return VariableKind.Uint64;
+            }
+
+            if (t == typeof(UIntPtr) || t == typeof(IntPtr))
+            {
+                sizeOfMember = SizeOfVoidPointer();
+                return VariableKind.AddressOfVariable;
             }
 
             if (t.IsArray)
