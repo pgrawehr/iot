@@ -135,5 +135,15 @@ namespace ArduinoCsCompiler.Runtime
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Gets the system error message for the supplied error code.
+        /// </summary>
+        /// <param name="error">The error code.</param>
+        /// <returns>The error message associated with <paramref name="error"/>.</returns>
+        public static string GetPInvokeErrorMessage(int error)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

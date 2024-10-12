@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Runtime.CompilerServices;
 using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
@@ -60,6 +61,24 @@ namespace ArduinoCsCompiler.Runtime
             // ldarg.1
             // ceq
             // ret
+        }
+
+        /// <summary>
+        /// Reinterprets the given value of type <typeparamref name="TFrom" /> as a value of type <typeparamref name="TTo" />.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The size of <typeparamref name="TFrom" /> and <typeparamref name="TTo" /> are not the same.</exception>
+        public static TTo BitCast<TFrom, TTo>(TFrom source)
+            where TFrom : struct
+            where TTo : struct
+        {
+#pragma warning disable CS8500 // Erfasst die Adresse, ermittelt die Größe oder deklariert einen Zeiger auf einen verwalteten Typ.
+            if (sizeof(TFrom) != sizeof(TTo))
+            {
+                throw new NotSupportedException();
+            }
+#pragma warning restore CS8500 // Erfasst die Adresse, ermittelt die Größe oder deklariert einen Zeiger auf einen verwalteten Typ.
+
+            return ReadUnaligned<TTo>(ref As<TFrom, byte>(ref source));
         }
 
         [ArduinoImplementation(CompareByParameterNames = true, MergeGenericImplementations = true)]
@@ -230,6 +249,18 @@ namespace ArduinoCsCompiler.Runtime
         public static void SkipInit<T>(out T value)
         {
             throw new PlatformNotSupportedException();
+        }
+
+        public static void CopyBlockUnaligned(ref byte destination, ref readonly byte source, uint byteCount)
+        {
+            throw new PlatformNotSupportedException();
+
+            // ldarg .0
+            // ldarg .1
+            // ldarg .2
+            // unaligned. 0x1
+            // cpblk
+            // ret
         }
     }
 }

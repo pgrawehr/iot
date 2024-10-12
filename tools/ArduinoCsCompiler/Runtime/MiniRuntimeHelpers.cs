@@ -36,6 +36,12 @@ namespace ArduinoCsCompiler.Runtime
             return 0;
         }
 
+        [ArduinoImplementation]
+        public static int TryGetHashCode(object? obj)
+        {
+            return GetHashCode(obj);
+        }
+
         [ArduinoImplementation(CompareByParameterNames = true)]
         public static bool IsPrimitiveType(CorElementType et)
         {
@@ -153,6 +159,12 @@ namespace ArduinoCsCompiler.Runtime
         public static System.Boolean TryEnsureSufficientExecutionStack()
         {
             return true;
+        }
+
+        [ArduinoImplementation]
+        public static System.ReadOnlySpan<T> CreateSpan<T>(RuntimeFieldHandle handle)
+        {
+            throw new NotImplementedException();
         }
     }
 }

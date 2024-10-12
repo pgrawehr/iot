@@ -2,11 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Enum), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Enum), true, IncludingPrivates = true)]
     internal class MiniEnum
     {
         public static object ToObject(Type enumType, sbyte value) =>
@@ -62,6 +63,11 @@ namespace ArduinoCsCompiler.Runtime
 
         [ArduinoImplementation("EnumToUInt64")]
         public static ulong ToUInt64(object value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static bool TryFormatUnconstrained<TEnum>(TEnum value, Span<char> destination, out int charsWritten, [StringSyntax(StringSyntaxAttribute.EnumFormat)] ReadOnlySpan<char> format = default)
         {
             throw new NotImplementedException();
         }

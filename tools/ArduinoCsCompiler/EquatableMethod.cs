@@ -297,10 +297,11 @@ namespace ArduinoCsCompiler
         public static bool IsOverriddenImplementation(EquatableMethod candidate, EquatableMethod self, bool candidateIsFromInterface)
         {
             var interf = candidate.DeclaringType;
-            if (interf != null && interf.IsInterface && self.DeclaringType != null && self.DeclaringType.IsArray == false)
+            if (interf != null && interf.IsInterface && self.DeclaringType != null && self.DeclaringType.IsArray == false && !self.DeclaringType.IsInterface)
             {
                 // The interface map can be used to check whether a method (self) implements a method from an interface. For this
-                // the names need not match (and will eventually not, if the method is implemented explicitly)
+                // the names need not match (and will eventually not, if the method is implemented explicitly).
+                // Note that self cannot be an interface in itself.
                 var map = self.DeclaringType.GetInterfaceMap(interf);
                 for (int i = 0; i < map.InterfaceMethods.Length; i++)
                 {
@@ -332,7 +333,6 @@ namespace ArduinoCsCompiler
             }
 
             // private methods cannot be virtual
-            // TODO: Check how explicitly interface implementations are handled in IL
             if (self.IsPrivate || candidate.IsPrivate)
             {
                 return false;

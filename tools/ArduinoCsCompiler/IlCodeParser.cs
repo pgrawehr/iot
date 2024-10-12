@@ -476,6 +476,12 @@ namespace ArduinoCsCompiler
             // the behavior/naming within the runtime has changed. So everything unexpected causes a crash.
             // Note that this returns valueName if there's no equal sign in the string.
             string length = valueName.Substring(valueName.IndexOf("=", StringComparison.Ordinal) + 1);
+            int alignment = length.IndexOf("_Align", StringComparison.Ordinal);
+            if (alignment > 0)
+            {
+                length = length.Substring(0, alignment);
+            }
+
             int len;
             if (length == "Int32")
             {
