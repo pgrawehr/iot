@@ -251,5 +251,15 @@ namespace ArduinoCsCompiler.Runtime
             return num;
         }
 
+        public static bool IsPow2(int value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static int LeadingZeroCount(System.UInt128 value)
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }
