@@ -361,7 +361,7 @@ namespace ArduinoCsCompiler
                                 flags |= BindingFlags.NonPublic;
                             }
 
-                            methodToReplace = ia.TypeToReplace!.GetMethods(flags).SingleOrDefault(x => EquatableMethod.MethodsHaveSameSignature(x, m) || EquatableMethod.AreSameOperatorMethods(x, m));
+                            methodToReplace = ia.TypeToReplace!.GetMethods(flags).SingleOrDefault(x => EquatableMethod.MethodsHaveSameSignature(x, m, false) || EquatableMethod.AreSameOperatorMethods(x, m, false));
                             if (methodToReplace == null)
                             {
                                 // if the method is not explicitly marked as InternalCall this is an error
@@ -399,7 +399,7 @@ namespace ArduinoCsCompiler
                                 flags |= BindingFlags.NonPublic;
                             }
 
-                            var ctor = ia.TypeToReplace!.GetConstructors(flags).SingleOrDefault(x => EquatableMethod.MethodsHaveSameSignature(x, m) || EquatableMethod.AreSameOperatorMethods(x, m));
+                            var ctor = ia.TypeToReplace!.GetConstructors(flags).SingleOrDefault(x => EquatableMethod.MethodsHaveSameSignature(x, m) || EquatableMethod.AreSameOperatorMethods(x, m, false));
                             if (ctor == null)
                             {
                                 // That may be ok if it is our own internal implementation, but for now we abort, since we currently have no such case

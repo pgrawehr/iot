@@ -1113,7 +1113,7 @@ namespace ArduinoCsCompiler
                         continue;
                     }
 
-                    if (EquatableMethod.MethodsHaveSameSignature(methoda, methodb) || EquatableMethod.AreSameOperatorMethods(methoda, methodb))
+                    if (EquatableMethod.MethodsHaveSameSignature(methoda, methodb) || EquatableMethod.AreSameOperatorMethods(methoda, methodb, false))
                     {
                         // Method A shall replace Method B
                         AddReplacementMethod(methodb, methoda);
@@ -1270,7 +1270,7 @@ namespace ArduinoCsCompiler
         {
             foreach (var replacementMethod in classToSearch.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic))
             {
-                if (EquatableMethod.MethodsHaveSameSignature(replacementMethod, methodInfo) || EquatableMethod.AreSameOperatorMethods(replacementMethod, methodInfo))
+                if (EquatableMethod.MethodsHaveSameSignature(replacementMethod, methodInfo) || EquatableMethod.AreSameOperatorMethods(replacementMethod, methodInfo, false))
                 {
                     if (!replacementMethod.IsGenericMethodDefinition)
                     {
@@ -1284,7 +1284,7 @@ namespace ArduinoCsCompiler
                 {
                     // The replacement method is likely the correct one, but we need to instantiate it.
                     var repl = replacementMethod.MakeGenericMethod(methodInfo.GetGenericArguments());
-                    if (EquatableMethod.MethodsHaveSameSignature(repl, methodInfo) || EquatableMethod.AreSameOperatorMethods(repl, methodInfo))
+                    if (EquatableMethod.MethodsHaveSameSignature(repl, methodInfo) || EquatableMethod.AreSameOperatorMethods(repl, methodInfo, false))
                     {
                         if (EquatableMethod.HasArduinoImplementationAttribute(replacementMethod, out var attr) && attr.MergeGenericImplementations)
                         {
