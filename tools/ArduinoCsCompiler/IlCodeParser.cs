@@ -228,6 +228,10 @@ namespace ArduinoCsCompiler
             int idx = 0;
             IlInstruction? methodStart = null;
             IlInstruction? current = null;
+
+            // when we see CONSTRAINED CALL, it's a call to a "static abstract" method through an interface, and we have to resolve at compile time
+            TypeInfo? staticAbstractType = null;
+
             var m = method.Method;
             while (idx < byteCode.Length - 5) // If less than 5 byte remain, there can't be a token within it
             {
@@ -316,9 +320,62 @@ namespace ArduinoCsCompiler
                             // These opcodes are followed by a method token
                             var methodTarget = ResolveMember(m, token)!;
                             MethodBase mb = (MethodBase)methodTarget; // This must work, or we're trying to call a field(?)
-                            patchValue = set.GetOrAddMethodToken(mb, method);
-                            // Do an inverse lookup again - might have changed due to replacement
-                            methodsUsed.Add((MethodBase)set.InverseResolveToken(patchValue)!);
+                            if (staticAbstractType != null && opCode == OpCode.CEE_CALL)
+                            {
+                                // Resolve the method using the static type of the type argument
+                                MethodInfo? targetMethod = null;
+
+                                IEnumerable<MethodInfo> targetMethods = staticAbstractType.GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                                bool first = true;
+                                var genericArgs = mb.GetGenericArguments();
+                                while (targetMethod == null)
+                                {
+                                    targetMethods = targetMethods.Where(x =>
+                                    {
+                                        var g2 = x.GetGenericArguments();
+                                        return genericArgs.Length == g2.Length;
+                                    });
+
+                                    if (genericArgs.Length > 0)
+                                    {
+                                        targetMethods = targetMethods.Select(x =>
+                                        {
+                                            return x.MakeGenericMethod(genericArgs);
+                                        });
+                                    }
+
+                                    targetMethod = targetMethods.SingleOrDefault(x => EquatableMethod.MethodsHaveSameSignature(x, mb, true)
+                                                                                      || EquatableMethod.AreSameOperatorMethods(x, mb, true));
+                                    if (targetMethod != null)
+                                    {
+                                        break;
+                                    }
+
+                                    // If it's not only static abstract, but static virtual, the implementation can be found in the interface.
+                                    if (mb.DeclaringType != null && first == true)
+                                    {
+                                        targetMethods = mb.DeclaringType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                                    }
+                                    else
+                                    {
+                                        throw new InvalidOperationException($"Unable to find implementation for {mb.MemberInfoSignature()} on {staticAbstractType} via static target resolver");
+                                    }
+
+                                    first = false;
+                                }
+
+                                patchValue = set.GetOrAddMethodToken(targetMethod, method);
+                                methodsUsed.Add((MethodBase)set.InverseResolveToken(patchValue)!);
+                            }
+                            else
+                            {
+                                patchValue = set.GetOrAddMethodToken(mb, method);
+                                // Do an inverse lookup again - might have changed due to replacement
+                                methodsUsed.Add((MethodBase)set.InverseResolveToken(patchValue)!);
+                            }
+
+                            staticAbstractType = null;
+
                             break;
                         }
 
@@ -445,6 +502,12 @@ namespace ArduinoCsCompiler
                             TypeInfo mb = (TypeInfo)typeTarget; // This must work, or the IL is invalid
                             patchValue = set.GetOrAddClassToken(mb);
                             typesUsed.Add((TypeInfo)set.InverseResolveToken(patchValue)!);
+                            if (opCode == OpCode.CEE_CONSTRAINED_)
+                            {
+                                staticAbstractType = mb;
+                                patchValue = 0; // We don't later need to care about this one.
+                            }
+
                             break;
                         }
 
