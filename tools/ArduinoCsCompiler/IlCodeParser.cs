@@ -504,8 +504,17 @@ namespace ArduinoCsCompiler
                             typesUsed.Add((TypeInfo)set.InverseResolveToken(patchValue)!);
                             if (opCode == OpCode.CEE_CONSTRAINED_)
                             {
-                                staticAbstractType = mb;
-                                patchValue = 0; // We don't later need to care about this one.
+                                int tempPc = idx;
+                                OpCode nextOpCode = DecodeOpcode(byteCode, ref tempPc);
+                                // According to the ECMA specification, CONSTRAINED is only allowed immediately before CALLVIRT,
+                                // but to implement "static virtual" methods, it now is also used before CALL. In the later case,
+                                // we will patch the call site with a static call to the target method and remove the CONSTRAINED
+                                // prefix (by just setting its argument token to 0, which makes it a NOP)
+                                if (nextOpCode == OpCode.CEE_CALL)
+                                {
+                                    staticAbstractType = mb;
+                                    patchValue = 0; // We don't later need to care about this one.
+                                }
                             }
 
                             break;

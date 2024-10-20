@@ -166,12 +166,6 @@ namespace ArduinoCsCompiler.Runtime
         }
 
         [ArduinoImplementation(CompareByParameterNames = true)]
-        public static T ReadUnaligned<T>(void* source)
-        {
-            return As<byte, T>(ref *(byte*)source);
-        }
-
-        [ArduinoImplementation(CompareByParameterNames = true)]
         public static T Read<T>(void* source)
         {
             return As<byte, T>(ref *(byte*)source);
@@ -238,6 +232,12 @@ namespace ArduinoCsCompiler.Runtime
         public static void WriteUnaligned<T>(ref byte destination, T value)
         {
             As<byte, T>(ref destination) = value;
+        }
+
+        [ArduinoImplementation]
+        public static T ReadUnaligned<T>(void* source)
+        {
+            return As<byte, T>(ref *(byte*)source);
         }
 
         public static T ReadUnaligned<T>(ref byte source)
