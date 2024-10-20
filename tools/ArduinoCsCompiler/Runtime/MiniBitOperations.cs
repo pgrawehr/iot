@@ -261,5 +261,16 @@ namespace ArduinoCsCompiler.Runtime
             throw new NotImplementedException();
         }
 
+        public static uint ResetLowestSetBit(uint value)
+        {
+            // It's lowered to BLSR on x86
+            return value & (value - 1);
+        }
+
+        public static ulong ResetLowestSetBit(ulong value)
+        {
+            // It's lowered to BLSR on x86
+            return value & (value - 1);
+        }
     }
 }

@@ -162,7 +162,13 @@ namespace ArduinoCsCompiler.Runtime
         }
 
         [ArduinoImplementation]
-        public static System.ReadOnlySpan<T> CreateSpan<T>(RuntimeFieldHandle handle)
+        public static unsafe System.ReadOnlySpan<T> CreateSpan<T>(RuntimeFieldHandle handle)
+        {
+            return new ReadOnlySpan<T>(GetSpanDataFrom(handle, typeof(T), out int length), length);
+        }
+
+        [ArduinoImplementation("RuntimeHelpersGetSpanDataFrom")]
+        public static unsafe void* GetSpanDataFrom(RuntimeFieldHandle handle, Type type, out int length)
         {
             throw new NotImplementedException();
         }

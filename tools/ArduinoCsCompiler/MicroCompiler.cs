@@ -2814,6 +2814,9 @@ namespace ArduinoCsCompiler
             // We need to figure out dependencies between the cctors (i.e. we know that System.Globalization.JapaneseCalendar..ctor depends on System.DateTime..cctor)
             // For now, we just do that by "knowledge" (analyzing the code manually showed these dependencies)
             // The last of the BringToFront elements below will be the first cctor that gets executed
+
+            // Some test uses Array.Empty<int>, this relies on this one. Something that could probably be auto-detected.
+            BringToFront(codeSequences, GetSystemPrivateType("System.Array+EmptyArray`1").MakeGenericType(typeof(int)));
             BringToFront(codeSequences, typeof(UnitsNet.BaseUnits));
             BringToFront(codeSequences, typeof(UnitsNet.BaseDimensions));
             BringToFront(codeSequences, typeof(UnitsNet.QuantityInfo));
