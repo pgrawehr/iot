@@ -216,6 +216,11 @@ namespace Iot.Device.Arduino.Tests
             return a % b;
         }
 
+        public static double Truncate(double a, double b)
+        {
+            return Math.Truncate(a);
+        }
+
         public static double LoadDoubleConstant(double a, double b)
         {
             double ret = 1.0;

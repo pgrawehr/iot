@@ -18,7 +18,7 @@ namespace ArduinoCsCompiler
             UseFlashForProgram = false;
             AdditionalSuppressions = new List<string>();
             LaunchProgramFromFlash = false;
-            MaxMemoryUsage = 256 * 1024;
+            MaxMemoryUsage = 400 * 1024;
             UsePreviewFeatures = false;
         }
 
