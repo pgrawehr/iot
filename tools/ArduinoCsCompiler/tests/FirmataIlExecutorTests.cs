@@ -233,6 +233,8 @@ namespace Iot.Device.Arduino.Tests
         [InlineData(nameof(TestMethods.ModD), 10, 2, 0)]
         [InlineData(nameof(TestMethods.ModD), 11, 2, 1)]
         [InlineData(nameof(TestMethods.ModD), -11, 2, -1)]
+        [InlineData(nameof(TestMethods.Truncate), 1.11, 0, 1)]
+        [InlineData(nameof(TestMethods.Truncate), -1.11, 0, -1)]
         [InlineData(nameof(TestMethods.LoadDoubleConstant), 0.0, 0.0, 2.0)] // tests the LDC.R8 instruction
         public void TestArithmeticOperationSignedDouble(string methodName, double argument1, double argument2, double expected)
         {

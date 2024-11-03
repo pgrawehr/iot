@@ -35,5 +35,11 @@ namespace ArduinoCsCompiler.Runtime
         {
             return IntPtr.Zero; // The returned function pointer(!) should not be used, because we have overriden UtcNow
         }
+
+        [ArduinoImplementation]
+        public static bool GetSystemSupportsLeapSeconds()
+        {
+            return false;
+        }
     }
 }
