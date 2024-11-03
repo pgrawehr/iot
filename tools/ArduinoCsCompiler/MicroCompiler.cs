@@ -733,7 +733,7 @@ namespace ArduinoCsCompiler
                 int staticFieldSize = 0;
                 var field = fields[index];
                 // For static fields, the minimum size is 4, so exact alignment is not necessary
-                var fieldType = GetVariableType(field.FieldType, StructAlignmentMinRequirement(classType, fields), out var size);
+                var fieldType = GetVariableType(field.Name, field.FieldType, StructAlignmentMinRequirement(classType, fields), out var size);
                 if (field.IsStatic)
                 {
                     fieldType |= VariableKind.StaticMember;
@@ -1590,7 +1590,7 @@ namespace ArduinoCsCompiler
             for (var index = 0; index < fields.Count; index++)
             {
                 var f = fields[index];
-                GetVariableType(f.FieldType, minSizeOfMember, out int sizeOfMember);
+                GetVariableType(f.Name, f.FieldType, minSizeOfMember, out int sizeOfMember);
                 offset = sizeDynamic;
                 if (f.IsStatic)
                 {
@@ -1723,13 +1723,19 @@ namespace ArduinoCsCompiler
         /// Returns the type of a variable for the IL. This merely distinguishes signed from unsigned types, since
         /// the execution stack auto-extends smaller types.
         /// </summary>
+        /// <param name="fieldName">Name of the field</param>
         /// <param name="t">Type to query</param>
         /// <param name="minSizeOfMember">Minimum size of the member (used to force alignment)</param>
         /// <param name="sizeOfMember">Returns the actual size of the member, used for value-type arrays (because byte[] should use just one byte per entry)</param>
         /// <returns>VariableKind instance</returns>
-        internal static VariableKind GetVariableType(Type t, int minSizeOfMember, out int sizeOfMember)
+        internal static VariableKind GetVariableType(string fieldName, Type t, int minSizeOfMember, out int sizeOfMember)
         {
-            string name = t.Name;
+            if (fieldName == null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            string typeName = t.Name;
 
             if (t.IsPointer)
             {
@@ -1826,7 +1832,7 @@ namespace ArduinoCsCompiler
                 var elemType = t.GetElementType();
                 if (elemType!.IsValueType)
                 {
-                    GetVariableType(elemType, minSizeOfMember, out sizeOfMember);
+                    GetVariableType(elemType.Name, elemType, minSizeOfMember, out sizeOfMember);
                     return VariableKind.ValueArray;
                 }
                 else
@@ -1875,7 +1881,7 @@ namespace ArduinoCsCompiler
 
                 foreach (var f in t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)) // Not the static ones
                 {
-                    GetVariableType(f.FieldType, minSizeOfMember, out var s);
+                    GetVariableType(f.Name, f.FieldType, minSizeOfMember, out var s);
                     sizeOfMember += s;
                 }
 
@@ -1909,6 +1915,12 @@ namespace ArduinoCsCompiler
                 }
 
                 return VariableKind.LargeValueType;
+            }
+
+            if (t.IsByRef)
+            {
+                sizeOfMember = SizeOfVoidPointer();
+                return VariableKind.AddressOfVariable;
             }
 
             sizeOfMember = SizeOfVoidPointer();
@@ -2761,7 +2773,7 @@ namespace ArduinoCsCompiler
                 {
                     var classType = body.LocalVariables[i].LocalType;
                     // This also needs alignment, because "classType" might be a long value type
-                    var type = GetVariableType(classType, SizeOfVoidPointer(), out int size);
+                    var type = GetVariableType($"Local{i}", classType, SizeOfVoidPointer(), out int size);
                     ClassMember local = new ClassMember($"Local #{i}", type, 0, (ushort)size);
                     localTypes[i] = local;
                 }
@@ -2781,7 +2793,7 @@ namespace ArduinoCsCompiler
             for (i = startOffset; i < decl.ArgumentCount; i++)
             {
                 var classType = parameters[i - startOffset].ParameterType;
-                var type = GetVariableType(classType, SizeOfVoidPointer(), out var size);
+                var type = GetVariableType($"Argument{i}", classType, SizeOfVoidPointer(), out var size);
                 ClassMember arg = new ClassMember($"Argument {i}", type, 0, size);
                 argTypes[i] = arg;
             }

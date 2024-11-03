@@ -241,6 +241,12 @@ namespace ArduinoCsCompiler.Runtime
             throw new NotImplementedException();
         }
 
+        [ArduinoImplementation]
+        public virtual bool Equals(Type other)
+        {
+            return Equals((object)other);
+        }
+
         [ArduinoImplementation("TypeGetHashCode", 0x5B)]
         public override int GetHashCode()
         {

@@ -9,6 +9,8 @@ using System.IO.Ports;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using ArduinoCsCompiler;
@@ -509,6 +511,22 @@ namespace Iot.Device.Arduino.Tests
             };
 
             LoadCodeMethod(typeof(ThreadingTests), methodName, a, b, expected, settings);
+        }
+
+        /// <summary>
+        /// Checks that the emulated runtime version is the same as the one on the host
+        /// </summary>
+        [Fact]
+        public void VerifyRuntimeVersion()
+        {
+            var settings = new CompilerSettings()
+            {
+                CreateKernelForFlashing = false,
+                UseFlashForKernel = false
+            };
+
+            // We can't pass on string types as arguments to the runtime at this time
+            LoadCodeMethod(typeof(TestMethods), nameof(TestMethods.CompareRuntimeVersion), 0, 0, 1, settings);
         }
     }
 }

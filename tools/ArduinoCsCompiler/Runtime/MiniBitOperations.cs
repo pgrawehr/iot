@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Runtime.CompilerServices;
 using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
@@ -271,6 +272,32 @@ namespace ArduinoCsCompiler.Runtime
         {
             // It's lowered to BLSR on x86
             return value & (value - 1);
+        }
+
+        /// <summary>
+        /// Flip the bit at a specific position in a given value.
+        /// Similar in behavior to the x86 instruction BTC (Bit Test and Complement).
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <param name="index">The zero-based index of the bit to flip.
+        /// Any value outside the range [0..31] is treated as congruent mod 32.</param>
+        /// <returns>The new value.</returns>
+        public static uint FlipBit(uint value, int index)
+        {
+            return value ^ (1u << index);
+        }
+
+        /// <summary>
+        /// Flip the bit at a specific position in a given value.
+        /// Similar in behavior to the x86 instruction BTC (Bit Test and Complement).
+        /// /// </summary>
+        /// <param name="value">The value.</param>
+        /// <param name="index">The zero-based index of the bit to flip.
+        /// Any value outside the range [0..63] is treated as congruent mod 64.</param>
+        /// <returns>The new value.</returns>
+        public static ulong FlipBit(ulong value, int index)
+        {
+            return value ^ (1ul << index);
         }
     }
 }

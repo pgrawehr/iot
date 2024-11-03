@@ -10,8 +10,10 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using ArduinoCsCompiler;
 using ArduinoCsCompiler.Runtime;
 using Iot.Device.CharacterLcd;
 using Iot.Device.Graphics;
@@ -1482,6 +1484,31 @@ namespace Iot.Device.Arduino.Tests
             MiniAssert.That("abcd".StartsWith("ab", StringComparison.CurrentCulture));
             MiniAssert.False("abcd".StartsWith("AB", StringComparison.CurrentCulture));
             MiniAssert.That("abcd".StartsWith("AB", StringComparison.InvariantCultureIgnoreCase));
+            return 1;
+        }
+
+        [ArduinoCompileTimeConstant]
+        public static string GetRuntimeVersionAtCompileTime()
+        {
+            return RuntimeInformation.FrameworkDescription;
+        }
+
+        /// <summary>
+        /// This verifies that the compiler uses the same major runtime version than we're emulating (see also implementation of <see cref="MiniRuntimeInformation"/>)
+        /// </summary>
+        public static int CompareRuntimeVersion(int major, int minor)
+        {
+            string v1 = GetRuntimeVersionAtCompileTime();
+            int idx1 = v1.LastIndexOf(" ", StringComparison.Ordinal);
+            MiniAssert.That(idx1 >= 0);
+            v1 = v1.Substring(idx1);
+            Version hostVersion = Version.Parse(v1);
+            string v2 = RuntimeInformation.FrameworkDescription;
+            v2 = v2.Substring(v2.LastIndexOf(" ", StringComparison.Ordinal));
+            Version ourVersion = Version.Parse(v2);
+            MiniAssert.AreEqual(hostVersion.Major, ourVersion.Major);
+            MiniAssert.AreEqual(hostVersion.Minor, ourVersion.Minor);
+            MiniAssert.That(hostVersion.Build >= ourVersion.Build);
             return 1;
         }
     }
