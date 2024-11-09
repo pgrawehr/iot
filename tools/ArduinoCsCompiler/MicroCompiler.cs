@@ -29,6 +29,11 @@ namespace ArduinoCsCompiler
         private const int DataVersion = 2;
 
         /// <summary>
+        /// Protocol version 0 is the version used with Iot.Device.Bindings v. 3.x
+        /// </summary>
+        public const int ProtocolVersion = 1;
+
+        /// <summary>
         /// The list of system assemblies (these may contain kernel interop calls)
         /// The list contains the name and a public type within that assembly.
         /// All of these assemblies contain a class named Interop+Kernel32. We want to replace them all, and
@@ -2773,7 +2778,18 @@ namespace ArduinoCsCompiler
                 {
                     var classType = body.LocalVariables[i].LocalType;
                     // This also needs alignment, because "classType" might be a long value type
-                    var type = GetVariableType($"Local{i}", classType, SizeOfVoidPointer(), out int size);
+                    int minSize = 1;
+                    if (!classType.IsValueType)
+                    {
+                        minSize = SizeOfVoidPointer();
+                    }
+
+                    if (classType.IsValueType && !classType.IsPrimitive)
+                    {
+                        minSize = SizeOfVoidPointer();
+                    }
+
+                    var type = GetVariableType($"Local{i}", classType, minSize, out int size);
                     ClassMember local = new ClassMember($"Local #{i}", type, 0, (ushort)size);
                     localTypes[i] = local;
                 }
@@ -3131,12 +3147,19 @@ namespace ArduinoCsCompiler
                 if (_commandHandler.IlCapabilities != null)
                 {
                     ilCapabilities = _commandHandler.IlCapabilities;
+                    if (ilCapabilities.ProtocolVersion != ProtocolVersion)
+                    {
+                        _logger.LogError("Board capabilities received, but protocol version does not match.");
+                        return false;
+                    }
+
                     return true;
                 }
 
                 Thread.Sleep(50);
             }
 
+            _logger.LogError("Couldn't query board capabilities. Possibly incompatible firmware");
             return false;
         }
 

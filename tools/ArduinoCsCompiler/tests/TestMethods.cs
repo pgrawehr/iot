@@ -1511,5 +1511,53 @@ namespace Iot.Device.Arduino.Tests
             MiniAssert.That(hostVersion.Build >= ourVersion.Build);
             return 1;
         }
+
+        public static int CallByValueIntTest(int arg1, int arg2)
+        {
+            int v1 = arg1;
+            MiniAssert.AreNotEqual(arg1, arg2);
+            UpdateVariable(ref v1, arg2);
+            MiniAssert.AreEqual(v1, arg2);
+            return 1;
+        }
+
+        public static int CallByValueShortTest(int arg1, int arg2)
+        {
+            short v1 = (short)arg1;
+            UpdateShortVariable(ref v1, -2);
+            MiniAssert.AreEqual(v1, -2); // Verify sign extension
+            return 1;
+        }
+
+        public static int CallByValueObjectTest(int arg1, int arg2)
+        {
+            List<int>? l = null;
+            CreateOrAddToList(ref l, 1);
+            MiniAssert.AreEqual(1, l!.Count);
+            CreateOrAddToList(ref l, 2);
+            MiniAssert.AreEqual(2, l!.Count);
+            MiniAssert.AreEqual(2, l[1]);
+            return 1;
+        }
+
+        public static void UpdateVariable(ref int arg, int withValue)
+        {
+            arg = withValue;
+        }
+
+        public static void UpdateShortVariable(ref short arg, short withValue)
+        {
+            arg = withValue;
+        }
+
+        public static void CreateOrAddToList(ref List<int>? list, int item)
+        {
+            if (list == null)
+            {
+                list = new List<int>();
+            }
+
+            list.Add(item);
+        }
     }
 }
