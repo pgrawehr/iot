@@ -42,7 +42,7 @@ namespace Iot.Device.Arduino.Tests
                     CreateKernelForFlashing = false,
                     UseFlashForKernel = false
                 };
-                settings.AdditionalSuppressions.Add("System.Number");
+                // settings.AdditionalSuppressions.Add("System.Number");
                 settings.AdditionalSuppressions.Add("System.SR");
             }
 
@@ -328,6 +328,15 @@ namespace Iot.Device.Arduino.Tests
         [Theory]
         [InlineData(nameof(TestMethods.SpanImplementationBehavior), 5, 1, 1)]
         public void SpanTest(string methodName, Int32 argument1, Int32 argument2, Int32 expected)
+        {
+            LoadCodeMethod(typeof(TestMethods), methodName, argument1, argument2, expected);
+        }
+
+        [Theory]
+        [InlineData(nameof(TestMethods.CallByValueIntTest), 5, 10, 1)]
+        [InlineData(nameof(TestMethods.CallByValueShortTest), 5, 10, 1)]
+        [InlineData(nameof(TestMethods.CallByValueObjectTest), 5, 10, 1)]
+        public void ByRefTest(string methodName, Int32 argument1, Int32 argument2, Int32 expected)
         {
             LoadCodeMethod(typeof(TestMethods), methodName, argument1, argument2, expected);
         }

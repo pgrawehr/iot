@@ -59,7 +59,6 @@ namespace ArduinoCsCompiler
 
                 if (!_compiler.QueryBoardCapabilities(true, out var caps))
                 {
-                    Logger.LogError("Couldn't query board capabilities. Possibly incompatible firmware");
                     return false;
                 }
 

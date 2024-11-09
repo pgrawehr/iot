@@ -251,6 +251,7 @@ namespace ArduinoCsCompiler.Runtime
             throw new PlatformNotSupportedException();
         }
 
+        [ArduinoImplementation("UnsafeCopyBlockUnaligned", 0x29)]
         public static void CopyBlockUnaligned(ref byte destination, ref readonly byte source, uint byteCount)
         {
             throw new PlatformNotSupportedException();
