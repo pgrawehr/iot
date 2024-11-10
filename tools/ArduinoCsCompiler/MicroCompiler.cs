@@ -1940,9 +1940,6 @@ namespace ArduinoCsCompiler
         }
 
         internal static bool HasReplacementAttribute(Type type,
-#if NET5_0_OR_GREATER
-            [NotNullWhen(true)]
-#endif
             out ArduinoReplacementAttribute attribute)
         {
             var repl = type.GetCustomAttribute<ArduinoReplacementAttribute>();

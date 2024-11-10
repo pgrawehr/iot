@@ -762,9 +762,9 @@ namespace Iot.Device.Arduino.Tests
         public static int EnumGetValues2(int arg1, int arg2)
         {
             var array = Enum.GetValues<TestEnum>();
-            MiniAssert.That(array.Count() == 4);
-            MiniAssert.That(array[0] == TestEnum.None);
-            MiniAssert.That(array[1] == TestEnum.One);
+            MiniAssert.AreEqual(4, array.Length);
+            MiniAssert.That(array[0] == TestEnum.None, $"None is not first element of array, but {array[0]} is");
+            MiniAssert.That(array[1] == TestEnum.One, $"One is not second element of array, but {array[1]} is");
             return 1;
         }
 
@@ -1558,6 +1558,17 @@ namespace Iot.Device.Arduino.Tests
             }
 
             list.Add(item);
+        }
+
+        public static int HasShortArgument(short s1, short s2)
+        {
+            return s1 + s2;
+        }
+
+        public static int UseShortArgument(int arg1, int arg2)
+        {
+            int result = HasShortArgument((short)arg1, (short)arg2);
+            return result;
         }
     }
 }
