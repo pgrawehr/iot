@@ -63,6 +63,24 @@ namespace ArduinoCsCompiler.Runtime
             }
         }
 
+        /// <summary>
+        /// This could probably be implemented as auto property, but we'd rather save the memory and avoid the cache.
+        /// </summary>
+        public object? GenericCache
+        {
+            [ArduinoImplementation]
+            get
+            {
+                return null;
+            }
+
+            [ArduinoImplementation]
+            set
+            {
+                // Nothing to do.
+            }
+        }
+
         public Assembly? Assembly
         {
             get
@@ -351,21 +369,19 @@ namespace ArduinoCsCompiler.Runtime
                 throw new ArgumentException("enumType");
             }
 
-            throw new NotImplementedException();
-
             // Get all of the values
-            ////ulong[] values = MiniEnum.InternalGetValues(this);
+            Array values = MiniEnum.GetValues(this);
 
-            ////// Create a generic Array
-            ////Array ret = Array.CreateInstance(MiniUnsafe.As<Type>(this), values.Length);
+            // Create a generic Array
+            Array ret = Array.CreateInstance(MiniUnsafe.As<Type>(this), values.Length);
 
-            ////for (int i = 0; i < values.Length; i++)
-            ////{
-            ////    object val = Enum.ToObject(MiniUnsafe.As<Type>(this), values[i]);
-            ////    ret.SetValue(val, i);
-            ////}
+            for (int i = 0; i < values.Length; i++)
+            {
+                object val = Enum.ToObject(MiniUnsafe.As<Type>(this), values.GetValue(i)!);
+                ret.SetValue(val, i);
+            }
 
-            ////return ret;
+            return ret;
         }
     }
 }

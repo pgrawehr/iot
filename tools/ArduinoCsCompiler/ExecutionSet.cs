@@ -43,7 +43,7 @@ namespace ArduinoCsCompiler
         /// <summary>
         /// For each method name, the list of replacements. The outer dictionary is to speed up lookups
         /// </summary>
-        private readonly Dictionary<string, List<(EquatableMethod, EquatableMethod?)>> _methodsReplaced;
+        private readonly Dictionary<string, List<(EquatableMethod Original, EquatableMethod? Replacement)>> _methodsReplaced;
         // These classes (and any of their methods) will not be loaded, even if they seem in use. This should speed up testing
         private readonly List<Type> _classesToSuppress;
         // String data, already UTF-8 encoded. The StringData value is actually only used for debugging purposes
@@ -685,7 +685,7 @@ namespace ArduinoCsCompiler
                         return GetOrAddMethodToken(dummyMethod, callingMethod);
                     }
 
-                    throw new InvalidOperationException($"Internal error: Expected replacement not found for {methodBase.MemberInfoSignature()}");
+                    throw new InvalidOperationException($"Internal error: Expected replacement not found for {methodBase.MemberInfoSignature()}. Method was called from {callingMethod.MemberInfoSignature()}");
                 }
 
                 return GetOrAddMethodToken(replacement, callingMethod);
@@ -996,13 +996,13 @@ namespace ArduinoCsCompiler
 
             if (_methodsReplaced.TryGetValue(method.Name, out var list))
             {
-                if (list.Any(x => EquatableMethod.AreMethodsIdentical(x.Item1, method.MethodBase)))
+                if (list.Any(x => EquatableMethod.AreMethodsIdentical(x.Original, method.MethodBase)))
                 {
                     throw new InvalidOperationException(
                         $"Method {method} should have been replaced by its replacement");
                 }
 
-                if (list.Any(x => EquatableMethod.AreMethodsIdentical(x.Item1, method.MethodBase) && x.Item2 == null))
+                if (list.Any(x => EquatableMethod.AreMethodsIdentical(x.Original, method.MethodBase) && x.Replacement == null))
                 {
                     throw new InvalidOperationException(
                         $"The method {method} should be replaced, but has no new implementation. This program will not execute");
@@ -1225,27 +1225,39 @@ namespace ArduinoCsCompiler
 
             var elem = methodsToConsider.FirstOrDefault(x =>
             {
-                if (x.Item2 != null && EquatableMethod.HasArduinoImplementationAttribute(x.Item2, out var attrib) && attrib.IgnoreGenericTypes)
+                if (x.Replacement != null && EquatableMethod.HasArduinoImplementationAttribute(x.Replacement, out var attrib) && attrib.IgnoreGenericTypes)
                 {
                     // There are only very few methods with the IgnoreGenericTypes attribute. Therefore a simple test is enough
-                    if (x.Item1.Name == original.Name && x.Item1.GetParameters().Length == original.GetParameters().Length
-                        && MicroCompiler.HasReplacementAttribute(x.Item2.DeclaringType!, out var replacementAttribute)
+                    if (x.Original.Name == original.Name && x.Original.GetParameters().Length == original.GetParameters().Length
+                        && MicroCompiler.HasReplacementAttribute(x.Replacement.DeclaringType!, out var replacementAttribute)
                         && replacementAttribute.TypeToReplace == original.DeclaringType)
                     {
                         return true;
                     }
                 }
 
-                return EquatableMethod.AreMethodsIdentical(x.Item1, original);
+                return EquatableMethod.AreMethodsIdentical(x.Original, original);
             });
 
-            if (elem.Item1 == default)
+            if (elem.Original == default)
             {
+                // There's a replacement required, but check whether we have the correct generic implementation
+                var openGenerics = methodsToConsider.FirstOrDefault(x => x.Original.IsConstructedGenericMethod == false
+                                                                         && x.Original.IsConstructor == false && x.Original.GetGenericArguments().Length > 0
+                                                                         && x.Replacement != null && EquatableMethod.HasArduinoImplementationAttribute(x.Replacement, out var attr));
+                if (openGenerics.Replacement != null)
+                {
+                    var replacement = GetGenericMethodReplacement(original, (MethodInfo)openGenerics.Replacement!.Method, true);
+                    methodsToConsider.Add((original, replacement));
+                    return replacement;
+                }
+
                 return null;
             }
-            else if (elem.Item2 == null)
+            else if (elem.Replacement == null)
             {
-                var classReplacement = GetReplacement(elem.Item1.DeclaringType);
+                // There should be a replacement, but there isn't
+                var classReplacement = GetReplacement(elem.Original.DeclaringType);
                 if (GetNotSupportedExceptionMethod(classReplacement!) != null)
                 {
                     return null;
@@ -1256,7 +1268,7 @@ namespace ArduinoCsCompiler
                 return null;
             }
 
-            return elem.Item2;
+            return elem.Replacement;
         }
 
         /// <summary>
@@ -1268,6 +1280,7 @@ namespace ArduinoCsCompiler
         /// <returns></returns>
         internal EquatableMethod? GetReplacement(EquatableMethod methodInfo, EquatableMethod callingMethod, Type classToSearch)
         {
+            string n1 = classToSearch.FullName ?? string.Empty;
             foreach (var replacementMethod in classToSearch.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic))
             {
                 if (EquatableMethod.MethodsHaveSameSignature(replacementMethod, methodInfo) || EquatableMethod.AreSameOperatorMethods(replacementMethod, methodInfo, false))
@@ -1278,26 +1291,37 @@ namespace ArduinoCsCompiler
                     }
                 }
 
-                if (replacementMethod.Name == methodInfo.Name && replacementMethod.GetParameters().Length == methodInfo.GetParameters().Length &&
-                    methodInfo.IsConstructedGenericMethod && replacementMethod.IsGenericMethodDefinition &&
-                    methodInfo.GetGenericArguments().Length == replacementMethod.GetGenericArguments().Length)
+                var genericReplacement = GetGenericMethodReplacement(methodInfo, replacementMethod, false);
+                if (genericReplacement != null)
                 {
-                    // The replacement method is likely the correct one, but we need to instantiate it.
-                    var repl = replacementMethod.MakeGenericMethod(methodInfo.GetGenericArguments());
-                    if (EquatableMethod.MethodsHaveSameSignature(repl, methodInfo) || EquatableMethod.AreSameOperatorMethods(repl, methodInfo, false))
-                    {
-                        if (EquatableMethod.HasArduinoImplementationAttribute(replacementMethod, out var attr) && attr.MergeGenericImplementations)
-                        {
-                            // If we don't care about the types of the generic arguments, return the generic method signature instead
-                            return replacementMethod;
-                        }
-
-                        return repl;
-                    }
+                    return genericReplacement;
                 }
             }
 
             return null; // this is now likely an error
+        }
+
+        private EquatableMethod? GetGenericMethodReplacement(EquatableMethod original, MethodInfo replacementMethod, bool originalIsClosed)
+        {
+            if (replacementMethod.Name == original.Name && replacementMethod.GetParameters().Length == original.GetParameters().Length &&
+                original.IsConstructedGenericMethod == originalIsClosed && replacementMethod.IsGenericMethodDefinition &&
+                original.GetGenericArguments().Length == replacementMethod.GetGenericArguments().Length)
+            {
+                // The replacement method is likely the correct one, but we need to instantiate it.
+                var repl = replacementMethod.MakeGenericMethod(original.GetGenericArguments());
+                if (EquatableMethod.MethodsHaveSameSignature(repl, original) || EquatableMethod.AreSameOperatorMethods(repl, original, false))
+                {
+                    if (EquatableMethod.HasArduinoImplementationAttribute(replacementMethod, out var attr) && attr.MergeGenericImplementations)
+                    {
+                        // If we don't care about the types of the generic arguments, return the generic method signature instead
+                        return replacementMethod;
+                    }
+
+                    return repl;
+                }
+            }
+
+            return null;
         }
 
         internal void AddReplacementMethod(MethodBase? toReplace, MethodBase? replacement)

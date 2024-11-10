@@ -320,6 +320,7 @@ namespace Iot.Device.Arduino.Tests
 
         [Theory]
         [InlineData(nameof(TestMethods.CastClassTest), 0, 0, 1)]
+        [InlineData(nameof(TestMethods.UseShortArgument), -5, 6, 1)]
         public void CastTest(string methodName, Int32 argument1, Int32 argument2, Int32 expected)
         {
             LoadCodeMethod(typeof(TestMethods), methodName, argument1, argument2, expected, new CompilerSettings() { CreateKernelForFlashing = false, UseFlashForKernel = false });

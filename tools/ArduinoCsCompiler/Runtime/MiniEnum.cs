@@ -2,12 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Enum), true, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Enum), IncludingPrivates = true)]
     internal class MiniEnum
     {
         public static object ToObject(Type enumType, sbyte value) =>
@@ -67,9 +71,88 @@ namespace ArduinoCsCompiler.Runtime
             throw new NotImplementedException();
         }
 
+        [ArduinoImplementation("EnumInternalGetValues")]
+        public static Array GetValues(System.Type enumType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static Array GetValues(MiniType enumType)
+        {
+            return GetValues(Unsafe.As<Type>(enumType));
+        }
+
+        public static Array GetValues<T>()
+        {
+            return GetValues(typeof(T));
+        }
+
         public static bool TryFormatUnconstrained<TEnum>(TEnum value, Span<char> destination, out int charsWritten, [StringSyntax(StringSyntaxAttribute.EnumFormat)] ReadOnlySpan<char> format = default)
         {
             throw new NotImplementedException();
+        }
+
+        [ArduinoImplementation(CompareByParameterNames = true)]
+        public static CorElementType InternalGetCorElementType(Type rt)
+        {
+            if (rt == typeof(byte))
+            {
+                return CorElementType.ELEMENT_TYPE_U1;
+            }
+
+            if (rt == typeof(sbyte))
+            {
+                return CorElementType.ELEMENT_TYPE_I1;
+            }
+
+            if (rt == typeof(short))
+            {
+                return CorElementType.ELEMENT_TYPE_I2;
+            }
+
+            if (rt == typeof(ushort))
+            {
+                return CorElementType.ELEMENT_TYPE_U2;
+            }
+
+            if (rt == typeof(int))
+            {
+                return CorElementType.ELEMENT_TYPE_I4;
+            }
+
+            if (rt == typeof(uint))
+            {
+                return CorElementType.ELEMENT_TYPE_U4;
+            }
+
+            if (rt == typeof(ulong))
+            {
+                return CorElementType.ELEMENT_TYPE_U8;
+            }
+
+            if (rt == typeof(long))
+            {
+                return CorElementType.ELEMENT_TYPE_I8;
+            }
+
+            return CorElementType.ELEMENT_TYPE_I; // Something else
+        }
+
+        [ArduinoImplementation(CompareByParameterNames = true)]
+        public static MiniEnumInfo<TStorage> GetEnumInfo<TStorage>(Type enumType, bool getNames)
+            where TStorage : struct, INumber<TStorage>
+        {
+            Array values = GetValues(enumType);
+            TStorage[] array = new TStorage[values.Length];
+            string[] names = new string[array.Length];
+            for (int i = 0; i < array.Length; i++)
+            {
+                array[i] = (TStorage)values.GetValue(i)!;
+                names[i] = array[i].ToString()!;
+            }
+
+            var ret = new MiniEnumInfo<TStorage>(false, array, names);
+            return ret;
         }
 
         [ArduinoImplementation]
@@ -111,6 +194,32 @@ namespace ArduinoCsCompiler.Runtime
             }
 
             return MiniRuntimeHelpers.EnumEqualsInternal(this, obj);
+        }
+
+        [ArduinoReplacement("System.Enum+EnumInfo`1", "System.Private.Corelib.dll", true, typeof(System.Enum), IncludingPrivates = true)]
+        internal sealed class MiniEnumInfo<TStorage>
+            where TStorage : struct, INumber<TStorage>
+        {
+            public readonly bool HasFlagsAttribute;
+            public readonly bool ValuesAreSequentialFromZero;
+            public readonly TStorage[] Values;
+            public readonly string[] Names;
+
+            // Each entry contains a list of sorted pair of enum field names and values, sorted by values
+            public MiniEnumInfo(bool hasFlagsAttribute, TStorage[] values, string[] names)
+            {
+                HasFlagsAttribute = hasFlagsAttribute;
+                Values = values;
+                Names = names;
+                ValuesAreSequentialFromZero = false;
+            }
+
+            /// <summary>Create a copy of <see cref="Values"/>.</summary>
+            public TResult[] CloneValues<TResult>()
+                where TResult : struct
+            {
+                return MemoryMarshal.Cast<TStorage, TResult>(Values).ToArray();
+            }
         }
     }
 }
