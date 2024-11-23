@@ -935,7 +935,8 @@ namespace ArduinoCsCompiler
                 return true;
             }
 
-            if (_classes.Any(x => x.TheType == classType))
+            var result = _classes.FirstOrDefault(x => x.TheType == classType);
+            if (result != null)
             {
                 return true;
             }
@@ -1202,6 +1203,20 @@ namespace ArduinoCsCompiler
                 if (x.Original.AssemblyQualifiedName == original.AssemblyQualifiedName)
                 {
                     return x.Replacement;
+                }
+                else if (original.IsConstructedGenericType)
+                {
+                    // This is for the case where we do a full-replacement of a generic class
+                    var deconstructed = original.GetGenericTypeDefinition();
+                    var deconstructedReplacement = GetReplacement(deconstructed);
+                    if (deconstructedReplacement == null)
+                    {
+                        continue;
+                    }
+
+                    var args = original.GetGenericArguments();
+                    var result = deconstructedReplacement.MakeGenericType(args);
+                    return result;
                 }
                 else if (x.Subclasses && original.IsSubclassOf(x.Original))
                 {

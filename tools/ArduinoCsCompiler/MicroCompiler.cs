@@ -2263,10 +2263,10 @@ namespace ArduinoCsCompiler
                 throw new InvalidOperationException($"Internal error: The class {classReplacement} should fully replace {methodInfo.DeclaringType}, however method {methodInfo} has no replacement (and no error either)");
             }
 
-            if (EquatableMethod.HasArduinoImplementationAttribute(methodInfo, out var implementation) && implementation!.MethodNumber != 0)
+            if (EquatableMethod.HasArduinoImplementationAttribute(methodInfo, out var implementation) && implementation.MethodNumber != 0)
             {
                 int tk1 = set.GetOrAddMethodToken(methodInfo, parentMethod);
-                var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, parent, MethodFlags.SpecialMethod, implementation!.MethodNumber);
+                var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, parent, MethodFlags.SpecialMethod, implementation.MethodNumber);
                 set.AddMethod(newInfo1);
                 return newInfo1.Token;
             }
