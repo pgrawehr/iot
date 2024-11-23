@@ -67,6 +67,7 @@ namespace ArduinoCsCompiler.Runtime
         /// Reinterprets the given value of type <typeparamref name="TFrom" /> as a value of type <typeparamref name="TTo" />.
         /// </summary>
         /// <exception cref="NotSupportedException">The size of <typeparamref name="TFrom" /> and <typeparamref name="TTo" /> are not the same.</exception>
+        [ArduinoImplementation]
         public static TTo BitCast<TFrom, TTo>(TFrom source)
             where TFrom : struct
             where TTo : struct
@@ -99,6 +100,7 @@ namespace ArduinoCsCompiler.Runtime
             return ref AddByteOffset(ref source, (IntPtr)(elementOffset * (int)SizeOf<T>()));
         }
 
+        [ArduinoImplementation]
         public static void* Add<T>(void* source, int elementOffset)
         {
             return (byte*)source + (elementOffset * (int)SizeOf<T>());
@@ -107,6 +109,7 @@ namespace ArduinoCsCompiler.Runtime
         /// <summary>
         /// Adds an element offset to the given reference.
         /// </summary>
+        [ArduinoImplementation]
         public static ref T Add<T>(ref T source, IntPtr elementOffset)
         {
             return ref AddByteOffset(ref source, (IntPtr)((uint)elementOffset * (uint)SizeOf<T>()));
@@ -150,6 +153,7 @@ namespace ArduinoCsCompiler.Runtime
             return ref As<byte, T>(ref *(byte*)source);
         }
 
+        [ArduinoImplementation]
         public static ref T AsRef<T>(in T source)
         {
             throw new PlatformNotSupportedException();
@@ -240,6 +244,7 @@ namespace ArduinoCsCompiler.Runtime
             return As<byte, T>(ref *(byte*)source);
         }
 
+        [ArduinoImplementation]
         public static T ReadUnaligned<T>(ref byte source)
         {
             return As<byte, T>(ref source);
