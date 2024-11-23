@@ -16,6 +16,7 @@ namespace ArduinoCsCompiler.Runtime
             throw new NotImplementedException();
         }
 
+        [ArduinoImplementation]
         public static unsafe void Memmove(ref byte dest, ref byte src, uint len)
         {
             fixed (byte* srcPointer = &src)
@@ -27,7 +28,8 @@ namespace ArduinoCsCompiler.Runtime
             }
         }
 
-        internal static void Memmove<T>(ref T destination, ref T source, uint elementCount)
+        [ArduinoImplementation]
+        public static void Memmove<T>(ref T destination, ref T source, uint elementCount)
         {
             // Blittable memmove. The standard CLR uses a different implementation if the element
             // to be copied contains references, without actually specifying why, though. I guess because

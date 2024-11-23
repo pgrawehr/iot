@@ -49,6 +49,7 @@ namespace ArduinoCsCompiler.Runtime
             return ((1 << (int)et) & 0b_0011_0000_0000_0011_1111_1111_1100) != 0;
         }
 
+        [ArduinoImplementation]
         public static bool IsReferenceOrContainsReferences<T>()
         {
             return IsReferenceOrContainsReferencesCore(typeof(T));
@@ -85,7 +86,8 @@ namespace ArduinoCsCompiler.Runtime
             throw new NotImplementedException();
         }
 
-        internal static bool IsBitwiseEquatable<T>()
+        [ArduinoImplementation]
+        public static bool IsBitwiseEquatable<T>()
         {
             return IsBitwiseEquatableCore(typeof(T));
         }
