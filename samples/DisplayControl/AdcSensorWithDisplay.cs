@@ -12,7 +12,7 @@ using UnitsNet;
 
 namespace DisplayControl
 {
-    public sealed class AdcSensors : PollingSensorBase
+    public sealed class AdcSensorWithDisplay : AdcSensorWithoutDisplay
     {
         private Ads1115 m_cpuAdc;
         private Ads1115 m_displayAdc;

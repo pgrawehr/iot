@@ -1,0 +1,272 @@
+﻿using Iot.Device.Ads1115;
+using System;
+using System.Collections.Generic;
+using System.Device.Gpio;
+using System.Device.I2c;
+using System.IO;
+using System.Text;
+using System.Threading;
+using Iot.Device.Common;
+using Microsoft.Extensions.Logging;
+using UnitsNet;
+
+namespace DisplayControl
+{
+    public class AdcSensorWithoutDisplay : PollingSensorBase
+    {
+        private Ads1115 m_cpuAdc;
+
+        private SensorMeasurement _currentSunBrightness;
+        private int _count;
+        private ILogger _logger;
+
+        public AdcSensorWithoutDisplay(MeasurementManager manager)
+        : base(manager, TimeSpan.FromMilliseconds(200))
+        {
+            _count = 0;
+            _logger = this.GetCurrentClassLogger();
+        }
+
+        public override void Init(GpioController gpioController)
+        {
+            var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.GND));
+            m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.PowerDown);
+
+            _voltage3_3V = new SensorMeasurement("3.3V supply voltage", ElectricPotential.Zero, SensorSource.MainPower);
+            _currentSunBrightness = new SensorMeasurement("Sunlight strength", ElectricPotential.Zero, SensorSource.Air);
+            Manager.AddRange(new[]
+            {
+                _voltage3_3V, 
+                _currentSunBrightness, 
+            });
+
+            base.Init(controller);
+        }
+
+
+        /// <summary>
+        /// Use some polling for the sensor values now, since we seem to need all channels and we can only enable interrupts usefully if a 
+        /// single channel is observed at once. 
+        /// </summary>
+        protected override void UpdateSensors()
+        {
+            if (_count % 10 == 0)
+            {
+                // Do this only every once in a while
+                try
+                {
+                    _voltage3_3V.UpdateValue(m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3));
+                    // Todo: Voltage is not really the correct unit for this.
+                    _currentSunBrightness.UpdateValue((m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) -
+                                                       m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2)));
+                }
+                catch (IOException x)
+                {
+                    _logger.LogError(x, $"Local ADC communication error: {x.Message}");
+                }
+            }
+
+            _count++;
+
+            if (!ButtonsEnabled)
+            {
+                // If the buttons are locked, show the status LED as red and do nothing more.
+                _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.Low);
+                _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Red, PinValue.High);
+                return;
+            }
+
+            _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Red, PinValue.Low);
+
+            try
+            {
+                _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
+                // First, read all four inputs with the led off (default)
+                double b1Low = RetryableReadAdc(InputMultiplexer.AIN0);
+                double b2Low = RetryableReadAdc(InputMultiplexer.AIN1);
+                double b3Low = RetryableReadAdc(InputMultiplexer.AIN2);
+                double b4Low = RetryableReadAdc(InputMultiplexer.AIN3);
+                _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.High);
+                // Then read them again, now with the reflection led on
+                double b1High = RetryableReadAdc(InputMultiplexer.AIN0);
+                double b2High = RetryableReadAdc(InputMultiplexer.AIN1);
+                double b3High = RetryableReadAdc(InputMultiplexer.AIN2);
+                double b4High = RetryableReadAdc(InputMultiplexer.AIN3);
+                _ledController.WriteLed(ExtendedDisplayController.PinUsage.KeyPadLeds, PinValue.Low);
+                double averageLow = (b1Low + b2Low + b3Low + b4Low) / 4;
+
+                // Calculates the average of the three smaller values
+                double averageHigh = (b1High + b2High + b3High + b4High) / 4;
+                bool sunIsShining = averageLow > 0.9 || averageHigh > 0.4;
+                _buttonEnableFilter.Update(sunIsShining);
+                // Find out which button might be pressed (obstructed)
+                // if the low average is high the LED might not have an effect at all. 
+                // if the low average equals the high average, the led has no effect (or is broken)
+                if (!_buttonEnableFilter.Output)
+                {
+                    // The "normal" button mode: buttons are pressed when the voltage rises
+                    _button1.UpdateValue(ElectricPotential.FromVolts(b1High));
+                    _button2.UpdateValue(ElectricPotential.FromVolts(b2High));
+                    _button3.UpdateValue(ElectricPotential.FromVolts(b3High));
+                    _button4.UpdateValue(ElectricPotential.FromVolts(b4High));
+
+                    _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.High);
+
+                    // Individual trigger limits for the buttons, a kind of calibration
+                    double averageLimit = 0.35;
+                    if (b1High > 0.36 && averageHigh < averageLimit)
+                    {
+                        if (_button1Filter.Update(true))
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Back);
+                            _button1Filter.Update(false);
+                        }
+                    }
+                    else if (b2High > 0.37 && averageHigh < averageLimit)
+                    {
+                        if (_button2Filter.Update(true))
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Previous);
+                            _button2Filter.Update(false);
+                        }
+                    }
+                    else if (b3High > 0.35 && averageHigh < averageLimit)
+                    {
+                        if (_button3Filter.Update(true))
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Next);
+                            _button3Filter.Update(false);
+                        }
+                    }
+                    else if (b4High > 0.42 && averageHigh < averageLimit)
+                    {
+                        if (_button4Filter.Update(true))
+                        {
+                            SendButtonPressedIfOk(DisplayButton.Enter);
+                            _button4Filter.Update(false);
+                        }
+                    }
+                    else
+                    {
+                        _button1Filter.Update(false);
+                        _button2Filter.Update(false);
+                        _button3Filter.Update(false);
+                        _button4Filter.Update(false);
+                    }
+                }
+                else
+                {
+                    // the environmental light is so high, that the LED has no effect and the input
+                    // is more or less saturated regardless of whether buttons are pressed or not
+                    _button1.UpdateValue(ElectricPotential.FromVolts(-b1Low)); // Negative, so we can distinguish the case
+                    _button2.UpdateValue(ElectricPotential.FromVolts(-b2Low));
+                    _button3.UpdateValue(ElectricPotential.FromVolts(-b3Low));
+                    _button4.UpdateValue(ElectricPotential.FromVolts(-b4Low));
+                    // Disable the green led 5, meaning the display is locked.
+                    _ledController.WriteLed(ExtendedDisplayController.PinUsage.Led5Green, PinValue.Low);
+                    /* This intends to do the opposite from the normal behavior: If all sensors get a lot of light,
+                     the one that gets the least is probably obstructed.
+                     Disabled - not reliable enough (causes many random button presses)
+                    const double lowThreshold = 0.5;
+                    double bt1Delta = b1Low - (b2Low + b3Low + b4Low) / 3;
+                    double bt2Delta = b2Low - (b1Low + b3Low + b4Low) / 3;
+                    double bt3Delta = b3Low - (b1Low + b2Low + b4Low) / 3;
+                    double bt4Delta = b4Low - (b1Low + b2Low + b3Low) / 3;
+                    // All the deltas are negative, if relevant
+                    // Only the maximum (the one with the largest difference) is relevant
+                    double maxDelta = Math.Min(Math.Min(bt1Delta, bt2Delta), Math.Min(bt3Delta, bt4Delta));
+                    if (Math.Abs(bt1Delta) > lowThreshold && Math.Abs(maxDelta - bt1Delta) < 1E-10)
+                    {
+                        SendButtonPressedIfOk(DisplayButton.Back);
+                    }
+                    else if (Math.Abs(bt2Delta) > lowThreshold && Math.Abs(maxDelta - bt2Delta) < 1E-10)
+                    {
+                        SendButtonPressedIfOk(DisplayButton.Previous);
+                    }
+                    else if (Math.Abs(bt3Delta) > lowThreshold && Math.Abs(maxDelta - bt3Delta) < 1E-10)
+                    {
+                        SendButtonPressedIfOk(DisplayButton.Next);
+                    }
+                    else if (Math.Abs(bt4Delta) > lowThreshold && Math.Abs(maxDelta - bt4Delta) < 1E-10)
+                    {
+                        SendButtonPressedIfOk(DisplayButton.Enter);
+                    }
+                    else
+                    {
+                        // Reset once no buttons are pressed any more
+                    }
+                    */
+                }
+            }
+            catch (Exception x) when (x is IOException || x is TimeoutException)
+            {
+                _logger.LogError(x, $"Remote ADC communication error: {x.Message}. Remote display disconnected?");
+            }
+        }
+
+        private double RetryableReadAdc(InputMultiplexer mpx)
+        {
+            int retries = 3;
+            while(true)
+            {
+                try
+                {
+                    double result = m_displayAdc.ReadVoltage(mpx).Volts;
+                    return result;
+                }
+                catch(IOException)
+                {
+                    if (retries <= 0)
+                    {
+                        throw;
+                    }
+                }
+
+                retries--;
+            }
+        }
+
+        private void SendButtonPressedIfOk(DisplayButton button)
+        {
+            ExtendedDisplayController.PinUsage usage = ExtendedDisplayController.PinUsage.Led1Green;
+            switch (button)
+            {
+                case DisplayButton.Back:
+                    usage = ExtendedDisplayController.PinUsage.Led1Green;
+                    break;
+                case DisplayButton.Previous:
+                    usage = ExtendedDisplayController.PinUsage.Led2Green;
+                    break;
+                case DisplayButton.Next:
+                    usage = ExtendedDisplayController.PinUsage.Led3Green;
+                    break;
+                case DisplayButton.Enter:
+                    usage = ExtendedDisplayController.PinUsage.Led4Green;
+                    break;
+            }
+
+            _ledController.WriteLed(usage, PinValue.High);
+            Thread.Sleep(300);
+            _ledController.WriteLed(usage, PinValue.Low);
+
+            ButtonPressed?.Invoke(button, true);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            StopThread();
+            if (m_cpuAdc != null)
+            {
+                m_cpuAdc.DeviceMode = DeviceMode.PowerDown;
+                m_cpuAdc.Dispose();
+            }
+            if (m_displayAdc != null)
+            {
+                m_displayAdc.DeviceMode = DeviceMode.PowerDown;
+                m_displayAdc.Dispose();
+            }
+            
+            base.Dispose(disposing);
+        }
+    }
+}
