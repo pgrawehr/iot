@@ -1970,6 +1970,7 @@ namespace ArduinoCsCompiler
 
             if (code == null)
             {
+                // TODO: Cache result of this (result is thrown away when called in this context and only used later)
                 code = IlCodeParser.FindAndPatchTokens(set, methodInfo.Method);
             }
 

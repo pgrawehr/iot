@@ -47,7 +47,6 @@ namespace ArduinoCsCompiler
 
         public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method)
         {
-            // We need to copy the code, because we're going to patch it
             var body = method.GetMethodBody();
             if (body == null)
             {
@@ -55,8 +54,16 @@ namespace ArduinoCsCompiler
                 return new IlCode(method, null);
             }
 
+            if (set.TryGetCachedCode(method, out IlCode? code))
+            {
+                return code;
+            }
+
+            // We need to copy the code, because we're going to patch it
             var byteCode = body.GetILAsByteArray()!.ToArray();
-            return FindAndPatchTokens(set, method, byteCode);
+            var result = FindAndPatchTokens(set, method, byteCode);
+            set.TryAddCachedCode(method, result);
+            return result;
         }
 
         public static IlInstruction GetNextInstruction(ArduinoMethodDeclaration method, ExecutionSet set, int currentPc)
