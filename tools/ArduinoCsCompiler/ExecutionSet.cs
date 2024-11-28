@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -39,6 +40,7 @@ namespace ArduinoCsCompiler
         private readonly Dictionary<EquatableField, (int Token, byte[]? InitializerData)> _patchedFieldTokens;
         private readonly Dictionary<int, EquatableField> _inversePatchedFieldTokens;
         private readonly HashSet<(Type Original, Type Replacement, bool Subclasses)> _classesReplaced;
+        private readonly Dictionary<EquatableMethod, IlCode> _codeCache;
 
         /// <summary>
         /// For each method name, the list of replacements. The outer dictionary is to speed up lookups
@@ -114,6 +116,7 @@ namespace ArduinoCsCompiler
             _arrayListImpl = new();
             _strings = new();
             _specialTypeList = new();
+            _codeCache = new();
 
             _nextToken = (int)KnownTypeTokens.LargestKnownTypeToken + 1;
             _nextGenericToken = GenericTokenStep * 4; // The first entries are reserved (see KnownTypeTokens)
@@ -152,6 +155,7 @@ namespace ArduinoCsCompiler
             _strings = new(setToClone._strings);
             _arrayListImpl = new Dictionary<Type, MethodInfo>(setToClone._arrayListImpl);
             _specialTypeList = new(setToClone._specialTypeList);
+            _codeCache = new(setToClone._codeCache);
 
             _nextToken = setToClone._nextToken;
             _nextGenericToken = setToClone._nextGenericToken;
@@ -1836,6 +1840,21 @@ namespace ArduinoCsCompiler
             }
 
             _logger.LogDebug($"Got {fieldOrCtorTokenToClass.Count} members in reverse lookup index");
+        }
+
+        internal bool TryGetCachedCode(EquatableMethod method, [NotNullWhen(true)]out IlCode? ilCode)
+        {
+            if (_codeCache.TryGetValue(method, out ilCode))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        internal bool TryAddCachedCode(EquatableMethod method, IlCode code)
+        {
+            return _codeCache.TryAdd(method, code);
         }
     }
 }
