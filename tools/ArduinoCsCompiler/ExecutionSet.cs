@@ -31,7 +31,7 @@ namespace ArduinoCsCompiler
         private static readonly Dictionary<Type, KnownTypeTokens> KnownTypeTokensMap;
 
         private readonly MicroCompiler _compiler;
-        private readonly List<ArduinoMethodDeclaration> _methods;
+        private readonly Dictionary<EquatableMethod, ArduinoMethodDeclaration> _methods;
         private readonly List<ClassDeclaration> _classes;
         private readonly Dictionary<TypeInfo, int> _patchedTypeTokens;
         private readonly Dictionary<int, TypeInfo> _inversePatchedTypeTokens;
@@ -102,7 +102,7 @@ namespace ArduinoCsCompiler
         {
             _compiler = compiler;
             _logger = this.GetCurrentClassLogger();
-            _methods = new List<ArduinoMethodDeclaration>();
+            _methods = new();
             _classes = new List<ClassDeclaration>();
             _patchedTypeTokens = new Dictionary<TypeInfo, int>();
             _patchedMethodTokens = new Dictionary<EquatableMethod, int>();
@@ -140,7 +140,7 @@ namespace ArduinoCsCompiler
                 throw new NotSupportedException("Target compiler settings must be equal to existing");
             }
 
-            _methods = new List<ArduinoMethodDeclaration>(setToClone._methods);
+            _methods = new(setToClone._methods);
             _classes = new List<ClassDeclaration>(setToClone._classes);
 
             _patchedTypeTokens = new Dictionary<TypeInfo, int>(setToClone._patchedTypeTokens);
@@ -412,7 +412,7 @@ namespace ArduinoCsCompiler
             List<int> stringTokens = new List<int>();
             // Can't use this, because the list may contain replacement tokens for methods we haven't actually picked as part of this snapshot
             // tokens.AddRange(_patchedMethodTokens.Values);
-            tokens.AddRange(_methods.Select(x => x.Token));
+            tokens.AddRange(_methods.Values.Select(x => x.Token));
             tokens.AddRange(_patchedFieldTokens.Values.Where(x => x.InitializerData != null).Select(x => x.Token));
             tokens.AddRange(_patchedTypeTokens.Values);
             stringTokens.AddRange(_strings.Select(x => x.Token));
@@ -519,7 +519,7 @@ namespace ArduinoCsCompiler
                 classSizes[cls.TheType] = new ClassStatistics(cls, classBytes);
             }
 
-            foreach (var method in _methods)
+            foreach (var method in _methods.Values)
             {
                 int methodBytes = MethodBodyMinSize;
                 methodBytes += method.ArgumentCount * 4;
@@ -963,8 +963,7 @@ namespace ArduinoCsCompiler
                 m = replacement;
             }
 
-            var find = _methods.FirstOrDefault(x => EquatableMethod.AreMethodsIdentical(x.MethodBase, m.Method));
-            if (find != null)
+            if (_methods.TryGetValue(m, out var find))
             {
                 found = find.Code;
                 newToken = find.Token;
@@ -994,7 +993,7 @@ namespace ArduinoCsCompiler
                 throw new NotSupportedException("The maximum execution stack size is 255");
             }
 
-            if (_methods.Any(x => EquatableMethod.AreMethodsIdentical(x.MethodBase, method.MethodBase)))
+            if (_methods.TryGetValue(method.MethodBase, out var m1))
             {
                 return false;
             }
@@ -1015,7 +1014,7 @@ namespace ArduinoCsCompiler
             }
 
             ClearStatistics();
-            _methods.Add(method);
+            _methods.Add(method.MethodBase, method);
             method.Index = _numDeclaredMethods;
             _numDeclaredMethods++;
 
@@ -1033,7 +1032,7 @@ namespace ArduinoCsCompiler
             return true;
         }
 
-        internal IList<ArduinoMethodDeclaration> Methods()
+        internal IDictionary<EquatableMethod, ArduinoMethodDeclaration> Methods()
         {
             return _methods;
         }
@@ -1532,7 +1531,12 @@ namespace ArduinoCsCompiler
 
         internal ArduinoMethodDeclaration GetMethod(EquatableMethod methodInfo)
         {
-            return _methods.First(x => EquatableMethod.AreMethodsIdentical(x.MethodBase, methodInfo));
+            if (_methods.TryGetValue(methodInfo, out var m))
+            {
+                return m;
+            }
+
+            throw new InvalidOperationException($"No such method: {methodInfo.MemberInfoSignature()}");
         }
 
         private static int Xor(IEnumerable<int> inputs)
@@ -1664,7 +1668,7 @@ namespace ArduinoCsCompiler
                     continue;
                 }
 
-                var m = _methods.FirstOrDefault(x => (uint)x.Token == token);
+                var m = _methods.Values.FirstOrDefault(x => (uint)x.Token == token);
                 if (m != null)
                 {
                     w.WriteLine($"0x{m.Token:X8} (Method) {m.ToString()}");

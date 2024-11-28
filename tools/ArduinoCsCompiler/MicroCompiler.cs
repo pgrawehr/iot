@@ -1145,7 +1145,7 @@ namespace ArduinoCsCompiler
         /// <exception cref="NotSupportedException">An error occurred finding a required method</exception>
         private void AddCallbackMethods(ExecutionSet set)
         {
-            if (set.Methods().Any(x => x.MethodBase.DeclaringType == typeof(Thread) && x.MethodBase.Name == "Start"))
+            if (set.Methods().Values.Any(x => x.MethodBase.DeclaringType == typeof(Thread) && x.MethodBase.Name == "Start"))
             {
                 // We get here if Thread.Start() is called anywhere. This means we need to also include Thread.StartCallback
                 var methodToInclude = typeof(Thread).GetMethod("StartCallback", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -1447,7 +1447,7 @@ namespace ArduinoCsCompiler
                 _logger.LogDebug("Loading user program methods...");
             }
 
-            var list = set.Methods().Where(x => !fromSnapShot.AlreadyAssignedTokens.Contains(x.Token) && toSnapShot.AlreadyAssignedTokens.Contains(x.Token));
+            var list = set.Methods().Values.Where(x => !fromSnapShot.AlreadyAssignedTokens.Contains(x.Token) && toSnapShot.AlreadyAssignedTokens.Contains(x.Token));
             var uploadList = list.OrderBy(x => (uint)x.Token).ToList();
             int cnt = uploadList.Count;
             int idx = 0;
