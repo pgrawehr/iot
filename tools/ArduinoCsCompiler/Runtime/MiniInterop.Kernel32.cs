@@ -688,6 +688,27 @@ namespace ArduinoCsCompiler.Runtime
                 */
                 return 0;
             }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static unsafe IntPtr CreateThreadpoolWork(void* pfnwk, IntPtr pv, IntPtr pcbe)
+            {
+                // Shouldn't be called, because we use the portable thread pool
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static void CloseThreadpoolWork(IntPtr pwk)
+            {
+                // Shouldn't be called, because we use the portable thread pool
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static void SubmitThreadpoolWork(IntPtr pwk)
+            {
+                // Shouldn't be called, because we use the portable thread pool
+                throw new NotImplementedException();
+            }
         }
 
 #pragma warning disable CS0169

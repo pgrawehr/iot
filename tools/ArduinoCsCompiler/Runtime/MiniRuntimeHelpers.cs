@@ -174,5 +174,11 @@ namespace ArduinoCsCompiler.Runtime
         {
             throw new NotImplementedException();
         }
+
+        [ArduinoImplementation]
+        public static bool IsKnownConstant(Char t)
+        {
+            return false;
+        }
     }
 }

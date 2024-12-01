@@ -1018,8 +1018,9 @@ namespace ArduinoCsCompiler
         /// Complete the execution set by making sure all dependencies are resolved
         /// </summary>
         /// <param name="set">The <see cref="ExecutionSet"/> to complete</param>
+        /// <param name="settings">Compiler settings</param>
         /// <param name="forKernel">True if a kernel shall be compiled (requires class completion, so the kernel classes can be finalized)</param>
-        internal void FinalizeExecutionSet(ExecutionSet set, bool forKernel)
+        internal void FinalizeExecutionSet(ExecutionSet set, CompilerSettings settings, bool forKernel)
         {
             if (_disposed)
             {
@@ -1034,50 +1035,53 @@ namespace ArduinoCsCompiler
             }
 
             // Because the code below is still not water proof (there could have been virtual methods added only in the end), we do this twice
-            for (int i = 0; i < 2; i++)
+            if (!settings.SkipIterativeCompletion)
             {
-                AddCallbackMethods(set);
-                // Contains all classes traversed so far
-                List<ClassDeclaration> declarations = new List<ClassDeclaration>(set.Classes);
-                // Contains the new ones to be traversed this time (start with all)
-                List<ClassDeclaration> newDeclarations = new List<ClassDeclaration>(declarations);
-                while (true)
+                for (int i = 0; i < 2; i++)
                 {
-                    // Sort: Interfaces first, then bases before their derived types (so that if a base rewires one virtual method to another - possibly abstract -
-                    // method, the derived method's actual implementation is linked. I.e. IEqualityComparer.Equals(object,object) -> EqualityComparer.Equals(object, object) ->
-                    // EqualityComparer<T>.Equals(T,T) -> -> GenericEqualityComparer<T>.Equals(T,T)
-                    newDeclarations.Sort(new ClassDeclarationByInheritanceSorter());
-                    DetectRequiredVirtualMethodImplementations(set, newDeclarations);
-
-                    // Of all classes in the list, load their static cctors. This may also add new classes in turn
-                    for (var j = 0; j < set.Classes.Count; j++)
+                    AddCallbackMethods(set);
+                    // Contains all classes traversed so far
+                    List<ClassDeclaration> declarations = new List<ClassDeclaration>(set.Classes);
+                    // Contains the new ones to be traversed this time (start with all)
+                    List<ClassDeclaration> newDeclarations = new List<ClassDeclaration>(declarations);
+                    while (true)
                     {
-                        var cls = set.Classes[j];
-                        var cctor = cls.TheType.TypeInitializer;
-                        if (cctor == null || cls.SuppressInit)
+                        // Sort: Interfaces first, then bases before their derived types (so that if a base rewires one virtual method to another - possibly abstract -
+                        // method, the derived method's actual implementation is linked. I.e. IEqualityComparer.Equals(object,object) -> EqualityComparer.Equals(object, object) ->
+                        // EqualityComparer<T>.Equals(T,T) -> -> GenericEqualityComparer<T>.Equals(T,T)
+                        newDeclarations.Sort(new ClassDeclarationByInheritanceSorter());
+                        DetectRequiredVirtualMethodImplementations(set, newDeclarations);
+
+                        // Of all classes in the list, load their static cctors. This may also add new classes in turn
+                        for (var j = 0; j < set.Classes.Count; j++)
                         {
-                            continue;
+                            var cls = set.Classes[j];
+                            var cctor = cls.TheType.TypeInitializer;
+                            if (cctor == null || cls.SuppressInit)
+                            {
+                                continue;
+                            }
+
+                            PrepareMethod(set, cctor, null);
                         }
 
-                        PrepareMethod(set, cctor, null);
-                    }
-
-                    if (set.Classes.Count == declarations.Count)
-                    {
-                        break;
-                    }
-
-                    // Find the new ones
-                    newDeclarations = new List<ClassDeclaration>();
-                    foreach (var decl in set.Classes)
-                    {
-                        if (!declarations.Contains(decl))
+                        if (set.Classes.Count == declarations.Count)
                         {
-                            newDeclarations.Add(decl);
+                            break;
                         }
-                    }
 
-                    declarations = new List<ClassDeclaration>(set.Classes);
+                        // Find the new ones
+                        newDeclarations = new List<ClassDeclaration>();
+                        foreach (var decl in set.Classes)
+                        {
+                            if (!declarations.Contains(decl))
+                            {
+                                newDeclarations.Add(decl);
+                            }
+                        }
+
+                        declarations = new List<ClassDeclaration>(set.Classes);
+                    }
                 }
             }
 
@@ -2156,7 +2160,7 @@ namespace ArduinoCsCompiler
             PrepareMethod(set, mainEntryPoint, null);
 
             set.MainEntryPointMethod = mainEntryPoint;
-            FinalizeExecutionSet(set, false);
+            FinalizeExecutionSet(set, compilerSettings, false);
             return set;
         }
 
@@ -2827,7 +2831,8 @@ namespace ArduinoCsCompiler
                     set.HasMethod(cls.TheType.TypeInitializer, cls.TheType.TypeInitializer, out var code, out _);
                     if (code == null)
                     {
-                        throw new InvalidOperationException("Inconsistent data set");
+                        // Class is normally expected to have a cctor, but we're suppressing it as not required
+                        continue;
                     }
 
                     codeSequences.Add(code);

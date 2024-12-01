@@ -9,6 +9,15 @@ namespace ArduinoCsCompiler.Runtime
     [ArduinoReplacement(typeof(ThreadPool), IncludingPrivates = true)]
     internal sealed class MiniThreadPool
     {
+        public static bool UseWindowsThreadPool
+        {
+            [ArduinoImplementation]
+            get
+            {
+                return false;
+            }
+        }
+
         /// <summary>
         /// See https://github.com/dotnet/runtime/blob/24e7a4a1a101d91b6666dc6f44137574246fdd9c/src/coreclr/vm/comthreadpool.cpp for an explanation of how this function is used
         /// from the ThreadPool cctor. TODO: Still need to decide whether using the PortableThreadPool is the right thing to do

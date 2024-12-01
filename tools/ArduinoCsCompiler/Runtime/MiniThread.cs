@@ -119,6 +119,12 @@ namespace ArduinoCsCompiler.Runtime
         }
 
         [ArduinoImplementation]
+        public static void UninterruptibleSleep0()
+        {
+            Yield();
+        }
+
+        [ArduinoImplementation]
         public static void SpinWait(int micros)
         {
             // No op, we're not fast enough
