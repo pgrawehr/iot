@@ -422,7 +422,7 @@ namespace ArduinoCsCompiler
 
         internal void CreateKernelSnapShot()
         {
-            _compiler.FinalizeExecutionSet(this, true);
+            _compiler.FinalizeExecutionSet(this, CompilerSettings, true);
 
             _kernelSnapShot = CreateSnapShot();
         }
