@@ -180,7 +180,14 @@ namespace Iot.Device.Arduino.Tests
         [InlineData(nameof(TestMethods.RshUnS), -8, 1, 2147483644)]
         public void TestArithmeticOperationSigned(string methodName, int argument1, int argument2, int expected)
         {
-            LoadCodeMethod(typeof(TestMethods), methodName, argument1, argument2, expected);
+            var settings = new CompilerSettings()
+            {
+                CreateKernelForFlashing = false,
+                UseFlashForKernel = false
+            };
+            // settings.AdditionalSuppressions.Add("System.Number");
+            settings.AdditionalSuppressions.Add("System.SR");
+            LoadCodeMethod(typeof(TestMethods), methodName, argument1, argument2, expected, settings);
         }
 
         [Theory]
