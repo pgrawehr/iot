@@ -2021,14 +2021,18 @@ namespace ArduinoCsCompiler
                     // in a stack overflow when a method is recursive (even indirect)
                     if (!set.HasMethod(me, stack, out var code1, out _) && newMethods.Add(me))
                     {
+                        stack.Push(me);
                         CollectDependendentMethods(set, me, code1, newMethods, stack);
+                        stack.Pop();
                     }
                 }
                 else if (finalMethod.Method is ConstructorInfo co)
                 {
                     if (!set.HasMethod(co, stack, out var code2, out _) && newMethods.Add(co))
                     {
+                        stack.Push(co);
                         CollectDependendentMethods(set, co, code2, newMethods, stack);
+                        stack.Pop();
                     }
                 }
                 else
