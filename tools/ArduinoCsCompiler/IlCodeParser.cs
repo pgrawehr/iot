@@ -327,6 +327,7 @@ namespace ArduinoCsCompiler
                             // These opcodes are followed by a method token
                             var methodTarget = ResolveMember(m, token)!;
                             MethodBase mb = (MethodBase)methodTarget; // This must work, or we're trying to call a field(?)
+                            analysisStack.Push(mb);
                             if (staticAbstractType != null && opCode == OpCode.CEE_CALL)
                             {
                                 // Resolve the method using the static type of the type argument
@@ -382,6 +383,7 @@ namespace ArduinoCsCompiler
                             }
 
                             staticAbstractType = null;
+                            analysisStack.Pop();
 
                             break;
                         }
