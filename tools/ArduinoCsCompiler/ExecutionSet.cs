@@ -422,7 +422,7 @@ namespace ArduinoCsCompiler
 
         internal void CreateKernelSnapShot()
         {
-            _compiler.FinalizeExecutionSet(this, CompilerSettings, true);
+            _compiler.FinalizeExecutionSet(this, CompilerSettings, new AnalysisStack(), true);
 
             _kernelSnapShot = CreateSnapShot();
         }
@@ -660,7 +660,7 @@ namespace ArduinoCsCompiler
             }
         }
 
-        internal int GetOrAddMethodToken(EquatableMethod methodBase, EquatableMethod callingMethod)
+        internal int GetOrAddMethodToken(EquatableMethod methodBase, AnalysisStack analysisStack)
         {
             int token;
             if (_patchedMethodTokens.TryGetValue(methodBase, out token))
@@ -668,17 +668,17 @@ namespace ArduinoCsCompiler
                 return token;
             }
 
-            var replacement = GetReplacement(methodBase, callingMethod);
+            var replacement = GetReplacement(methodBase, analysisStack);
             if (replacement != null)
             {
-                return GetOrAddMethodToken(replacement, callingMethod);
+                return GetOrAddMethodToken(replacement, analysisStack);
             }
 
             // If the class is being replaced, search the replacement class
             var classReplacement = GetReplacement(methodBase.DeclaringType);
             if (classReplacement != null && replacement == null)
             {
-                replacement = GetReplacement(methodBase, callingMethod, classReplacement);
+                replacement = GetReplacement(methodBase, analysisStack, classReplacement);
                 if (replacement == null)
                 {
                     // If the replacement class has a static method named "NotSupportedException", we call this instead (expecting that this will never be called).
@@ -686,13 +686,13 @@ namespace ArduinoCsCompiler
                     MethodInfo? dummyMethod = GetNotSupportedExceptionMethod(classReplacement);
                     if (dummyMethod != null)
                     {
-                        return GetOrAddMethodToken(dummyMethod, callingMethod);
+                        return GetOrAddMethodToken(dummyMethod, analysisStack);
                     }
 
-                    throw new InvalidOperationException($"Internal error: Expected replacement not found for {methodBase.MemberInfoSignature()}. Method was called from {callingMethod.MemberInfoSignature()}");
+                    throw new InvalidOperationException($"Internal error: Expected replacement not found for {methodBase.MemberInfoSignature()}. CallStack {analysisStack}");
                 }
 
-                return GetOrAddMethodToken(replacement, callingMethod);
+                return GetOrAddMethodToken(replacement, analysisStack);
             }
 
             if (methodBase.DeclaringType == typeof(Thread) && methodBase.Name == "StartCallback")
@@ -948,7 +948,7 @@ namespace ArduinoCsCompiler
             return false;
         }
 
-        internal bool HasMethod(EquatableMethod m, EquatableMethod callingMethod, out IlCode? found, out int newToken)
+        internal bool HasMethod(EquatableMethod m, AnalysisStack analysisStack, out IlCode? found, out int newToken)
         {
             newToken = 0;
             if (_classesToSuppress.Contains(m.DeclaringType!))
@@ -957,7 +957,7 @@ namespace ArduinoCsCompiler
                 return true;
             }
 
-            var replacement = GetReplacement(m, callingMethod);
+            var replacement = GetReplacement(m, analysisStack);
             if (replacement != null)
             {
                 m = replacement;
@@ -1293,7 +1293,7 @@ namespace ArduinoCsCompiler
             return true;
         }
 
-        internal EquatableMethod? GetReplacement(EquatableMethod original, EquatableMethod callingMethod)
+        internal EquatableMethod? GetReplacement(EquatableMethod original, AnalysisStack analysisStack)
         {
             // Odd: I'm pretty sure that previously equality on MethodBase instances worked, but for some reason not all instances pointing to the same method are Equal().
             if (!_methodsReplaced.TryGetValue(original.Name, out var methodsToConsider))
@@ -1359,7 +1359,7 @@ namespace ArduinoCsCompiler
                     return null;
                 }
 
-                ErrorManager.AddError("ACS0007", $"Should have a replacement for {original.MethodSignature()}, but it is missing. Caller: {callingMethod.MethodSignature()}. " +
+                ErrorManager.AddError("ACS0007", $"Should have a replacement for {original.MethodSignature()}, but it is missing. CallStack: \r\n{analysisStack} " +
                                                     $"Original implementation is in {original.DeclaringType!.AssemblyQualifiedName}");
                 return null;
             }
@@ -1371,10 +1371,10 @@ namespace ArduinoCsCompiler
         /// Try to find a replacement for the given method in the given class
         /// </summary>
         /// <param name="methodInfo">The method to replace</param>
-        /// <param name="callingMethod">The method that called into this one</param>
+        /// <param name="analysisStack">The stack of the current analyzer queue</param>
         /// <param name="classToSearch">With a method in this class</param>
         /// <returns></returns>
-        internal EquatableMethod? GetReplacement(EquatableMethod methodInfo, EquatableMethod callingMethod, Type classToSearch)
+        internal EquatableMethod? GetReplacement(EquatableMethod methodInfo, AnalysisStack analysisStack, Type classToSearch)
         {
             string n1 = classToSearch.FullName ?? string.Empty;
             foreach (var replacementMethod in classToSearch.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic))

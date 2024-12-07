@@ -45,7 +45,7 @@ namespace ArduinoCsCompiler
             return opcode;
         }
 
-        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method)
+        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack)
         {
             var body = method.GetMethodBody();
             if (body == null)
@@ -61,7 +61,7 @@ namespace ArduinoCsCompiler
 
             // We need to copy the code, because we're going to patch it
             var byteCode = body.GetILAsByteArray()!.ToArray();
-            var result = FindAndPatchTokens(set, method, byteCode);
+            var result = FindAndPatchTokens(set, method, analysisStack, byteCode);
             set.TryAddCachedCode(method, result);
             return result;
         }
@@ -214,7 +214,7 @@ namespace ArduinoCsCompiler
         /// method depends on (fields, classes and other methods). Then we do a lookup and patch the token with a replacement token that
         /// is unique within our program. So we do not have to care about module boundaries.
         /// </summary>
-        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, byte[] byteCode)
+        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack, byte[] byteCode)
         {
             // We need to copy the code, because we're going to patch it
             if (byteCode == null)
@@ -371,12 +371,12 @@ namespace ArduinoCsCompiler
                                     first = false;
                                 }
 
-                                patchValue = set.GetOrAddMethodToken(targetMethod, method);
+                                patchValue = set.GetOrAddMethodToken(targetMethod, analysisStack);
                                 methodsUsed.Add((MethodBase)set.InverseResolveToken(patchValue)!);
                             }
                             else
                             {
-                                patchValue = set.GetOrAddMethodToken(mb, method);
+                                patchValue = set.GetOrAddMethodToken(mb, analysisStack);
                                 // Do an inverse lookup again - might have changed due to replacement
                                 methodsUsed.Add((MethodBase)set.InverseResolveToken(patchValue)!);
                             }
