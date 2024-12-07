@@ -1172,18 +1172,19 @@ namespace ArduinoCsCompiler
                 PrepareMethod(set, new EquatableMethod(methodToInclude), new AnalysisStack(methodToInclude));
             }
 
-            var c1 = set.Classes.FirstOrDefault(x => x.Name == "System.Threading.TimerQueue");
-            if (c1 != null)
-            {
-                // We get here if Thread.Start() is called anywhere. This means we need to also include Thread.StartCallback
-                var methodToInclude = c1.TheType.GetMethod("AppDomainTimerCallback", BindingFlags.Static | BindingFlags.NonPublic);
-                if (methodToInclude == null)
-                {
-                    throw new NotSupportedException("The method TimerQueue.AppDomainTimerCallback cannot be found");
-                }
+            // Something has changed in .NET 8.0 for these - lets see what's missing
+            ////var c1 = set.Classes.FirstOrDefault(x => x.Name == "System.Threading.TimerQueue");
+            ////if (c1 != null)
+            ////{
+            ////    // We get here if Thread.Start() is called anywhere. This means we need to also include Thread.StartCallback
+            ////    var methodToInclude = c1.TheType.GetMethod("AppDomainTimerCallback", BindingFlags.Static | BindingFlags.NonPublic);
+            ////    if (methodToInclude == null)
+            ////    {
+            ////        throw new NotSupportedException("The method TimerQueue.AppDomainTimerCallback cannot be found");
+            ////    }
 
-                PrepareMethod(set, new EquatableMethod(methodToInclude), new AnalysisStack(methodToInclude));
-            }
+            ////    PrepareMethod(set, new EquatableMethod(methodToInclude), new AnalysisStack(methodToInclude));
+            ////}
         }
 
         /// <summary>
@@ -2244,6 +2245,7 @@ namespace ArduinoCsCompiler
             var exec = PrepareProgram(mainEntryPoint, settings);
             try
             {
+                exec.WriteMapFile($"c:\\temp\\{mainEntryPoint.Name}_tokenMap.txt", new IlCapabilities());
                 exec.Load(true);
             }
             catch (Exception)
@@ -2890,6 +2892,7 @@ namespace ArduinoCsCompiler
             BringToFront(codeSequences, typeof(System.Text.EncoderReplacementFallback));
             BringToFront(codeSequences, typeof(System.Text.EncoderExceptionFallback));
             BringToFront(codeSequences, GetSystemPrivateType("System.Diagnostics.Tracing.FrameworkEventSource"));
+            BringToFront(codeSequences, GetSystemPrivateType("System.Diagnostics.Tracing.NativeRuntimeEventSource"));
             BringToFront(codeSequences, typeof(CancellationTokenSource));
             BringToFront(codeSequences, typeof(MiniCultureInfo));
             BringToFront(codeSequences, typeof(Stopwatch));
