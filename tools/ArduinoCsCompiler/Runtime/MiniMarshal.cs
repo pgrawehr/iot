@@ -143,7 +143,7 @@ namespace ArduinoCsCompiler.Runtime
         /// <returns>The error message associated with <paramref name="error"/>.</returns>
         public static string GetPInvokeErrorMessage(int error)
         {
-            throw new NotImplementedException();
+            return $"System error {error}";
         }
     }
 }
