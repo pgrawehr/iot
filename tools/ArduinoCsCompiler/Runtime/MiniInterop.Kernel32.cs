@@ -292,8 +292,20 @@ namespace ArduinoCsCompiler.Runtime
                 return 1; // Only disk files supported
             }
 
+            [ArduinoImplementation("Interop_Kernel32SetEvent")]
+            internal static Boolean SetEventInternal(IntPtr handle)
+            {
+                throw new NotImplementedException();
+            }
+
             [ArduinoImplementation]
             public static Boolean SetEvent(Microsoft.Win32.SafeHandles.SafeWaitHandle handle)
+            {
+                return SetEventInternal(handle.DangerousGetHandle());
+            }
+
+            [ArduinoImplementation("Interop_Kernel32ResetEvent")]
+            internal static Boolean ResetEventInternal(IntPtr handle)
             {
                 throw new NotImplementedException();
             }
@@ -301,7 +313,7 @@ namespace ArduinoCsCompiler.Runtime
             [ArduinoImplementation]
             public static Boolean ResetEvent(Microsoft.Win32.SafeHandles.SafeWaitHandle handle)
             {
-                throw new NotImplementedException();
+                return ResetEventInternal(handle.DangerousGetHandle());
             }
 
             [ArduinoImplementation("Interop_Kernel32SetEndOfFile", 0x207)]
