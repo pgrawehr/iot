@@ -162,10 +162,16 @@ namespace ArduinoCsCompiler
 
             if (!CommandLineOptions.CompileOnly)
             {
-                set.Load(false);
-
-                // Call this after load, so we have an updated flash usage value available.
-                WriteTokenMap(set);
+                try
+                {
+                    set.Load(false);
+                }
+                finally
+                {
+                    // Call this after load, so we have an updated flash usage value available.
+                    // But also call it if load fails (e.g. due to not enough flash memory)
+                    WriteTokenMap(set);
+                }
 
                 if (CommandLineOptions.Run == false)
                 {

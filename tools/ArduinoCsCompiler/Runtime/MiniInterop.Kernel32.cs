@@ -629,6 +629,38 @@ namespace ArduinoCsCompiler.Runtime
             }
 
             [ArduinoImplementation(CompareByParameterNames = true)]
+            internal static unsafe bool GetQueuedCompletionStatusEx(System.IntPtr CompletionPort, void* lpCompletionPortEntries,
+                System.Int32 ulCount, ref System.Int32 ulNumEntriesRemoved, System.Int32 dwMilliseconds, System.Boolean fAlertable)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static unsafe SafeHandle CreateThreadpoolIo(SafeHandle fl, void* pfnio, IntPtr context, IntPtr pcbe)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static void CancelThreadpoolIo(SafeHandle pio)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static void StartThreadpoolIo(SafeHandle pio)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation]
+            public static unsafe System.Boolean DeviceIoControl(SafeHandle hDevice, UInt32 dwIoControlCode, void* lpInBuffer,
+                UInt32 nInBufferSize, void* lpOutBuffer, UInt32 nOutBufferSize, ref UInt32 lpBytesReturned, System.IntPtr lpOverlapped)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
             [ArduinoCompileTimeConstant(nameof(GetDynamicTimeZoneInformation))]
             public static unsafe uint GetDynamicTimeZoneInformation(out TIME_DYNAMIC_ZONE_INFORMATION pTimeZoneInformation)
             {

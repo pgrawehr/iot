@@ -46,13 +46,13 @@ namespace ArduinoCsCompiler.Runtime
         /// <summary>
         /// Determines the byte offset from origin to target from the given references.
         /// </summary>
-        [ArduinoImplementation("UnsafeByteOffset", 0x22, CompareByParameterNames = true)]
+        [ArduinoImplementation("UnsafeByteOffset", 0x22, CompareByParameterNames = true, MergeGenericImplementations = true)]
         public static IntPtr ByteOffset<T>(ref T origin, ref T target)
         {
             throw new PlatformNotSupportedException();
         }
 
-        [ArduinoImplementation("UnsafeAreSame", 0x23, CompareByParameterNames = true)]
+        [ArduinoImplementation("UnsafeAreSame", 0x23, CompareByParameterNames = true, MergeGenericImplementations = true)]
         public static bool AreSame<T>(ref T left, ref T right)
         {
             throw new PlatformNotSupportedException();
@@ -113,6 +113,33 @@ namespace ArduinoCsCompiler.Runtime
         public static ref T Add<T>(ref T source, IntPtr elementOffset)
         {
             return ref AddByteOffset(ref source, (IntPtr)((uint)elementOffset * (uint)SizeOf<T>()));
+        }
+
+        public static ref T Subtract<T>(ref T source, UIntPtr elementOffset)
+        {
+            return ref SubtractByteOffset(ref source, (nuint)(elementOffset * (uint)SizeOf<T>()));
+
+            // ldarg .0
+            // ldarg .1
+            // sizeof !!T
+            // mul
+            // sub
+            // ret
+        }
+
+        public static ref T SubtractByteOffset<T>(ref T source, nuint byteOffset)
+        {
+            return ref SubtractByteOffset(ref source, (IntPtr)(void*)byteOffset);
+            // ldarg .0
+            // ldarg .1
+            // sub
+            // ret
+        }
+
+        [ArduinoImplementation("UnsafeSubtractByteOffset", MergeGenericImplementations = true)]
+        public static ref T SubtractByteOffset<T>(ref T source, IntPtr byteOffset)
+        {
+            throw new PlatformNotSupportedException();
         }
 
         [ArduinoImplementation("UnsafeAddByteOffset", 0x24, MergeGenericImplementations = true)]
