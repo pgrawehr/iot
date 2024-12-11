@@ -18,7 +18,7 @@
     },
     "WeatherStation": {
       "commandName": "Project",
-      "commandLineArgs": "compile --run ..\\..\\..\\WeatherStation\\$(Configuration)\\net6.0\\WeatherStation.exe --network localhost --mapfile ..\\..\\..\\WeatherStation\\$(Configuration)\\net6.0\\WeatherStation-tokenmap.txt --debug"
+      "commandLineArgs": "compile --run ..\\..\\..\\WeatherStation\\$(Configuration)\\net8.0\\WeatherStation.exe --network localhost --mapfile ..\\..\\..\\WeatherStation\\$(Configuration)\\net8.0\\WeatherStation-tokenmap.txt --debug"
     }
   }
 }

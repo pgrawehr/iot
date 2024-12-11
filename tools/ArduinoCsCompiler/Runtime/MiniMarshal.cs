@@ -145,5 +145,10 @@ namespace ArduinoCsCompiler.Runtime
         {
             return $"System error {error}";
         }
+
+        public static System.Exception GetExceptionForHR(System.Int32 errorCode)
+        {
+            return new Win32Exception(errorCode);
+        }
     }
 }

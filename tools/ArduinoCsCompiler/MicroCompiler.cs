@@ -555,6 +555,21 @@ namespace ArduinoCsCompiler
                 }).ToList();
             }
 
+            if (classType == typeof(ArduinoNativeI2cDevice))
+            {
+                // Sorting of fields required
+                fields = fields.OrderBy(x =>
+                {
+                    // This field must be the first (used in runtime)
+                    if (x.Name == "_deviceAddress")
+                    {
+                        return 0;
+                    }
+
+                    return 10;
+                }).ToList();
+            }
+
             if (classType == typeof(Exception))
             {
                 // For exception, we need to make sure the field "_message" is the first, because we directly access it in the EE.
@@ -883,7 +898,7 @@ namespace ArduinoCsCompiler
                     }
                 }
 
-                var newvar = new ClassMember(field, fieldType, token, size, -1, staticFieldSize);
+                var newvar = new ClassMember(field, fieldType, token, size, staticFieldSize);
                 memberTypes.Add(newvar);
             }
         }
@@ -2245,7 +2260,8 @@ namespace ArduinoCsCompiler
             var exec = PrepareProgram(mainEntryPoint, settings);
             try
             {
-                exec.WriteMapFile($"c:\\temp\\{mainEntryPoint.Name}_tokenMap.txt", new IlCapabilities());
+                // Use this to get a token map during a test run
+                // exec.WriteMapFile($"c:\\temp\\{mainEntryPoint.Name}_tokenMap.txt", new IlCapabilities());
                 exec.Load(true);
             }
             catch (Exception)
