@@ -5,7 +5,7 @@ REM Second argument is either "Debug" or "Release"
 if %1!==! goto :usage
 
 REM Defines the revision to check out in the ExtendedConfigurableFirmata repo
-set FIRMATA_SIMULATOR_CHECKOUT_REVISION=fd994d309bbb71242bfca8c6732fb93a63ed92b1
+set FIRMATA_SIMULATOR_CHECKOUT_REVISION=0d4bfebb87c2737dfce0b08e6c4b714447d98e40
 set RUN_COMPILER_TESTS=FALSE
 
 choco install -y --no-progress arduino-cli
