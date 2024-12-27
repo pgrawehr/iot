@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Management" Version="$(SystemManagementPackageVersion)" />
+    <PackageReference Include="System.Management" Version="6.0.2" />
   </ItemGroup>
 
 </Project>

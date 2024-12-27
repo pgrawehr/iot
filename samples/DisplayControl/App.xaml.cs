@@ -9,14 +9,8 @@ namespace DisplayControl
 {
     public class App : Application
     {
-        private static GpioController s_gpioController;
         public App()
         {
-        }
-
-        public static void SetGpioController(GpioController gpioController)
-        {
-            s_gpioController = gpioController;
         }
 
         public override void Initialize()
@@ -28,7 +22,7 @@ namespace DisplayControl
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                DataContainer dc = new DataContainer(s_gpioController);
+                DataContainer dc = new DataContainer();
                 dc.Initialize();
                 var vm = new MainWindowViewModel(dc);
                 desktop.MainWindow = new MainWindow

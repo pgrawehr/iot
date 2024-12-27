@@ -99,7 +99,6 @@ namespace DisplayControl
         public void Run(string[] args)
         {
             var builder = BuildAvaloniaApp();
-            App.SetGpioController(Controller);
             builder.StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
         }
 

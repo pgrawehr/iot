@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using Iot.Device.Board;
 using Iot.Device.CharacterLcd;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Common;
@@ -26,10 +27,12 @@ namespace DisplayControl
 {
     public class DataContainer
     {
-        I2cDevice _displayDevice = null;
-        ICharacterLcd _characterLcd = null;
-        LcdConsole _lcdConsole = null;
-        AdcSensors _adcSensors = null;
+        private Board _board;
+        private bool _displayConnected;
+        private I2cDevice _displayDevice = null;
+        private ICharacterLcd _characterLcd = null;
+        private LcdConsole _lcdConsole = null;
+        private AdcSensorWithoutDisplay _adcSensors = null;
         private SensorFusionEngine _fusionEngine;
         private ExtendedDisplayController _extendedDisplayController;
         private bool _lcdConsoleActive;
@@ -67,9 +70,11 @@ namespace DisplayControl
             TextUpdate
         }
 
-        public DataContainer(GpioController controller)
+        public DataContainer()
         {
-            Controller = controller;
+            _board = Board.Create();
+            Controller = _board.CreateGpioController();
+            _displayConnected = false;
             _extendedDisplayController = null;
             _sensorManager = new MeasurementManager();
             _fusionEngine = new SensorFusionEngine(_sensorManager);
@@ -162,10 +167,15 @@ namespace DisplayControl
 
         private void InitializeDisplay()
         {
+            if (!_displayConnected)
+            {
+                return;
+            }
+
             WaitDisplayIdle();
             lock (_displayLock)
             {
-                _displayDevice = I2cDevice.Create(new I2cConnectionSettings(1, 0x27));
+                _displayDevice = _board.CreateI2cDevice(new I2cConnectionSettings(1, 0x27));
                 var lcdInterface = LcdInterface.CreateI2c(_displayDevice, false);
                 _characterLcd = new Lcd2004(lcdInterface);
 
@@ -187,6 +197,10 @@ namespace DisplayControl
 
         private void WaitDisplayIdle()
         {
+            if (!_displayConnected)
+            {
+                return;
+            }
             lock (_displayUpdateTaskLock)
             {
                 if (_displayUpdateTask != null)
@@ -209,20 +223,27 @@ namespace DisplayControl
             WriteLineToConsoleAndDisplay("Display controller...");
             try
             {
-                var extendedDisplayController = new ExtendedDisplayController();
-                extendedDisplayController.Init(Controller);
-                extendedDisplayController.SelfTest();
-                _extendedDisplayController = extendedDisplayController;
+                if (_displayConnected)
+                {
+                    var extendedDisplayController = new ExtendedDisplayController();
+                    extendedDisplayController.Init(Controller);
+                    extendedDisplayController.SelfTest();
+                    _extendedDisplayController = extendedDisplayController;
 
-                WriteLineToConsoleAndDisplay("ADC...");
-                _adcSensors = new AdcSensors(_sensorManager);
-                _adcSensors.Init(Controller, extendedDisplayController);
-                _adcSensors.ButtonPressed += DisplayButtonPressed;
-
-                WriteLineToConsoleAndDisplay("Cockpit Environment...");
-                _pressureSensor = new Bmp280Environment(_sensorManager);
-                _pressureSensor.Init(Controller);
-                WriteLineToConsoleAndDisplay("Remote display connected and ready");
+                    WriteLineToConsoleAndDisplay("ADC...");
+                    var disp = new AdcSensorWithDisplay(_sensorManager);
+                    disp.Init(Controller, extendedDisplayController);
+                    disp.ButtonPressed += DisplayButtonPressed;
+                    _adcSensors = disp;
+                    WriteLineToConsoleAndDisplay("Cockpit Environment...");
+                    _pressureSensor = new Bmp280Environment(_sensorManager);
+                    _pressureSensor.Init(Controller);
+                    WriteLineToConsoleAndDisplay("Remote display connected and ready");
+                }
+                else
+                {
+                    _adcSensors = new AdcSensorWithoutDisplay(_sensorManager);
+                }
             }
             catch (IOException x)
             {
@@ -678,8 +699,25 @@ namespace DisplayControl
             }
         }
 
+        private void CheckI2cConnections()
+        {
+            _displayConnected = false;
+            var bus = _board.CreateOrGetI2cBus(1);
+            var devices = bus.PerformBusScan();
+            foreach (var device in devices)
+            {
+                WriteLineToConsoleAndDisplay($"I2C Address: {device}");
+            }
+
+            if (devices.Contains(0x27))
+            {
+                _displayConnected = true;
+            }
+        }
+
         public void Initialize()
         {
+            CheckI2cConnections();
             InitializeDisplay();
             InitializeSensors();
             _lcdConsole.Clear();
@@ -1011,9 +1049,9 @@ namespace DisplayControl
 
         public void LockDisplay(bool displayLocked)
         {
-            if (_adcSensors != null)
+            if (_adcSensors is AdcSensorWithDisplay display)
             {
-                _adcSensors.ButtonsEnabled = !displayLocked;
+                display.ButtonsEnabled = !displayLocked;
             }
         }
 

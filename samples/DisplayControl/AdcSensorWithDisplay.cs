@@ -33,7 +33,7 @@ namespace DisplayControl
         private int _count;
         private ILogger _logger;
 
-        public AdcSensors(MeasurementManager manager)
+        public AdcSensorWithDisplay(MeasurementManager manager)
         : base(manager, TimeSpan.FromMilliseconds(200))
         {
             _count = 0;

@@ -22,7 +22,12 @@ namespace DisplayControl
         private SensorMeasurement _voltage3_3V;
 
         public AdcSensorWithoutDisplay(MeasurementManager manager)
-        : base(manager, TimeSpan.FromMilliseconds(200))
+            : this(manager, TimeSpan.FromMilliseconds(200))
+        {
+        }
+
+        public AdcSensorWithoutDisplay(MeasurementManager manager, TimeSpan pollingInterval)
+        : base(manager, pollingInterval)
         {
             _count = 0;
             _logger = this.GetCurrentClassLogger();
