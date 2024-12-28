@@ -59,6 +59,8 @@ namespace Iot.Device.Ili934x.Samples
 
         private bool _forceUpdate;
         private PositionProvider _positionProvider;
+        private AutopilotController _autopilotController;
+        private MessageRouter _messageRouter;
 
         public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IPointingDevice deviceSimulator, ScreenCapture capture, Arguments commandLine)
         {
@@ -79,10 +81,28 @@ namespace Iot.Device.Ili934x.Samples
             _dataSets = new List<NmeaDataSet>();
             _forceUpdate = true;
 
+            _messageRouter = new MessageRouter(new LoggingConfiguration());
             _tcpClient = new NmeaTcpClient("TcpClient", _commandLine.NmeaServer, _commandLine.NmeaPort);
             _tcpClient.OnNewSequence += OnNewSequence;
-            _cache = new SentenceCache(_tcpClient);
+            _cache = new SentenceCache(_messageRouter);
             _positionProvider = new PositionProvider(_cache);
+
+            _autopilotController = new AutopilotController(_messageRouter, _messageRouter, _cache);
+
+            _messageRouter.AddEndPoint(_tcpClient);
+
+            // The local sink gets everything from the server
+            _messageRouter.AddFilterRule(new FilterRule(_tcpClient.InterfaceName, TalkerId.Any, SentenceId.Any, new List<string>() { _messageRouter.InterfaceName },
+                false, true));
+            // Anything from the local sink (typically output from the Autopilot controller) is only cached for later reuse
+            _messageRouter.AddFilterRule(new FilterRule(_messageRouter.InterfaceName, TalkerId.ElectronicChartDisplayAndInformationSystem, SentenceId.Any, 
+                new List<string>(), (source, destination, before) =>
+                {
+                    _cache.Add(before);
+                    return null;
+                }, true, false));
+
+            _messageRouter.StartDecode();
 
             _dataSets.Add(new NmeaValueDataSet("Speed over Ground", s =>
             {
@@ -159,6 +179,16 @@ namespace Iot.Device.Ili934x.Samples
                 if (s.TryGetTransducerData("ROLL", out TransducerDataSet set))
                 {
                     return Angle.FromDegrees(set.Value);
+                }
+
+                return null;
+            }));
+
+            _dataSets.Add(new NmeaValueDataSet("Distance to WP", s =>
+            {
+                if (_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination rmb))
+                {
+                    return rmb.DistanceToWayPoint;
                 }
 
                 return null;
@@ -493,14 +523,10 @@ namespace Iot.Device.Ili934x.Samples
                 using var g = targetBuffer.GetDrawingApi();
                 string font = GetDefaultFontName();
                 g.DrawText(data.Value, font, 110, Color.Blue, new Point(20, 30));
-                g.DrawText(data.Name, font, 20, Color.Blue, new Point(10, 5));
-                g.DrawText(data.Unit, font, 20, Color.Blue, new Point(_screen.ScreenWidth / 2, _screen.ScreenHeight - 33));
+                g.DrawText(data.Name, font, 30, Color.Blue, new Point(10, 5));
+                g.DrawText(data.Unit, font, 30, Color.Blue, new Point(_screen.ScreenWidth / 2, _screen.ScreenHeight - 33));
 
                 return true;
-            }
-            else
-            {
-                targetBuffer.Clear(Color.White);
             }
 
             return false;
@@ -566,6 +592,8 @@ namespace Iot.Device.Ili934x.Samples
 
         public void Dispose()
         {
+            _messageRouter.Dispose();
+            _autopilotController.Dispose();
             _tcpClient.StopDecode();
             _tcpClient.Dispose();
         }

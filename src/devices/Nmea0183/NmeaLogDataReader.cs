@@ -98,10 +98,20 @@ namespace Iot.Device.Nmea0183
             set;
         }
 
+        /// <summary>
+        /// Loop until aborted. Only effective if set before calling <see cref="StartDecode"/>.
+        /// </summary>
+        public bool Loop
+        {
+            get;
+            set;
+        }
+
         /// <inheritdoc />
         public override void StartDecode()
         {
             var ms = new FileSetStream(_filesToRead);
+            ms.Loop = Loop;
             _doneEvent = new ManualResetEvent(false);
             _internalParser = new NmeaParser(InterfaceName, ms, null);
             _internalParser.SupportLogReading = true;

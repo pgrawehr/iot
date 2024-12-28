@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Iot.Device.Nmea0183;
 using UnitsNet;
+using UnitsNet.Units;
 
 namespace Iot.Device.Ili934x.Samples
 {
@@ -48,9 +49,20 @@ namespace Iot.Device.Ili934x.Samples
                     return string.Empty;
                 }
 
-                var unitName = _lastValue.Unit;
-                return unitName.ToString();
+                return UserUnitName(_lastValue.Unit);
             }
+        }
+
+        private string UserUnitName(Enum unit)
+        {
+            return unit switch
+            {
+                RotationalSpeedUnit.RevolutionPerMinute => "RPM",
+                AngleUnit.Degree => "Degrees",
+                SpeedUnit.Knot => "Knots",
+                LengthUnit.NauticalMile => "NM",
+                _ => unit.ToString()
+            };
         }
 
         public override bool Update(SentenceCache cache, double tolerance)

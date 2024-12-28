@@ -323,6 +323,7 @@ namespace Nmea.Simulator
         private void FilePlayback()
         {
             NmeaLogDataReader rd = new NmeaLogDataReader("LogDataReader", ReplayFiles);
+            rd.Loop = _arguments.Loop;
             rd.DecodeInRealtime = true;
             rd.OnNewSequence += (source, sentence) => SendSentence(sentence);
             rd.StartDecode();
