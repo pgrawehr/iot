@@ -53,6 +53,7 @@ namespace Iot.Device.Ili934x.Samples
         private NmeaTcpClient _tcpClient;
         private SentenceCache _cache;
 
+        private AutoResetEvent _waitForClick;
         private List<NmeaDataSet> _dataSets;
         private int _selectedDataSet;
 
@@ -68,6 +69,7 @@ namespace Iot.Device.Ili934x.Samples
             _left = 0;
             _top = 0;
             _scale = 1.0f;
+            _waitForClick = new AutoResetEvent(false);
             _screenMode = ScreenMode.Mirror;
             _backLight = ElectricPotential.FromMillivolts(3000);
             _mouseButtonsToPress = MouseButton.None;
@@ -77,7 +79,7 @@ namespace Iot.Device.Ili934x.Samples
             _dataSets = new List<NmeaDataSet>();
             _forceUpdate = true;
 
-            _tcpClient = new NmeaTcpClient("TcpClient", nmeaSourceAddress, 10100);
+            _tcpClient = new NmeaTcpClient("TcpClient", nmeaSourceAddress, 10110);
             _tcpClient.OnNewSequence += OnNewSequence;
             _cache = new SentenceCache(_tcpClient);
             _positionProvider = new PositionProvider(_cache);
@@ -179,8 +181,9 @@ namespace Iot.Device.Ili934x.Samples
 
         private void OnTouched(object o, Point point)
         {
-            Debug.WriteLine($"Touched screen at {point}");
+            Console.WriteLine($"Touched screen at {point}");
             _powerControl?.Beep(TimeSpan.FromMilliseconds(20));
+            _waitForClick.Set();
             // For the coordinates here, see the MenuBar.png file
             if (_menuMode && point.Y < 100)
             {
@@ -188,19 +191,19 @@ namespace Iot.Device.Ili934x.Samples
                 {
                     _menuMode = false;
                     _screenMode = ScreenMode.Mirror;
-                    Debug.WriteLine("Changed to mirror mode");
+                    Console.WriteLine("Changed to mirror mode");
                 }
                 else if (point.Y < 50 && point.X > 100 && point.X < 160)
                 {
                     _screenMode = ScreenMode.Battery;
-                    Debug.WriteLine("Changed to battery status mode");
+                    Console.WriteLine("Changed to battery status mode");
                     _mouseButtonsToPress = MouseButton.None;
                     _menuMode = false;
                 }
                 else if (point.Y < 50 && point.X >= 160 && point.X < 220)
                 {
                     _screenMode = ScreenMode.NmeaValue;
-                    Debug.WriteLine("Changed to NMEA display mode");
+                    Console.WriteLine("Changed to NMEA display mode");
                     _mouseButtonsToPress = MouseButton.None;
                     _forceUpdate = true;
                     _menuMode = false;
@@ -208,12 +211,12 @@ namespace Iot.Device.Ili934x.Samples
                 else if (point.Y > 50 && point.X > 100 && point.X < 160)
                 {
                     _scale /= 1.1f;
-                    Debug.WriteLine($"Changed scale to {_scale}");
+                    Console.WriteLine($"Changed scale to {_scale}");
                 }
                 else if (point.Y > 50 && point.X > 160 && point.X < 220)
                 {
                     _scale *= 1.1f;
-                    Debug.WriteLine($"Changed scale to {_scale}");
+                    Console.WriteLine($"Changed scale to {_scale}");
                 }
                 else if (point.X < 100)
                 {
@@ -230,7 +233,7 @@ namespace Iot.Device.Ili934x.Samples
                         _mouseButtonsToPress = MouseButton.Left;
                     }
 
-                    Debug.WriteLine($"Mouse mode: {_mouseButtonsToPress}");
+                    Console.WriteLine($"Mouse mode: {_mouseButtonsToPress}");
                 }
             }
             else
@@ -251,8 +254,16 @@ namespace Iot.Device.Ili934x.Samples
                 }
                 else if (_screenMode == ScreenMode.NmeaValue)
                 {
-                    _selectedDataSet = (_selectedDataSet + 1) % _dataSets.Count;
-                    _forceUpdate = true;
+                    if (point.X > _screen.ScreenWidth - 50)
+                    {
+                        _selectedDataSet = (_selectedDataSet + 1) % _dataSets.Count;
+                        _forceUpdate = true;
+                    }
+                    else if (point.X < 50)
+                    {
+                        _selectedDataSet = (_selectedDataSet) > 0 ? _selectedDataSet - 1 : _dataSets.Count - 1;
+                        _forceUpdate = true;
+                    }
                 }
             }
         }
@@ -326,7 +337,6 @@ namespace Iot.Device.Ili934x.Samples
             StartupDisplay();
 
             bool abort = false;
-            Point dragBegin = Point.Empty;
 
             var backBuffer = _screen.GetBackBufferCompatibleImage();
 
@@ -346,6 +356,7 @@ namespace Iot.Device.Ili934x.Samples
                 };
             }
 
+            TimeSpan minTimeBetweenFrames = TimeSpan.FromMilliseconds(100);
             while (!abort)
             {
                 Stopwatch sw = Stopwatch.StartNew();
@@ -355,18 +366,16 @@ namespace Iot.Device.Ili934x.Samples
                 {
                     case ScreenMode.Mirror:
                         DrawScreenContents(backBuffer, _capture, _scale, ref _left, ref _top);
+                        minTimeBetweenFrames = TimeSpan.FromMilliseconds(100);
                         break;
                     case ScreenMode.Battery:
                         backBuffer.Clear();
                         DrawPowerStatus(backBuffer);
+                        minTimeBetweenFrames = TimeSpan.FromSeconds(1);
                         break;
                     case ScreenMode.NmeaValue:
-                        if (!DrawNmeaValue(backBuffer, _menuMode || _forceUpdate))
-                        {
-                            Thread.Sleep(100);
-                            continue;
-                        }
-
+                        DrawNmeaValue(backBuffer, _menuMode || _forceUpdate);
+                        minTimeBetweenFrames = TimeSpan.FromMilliseconds(500);
                         _forceUpdate = false;
                         break;
                     default:
@@ -401,11 +410,7 @@ namespace Iot.Device.Ili934x.Samples
                     fps = ili.Fps;
                 }
                 Console.WriteLine($"\rFPS: {fps}");
-                // This typically happens if nothing needs to be done (the screen didn't change)
-                if (fps > 10)
-                {
-                    Thread.Sleep(100);
-                }
+                _waitForClick.WaitOne(minTimeBetweenFrames);
             }
         }
 
@@ -514,8 +519,6 @@ namespace Iot.Device.Ili934x.Samples
             {
                 Console.ReadKey(true);
             }
-
-            Thread.Sleep(500);
         }
 
         private String GetDefaultFontName()
