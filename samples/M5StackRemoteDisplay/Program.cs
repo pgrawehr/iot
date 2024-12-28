@@ -138,7 +138,8 @@ namespace Iot.Device.Ili934x.Samples
 
             if (board != null)
             {
-                touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), new Size(display.ScreenWidth, display.ScreenHeight), 39, board.CreateGpioController(), false);
+                touch = new Chsc6440(board.CreateI2cDevice(new I2cConnectionSettings(0, Chsc6440.DefaultI2cAddress)), 
+                    new Size(display.ScreenWidth, display.ScreenHeight), parsedArguments.FlipScreen, 39, board.CreateGpioController(), false);
                 touch.UpdateInterval = TimeSpan.FromMilliseconds(100);
                 touch.EnableEvents();
             }
@@ -149,8 +150,8 @@ namespace Iot.Device.Ili934x.Samples
             var size = screenCapture.ScreenSize();
             touchSimulator = VirtualPointingDevice.CreateAbsolute(size.Width, size.Height);
 
-            using RemoteControl ctrol = new RemoteControl(touch, display, powerControl, touchSimulator, screenCapture, parsedArguments.NmeaServer);
-            ctrol.DisplayFeatures();
+            using RemoteControl ctrol = new RemoteControl(touch, display, powerControl, touchSimulator, screenCapture, parsedArguments);
+            ctrol.Run();
 
             display.ClearScreen(true);
             if (powerControl != null)

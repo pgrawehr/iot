@@ -39,7 +39,7 @@ namespace Iot.Device.Ili934x.Samples
         private readonly BitmapImage _openMenu;
 
         private readonly ScreenCapture _capture;
-        private readonly string _nmeaSourceAddress;
+        private readonly Arguments _commandLine;
 
         private bool _menuMode;
         private float _left;
@@ -60,7 +60,7 @@ namespace Iot.Device.Ili934x.Samples
         private bool _forceUpdate;
         private PositionProvider _positionProvider;
 
-        public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IPointingDevice deviceSimulator, ScreenCapture capture, string nmeaSourceAddress)
+        public RemoteControl(Chsc6440? touch, Ili9342 screen, M5ToughPowerControl? powerControl, IPointingDevice deviceSimulator, ScreenCapture capture, Arguments commandLine)
         {
             _touch = touch;
             _screen = screen;
@@ -75,11 +75,11 @@ namespace Iot.Device.Ili934x.Samples
             _mouseButtonsToPress = MouseButton.None;
             _clickSimulator = deviceSimulator ?? throw new ArgumentNullException(nameof(deviceSimulator));
             _capture = capture;
-            _nmeaSourceAddress = nmeaSourceAddress;
+            _commandLine = commandLine;
             _dataSets = new List<NmeaDataSet>();
             _forceUpdate = true;
 
-            _tcpClient = new NmeaTcpClient("TcpClient", nmeaSourceAddress, 10110);
+            _tcpClient = new NmeaTcpClient("TcpClient", _commandLine.NmeaServer, _commandLine.NmeaPort);
             _tcpClient.OnNewSequence += OnNewSequence;
             _cache = new SentenceCache(_tcpClient);
             _positionProvider = new PositionProvider(_cache);
@@ -185,9 +185,13 @@ namespace Iot.Device.Ili934x.Samples
             _powerControl?.Beep(TimeSpan.FromMilliseconds(20));
             _waitForClick.Set();
             // For the coordinates here, see the MenuBar.png file
-            if (_menuMode && point.Y < 100)
+            if (_menuMode)
             {
-                if (point.X > 222)
+                if (point.Y >= 100)
+                {
+                    _menuMode = false;
+                }
+                else if (point.X > 222)
                 {
                     _menuMode = false;
                     _screenMode = ScreenMode.Mirror;
@@ -250,6 +254,7 @@ namespace Iot.Device.Ili934x.Samples
                     {
                         var pt = ToAbsoluteScreenPosition(point);
                         _clickSimulator.MoveTo(pt.X, pt.Y);
+                        _clickSimulator.Click(_mouseButtonsToPress);
                     }
                 }
                 else if (_screenMode == ScreenMode.NmeaValue)
@@ -332,7 +337,7 @@ namespace Iot.Device.Ili934x.Samples
             }
         }
 
-        public void DisplayFeatures()
+        public void Run()
         {
             StartupDisplay();
 
@@ -403,7 +408,17 @@ namespace Iot.Device.Ili934x.Samples
                     backBuffer.GetDrawingApi().DrawImage(_openMenu, new Rectangle(0, 0, _openMenu.Width, _openMenu.Height), new Rectangle(_screen.ScreenWidth - _openMenu.Width, 0, _openMenu.Width, _openMenu.Height));
                 }
 
-                _screen.DrawBitmap(backBuffer);
+                if (_commandLine.FlipScreen)
+                {
+                    var rotated = backBuffer.Rotate(180);
+                    _screen.DrawBitmap(rotated);
+                    rotated.Dispose();
+                }
+                else
+                {
+                    _screen.DrawBitmap(backBuffer);
+                }
+
                 double fps = 0;
                 if (_screen is Ili9341 ili)
                 {
@@ -493,7 +508,11 @@ namespace Iot.Device.Ili934x.Samples
 
         private void StartupDisplay()
         {
-            using var image = BitmapImage.CreateFromFile(@"images/Landscape.png");
+            var image = BitmapImage.CreateFromFile(@"images/Landscape.png");
+            if (_commandLine.FlipScreen)
+            {
+                image = image.Rotate(180);
+            }
             using var backBuffer = _screen.GetBackBufferCompatibleImage();
             for (int i = 1; i < 20; i++)
             {
@@ -515,6 +534,7 @@ namespace Iot.Device.Ili934x.Samples
                 Thread.Sleep(100);
             }
 
+            image.Dispose();
             if (Console.KeyAvailable)
             {
                 Console.ReadKey(true);

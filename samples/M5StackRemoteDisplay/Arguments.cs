@@ -30,7 +30,10 @@ namespace Iot.Device.Ili934x.Samples
         [Option("nmeaport", HelpText = "NMEA TCP Server port", Default = 10110)]
         public int NmeaPort { get; set; }
 
-        [Option("nosleeop", Default = false, HelpText = "Do not send the device to sleep when process terminates")]
+        [Option("nosleep", Default = false, HelpText = "Do not send the device to sleep when process terminates")]
         public bool NoSleep { get; set; }
+
+        [Option("flipscreen", Default = false, HelpText = "Rotates the screen by 180 degrees")]
+        public bool FlipScreen { get; set; }
     }
 }

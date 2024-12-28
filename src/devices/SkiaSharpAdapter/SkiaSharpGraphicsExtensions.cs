@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkiaSharp;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Iot.Device.Graphics.SkiaSharpAdapter
 {
@@ -72,6 +73,48 @@ namespace Iot.Device.Graphics.SkiaSharpAdapter
             var sourceBmp = (SkiaSharpBitmap)source;
             var targetCanvas = GetCanvas(graphics);
             targetCanvas.DrawBitmap(sourceBmp.WrappedBitmap, x, y, null);
+        }
+
+        /// <summary>
+        /// Rotates the specified bitmap by the given angle, returns a new bitmap
+        /// </summary>
+        /// <param name="source">The source image</param>
+        /// <param name="angle">The angle to rotate, in degrees</param>
+        /// <returns>A rotated bitmap</returns>
+        /// <exception cref="NotSupportedException">The input bitmap is not a SkiaSharpBitmap</exception>
+        public static BitmapImage Rotate(this BitmapImage source, double angle)
+        {
+            if (!(source is SkiaSharpBitmap img))
+            {
+                throw new NotSupportedException("Not a valid source image for this operation");
+            }
+
+            double radians = Math.PI * angle / 180;
+            float sine = (float)Math.Abs(Math.Sin(radians));
+            float cosine = (float)Math.Abs(Math.Cos(radians));
+            int originalWidth = source.Width;
+            int originalHeight = source.Height;
+            int rotatedWidth = (int)(cosine * originalWidth + sine * originalHeight);
+            int rotatedHeight = (int)(cosine * originalHeight + sine * originalWidth);
+
+            SKBitmap rotatedBitmap = new(rotatedWidth, rotatedHeight, img.WrappedBitmap.ColorType, img.WrappedBitmap.AlphaType);
+            using (SKCanvas canvas = new(rotatedBitmap))
+            {
+                canvas.Clear();
+                canvas.Translate(rotatedWidth / 2.0f, rotatedHeight / 2.0f);
+                canvas.RotateDegrees((float)angle);
+                canvas.Translate(-originalWidth / 2.0f, -originalHeight / 2.0f);
+                canvas.DrawBitmap(img.WrappedBitmap, new SKPoint());
+            }
+
+            PixelFormat pf = img.WrappedBitmap.ColorType switch
+            {
+                SKColorType.Bgra8888 => PixelFormat.Format32bppArgb,
+                SKColorType.Rgb888x => PixelFormat.Format32bppXrgb,
+                _ => PixelFormat.Format32bppArgb,
+            };
+
+            return new SkiaSharpBitmap(rotatedBitmap, pf);
         }
 
         /// <summary>
