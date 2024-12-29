@@ -36,6 +36,38 @@ namespace Iot.Device.Graphics.SkiaSharpAdapter
         }
 
         /// <summary>
+        /// Draws a non-filled rectangle to the target
+        /// </summary>
+        /// <param name="graphics">The graphics object</param>
+        /// <param name="rectangle">The extent of the rectangle</param>
+        /// <param name="color">The color</param>
+        /// <param name="strokeWidth">Width of the border</param>
+        public static void DrawRectangle(this IGraphics graphics, Rectangle rectangle, Color color, int strokeWidth = 1)
+        {
+            var canvas = GetCanvas(graphics);
+            var paint = new SKPaint();
+            paint.Color = new SKColor((uint)color.ToArgb());
+            paint.StrokeWidth = strokeWidth;
+            paint.Style = SKPaintStyle.Stroke;
+            canvas.DrawRect(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height, paint);
+        }
+
+        /// <summary>
+        /// Draws a filled rectangle to the target
+        /// </summary>
+        /// <param name="graphics">The graphics object</param>
+        /// <param name="rectangle">The extent of the rectangle</param>
+        /// <param name="fillColor">The color</param>
+        public static void FillRectangle(this IGraphics graphics, Rectangle rectangle, Color fillColor)
+        {
+            var canvas = GetCanvas(graphics);
+            var paint = new SKPaint();
+            paint.Color = new SKColor((uint)fillColor.ToArgb());
+            paint.Style = SKPaintStyle.Fill;
+            canvas.DrawRect(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height, paint);
+        }
+
+        /// <summary>
         /// Draws text to the bitmap
         /// </summary>
         public static void DrawText(this IGraphics graphics, string text, string fontFamilyName, int size, Color color, Point position)
