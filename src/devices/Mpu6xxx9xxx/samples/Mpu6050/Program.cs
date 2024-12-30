@@ -5,10 +5,12 @@ using System;
 using System.Threading;
 using System.Device.I2c;
 using System.Numerics;
+using Iot.Device.Arduino;
 using Iot.Device.Imu;
 
-I2cConnectionSettings settings = new(busId: 1, deviceAddress: Mpu6050.DefaultI2cAddress);
-using (Mpu6050 ag = new(I2cDevice.Create(settings)))
+using ArduinoBoard board = new ArduinoBoard("COM5", 115200);
+I2cConnectionSettings settings = new(busId: 0, deviceAddress: Mpu6050.DefaultI2cAddress);
+using (Mpu6050 ag = new(board.CreateI2cDevice(settings)))
 {
     Console.WriteLine($"Internal temperature: {ag.GetTemperature().DegreesCelsius} C");
 
