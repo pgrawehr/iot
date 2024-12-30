@@ -74,6 +74,11 @@ namespace Iot.Device.Imu
             _i2cDevice = i2cDevice ?? throw new ArgumentNullException(nameof(i2cDevice));
         }
 
+        /// <summary>
+        /// The predefined standard earth acceleration.
+        /// </summary>
+        public static Acceleration EarthAcceleration => Acceleration.FromStandardGravity(1);
+
         #region Accelerometer
 
         /// <summary>
@@ -138,7 +143,7 @@ namespace Iot.Device.Imu
         }
 
         /// <summary>
-        /// Get the accelerometer in G
+        /// Get the accelerometer values in m/s^2
         /// </summary>
         /// <remarks>
         /// Vector axes are the following:
@@ -153,6 +158,31 @@ namespace Iot.Device.Imu
         /// </remarks>
         [Telemetry("Acceleration")]
         public Vector3 GetAccelerometer() => GetRawAccelerometer() * AccelerationScale;
+
+        /// <summary>
+        /// Returns the acceleration vector. The default unit is G, to calculate the exact motion, the earth acceleration
+        /// at the point of measurement is required.
+        /// </summary>
+        /// <returns>An array of acceleration values: X, Y, Z</returns>
+        public Acceleration[] GetAcceleration()
+        {
+            var ret = GetRawAccelerometer();
+            double accelScale = AccelerometerRange switch
+            {
+                AccelerometerRange.Range02G => 16384.0,
+                AccelerometerRange.Range04G => 8192.0,
+                AccelerometerRange.Range08G => 4096.0,
+                AccelerometerRange.Range16G => 2048.0,
+                _ => 1,
+            };
+
+            return new Acceleration[3]
+            {
+                Acceleration.FromStandardGravity(ret.X / accelScale),
+                Acceleration.FromStandardGravity(ret.Y / accelScale),
+                Acceleration.FromStandardGravity(ret.Z / accelScale)
+            };
+        }
 
         /// <summary>
         /// Gets the raw accelerometer data
@@ -299,6 +329,30 @@ namespace Iot.Device.Imu
         /// </remarks>
         [Telemetry("AngularRate")]
         public Vector3 GetGyroscopeReading() => GetRawGyroscope() * GyroscopeScale;
+
+        /// <summary>
+        /// Returns a vector of rotational elements
+        /// </summary>
+        /// <returns>The vector of rotations, around the x, y and z axis</returns>
+        public RotationalSpeed[] GetRotationalSpeeds()
+        {
+            var vect = GetRawGyroscope();
+            double val = GyroscopeRange switch
+            {
+                GyroscopeRange.Range0250Dps => 250.0,
+                GyroscopeRange.Range0500Dps => 500.0,
+                GyroscopeRange.Range1000Dps => 1000.0,
+                GyroscopeRange.Range2000Dps => 2000.0,
+                _ => 0,
+            };
+
+            return new RotationalSpeed[3]
+            {
+                RotationalSpeed.FromDegreesPerSecond(vect.X / val),
+                RotationalSpeed.FromDegreesPerSecond(vect.Y / val),
+                RotationalSpeed.FromDegreesPerSecond(vect.Z / val)
+            };
+        }
 
         /// <summary>
         /// Gets the raw gyroscope data
