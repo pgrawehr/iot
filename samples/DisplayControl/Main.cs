@@ -65,6 +65,8 @@ namespace DisplayControl
                 }
             }
 
+            EkfOrientationWithGnss.RunTest(null);
+
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs)
             {
                 // Just ignore CTRL+C
