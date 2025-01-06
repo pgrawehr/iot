@@ -65,7 +65,12 @@ namespace DisplayControl
                 }
             }
 
+            // Test code
             EkfOrientationWithGnss.RunTest(null);
+            if (OperatingSystem.IsWindows())
+            {
+                return;
+            }
 
             Console.CancelKeyPress += delegate(object sender, ConsoleCancelEventArgs eventArgs)
             {
