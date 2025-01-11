@@ -743,10 +743,17 @@ namespace Iot.Device.Arduino
 
             Span<byte> rawData = stackalloc byte[512];
 
-            int bytesRead = _firmataStream.Read(rawData);
-            for (int i = 0; i < bytesRead; i++)
+            try
             {
-                _dataQueue.Enqueue(rawData[i]);
+                int bytesRead = _firmataStream.Read(rawData);
+                for (int i = 0; i < bytesRead; i++)
+                {
+                    _dataQueue.Enqueue(rawData[i]);
+                }
+            }
+            catch (TimeoutException x)
+            {
+                _logger.LogWarning(x, "Read timed out, this isn't really supposed to happen, so ignoring.");
             }
 
             return _dataQueue.Count > 0;

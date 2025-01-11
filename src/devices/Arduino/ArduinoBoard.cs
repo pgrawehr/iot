@@ -96,6 +96,10 @@ namespace Iot.Device.Arduino
         {
             _dataStream = null;
             _serialPort = new SerialPort(portName, baudRate);
+            // A very large number, but not infinite, to work around a problem of the implementation when the underlying driver (or some
+            // other component?) fails to handle a Read in a blocking manner. This would throw a weird IOException when no data is available for
+            // reading.
+            _serialPort.ReadTimeout = Int32.MaxValue - 10;
             StreamUsesHardwareFlowControl = false; // Would need to configure the serial port externally for this to work
             _logger = this.GetCurrentClassLogger();
         }
