@@ -333,7 +333,7 @@ namespace Iot.Device.Imu
         /// <summary>
         /// Returns a vector of rotational elements
         /// </summary>
-        /// <returns>The vector of rotations, around the x, y and z axis</returns>
+        /// <returns>The vector of rotations, around the x, y and z axis (positive clockwise)</returns>
         public RotationalSpeed[] GetRotationalSpeeds()
         {
             var vect = GetRawGyroscope();

@@ -5,6 +5,11 @@ using UnitsNet;
 using UnitsNet.Units;
 using static System.Math;
 
+namespace DisplayControl;
+
+/// <summary>
+/// Extended Kalman Filter for various input sensors: GNSS, attitude and magnetometer are currently supported.
+/// </summary>
 public class EkfOrientationWithGnss
 {
     // Average radius of the earth, in meters
@@ -333,5 +338,44 @@ public class EkfOrientationWithGnss
             radCosLat * Math.Sin(lonRadians),
             radius * Math.Sin(latRadians)
         });
+    }
+
+    /// <summary>
+    /// Rotates the object to the world
+    /// </summary>
+    public static Matrix<double> RotateObjectToWorld(double lat, double lon, double alt, double heading, double pitch, double roll)
+    {
+        Matrix<double> rotationMatrix = Matrix4D.ObjectRotationHeadingPitchRoll(heading, pitch, roll);
+
+        // Move object to the north pole (this will keep the notion of "down" from the object point of view)
+        if (altitudeRelativeToGround)
+        {
+            var mod = drawArgs.CurrentWorld.Model;
+            double currentElevation = 0;
+            if (mod != null)
+            {
+                mod.GetElevation(lat, lon);
+            }
+
+            rotationMatrix = Matrix4D.TranslationMatrix(0, 0, drawArgs.WorldCamera.WorldRadius + ((currentElevation + altitude) * vertExaggeration)) * rotationMatrix;
+        }
+        else
+        {
+            double r = CalcRadius(drawArgs, altitude, vertExaggeration);
+            rotationMatrix = Matrix4D.TranslationMatrix(0, 0, r) * rotationMatrix;
+        }
+
+        // And rotate from there to the correct point on earth.
+        rotationMatrix = Matrix4D.RotationMatrixY(MathEngine.DegreesToRadians(90 - lat)) * rotationMatrix;
+        rotationMatrix = Matrix4D.RotationMatrixZ(MathEngine.DegreesToRadians(lon)) * rotationMatrix;
+
+        rotationMatrix = Matrix4D.TranslationMatrix(
+            -drawArgs.WorldCamera.ReferenceCenter.X,
+            -drawArgs.WorldCamera.ReferenceCenter.Y,
+            -drawArgs.WorldCamera.ReferenceCenter.Z) * rotationMatrix;
+
+        rotationMatrix.Transpose(); // This matrix must be in row-vector order for directx
+
+        return rotationMatrix;
     }
 }

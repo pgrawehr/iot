@@ -49,6 +49,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ili934x", "..\..\src\device
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NmeaSimulator", "..\..\src\devices\Nmea0183\samples\NmeaSimulator\NmeaSimulator.csproj", "{4447D2E8-A2FD-4783-9AE6-B5596BE79749}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisplayControl.Tests", "tests\DisplayControl.Tests.csproj", "{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -143,9 +145,16 @@ Global
 		{4447D2E8-A2FD-4783-9AE6-B5596BE79749}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4447D2E8-A2FD-4783-9AE6-B5596BE79749}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4447D2E8-A2FD-4783-9AE6-B5596BE79749}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6} = {25C6F468-399B-46C6-84AF-D33C25135933}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2799B6AD-B634-446F-AEC1-90D325A19B98}

@@ -9,7 +9,8 @@ using UnitsNet.Units;
 namespace Iot.Device.Bmp180
 {
     /// <summary>
-    /// Container for the magnetometer result data
+    /// Container for the magnetometer result data.
+    /// The coordinate system used by the magnetometer is a right-handed one, X pointing forward, Y pointing right and Z pointing down.
     /// </summary>
     public record MagnetometerData
     {
