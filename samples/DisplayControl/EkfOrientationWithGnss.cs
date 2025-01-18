@@ -347,32 +347,12 @@ public class EkfOrientationWithGnss
     {
         Matrix<double> rotationMatrix = Matrix4D.ObjectRotationHeadingPitchRoll(heading, pitch, roll);
 
-        // Move object to the north pole (this will keep the notion of "down" from the object point of view)
-        if (altitudeRelativeToGround)
-        {
-            var mod = drawArgs.CurrentWorld.Model;
-            double currentElevation = 0;
-            if (mod != null)
-            {
-                mod.GetElevation(lat, lon);
-            }
-
-            rotationMatrix = Matrix4D.TranslationMatrix(0, 0, drawArgs.WorldCamera.WorldRadius + ((currentElevation + altitude) * vertExaggeration)) * rotationMatrix;
-        }
-        else
-        {
-            double r = CalcRadius(drawArgs, altitude, vertExaggeration);
-            rotationMatrix = Matrix4D.TranslationMatrix(0, 0, r) * rotationMatrix;
-        }
+        double r = EARTH_RADIUS + alt;
+        rotationMatrix = Matrix4D.TranslationMatrix(0, 0, r) * rotationMatrix;
 
         // And rotate from there to the correct point on earth.
-        rotationMatrix = Matrix4D.RotationMatrixY(MathEngine.DegreesToRadians(90 - lat)) * rotationMatrix;
-        rotationMatrix = Matrix4D.RotationMatrixZ(MathEngine.DegreesToRadians(lon)) * rotationMatrix;
-
-        rotationMatrix = Matrix4D.TranslationMatrix(
-            -drawArgs.WorldCamera.ReferenceCenter.X,
-            -drawArgs.WorldCamera.ReferenceCenter.Y,
-            -drawArgs.WorldCamera.ReferenceCenter.Z) * rotationMatrix;
+        rotationMatrix = Matrix4D.RotationMatrixY(Matrix4D.DegreesToRadians(90 - lat)) * rotationMatrix;
+        rotationMatrix = Matrix4D.RotationMatrixZ(Matrix4D.DegreesToRadians(lon)) * rotationMatrix;
 
         rotationMatrix.Transpose(); // This matrix must be in row-vector order for directx
 

@@ -9,6 +9,8 @@
     <PreferPackageReference>true</PreferPackageReference>
     <NoWarn>$(NoWarn);NU1504</NoWarn>
     <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 <ItemGroup>
     <Folder Include="Models\" />
@@ -19,6 +21,11 @@
       <SubType>Designer</SubType>
     </AvaloniaResource>
     <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Remove="tests\**" />
+    <AvaloniaXaml Remove="tests\**" />
+    <Compile Remove="tests\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <None Remove="tests\**" />
   </ItemGroup>
 
 <ItemGroup>

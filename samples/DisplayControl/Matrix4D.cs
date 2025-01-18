@@ -10,7 +10,7 @@ namespace DisplayControl
 {
     public static class Matrix4D
     {
-        private static double DegreesToRadians(double degrees)
+        public static double DegreesToRadians(double degrees)
         {
             return degrees / 180 * PI;
         }
@@ -53,6 +53,11 @@ namespace DisplayControl
             matrix[2, 0] = Sin(angle);
             matrix[0, 2] = -Sin(angle);
             return matrix;
+        }
+
+        public static double TranslationMatrix(int x, int y, double z)
+        {
+            throw new NotImplementedException();
         }
     }
 }
