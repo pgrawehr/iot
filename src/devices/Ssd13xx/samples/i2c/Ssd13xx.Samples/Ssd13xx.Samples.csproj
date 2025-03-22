@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(DefaultSampleTfms)</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Arduino\Arduino.csproj" />
+    <ProjectReference Include="..\..\..\..\SkiaSharpAdapter\SkiaSharpAdapter.csproj" />
+    <ProjectReference Include="..\..\..\Ssd13xx.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="images\*.bmp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

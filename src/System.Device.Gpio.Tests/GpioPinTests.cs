@@ -33,7 +33,7 @@ namespace System.Device.Gpio.Tests
             _mockedGpioDriver.Setup(x => x.IsPinModeSupportedEx(PinNumber, It.IsAny<PinMode>())).Returns(true);
             _mockedGpioDriver.Setup(x => x.SetPinModeEx(PinNumber, It.IsAny<PinMode>()));
             _mockedGpioDriver.Setup(x => x.GetPinModeEx(PinNumber)).Returns(PinMode.Input);
-            var ctrl = new GpioController(PinNumberingScheme.Logical, _mockedGpioDriver.Object);
+            var ctrl = new GpioController(_mockedGpioDriver.Object);
             // Act
             GpioPin pin = ctrl.OpenPin(PinNumber, PinMode.Input);
             // Assert
@@ -41,21 +41,43 @@ namespace System.Device.Gpio.Tests
             Assert.Equal(PinMode.Input, pin.GetPinMode());
         }
 
+        /// <summary>
+        /// Closes the pin via the controller first
+        /// </summary>
         [Fact]
-        public void TestClosePin()
+        public void TestClosePin1()
         {
             // Arrange
             _mockedGpioDriver.Setup(x => x.OpenPinEx(PinNumber));
             _mockedGpioDriver.Setup(x => x.IsPinModeSupportedEx(PinNumber, It.IsAny<PinMode>())).Returns(true);
             _mockedGpioDriver.Setup(x => x.SetPinModeEx(PinNumber, It.IsAny<PinMode>()));
-            var ctrl = new GpioController(PinNumberingScheme.Logical, _mockedGpioDriver.Object);
+            var ctrl = new GpioController(_mockedGpioDriver.Object);
             // Act
             GpioPin pin = ctrl.OpenPin(PinNumber, PinMode.Input);
             ctrl.ClosePin(PinNumber);
-            // Assert
-            // This should work even if the pin is closed in the controller as the driver has no idea
-            // Of the controller behavior.
-            var ret = pin.Read();
+            // Closing the pin makes its usage invalid
+            Assert.Throws<InvalidOperationException>(() => pin.Read());
+            pin.Dispose(); // Shouldn't throw
+        }
+
+        /// <summary>
+        /// Closes the pin via Dispose first
+        /// </summary>
+        [Fact]
+        public void TestClosePin2()
+        {
+            // Arrange
+            _mockedGpioDriver.Setup(x => x.OpenPinEx(PinNumber));
+            _mockedGpioDriver.Setup(x => x.IsPinModeSupportedEx(PinNumber, It.IsAny<PinMode>())).Returns(true);
+            _mockedGpioDriver.Setup(x => x.SetPinModeEx(PinNumber, It.IsAny<PinMode>()));
+            var ctrl = new GpioController(_mockedGpioDriver.Object);
+            // Act
+            GpioPin pin = ctrl.OpenPin(PinNumber, PinMode.Input);
+            pin.Dispose();
+            // Closing the pin makes its usage invalid
+            Assert.Throws<InvalidOperationException>(() => ctrl.Read(PinNumber));
+            // That is not valid now
+            Assert.Throws<InvalidOperationException>(() => ctrl.ClosePin(PinNumber));
         }
 
         [Fact]
@@ -67,7 +89,7 @@ namespace System.Device.Gpio.Tests
             _mockedGpioDriver.Setup(x => x.IsPinModeSupportedEx(PinNumber, It.IsAny<PinMode>())).Returns(true);
             _mockedGpioDriver.Setup(x => x.SetPinModeEx(PinNumber, It.IsAny<PinMode>()));
             _mockedGpioDriver.Setup(x => x.ReadEx(PinNumber)).Returns(pinValue);
-            var ctrl = new GpioController(PinNumberingScheme.Logical, _mockedGpioDriver.Object);
+            var ctrl = new GpioController(_mockedGpioDriver.Object);
             // Act
             GpioPin pin = ctrl.OpenPin(PinNumber, PinMode.Input);
             pin.Write(pinValue);

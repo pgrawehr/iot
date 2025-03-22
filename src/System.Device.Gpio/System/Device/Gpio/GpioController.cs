@@ -26,9 +26,6 @@ public class GpioController : IDisposable
     private const string RaspberryPi3Product = "Raspberry Pi 3";
     private const string RaspberryPi5Product = "Raspberry Pi 5";
 
-    private const string HummingBoardProduct = "HummingBoard-Edge";
-    private const string HummingBoardHardware = @"Freescale i.MX6 Quad/DualLite (Device Tree)";
-
     /// <summary>
     /// If a pin element exists, that pin is open. Uses current controller's numbering scheme
     /// </summary>
@@ -40,8 +37,26 @@ public class GpioController : IDisposable
     /// Initializes a new instance of the <see cref="GpioController"/> class that will use the logical pin numbering scheme as default.
     /// </summary>
     public GpioController()
+#pragma warning disable CS0612 // PinNumberingScheme is obsolete
         : this(PinNumberingScheme.Logical)
+#pragma warning restore CS0612
     {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GpioController"/> class that will use the specified numbering scheme and driver.
+    /// </summary>
+    /// <param name="driver">The driver that manages all of the pin operations for the controller.</param>
+    public GpioController(GpioDriver driver)
+    {
+        _driver = driver;
+
+#pragma warning disable CS0612 // PinNumberingScheme is obsolete
+        NumberingScheme = PinNumberingScheme.Logical;
+#pragma warning restore CS0612
+
+        _openPins = new ConcurrentDictionary<int, PinValue?>();
+        _gpioPins = new ConcurrentDictionary<int, GpioPin>();
     }
 
     /// <summary>
@@ -49,6 +64,7 @@ public class GpioController : IDisposable
     /// </summary>
     /// <param name="numberingScheme">The numbering scheme used to represent pins provided by the controller.</param>
     /// <param name="driver">The driver that manages all of the pin operations for the controller.</param>
+    [Obsolete]
     public GpioController(PinNumberingScheme numberingScheme, GpioDriver driver)
     {
         _driver = driver;
@@ -62,6 +78,7 @@ public class GpioController : IDisposable
     /// The controller will default to use the driver that best applies given the platform the program is executing on.
     /// </summary>
     /// <param name="numberingScheme">The numbering scheme used to represent pins provided by the controller.</param>
+    [Obsolete]
     public GpioController(PinNumberingScheme numberingScheme)
         : this(numberingScheme, GetBestDriverForBoard())
     {
@@ -70,6 +87,7 @@ public class GpioController : IDisposable
     /// <summary>
     /// The numbering scheme used to represent pins provided by the controller.
     /// </summary>
+    [Obsolete]
     public PinNumberingScheme NumberingScheme { get; }
 
     /// <summary>
@@ -102,7 +120,9 @@ public class GpioController : IDisposable
     /// <returns>The logical pin number in the controller's numbering scheme.</returns>
     protected virtual int GetLogicalPinNumber(int pinNumber)
     {
+#pragma warning disable CS0612 // PinNumberingScheme is obsolete
         return (NumberingScheme == PinNumberingScheme.Logical) ? pinNumber : _driver.ConvertPinNumberToLogicalNumberingScheme(pinNumber);
+#pragma warning restore CS0612
     }
 
     /// <summary>
@@ -119,7 +139,7 @@ public class GpioController : IDisposable
 
         OpenPinCore(pinNumber);
         _openPins.TryAdd(pinNumber, null);
-        _gpioPins[pinNumber] = new GpioPin(pinNumber, _driver);
+        _gpioPins[pinNumber] = new GpioPin(pinNumber, this);
         return _gpioPins[pinNumber];
     }
 
@@ -238,7 +258,7 @@ public class GpioController : IDisposable
     /// </summary>
     /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
     /// <returns>The status if the pin is open or closed.</returns>
-    public bool IsPinOpen(int pinNumber)
+    public virtual bool IsPinOpen(int pinNumber)
     {
         CheckDriverValid();
         return _openPins.ContainsKey(pinNumber);
@@ -549,13 +569,8 @@ public class GpioController : IDisposable
             return new RaspberryPi3Driver();
         }
 
-        if (baseBoardProduct == HummingBoardProduct || baseBoardProduct.StartsWith($"{HummingBoardProduct} "))
-        {
-            return new HummingBoardDriver();
-        }
-
         // Default for Windows IoT Core on a non-specific device
-        return new Windows10Driver();
+        throw new PlatformNotSupportedException();
     }
 
     /// <summary>

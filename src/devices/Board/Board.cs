@@ -28,7 +28,6 @@ namespace Iot.Device.Board
         private const string BaseBoardProductRegistryValue = @"SYSTEM\HardwareConfig\Current\BaseBoardProduct";
         private const string RaspberryPi2Product = "Raspberry Pi 2";
         private const string RaspberryPi3Product = "Raspberry Pi 3";
-        private const string HummingBoardProduct = "HummingBoard-Edge";
 
         private readonly object _pinReservationsLock;
         private readonly Dictionary<int, List<PinReservation>> _pinReservations;
@@ -66,18 +65,6 @@ namespace Iot.Device.Board
         /// Any attempt to use it after this becomes true results in undefined behavior.
         /// </summary>
         protected bool Disposed => _disposed;
-
-        /// <summary>
-        /// The default pin numbering scheme for this board.
-        /// </summary>
-        public PinNumberingScheme DefaultPinNumberingScheme
-        {
-            get
-            {
-                // This is currently hardcoded to logical numbering, since it makes the API simpler and there are few really useful cases where you would need it otherwise.
-                return PinNumberingScheme.Logical;
-            }
-        }
 
         /// <summary>
         /// Reserves a pin for a specific usage. This is done automatically if a known interface (i.e. GpioController) is
@@ -403,13 +390,8 @@ namespace Iot.Device.Board
                 return new RaspberryPi3Driver();
             }
 
-            if (baseBoardProduct == HummingBoardProduct || baseBoardProduct.StartsWith($"{HummingBoardProduct} "))
-            {
-                return new HummingBoardDriver();
-            }
-
             // Default for Windows IoT Core on a non-specific device
-            return new Windows10Driver();
+            throw new PlatformNotSupportedException();
         }
 
         /// <summary>
@@ -507,9 +489,8 @@ namespace Iot.Device.Board
         /// <param name="connectionSettings">Connection parameters (contains bus number and CS pin number)</param>
         /// <param name="pinAssignment">The set of pins to use for SPI. The parameter can be null if the hardware requires a fixed mapping from
         /// pins to SPI for the given bus.</param>
-        /// <param name="pinNumberingScheme">The numbering scheme in which the <paramref name="pinAssignment"/> is given</param>
         /// <returns>An SPI device instance</returns>
-        public SpiDevice CreateSpiDevice(SpiConnectionSettings connectionSettings, int[] pinAssignment, PinNumberingScheme pinNumberingScheme)
+        public SpiDevice CreateSpiDevice(SpiConnectionSettings connectionSettings, int[] pinAssignment)
         {
             Initialize();
 
@@ -539,7 +520,7 @@ namespace Iot.Device.Board
             // Returns logical pin numbers for the selected bus (or an exception if using a bus number > 1, because that
             // requires specifying the pins)
             int[] pinAssignment = GetDefaultPinAssignmentForSpi(connectionSettings);
-            return CreateSpiDevice(connectionSettings, pinAssignment, PinNumberingScheme.Logical);
+            return CreateSpiDevice(connectionSettings, pinAssignment);
         }
 
         /// <summary>
@@ -560,10 +541,9 @@ namespace Iot.Device.Board
         /// <param name="frequency">Initial frequency</param>
         /// <param name="dutyCyclePercentage">Initial duty cycle</param>
         /// <param name="pin">The pin number for the pwm channel. Used if not hardwired (i.e. on the Raspi, it is possible to use different pins for the same PWM channel)</param>
-        /// <param name="pinNumberingScheme">The pin numbering scheme for the pin</param>
         /// <returns>A pwm channel instance</returns>
         public PwmChannel CreatePwmChannel(int chip, int channel, int frequency, double dutyCyclePercentage,
-            int pin, PinNumberingScheme pinNumberingScheme)
+            int pin)
         {
             Initialize();
             return AddManager(new PwmChannelManager(this, pin, chip, channel, frequency, dutyCyclePercentage, CreateSimplePwmChannel));
@@ -585,7 +565,7 @@ namespace Iot.Device.Board
         {
             Initialize();
             int pin = GetDefaultPinAssignmentForPwm(chip, channel);
-            return CreatePwmChannel(chip, channel, frequency, dutyCyclePercentage, pin, PinNumberingScheme.Logical);
+            return CreatePwmChannel(chip, channel, frequency, dutyCyclePercentage, pin);
         }
 
         /// <summary>
