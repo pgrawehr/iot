@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(DefaultSampleTfms)</TargetFramework>
     <AssemblyName>IG500A.sample</AssemblyName>
     <RootNamespace>IG500.Sample</RootNamespace>
   </PropertyGroup>

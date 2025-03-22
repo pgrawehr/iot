@@ -39,7 +39,7 @@ namespace DisplayControl
         {
             _device = I2cDevice.Create(new I2cConnectionSettings(1, 0x20));
             _mcp23017 = new Mcp23017(_device, -1, -1, -1, gpioController);
-            _controllerUsingMcp = new GpioController(PinNumberingScheme.Logical, _mcp23017);
+            _controllerUsingMcp = new GpioController(_mcp23017);
 
             // Just open all the pins
             for (int i = 0; i < _controllerUsingMcp.PinCount; i++)
