@@ -36,7 +36,7 @@ namespace Iot.Device.Common
                 }
             }
 
-            _currentFile = 0;
+            _currentFile = -1;
             Loop = false;
         }
 
@@ -64,7 +64,7 @@ namespace Iot.Device.Common
                 }
             }
 
-            _currentFile = 0;
+            _currentFile = -1;
             Loop = false;
         }
 
