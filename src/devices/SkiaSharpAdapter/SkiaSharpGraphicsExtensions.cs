@@ -68,6 +68,25 @@ namespace Iot.Device.Graphics.SkiaSharpAdapter
         }
 
         /// <summary>
+        /// Computes the size of the provided text without actually drawing it.
+        /// </summary>
+        /// <param name="graphics">The target object</param>
+        /// <param name="text">The text to render</param>
+        /// <param name="fontFamilyName">The font</param>
+        /// <param name="size">The height of the text</param>
+        /// <returns>The size of the string when rendered</returns>
+        public static SizeF MeasureText(this IGraphics graphics, string text, string fontFamilyName, int size)
+        {
+            var canvas = GetCanvas(graphics);
+            SKFont fnt = new SKFont(SKTypeface.FromFamilyName(fontFamilyName), size);
+            var paint = new SKPaint(fnt);
+            paint.TextAlign = SKTextAlign.Left;
+            paint.TextEncoding = SKTextEncoding.Utf16;
+            float width = paint.MeasureText(text);
+            return new SizeF(width, size);
+        }
+
+        /// <summary>
         /// Draws text to the bitmap
         /// </summary>
         public static void DrawText(this IGraphics graphics, string text, string fontFamilyName, int size, Color color, Point position)

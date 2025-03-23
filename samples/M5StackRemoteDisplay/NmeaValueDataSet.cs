@@ -36,6 +36,12 @@ namespace Iot.Device.Ili934x.Samples
                     return "N/A";
                 }
 
+                if (_lastValue.QuantityInfo.UnitType == typeof(DurationUnit))
+                {
+                    Duration d = (Duration)_lastValue;
+                    return d.ToTimeSpan().ToString(@"hh\:mm\:ss", CultureInfo.CurrentCulture);
+                }
+
                 return _lastValue.Value.ToString(_format, CultureInfo.CurrentCulture);
             }
         }

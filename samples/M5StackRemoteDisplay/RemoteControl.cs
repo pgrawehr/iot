@@ -171,7 +171,7 @@ namespace Iot.Device.Ili934x.Samples
                 }
 
                 return null;
-            }));
+            }, "F0"));
 
             _dataSets.Add(new NmeaValueDataSet("Pitch", s =>
             {
@@ -198,6 +198,20 @@ namespace Iot.Device.Ili934x.Samples
                 if (_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination rmb))
                 {
                     return rmb.DistanceToWayPoint;
+                }
+
+                return null;
+            }));
+
+            _dataSets.Add(new NmeaValueDataSet("Est Time to WP", s =>
+            {
+                if (_cache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id, out RecommendedMinimumNavToDestination rmb))
+                {
+                    if (UnitMath.Abs(rmb.ApproachSpeed.GetValueOrDefault(Speed.Zero)) < Speed.FromKnots(0.1))
+                    {
+                        return Duration.FromHours(99);
+                    }
+                    return rmb.DistanceToWayPoint / rmb.ApproachSpeed;
                 }
 
                 return null;
@@ -592,6 +606,7 @@ namespace Iot.Device.Ili934x.Samples
 
         private bool DrawNmeaValue(BitmapImage targetBuffer, bool force)
         {
+            const int leftOffset = 20;
             var data = _dataSets[_selectedDataSet];
             if (data.Update(_cache, 1E-2) || force)
             {
@@ -606,10 +621,17 @@ namespace Iot.Device.Ili934x.Samples
 
                 using var g = targetBuffer.GetDrawingApi();
                 string font = GetDefaultFontName();
-                g.DrawText(data.Value, font, 110, Color.Blue, new Point(20, 30));
+                var size = g.MeasureText(data.Value, font, 110);
+                int actualSize = 110;
+                if (size.Width + leftOffset > _screen.ScreenWidth)
+                {
+                    float ratio = size.Width / (_screen.ScreenWidth - leftOffset);
+                    actualSize = (int)(actualSize / ratio);
+                }
+                g.DrawText(data.Value, font, actualSize, Color.Blue, new Point(20, 30));
                 g.DrawText(data.Name, font, 30, Color.Blue, new Point(10, 5));
                 g.DrawText(data.Unit, font, 30, Color.Blue, new Point(_screen.ScreenWidth / 2, _screen.ScreenHeight - 33));
-
+                // Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff}: {data.Name} {data.Value} {data.Unit}");
                 return true;
             }
 
