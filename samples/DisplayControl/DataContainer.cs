@@ -706,7 +706,7 @@ namespace DisplayControl
             var devices = bus.PerformBusScan();
             foreach (var device in devices)
             {
-                WriteLineToConsoleAndDisplay($"I2C Address: {device}");
+                WriteLineToConsoleAndDisplay($"I2C Address: 0x{device:X2}");
             }
 
             if (devices.Contains(0x27))

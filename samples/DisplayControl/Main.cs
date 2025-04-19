@@ -66,7 +66,7 @@ namespace DisplayControl
             }
 
             // Test code
-            EkfOrientationWithGnss.RunTest(null);
+            // EkfOrientationWithGnss.RunTest(null);
             if (OperatingSystem.IsWindows())
             {
                 return;

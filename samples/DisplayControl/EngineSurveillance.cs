@@ -48,6 +48,10 @@ namespace DisplayControl
         private PersistentDouble _engineRpmFactor;
         private PersistentDouble _engineArduinoRpmFactor;
         private long _lastTickForUpdate;
+
+        // True if engine is expected to be on, false otherwise.
+        // If this is true but revs are zero, we set an error.
+        private HysteresisFilter _engineLastOn;
         private PersistenceFile _enginePersistenceFile;
         private I2cDevice _device;
         private Mcp23017 _mcp23017;
@@ -80,6 +84,9 @@ namespace DisplayControl
             _lastEvents = new Queue<CounterEvent>();
             _engineOn = false;
             _lastTickForUpdate = 0;
+            _engineLastOn = new HysteresisFilter(false);
+            _engineLastOn.FallingDelayTime = TimeSpan.FromSeconds(10);
+            _engineLastOn.RisingDelayTime = TimeSpan.FromSeconds(10);
             _rpm = 0;
             _inSelfTest = false;
             _logger = this.GetCurrentClassLogger();
@@ -373,7 +380,25 @@ namespace DisplayControl
                 rs = RotationalSpeed.FromRevolutionsPerMinute(umin);
             }
 
-            EngineStatus status = rs > RotationalSpeed.Zero ? EngineStatus.None : EngineStatus.CheckEngine;
+            EngineStatus status;
+
+            _engineLastOn.Update(rs > RotationalSpeed.Zero);
+
+            if (rs > RotationalSpeed.Zero)
+            {
+                status = EngineStatus.None;
+            }
+            else if (_engineLastOn.Output)
+            {
+                // Engine is expected to be on (e.g. it was seen to be on) but now it's not, trigger an error
+                status = EngineStatus.CheckEngine;
+                _logger.LogWarning("Engine switched off or in error state!");
+            }
+            else
+            {
+                // After some time, forget about the error.
+                status = EngineStatus.None;
+            }
 
             // Final step: Send values to UI and NMEA clients
             if (!_inSelfTest)
