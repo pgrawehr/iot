@@ -25,6 +25,7 @@ namespace DisplayControl
     public sealed class NmeaSensor : IDisposable
     {
         private readonly MeasurementManager _manager;
+        private readonly bool _hasPlotter;
         private const string ShipSourceName = "Ship";
         private const string HandheldSourceName = "Handheld";
         private const string OpenCpn = "OpenCpn";
@@ -101,9 +102,10 @@ namespace DisplayControl
         private readonly SensorMeasurement _autoPilotHeading;
         private readonly SensorMeasurement _autoPilotDesiredHeading;
 
-        public NmeaSensor(MeasurementManager manager)
+        public NmeaSensor(MeasurementManager manager, bool hasPlotter)
         {
             _manager = manager;
+            _hasPlotter = hasPlotter;
             _magneticVariation = null;
             _aisUpdates = 0;
             _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.Wind);
@@ -185,6 +187,7 @@ namespace DisplayControl
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
             // The GPS messages are sent everywhere (as raw)
+            // If we also have the plotter enabled, don't send it to the ship, to prevent flooding the bus with unnecessary duplicates
             string[] gpsSequences = new string[]
             {
                 "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG", "GSA"
@@ -192,7 +195,9 @@ namespace DisplayControl
 
             foreach (var gpsSequence in gpsSequences)
             {
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(gpsSequence), new[] { OpenCpn, ShipSourceName, Udp }, true, true));
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, 
+                    new SentenceId(gpsSequence), 
+                    new[] { OpenCpn, ShipSourceName, Udp }, true, true));
             }
 
             string[] navigationSentences = new string[]
@@ -200,14 +205,18 @@ namespace DisplayControl
                 "RMB", "BOD", "XTE", "BWC", "RTE", "APA", "APB", "BWR"
             };
 
-            foreach (var navigationSentence in navigationSentences)
+            if (!_hasPlotter)
             {
-                // Send these from handheld to the nav software, so that this picks up the current destination.
-                // signalK is able to do this, OpenCPN is not
-                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence), new[] { OpenCpn, Udp }, RemoveNonAsciiFromMessageForSignalk, false, true));
-                // And send the result of that nav operation to the ship 
-                // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
-                // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
+                foreach (var navigationSentence in navigationSentences)
+                {
+                    // Send these from handheld to the nav software, so that this picks up the current destination.
+                    // signalK is able to do this, OpenCPN is not
+                    rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence),
+                        new[] { OpenCpn, Udp }, RemoveNonAsciiFromMessageForSignalk, false, true));
+                    // And send the result of that nav operation to the ship 
+                    // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
+                    // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
+                }
             }
 
             // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
@@ -217,11 +226,11 @@ namespace DisplayControl
                 "BPI", "BWR", "BWC",
                 "BER", "BEC", "WDR", "WDC", "BOD", "WCV", "VWR", "VHW"
             };
-            foreach (var autopilot in autoPilotSentences)
+            foreach (var autopilotSentence in autoPilotSentences)
             {
                 // - Maybe we need to be able to switch between using OpenCpn and the Handheld for autopilot / navigation control
                 // - For now, we forward anything from our own processor to the real autopilot and the ship (so it gets displayed on the displays)
-                rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilot), new []{ HandheldSourceName }, false, true));
+                rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilotSentence), new []{ HandheldSourceName }, false, true));
             }
 
             // The messages VWR and VHW (Wind measurement / speed trough water) come from the ship and need to go to the autopilot

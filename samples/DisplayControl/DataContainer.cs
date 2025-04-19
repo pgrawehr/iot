@@ -260,7 +260,8 @@ namespace DisplayControl
             _imuSensor.OnNewOrientation += ImuSensorOnNewOrientation;
 
             WriteLineToConsoleAndDisplay("NMEA Sources...");
-            _nmeaSensor = new NmeaSensor(_sensorManager);
+            var hasPlotter = new PersistentBool(_configFile, "HasPlotter", true);
+            _nmeaSensor = new NmeaSensor(_sensorManager, hasPlotter.Value);
             _nmeaSensor.Initialize(_fusionEngine, _imuSensor);
 
             WriteLineToConsoleAndDisplay("Motor...");
