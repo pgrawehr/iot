@@ -157,9 +157,6 @@ namespace DisplayControl
             TalkerId yd = new TalkerId('Y', 'D');
             // Note: Order is important. First ones are checked first
             IList<FilterRule> rules = new List<FilterRule>();
-            // Log just everything, but of course continue processing
-            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LoggingSinkName }, false, true));
-
             // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
             // (we actually send everything to the AisManager, as it also needs the current position and time)
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager }, true, true));
@@ -220,10 +217,8 @@ namespace DisplayControl
         {
             TalkerId yd = new TalkerId('Y', 'D');
             // Note: Order is important. First ones are checked first
+            // Note: The logging filter rule is configured by default
             IList<FilterRule> rules = new List<FilterRule>();
-            // Log just everything, but of course continue processing
-            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new []{ MessageRouter.LoggingSinkName }, false, true));
-
             // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
             rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager }, true, true));
             rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new []{ ShipSourceName }, true, true));
@@ -426,6 +421,7 @@ namespace DisplayControl
             _serialPortShip.Open();
             _streamShip = _serialPortShip.BaseStream;
             _parserShipInterface = new NmeaParser(ShipSourceName, _streamShip, _streamShip);
+            _parserShipInterface.LogSend = true;
             _parserShipInterface.OnParserError += OnParserError;
             _parserShipInterface.StartDecode();
 
@@ -447,6 +443,8 @@ namespace DisplayControl
             _parserForwardInterface.StartDecode();
 
             _seatalkPort = new SeatalkToNmeaConverter(Seatalk1Name, "/dev/ttyAMA5");
+            _seatalkPort.LogSend = true;
+            _seatalkPort.LogReceive = true;
             _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControlStatus.Id);
             _seatalkPort.SentencesToTranslate.Add(RudderSensorAngle.Id);
             _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControl.Id);
