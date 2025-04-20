@@ -28,6 +28,8 @@ namespace DisplayControl
         private readonly bool _hasPlotter;
         private const string ShipSourceName = "Ship";
         private const string HandheldSourceName = "Handheld";
+        // The NMEA0183 connection physically connects to the AP when sending
+        private const string AutopilotSink = HandheldSourceName;
         private const string OpenCpn = "OpenCpn";
         private const string Udp = "Udp";
         private const string AuxiliaryGps = "AuxiliaryGps";
@@ -145,7 +147,76 @@ namespace DisplayControl
 
         public SensorMeasurement AisDataUpdateTrigger => _aisTrigger;
 
-        public IList<FilterRule> ConstructRules()
+        /// <summary>
+        /// If the plotter is connected, we need an entire different set of rules, because now the whole navigation data comes from the ship and
+        /// we shouldn't be sending navigation data there as this confuses the displays.
+        /// </summary>
+        /// <returns></returns>
+        public IList<FilterRule> ConstructRulesWithPlotter()
+        {
+            TalkerId yd = new TalkerId('Y', 'D');
+            // Note: Order is important. First ones are checked first
+            IList<FilterRule> rules = new List<FilterRule>();
+            // Log just everything, but of course continue processing
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LoggingSinkName }, false, true));
+
+            // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
+            // (we actually send everything to the AisManager, as it also needs the current position and time)
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager }, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new[] { ShipSourceName }, true, true));
+            // The time message is required by the time component
+            rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false, true));
+            
+            // Messages from Aux are currently disabled (TBD)
+            rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+            // And from handheld, too
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+
+            // Drop this, it's wrong (seems not to use the heading, even if it should).
+            // We're instead reconstructing this message - but in that case, don't send it back to the ship, as this causes confusion
+            // for the wind displays
+            rules.Add(new FilterRule("*", yd, WindDirectionWithRespectToNorth.Id, new List<string>(), false, false));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.ElectronicChartDisplayAndInformationSystem, WindDirectionWithRespectToNorth.Id, new List<string>() { OpenCpn, Udp }, false, false));
+            // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, Udp }, false, true));
+
+            // Anything from OpenCpn is distributed everywhere
+            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, AutopilotSink }));
+            // Anything from the ship is sent locally
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { OpenCpn, MessageRouter.LocalMessageSource, Udp }, false, true));
+
+            // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
+            string[] autoPilotSentences = new string[]
+            {
+                "APB", "APA", "RMB", "XTE", "XTR",
+                "BPI", "BWR", "BWC",
+                "BER", "BEC", "WDR", "WDC", "BOD", "WCV", "VWR", "VHW"
+            };
+            foreach (var autopilotSentence in autoPilotSentences)
+            {
+                // - Maybe we need to be able to switch between using OpenCpn and the Handheld for autopilot / navigation control
+                // - For now, we forward anything from our own processor to the real autopilot and the ship (so it gets displayed on the displays)
+                rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilotSentence), new[] { AutopilotSink }, false, true));
+            }
+
+            // The messages VWR and VHW (Wind measurement / speed trough water) come from the ship and need to go to the autopilot
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VWR"), new[] { AutopilotSink }, true, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { AutopilotSink }, true, true));
+
+            // Messages from the Autopilot go everywhere
+            rules.Add(new FilterRule(Seatalk1Name, TalkerId.Any, SentenceId.Any, new List<string>() { OpenCpn, ShipSourceName, MessageRouter.LocalMessageSource, Udp }, false, true));
+            // This one automatically only takes what he can use
+            rules.Add(new FilterRule(Udp, TalkerId.ElectronicChartDisplayAndInformationSystem, SentenceId.Any, new[] { Seatalk1Name }, false, true));
+            // Command messages to the autopilot
+            rules.Add(new FilterRule("*", TalkerId.Seatalk, SeatalkNmeaMessage.Id, new List<string>()
+            {
+                Seatalk1Name
+            }, false, true));
+
+            return rules;
+        }
+
+        public IList<FilterRule> ConstructRulesWithoutPlotter()
         {
             TalkerId yd = new TalkerId('Y', 'D');
             // Note: Order is important. First ones are checked first
@@ -205,18 +276,15 @@ namespace DisplayControl
                 "RMB", "BOD", "XTE", "BWC", "RTE", "APA", "APB", "BWR"
             };
 
-            if (!_hasPlotter)
+            foreach (var navigationSentence in navigationSentences)
             {
-                foreach (var navigationSentence in navigationSentences)
-                {
-                    // Send these from handheld to the nav software, so that this picks up the current destination.
-                    // signalK is able to do this, OpenCPN is not
-                    rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence),
-                        new[] { OpenCpn, Udp }, RemoveNonAsciiFromMessageForSignalk, false, true));
-                    // And send the result of that nav operation to the ship 
-                    // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
-                    // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
-                }
+                // Send these from handheld to the nav software, so that this picks up the current destination.
+                // signalK is able to do this, OpenCPN is not
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, new SentenceId(navigationSentence),
+                    new[] { OpenCpn, Udp }, RemoveNonAsciiFromMessageForSignalk, false, true));
+                // And send the result of that nav operation to the ship 
+                // TODO: Choose which nav solution to use: Handheld direct, OpenCPN, signalK, depending on who is ready to do so
+                // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
             }
 
             // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
@@ -422,7 +490,8 @@ namespace DisplayControl
             _router.AddEndPoint(_seatalkPort);
 
             _router.OnNewSequence += ParserOnNewSequence;
-            foreach (var rule in ConstructRules())
+            var ruleList = _hasPlotter ? ConstructRulesWithPlotter() : ConstructRulesWithoutPlotter();
+            foreach (var rule in ruleList)
             {
                 _router.AddFilterRule(rule);
             }

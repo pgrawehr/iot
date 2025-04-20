@@ -93,7 +93,10 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public IEnumerable<string> Fields => _fields;
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Converts the current message to NMEA format
+        /// </summary>
+        /// <returns>An NMEA0183 sentence, including checksum, ready to be sent</returns>
         public override string ToString()
         {
             string mainPart = string.Format(CultureInfo.InvariantCulture, "{0}{1},{2}", TalkerId, Id, string.Join(",", Fields));
