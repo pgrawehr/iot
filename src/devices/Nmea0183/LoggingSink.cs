@@ -119,6 +119,9 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Writes the message to the log. Note: Caller must own the lock.
+        /// </summary>
         private void LogMessage(string sourceName, NmeaSentence sentence)
         {
             string msg = FormattableString.Invariant(
@@ -133,7 +136,10 @@ namespace Iot.Device.Nmea0183
         /// <param name="message">The message</param>
         public void LogSendMessage(NmeaSinkAndSource destination, NmeaSentence message)
         {
-            LogMessage(">>>" + destination.InterfaceName, message);
+            lock (_lock)
+            {
+                LogMessage(">>>" + destination.InterfaceName, message);
+            }
         }
 
         /// <inheritdoc />
