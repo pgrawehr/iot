@@ -14,13 +14,9 @@ namespace DisplayControl
 {
     public sealed class AdcSensorWithDisplay : AdcSensorWithoutDisplay
     {
-        private Ads1115 m_cpuAdc;
         private Ads1115 m_displayAdc;
         private ExtendedDisplayController _ledController;
 
-        private SensorMeasurement _voltage3_3V;
-
-        private SensorMeasurement _currentSunBrightness;
         private SensorMeasurement _button1;
         private SensorMeasurement _button2;
         private SensorMeasurement _button3;
@@ -30,13 +26,11 @@ namespace DisplayControl
         private HysteresisFilter _button2Filter;
         private HysteresisFilter _button3Filter;
         private HysteresisFilter _button4Filter;
-        private int _count;
         private ILogger _logger;
 
         public AdcSensorWithDisplay(MeasurementManager manager)
         : base(manager, TimeSpan.FromMilliseconds(200))
         {
-            _count = 0;
             _logger = this.GetCurrentClassLogger();
             _buttonEnableFilter = new HysteresisFilter(false);
             _buttonEnableFilter.FallingDelayTime = TimeSpan.FromMilliseconds(500);
@@ -69,14 +63,9 @@ namespace DisplayControl
         {
             ButtonsEnabled = true;
             _ledController = ledController ?? throw new ArgumentNullException(nameof(ledController));
-            var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.GND));
-            m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.PowerDown);
-
             var displayI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.VCC));
             m_displayAdc = new Ads1115(displayI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS064, DeviceMode.PowerDown);
 
-            _voltage3_3V = new SensorMeasurement("3.3V supply voltage", ElectricPotential.Zero, SensorSource.MainPower);
-            _currentSunBrightness = new SensorMeasurement("Sunlight strength", ElectricPotential.Zero, SensorSource.Air);
             _button1 = new SensorMeasurement("Button 1 voltage", ElectricPotential.Zero, SensorSource.UserInput);
             _button2 = new SensorMeasurement("Button 2 voltage", ElectricPotential.Zero, SensorSource.UserInput);
             _button3 = new SensorMeasurement("Button 3 voltage", ElectricPotential.Zero, SensorSource.UserInput);
@@ -85,8 +74,6 @@ namespace DisplayControl
 
             Manager.AddRange(new[]
             {
-                _voltage3_3V, 
-                _currentSunBrightness, 
                 _button1, 
                 _button2, 
                 _button3, 
@@ -103,23 +90,7 @@ namespace DisplayControl
         /// </summary>
         protected override void UpdateSensors()
         {
-            if (_count % 10 == 0)
-            {
-                // Do this only every once in a while
-                try
-                {
-                    _voltage3_3V.UpdateValue(m_cpuAdc.ReadVoltage(InputMultiplexer.AIN3));
-                    // Todo: Voltage is not really the correct unit for this.
-                    _currentSunBrightness.UpdateValue((m_cpuAdc.MaxVoltageFromMeasuringRange(MeasuringRange.FS4096) -
-                                                       m_cpuAdc.ReadVoltage(InputMultiplexer.AIN2)));
-                }
-                catch (IOException x)
-                {
-                    _logger.LogError(x, $"Local ADC communication error: {x.Message}");
-                }
-            }
-
-            _count++;
+            base.UpdateSensors();
 
             if (!ButtonsEnabled)
             {
@@ -308,11 +279,6 @@ namespace DisplayControl
         protected override void Dispose(bool disposing)
         {
             StopThread();
-            if (m_cpuAdc != null)
-            {
-                m_cpuAdc.DeviceMode = DeviceMode.PowerDown;
-                m_cpuAdc.Dispose();
-            }
             if (m_displayAdc != null)
             {
                 m_displayAdc.DeviceMode = DeviceMode.PowerDown;

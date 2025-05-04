@@ -35,7 +35,7 @@ namespace DisplayControl
 
         public override void Init(GpioController gpioController)
         {
-            var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, (int)I2cAddress.GND));
+            var cpuI2c = I2cDevice.Create(new I2cConnectionSettings(1, 0x48));
             m_cpuAdc = new Ads1115(cpuI2c, InputMultiplexer.AIN0, MeasuringRange.FS4096, DataRate.SPS128, DeviceMode.PowerDown);
 
             _voltage3_3V = new SensorMeasurement("3.3V supply voltage", ElectricPotential.Zero, SensorSource.MainPower);

@@ -243,6 +243,7 @@ namespace DisplayControl
                 else
                 {
                     _adcSensors = new AdcSensorWithoutDisplay(_sensorManager);
+                    _adcSensors.Init(Controller);
                 }
             }
             catch (IOException x)
@@ -440,7 +441,7 @@ namespace DisplayControl
                 _menuMode = false;
                 // Make sure the display is blank
                 SwitchToConsoleMode();
-                _lcdConsole.Clear();
+                _lcdConsole?.Clear();
             }
         }
 
@@ -669,6 +670,11 @@ namespace DisplayControl
                 valueSourceUpper = SensorMeasurement.CpuTemperature;
             }
 
+            if (!_displayConnected)
+            {
+                return;
+            }
+
             lock (_displayLock)
             {
                 _lcdConsole.ReplaceLine(0, valueSourceUpper.Name ?? string.Empty);
@@ -721,8 +727,11 @@ namespace DisplayControl
             CheckI2cConnections();
             InitializeDisplay();
             InitializeSensors();
-            _lcdConsole.Clear();
-            _lcdConsole.ReplaceLine(0, "Startup successful");
+            if (_displayConnected)
+            {
+                _lcdConsole.Clear();
+                _lcdConsole.ReplaceLine(0, "Startup successful");
+            }
         }
 
         /// <summary>
@@ -732,17 +741,24 @@ namespace DisplayControl
         {
             lock (_displayLock)
             {
-                _lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(_activeEncoding, "A00"));
+                if (_displayConnected)
+                {
+                    _lcdConsole.LoadEncoding(LcdConsole.CreateEncoding(_activeEncoding, "A00"));
+                }
             }
         }
 
         public void ShutDown()
         {
             WaitDisplayIdle();
-            _lcdConsole.Clear();
-            _lcdConsole.BacklightOn = false;
-            _lcdConsole.DisplayOn = false;
-            _lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
+            if (_displayConnected)
+            {
+                _lcdConsole.Clear();
+                _lcdConsole.BacklightOn = false;
+                _lcdConsole.DisplayOn = false;
+                _lcdConsole.LineFeedMode = LineWrapMode.WordWrap;
+            }
+
             _sensorManager.AnyMeasurementChanged -= OnSensorValueChanged;
 
             _adcSensors.Dispose();
@@ -768,14 +784,14 @@ namespace DisplayControl
             _engine?.Dispose();
             _engine = null;
 
-            _extendedDisplayController.Dispose();
+            _extendedDisplayController?.Dispose();
             _extendedDisplayController = null;
 
-            _lcdConsole.Dispose();
+            _lcdConsole?.Dispose();
             _lcdConsole = null;
-            _characterLcd.Dispose();
+            _characterLcd?.Dispose();
             _characterLcd = null;
-            _displayDevice.Dispose();
+            _displayDevice?.Dispose();
             _displayDevice = null;
 
             _sensorManager.Dispose();
@@ -985,6 +1001,10 @@ namespace DisplayControl
 
         public void ReinitDisplay()
         {
+            if (!_displayConnected)
+            {
+                return;
+            }
             LeaveMenu();
             _lcdConsole.Dispose();
             _characterLcd.Dispose();

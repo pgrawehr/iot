@@ -152,7 +152,7 @@ namespace DisplayControl
                     // We use a stepwise linear function, as below. The tank size is not linear from top to bottom
                     // a and b are the constants for the linear equation between that point and the point above.
                     // Input   Expected result	a             b
-                    // 2.25    100
+                    // 2.4    100
                     // 2       75               100           -125
                     // 1.3     20               78.57142857   -82.14285714
                     // 0.21    0                18.34862385   -3.853211009
@@ -169,7 +169,8 @@ namespace DisplayControl
                         percentage = 18.34862385 + v + -3.853211009;
                     }
 
-                    // no clamping of percentage, so we would see out-of-bounds values.
+                    // Large clamp range, to see out-of-bounds values but prevent complete garbage (like wraparound).
+                    percentage = Math.Clamp(percentage, -10, 120);
                     SensorMeasurement.FuelTank0Level.UpdateValue(Ratio.FromPercent(percentage), SensorMeasurementStatus.None, false);
                 }
             }
