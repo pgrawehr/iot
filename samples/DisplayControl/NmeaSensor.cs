@@ -421,7 +421,8 @@ namespace DisplayControl
             _serialPortShip.Open();
             _streamShip = _serialPortShip.BaseStream;
             _parserShipInterface = new NmeaParser(ShipSourceName, _streamShip, _streamShip);
-            _parserShipInterface.LogSend = true;
+            // Can be helpful for debugging, but generates lots of data
+            // _parserShipInterface.LogSend = true;
             _parserShipInterface.OnParserError += OnParserError;
             _parserShipInterface.StartDecode();
 
