@@ -163,11 +163,19 @@ namespace DisplayControl
             rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new[] { ShipSourceName }, true, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false, true));
-            
+
             // Messages from Aux are currently disabled (TBD)
-            rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+            // rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
             // And from handheld, too
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+            // rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+
+            // Navigation and waypoint stuff disabled from handheld
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BOD"), new List<string>(), false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BWC"), new List<string>(), false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("XTE"), new List<string>(), false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RTE"), new List<string>(), false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("WPT"), new List<string>(), false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RMB"), new List<string>(), false, false));
 
             // Drop this, it's wrong (seems not to use the heading, even if it should).
             // We're instead reconstructing this message - but in that case, don't send it back to the ship, as this causes confusion
@@ -181,6 +189,23 @@ namespace DisplayControl
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, AutopilotSink }));
             // Anything from the ship is sent locally
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { OpenCpn, MessageRouter.LocalMessageSource, Udp }, false, true));
+
+            // Anything remaining from the handheld is sent to our processor
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
+
+            // The GPS messages are sent everywhere (as raw)
+            // If we also have the plotter enabled, don't send it to the ship, to prevent flooding the bus with unnecessary duplicates
+            string[] gpsSequences = new string[]
+            {
+                "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG", "GSA"
+            };
+
+            foreach (var gpsSequence in gpsSequences)
+            {
+                rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any,
+                    new SentenceId(gpsSequence),
+                    new[] { OpenCpn, ShipSourceName, Udp }, true, true));
+            }
 
             // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
             string[] autoPilotSentences = new string[]
