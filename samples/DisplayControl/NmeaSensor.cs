@@ -103,6 +103,7 @@ namespace DisplayControl
         private readonly CustomData<string> _autoPilotStatus;
         private readonly SensorMeasurement _autoPilotHeading;
         private readonly SensorMeasurement _autoPilotDesiredHeading;
+        private NmeaSentence m_lastMessageFromHandheld;
 
         public NmeaSensor(MeasurementManager manager, bool hasPlotter)
         {
@@ -146,6 +147,8 @@ namespace DisplayControl
         public AisManager AisManger => _aisManager;
 
         public SensorMeasurement AisDataUpdateTrigger => _aisTrigger;
+
+        public bool HandheldOffline => m_lastMessageFromHandheld == null || m_lastMessageFromHandheld.Age > TimeSpan.FromSeconds(10);
 
         /// <summary>
         /// If the plotter is connected, we need an entire different set of rules, because now the whole navigation data comes from the ship and
@@ -194,7 +197,8 @@ namespace DisplayControl
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
             // The GPS messages are sent everywhere (as raw)
-            // If we also have the plotter enabled, don't send it to the ship, to prevent flooding the bus with unnecessary duplicates
+            // If we also have the plotter enabled, we send our stuff to the ship, because it needs to be reprocessed
+            // for the displays to work correctly
             string[] gpsSequences = new string[]
             {
                 "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG", "GSA"
@@ -205,6 +209,16 @@ namespace DisplayControl
                 rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any,
                     new SentenceId(gpsSequence),
                     new[] { OpenCpn, ShipSourceName, Udp }, true, true));
+            }
+
+            // If handheld is not connected or not working, use aux instead
+            rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, SentenceId.Any,
+                new[] { MessageRouter.LocalMessageSource }, ForwardIfNoHandheldData, false, true));
+            foreach (var gpsSequence in gpsSequences)
+            {
+                rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any,
+                    new SentenceId(gpsSequence),
+                    new[] { OpenCpn, ShipSourceName, Udp }, ForwardIfNoHandheldData, true, true));
             }
 
             // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
@@ -236,6 +250,21 @@ namespace DisplayControl
             }, false, true));
 
             return rules;
+        }
+
+        private NmeaSentence ForwardIfNoHandheldData(NmeaSinkAndSource source, NmeaSinkAndSource target, NmeaSentence sentence)
+        {
+            if (source.InterfaceName != AuxiliaryGps)
+            {
+                return sentence;
+            }
+
+            if (HandheldOffline)
+            {
+                return sentence;
+            }
+
+            return null;
         }
 
         public IList<FilterRule> ConstructRulesWithoutPlotter()
@@ -461,6 +490,7 @@ namespace DisplayControl
 
             _parserHandheldInterface = new NmeaParser(HandheldSourceName, _streamHandheld, _streamHandheld);
             _parserHandheldInterface.OnParserError += OnParserError;
+            _parserHandheldInterface.OnNewSequence += (source, msg) => m_lastMessageFromHandheld = msg;
             _parserHandheldInterface.StartDecode();
 
             _parserForwardInterface =
@@ -657,7 +687,11 @@ namespace DisplayControl
                             _forwardPosition.UpdateValue(new GeographicPosition(), SensorMeasurementStatus.NoData);
                         }
 
-                        break;
+                        // If it is offline, we continue here and update the values below
+                            if (!HandheldOffline)
+                        {
+                            break;
+                        }
                     }
 
                     if (gga.Valid)
