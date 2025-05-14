@@ -399,7 +399,7 @@ namespace DisplayControl.ViewModels
         {
             // Note: This does not auto-update. So if one is now in error state, it won't go away
             // and also the other way round
-            m_filterFunc = x => x.Source.Status != SensorMeasurementStatus.None;
+            m_filterFunc = x => (((int)x.Source.Status) & 0x15) != 0 ; // Any of the first 4 bits set means a warning
             UpdateVisibleModels();
         }
 

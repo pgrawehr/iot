@@ -141,7 +141,9 @@ namespace DisplayControl
 
             _valueLogger = LogDispatcher.GetLogger("HeadingRawLogger");
             // Don't use dashes in the following line, as it makes evaluating in excel more difficult (the dash is used as main separator in the logs)
-            _valueLogger.LogDebug($"Compass | Handheld | Rear to Forward | Rear to Handheld | Handheld to Forward | COG | Dist RF | Dist RH | Dist HF");
+            _valueLogger.LogDebug($"Compass | Handheld | Rear to Forward | " +
+                                  $"Rear to Handheld | Handheld to Forward | " +
+                                  $"COG | Dist RF | corrected HDG");
         }
 
         public AisManager AisManger => _aisManager;
@@ -627,12 +629,9 @@ namespace DisplayControl
                             _rearPosition.UpdateValue(gga.Position);
                             if (_positionProvider.TryGetCurrentPosition(out var forwardPos, AuxiliaryGps,
                                     false,
-                                    out _, out _, out _, out var time1) && forwardPos!.ContainsValidPosition() 
-                                && _positionProvider.TryGetCurrentPosition(out var handheldPosition, HandheldSourceName, false, out _, out _, out _, out _) && handheldPosition.ContainsValidPosition())
+                                    out _, out _, out _, out var time1))
                             {
                                 GreatCircle.DistAndDir(gga.Position, forwardPos, out var distance, out var anglerf);
-                                GreatCircle.DistAndDir(gga.Position, handheldPosition, out var distance2, out var anglerh);
-                                GreatCircle.DistAndDir(handheldPosition, forwardPos, out var distance3, out var anglehf);
                                     if (DateTimeOffset.UtcNow - time1 < TimeSpan.FromSeconds(10))
                                 {
                                     _forwardRearSeparation.UpdateValue(distance);
@@ -645,6 +644,10 @@ namespace DisplayControl
                                         Angle hdgFromHandheld = Angle.FromDegrees(_hdgFromHandheld.Value.Value);
                                         Angle trueFromHandheld =
                                             hdgFromHandheld.MagneticToTrue(_magneticVariation.Value);
+                                        if (!SensorMeasurement.Heading.TryGetAs(out Angle trueHeading))
+                                        {
+                                            trueHeading = Angle.Zero;
+                                        }
 
                                         ////_logger.LogDebug(
                                         ////    $"Heading update: Main compass (true): {trueFromCompass} From Handheld: {trueFromHandheld}, GNSS derived: R-F {anglerf} R-H {anglerh} H-F {anglehf}, COG: {SensorMeasurement.Track.Value}");
@@ -657,7 +660,7 @@ namespace DisplayControl
                                         var gnssTrack = SensorMeasurement.Track;
                                         var trackV = gnssTrack.Value != null ? gnssTrack.Value.Value : 0;
 
-                                        _valueLogger.LogDebug($"{trueFromCompass.Degrees} | {trueFromHandheld.Degrees} | {anglerf.Degrees} | {anglerh.Degrees} | {anglehf.Degrees} | {trackV} | {distance.Meters} | {distance2.Meters} | {distance3.Meters}");
+                                        _valueLogger.LogDebug($"{trueFromCompass.Degrees} | {trueFromHandheld.Degrees} | {anglerf.Degrees} | {trackV} | {distance.Meters} | {trueHeading.Degrees:F2}");
                                     }
                                 }
                                 else

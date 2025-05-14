@@ -281,7 +281,7 @@ namespace Iot.Device.Nmea0183
             s.TrueHeading = heading;
             s.LastSeen = messageTime;
 
-            _logger.LogWarning($"AISManager: Position of own ship: {position}, speed: {sog}, course {track}");
+            _logger.LogInformation($"AISManager: Position of own ship: {position}, speed: {sog}, course {track}");
             ownShip = s;
             return true;
         }
