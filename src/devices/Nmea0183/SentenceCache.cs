@@ -26,7 +26,6 @@ namespace Iot.Device.Nmea0183
         private readonly Dictionary<int, NmeaSentence> _dinData;
         private readonly Dictionary<SentenceId, NmeaSentence> _sentences;
         private readonly Dictionary<String, Dictionary<SentenceId, NmeaSentence>> _sentencesBySource;
-
         private readonly ILogger _logger;
 
         private long _ticksLastCleanup;
