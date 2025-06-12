@@ -33,6 +33,7 @@ namespace Iot.Device.Nmea0183
         private Dictionary<string, Waypoint> _wayPoints;
         private Queue<SatellitesInView> _lastSatelliteInfos;
         private Dictionary<string, TransducerDataSet> _xdrData;
+        private TalkerId _magneticDeviationProvider = TalkerId.Any;
 
         private SentenceId[] _groupSentences = new SentenceId[]
         {
@@ -86,6 +87,15 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
+        /// The magnetic variation at the current location. Positive when easterly, negative when westerly.
+        /// </summary>
+        public Angle? MagneticVariation
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
         /// Clears the cache
         /// </summary>
         public void Clear()
@@ -97,6 +107,8 @@ namespace Iot.Device.Nmea0183
                 _wayPoints.Clear();
                 _lastSatelliteInfos.Clear();
                 _sentencesBySource.Clear();
+                MagneticVariation = null;
+                _magneticDeviationProvider = TalkerId.Any;
             }
         }
 
@@ -271,6 +283,17 @@ namespace Iot.Device.Nmea0183
                 else if (sentence.SentenceId == ProprietaryMessage.Id && (sentence is ProprietaryMessage din))
                 {
                     _dinData[din.Identifier] = din;
+                }
+                else if (sentence.SentenceId == RecommendedMinimumNavigationInformation.Id && (sentence is RecommendedMinimumNavigationInformation rmc))
+                {
+                    // Once we received one such value, always use that provider. Otherwise we might get confused
+                    // by different sources with varying variance models.
+                    _logger.LogInformation($"Sentence cache: Seen an RMC message with variance: {rmc.MagneticVariationInDegrees}");
+                    if (rmc.MagneticVariationInDegrees.HasValue && (_magneticDeviationProvider == rmc.TalkerId || _magneticDeviationProvider == TalkerId.Any))
+                    {
+                        MagneticVariation = rmc.MagneticVariationInDegrees.Value;
+                        _magneticDeviationProvider = sentence.TalkerId;
+                    }
                 }
             }
         }

@@ -240,8 +240,8 @@ namespace Iot.Device.Nmea0183
                 if (!_cache.TryGetLastSentence(HeadingAndDeclination.Id, out HeadingAndDeclination? deviation) ||
                     !deviation.Declination.HasValue)
                 {
-                    if (!_cache.TryGetLastSentence(RecommendedMinimumNavigationInformation.Id,
-                        out RecommendedMinimumNavigationInformation? rmc) || !rmc.MagneticVariationInDegrees.HasValue)
+                    var variation = _cache.MagneticVariation;
+                    if (!variation.HasValue)
                     {
                         if (loops % LogSkip == 0)
                         {
@@ -251,7 +251,7 @@ namespace Iot.Device.Nmea0183
                         return;
                     }
 
-                    deviation = new HeadingAndDeclination(Angle.Zero, Angle.Zero, rmc.MagneticVariationInDegrees);
+                    deviation = new HeadingAndDeclination(Angle.Zero, Angle.Zero, variation);
                 }
 
                 _activeDeviation = deviation;

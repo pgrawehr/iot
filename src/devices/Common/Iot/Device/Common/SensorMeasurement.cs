@@ -172,10 +172,16 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement TimeToNextWaypoint =
             new SensorMeasurement("Time to next Waypoint", Duration.Zero, SensorSource.Navigation) { CustomFormatOperation = x => ((Duration)x).ToTimeSpan().ToString() };
 
+        public static readonly SensorMeasurement CrossTrackError =
+            new SensorMeasurement("Crosstrack Error", Length.Zero, Common.SensorSource.Navigation);
+
         /// <summary>
         /// Magnetic variation is usually computed using the NOAA formulas from the position
         /// </summary>
         public static SensorMeasurement MagneticVariation = new SensorMeasurement("Magnetic Variation", Angle.FromDegrees(0), SensorSource.Position);
+
+        public static SensorMeasurement LogTotal =
+            new SensorMeasurement("Total Log distance", Length.Zero, SensorSource.Water);
 
         /// <summary>
         /// Source of the measurement

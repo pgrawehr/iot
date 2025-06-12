@@ -466,7 +466,8 @@ namespace DisplayControl
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
                 _hdgFromHandheld,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
-                SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint,
+                SensorMeasurement.LogTotal,
+                SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint, SensorMeasurement.CrossTrackError,
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus, _rearPosition, _forwardPosition,
                 _forwardRearSeparation, _forwardRearAngle, _aisNumberOfTargets, _aisNearestShip, _aisDistanceToNearestShip,
                 _aisDangerousTargets, _aisTrigger, _autoPilotStatus, _autoPilotHeading, _autoPilotDesiredHeading
@@ -691,10 +692,13 @@ namespace DisplayControl
                         }
 
                         // If it is offline, we continue here and update the values below
-                            if (!HandheldOffline)
+                        if (!HandheldOffline)
                         {
+                            _autopilot.NmeaSourceName = HandheldSourceName;
                             break;
                         }
+
+                        _autopilot.NmeaSourceName = AuxiliaryGps;
                     }
 
                     if (gga.Valid)
@@ -799,7 +803,7 @@ namespace DisplayControl
                     _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
                         rmb.DistanceToWayPoint.HasValue ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData);
                     if (rmb.DistanceToWayPoint.HasValue &&
-                        _positionProvider.TryGetCurrentPosition(out var position, HandheldSourceName, false, out var track, out var sog, out var heading, out var time))
+                        _positionProvider.TryGetCurrentPosition(out var position, HandheldOffline ? AuxiliaryGps : HandheldSourceName, false, out var track, out var sog, out var heading, out var time))
                     {
                         if (sog.MetersPerSecond < 0.01)
                         {
@@ -815,12 +819,19 @@ namespace DisplayControl
                         {
                             _manager.UpdateValue(SensorMeasurement.TimeToNextWaypoint, timeToWp);
                         }
+                        _manager.UpdateValue(SensorMeasurement.CrossTrackError, rmb.CrossTrackError);
                     }
 
                     break;
                 case SeatalkNmeaMessageWithDecoding stalk:
                 {
                     ParserOnNewStalkMessage(source, stalk);
+                    break;
+                }
+
+                case DistanceTraveledTroughWater vtw:
+                {
+                    _manager.UpdateValue(SensorMeasurement.LogTotal, vtw.TotalDistanceTraveled, SensorMeasurementStatus.None);
                     break;
                 }
             }
