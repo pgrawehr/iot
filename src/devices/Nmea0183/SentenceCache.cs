@@ -250,7 +250,8 @@ namespace Iot.Device.Nmea0183
                         _sentencesBySource[sourceName] = d;
                     }
                 }
-                else if (sentence.SentenceId == RoutePart.Id && (sentence is RoutePart rte))
+
+                if (sentence.SentenceId == RoutePart.Id && (sentence is RoutePart rte))
                 {
                     _lastRouteSentences.Enqueue(rte);
                     while (_lastRouteSentences.Count > 100)
@@ -288,7 +289,6 @@ namespace Iot.Device.Nmea0183
                 {
                     // Once we received one such value, always use that provider. Otherwise we might get confused
                     // by different sources with varying variance models.
-                    _logger.LogInformation($"Sentence cache: Seen an RMC message with variance: {rmc.MagneticVariationInDegrees}");
                     if (rmc.MagneticVariationInDegrees.HasValue && (_magneticDeviationProvider == rmc.TalkerId || _magneticDeviationProvider == TalkerId.Any))
                     {
                         MagneticVariation = rmc.MagneticVariationInDegrees.Value;

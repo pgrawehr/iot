@@ -1082,8 +1082,8 @@ namespace DisplayControl
 
             // This is the old-stlye RPM message. Can carry only a limited set of information and is often no longer
             // recognized by NMEA-2000 displays or converters.
-            EngineRevolutions rv = new EngineRevolutions(RotationSource.Engine, engineData.Revolutions, engineData.EngineNo + 1, engineData.Pitch);
-            _router.SendSentence(rv);
+            ////EngineRevolutions rv = new EngineRevolutions(RotationSource.Engine, engineData.Revolutions, engineData.EngineNo + 1, engineData.Pitch);
+            ////_router.SendSentence(rv);
 
             // We're sending both with the same frequency here - doesn't really matter.
             var fast = new SeaSmartEngineFast(engineData);
