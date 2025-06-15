@@ -160,12 +160,32 @@ namespace Iot.Device.Nmea0183
             _lastCleanupCheck = null;
             _aisAlarmsEnabled = false;
             TrackEstimationParameters = new TrackEstimationParameters();
+            OwnTransceiverClass = AisTransceiverClass.A;
         }
 
         /// <summary>
         /// The own MMSI
         /// </summary>
         public uint OwnMmsi { get; }
+
+        /// <summary>
+        /// Our own transceiver type, used when sending our own ship's data over the network.
+        /// By default, uses Type A, as this can carry more information.
+        /// </summary>
+        public AisTransceiverClass OwnTransceiverClass
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Set this to true to make the component generate VDO sentences automatically.
+        /// </summary>
+        public bool GenerateOwnShipData
+        {
+            get;
+            set;
+        }
 
         /// <summary>
         /// The name of the own ship
@@ -700,6 +720,11 @@ namespace Iot.Device.Nmea0183
         /// <returns>True if the message was sent, false otherwise</returns>
         public bool SendWarningMessage(string messageId, uint sourceMmsi, string messageText)
         {
+            if (sourceMmsi == 0)
+            {
+                sourceMmsi = OwnMmsi;
+            }
+
             return SendWarningMessage(new AisMessageId(AisWarningType.UserMessage, sourceMmsi), sourceMmsi, messageText, DateTimeOffset.UtcNow, null);
         }
 
@@ -815,7 +840,8 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Sends a ship position report for the given ship to the NMEA stream. Useful for testing or simulation.
+        /// Sends a ship position report for the given ship to the NMEA stream.
+        /// Useful for testing or simulation, or also to send our own ship's information to attached devices.
         /// </summary>
         /// <param name="transceiverClass">Transceiver class to simulate</param>
         /// <param name="ship">The ship whose position data to send</param>
@@ -823,6 +849,34 @@ namespace Iot.Device.Nmea0183
         /// <exception cref="InvalidOperationException">An internal inconsistency occurred</exception>
         /// <exception cref="NotSupportedException">This message type is not currently supported for encoding</exception>
         public NmeaSentence SendShipPositionReport(AisTransceiverClass transceiverClass, Ship ship)
+        {
+            if (transceiverClass == AisTransceiverClass.A)
+            {
+                PositionReportClassAMessage msg = ShipToPositionReportClassAMessage(ship);
+                List<NmeaSentence> sentences = _aisParser.ToSentences(msg);
+                if (sentences.Count != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Encoding the position report for class A returned {sentences.Count} sentences. Exactly 1 expected");
+                }
+
+                NmeaSentence single = sentences.Single();
+
+                DispatchSentenceEvents(this, single);
+                return single;
+            }
+            else
+            {
+                throw new NotSupportedException("Only class A messages can currently be constructed");
+            }
+        }
+
+        /// <summary>
+        /// Sends a status report (or reports) for the given ship
+        /// </summary>
+        /// <param name="transceiverClass">Transceiver type to use</param>
+        /// <param name="ship">The ship whose information is to be encoded, typically our own</param>
+        public void SendShipStatusReport(AisTransceiverClass transceiverClass, Ship ship)
         {
             if (transceiverClass == AisTransceiverClass.A)
             {
@@ -917,7 +971,7 @@ namespace Iot.Device.Nmea0183
                     return;
                 }
 
-                t = new Thread(AisAlarmThread);
+                t = new Thread(AisSupervisionThread);
                 t.Start();
                 _aisBackgroundThread = t;
             }
@@ -943,7 +997,7 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// This thread calculates CPA and TCPA between vessels and generates corresponding warnings.
         /// </summary>
-        private void AisAlarmThread()
+        private void AisSupervisionThread()
         {
             Stopwatch sw = new Stopwatch();
             // This uses a do-while for easier testability
@@ -959,6 +1013,12 @@ namespace Iot.Device.Nmea0183
                     if (remaining < TimeSpan.FromMilliseconds(20))
                     {
                         remaining = TimeSpan.FromMilliseconds(20);
+                    }
+
+                    if (GetOwnShipData(out var ownData))
+                    {
+                        SendShipStatusReport(OwnTransceiverClass, ownData);
+                        SendShipPositionReport(OwnTransceiverClass, ownData);
                     }
 
                     Thread.Sleep(remaining);
@@ -1000,7 +1060,7 @@ namespace Iot.Device.Nmea0183
                     {
                         // Warn if the ship will be closer than the warning distance in less than the WarningTime
                         SendWarningMessage(new AisMessageId(AisWarningType.DangerousVessel, difference.To.Mmsi), difference.To.Mmsi,
-                            $"CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
+                            $"{difference.To.NameOrMssi()} CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
                             time, difference.To);
                     }
 
@@ -1009,7 +1069,7 @@ namespace Iot.Device.Nmea0183
                     {
                         // The vessel was lost
                         SendWarningMessage(new AisMessageId(AisWarningType.VesselLost, difference.To.Mmsi), difference.To.Mmsi,
-                            $"LOST: CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
+                            $"{difference.To.NameOrMssi()} LOST: CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
                             time, difference.To);
                     }
                 }
