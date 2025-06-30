@@ -223,7 +223,7 @@ namespace Iot.Device.Nmea0183
             }
 
             int firstComma = sentence.IndexOf(',', 1);
-            if (firstComma == -1)
+            if (firstComma <= 3)
             {
                 errorCode = NmeaError.MessageToShort;
                 return null;

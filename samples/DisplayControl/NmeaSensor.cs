@@ -77,6 +77,7 @@ namespace DisplayControl
         private SensorMeasurement _smoothedTrueWindSpeed;
         private SensorMeasurement _maxWindGusts;
         private SensorMeasurement _hdgFromHandheld;
+        private readonly CustomData<int> _handheldRxErrors;
         private CustomData<int> _aisTrigger; // A dummy measurement that updates whenever any AIS target changes
         private CustomData<GeographicPosition> _position;
         private CustomData<int> _numSatellites;
@@ -117,6 +118,7 @@ namespace DisplayControl
             _numSatellites = new CustomData<int>("Number of Sats in view", 0, SensorSource.Position) { CustomFormatOperation = x => x.ToString(CultureInfo.CurrentCulture) };
             _satStatus = new CustomData<string>("Satellites in View", string.Empty, SensorSource.Position);
             _hdgFromHandheld = new SensorMeasurement("Handheld heading", Angle.Zero, SensorSource.Compass, 2, TimeSpan.FromSeconds(20));
+            _handheldRxErrors = new CustomData<int>("Handheld RX errors", 0, SensorSource.Position, 1, TimeSpan.MaxValue);
             _forwardPosition = new CustomData<GeographicPosition>("Forward antenna position", new GeographicPosition(),
                 SensorSource.Position);
             _rearPosition = new CustomData<GeographicPosition>("Rear antenna position", new GeographicPosition(),
@@ -464,7 +466,7 @@ namespace DisplayControl
                 SensorMeasurement.WindDirectionAbsolute, SensorMeasurement.WindDirectionApparent, SensorMeasurement.WindDirectionTrue,
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
-                _hdgFromHandheld,
+                _hdgFromHandheld, _handheldRxErrors,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.LogTotal,
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint, SensorMeasurement.CrossTrackError,
@@ -703,6 +705,7 @@ namespace DisplayControl
 
                     if (gga.Valid)
                     {
+                        _logger.LogInformation($"Received valid gga sentence from {source.InterfaceName}");
                         _position.UpdateValue(gga.Position);
                         _manager.UpdateValues(new[] { SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid },
                             new IQuantity[] { Angle.FromDegrees(gga.LatitudeDegrees.GetValueOrDefault(0)), Angle.FromDegrees(gga.LongitudeDegrees.GetValueOrDefault(0)),
@@ -915,6 +918,7 @@ namespace DisplayControl
             // Ignore drops while sending to the autopilot. Since that interface is very slow, it happens constantly.
             if (!((source.InterfaceName == HandheldSourceName) && errorCode == NmeaError.MessageDropped))
             {
+                _handheldRxErrors.UpdateValue(_handheldRxErrors.Value + 1, SensorMeasurementStatus.None);
                 _logger.LogError($"Nmea error from {source.InterfaceName}: {error}");
             }
         }
