@@ -92,5 +92,15 @@ namespace Iot.Device.Nmea0183.Ais
         /// is controlled via <see cref="TargetLostTimeout"/>. Default: 25 minutes
         /// </summary>
         public TimeSpan CleanupLatency { get; set; } = TimeSpan.FromMinutes(25);
+
+        /// <summary>
+        /// Speed limit to assume a vessel is moored. Set to null to disable. Default: 0.2 Knots
+        /// </summary>
+        public Speed? IgnoreVesselsSlowerThan { get; set; } = Speed.FromKnots(0.2);
+
+        /// <summary>
+        /// Assume we're moored ourselves if the speed is less than this value. Set to null to disable. Default: 0.1 Knots.
+        /// </summary>
+        public Speed? AssumeMooredWhenSlowerThan { get; set; } = Speed.FromKnots(0.1);
     }
 }

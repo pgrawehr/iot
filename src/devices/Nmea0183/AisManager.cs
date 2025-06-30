@@ -1000,7 +1000,7 @@ namespace Iot.Device.Nmea0183
                     {
                         // Warn if the ship will be closer than the warning distance in less than the WarningTime
                         SendWarningMessage(new AisMessageId(AisWarningType.DangerousVessel, difference.To.Mmsi), difference.To.Mmsi,
-                            $"CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
+                            $"{difference.To.NameOrMssi()} CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
                             time, difference.To);
                     }
 
@@ -1009,7 +1009,7 @@ namespace Iot.Device.Nmea0183
                     {
                         // The vessel was lost
                         SendWarningMessage(new AisMessageId(AisWarningType.VesselLost, difference.To.Mmsi), difference.To.Mmsi,
-                            $"LOST: CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
+                            $"{difference.To.NameOrMssi()} LOST: CPA {cpa.Value.NauticalMiles:F2}; TCPA {tcpa.Value:mm\\:ss}",
                             time, difference.To);
                     }
                 }

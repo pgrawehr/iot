@@ -181,7 +181,15 @@ namespace Iot.Device.Nmea0183.Ais
                         if (pos.ClosestPointOfApproach < parameters.WarningDistance &&
                             timeToClosest > -TimeSpan.FromMinutes(1) && timeToClosest < parameters.WarningTime)
                         {
-                            pos.SafetyState = AisSafetyState.Dangerous;
+                            if (!parameters.IgnoreVesselsSlowerThan.HasValue || otherAsMovingTarget.SpeedOverGround >
+                                parameters.IgnoreVesselsSlowerThan.Value)
+                            {
+                                pos.SafetyState = AisSafetyState.Dangerous;
+                            }
+                            else
+                            {
+                                pos.SafetyState = AisSafetyState.Ignored;
+                            }
                         }
 
                         retList.Add(pos);

@@ -116,9 +116,13 @@ namespace DisplayControl.ViewModels
             var relPos = _target.RelativePosition;
             if (relPos != null && _target.Position.ContainsValidPosition())
             {
-                sb.Append($"Dist: {FormatLength(relPos.Distance)} ");
+                sb.AppendLine($"Dist: {FormatLength(relPos.Distance)} ");
+                if (_target is MovingTarget mt)
+                {
+                    sb.Append($"SPD: {FormatSpeed(mt.SpeedOverGround)} TRK: {FormatAngle(mt.CourseOverGround)}");
+                }
                 sb.Append($"CPA: {FormatLength(relPos.ClosestPointOfApproach)} ");
-                sb.Append($"TCPA: {relPos.TimeToClosestPointOfApproach(now)} ");
+                sb.AppendLine($"TCPA: {relPos.TimeToClosestPointOfApproach(now):g} ");
                 sb.Append($"Status: {relPos.SafetyState}");
             }
             else
@@ -127,6 +131,16 @@ namespace DisplayControl.ViewModels
             }
 
             return sb.ToString();
+        }
+
+        private string FormatSpeed(Speed spd)
+        {
+            return $"{spd.Knots:F1}kts";
+        }
+
+        private string FormatAngle(Angle angle)
+        {
+            return $"{angle.Degrees:F1}°";
         }
 
         private string FormatLength(Length? length)
