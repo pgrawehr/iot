@@ -339,10 +339,10 @@ namespace Iot.Device.Nmea0183
             lock (_lock)
             {
                 AisTarget? target;
-                T? ship;
-                if (TryGetTarget(mmsi, out target) && target is Ship)
+                T ship;
+                if (TryGetTarget(mmsi, out target) && target is T targetAsT)
                 {
-                    ship = target as T;
+                    ship = targetAsT;
                 }
                 else
                 {
@@ -353,7 +353,7 @@ namespace Iot.Device.Nmea0183
                     _targets.TryAdd(mmsi, ship);
                 }
 
-                if (lastSeenTime.HasValue && ship != null)
+                if (lastSeenTime.HasValue)
                 {
                     ship.LastSeen = lastSeenTime.Value;
                 }
@@ -365,7 +365,7 @@ namespace Iot.Device.Nmea0183
                     _activeWarnings.TryRemove(obsoleteWarning.Key, out _);
                 }
 
-                return ship!;
+                return ship;
             }
         }
 
@@ -727,6 +727,11 @@ namespace Iot.Device.Nmea0183
         /// <returns>True if the message was sent, false otherwise</returns>
         public bool SendWarningMessage(AisMessageId messageId, uint sourceMmsi, string messageText, DateTimeOffset now, AisTarget? target)
         {
+            if (TrackEstimationParameters.SuppressAllVesselWarnings)
+            {
+                return false;
+            }
+
             if (_activeWarnings.TryGetValue(messageId, out var msg))
             {
                 if (msg.TimeStamp + TrackEstimationParameters.WarningRepeatTimeout > now)
