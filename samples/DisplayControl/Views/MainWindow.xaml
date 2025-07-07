@@ -37,14 +37,10 @@
     </Design.DataContext>
     <StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="2">
-            <Button Name="Reinit" Height="{Binding HeaderHeight}" Content="Reinit Display" 
-                    Command="{Binding ReinitDisplayCommand}"/>
-            <Button Content="{Binding LockDisplayText}" Command="{Binding LockDisplay}" />
             <Button Content="{Binding TankSensorText}" Command="{Binding EnableDisableForceTankSensorEnable}"/>
             <Button Content="{Binding SuppressAisWarningText}" Command="{Binding EnableDisableAisTargetWarnings}"></Button>
             <Button Content="Test Msg" Command="{Binding SendTestMessage}"/>
-            <Button Content="Auto Deviation" Command="{Binding EnableDisableDeviationCorrection}" Background="{Binding DeviationButtonColor}"/>
-            <Button Content="HDG from Handheld" Command="{Binding EnableDisableHandheldForHeading}" Background="{Binding HeadingFromHandheldColor}"/>
+            <Button Content="{Binding HeadingModeText}" Command="{Binding ChangeHeadingMode}" Background="{Binding HeadingModeColor}"/>
             <Button Content="Exit" Command="{Binding ExitCommand}" />
 
         </StackPanel>

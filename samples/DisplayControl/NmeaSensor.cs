@@ -831,6 +831,10 @@ namespace DisplayControl
                             _manager.UpdateValue(SensorMeasurement.TimeToNextWaypoint, timeToWp);
                         }
                         _manager.UpdateValue(SensorMeasurement.CrossTrackError, rmb.CrossTrackError);
+                        if (_imu != null)
+                        {
+                            _imu.CurrentCourseOverGround = track;
+                        }
                     }
 
                     break;

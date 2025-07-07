@@ -27,8 +27,7 @@ namespace DisplayControl.ViewModels
         private double _clientHeight;
         private double _headerHeight;
         private bool _displayLocked;
-        private bool _deviationEnabled;
-        private bool _useHeadingFromHandheld;
+        private HeadingMode _headingMode;
         private bool _forceTankSensorEnable;
         private bool _aisTargetsVisible;
         private bool _aisWarningsSuppressed;
@@ -44,8 +43,7 @@ namespace DisplayControl.ViewModels
             StatusColor = new SolidColorBrush(SystemDrawing.FromName("Green"));
             Cancel = false;
             DisplayLocked = false;
-            _deviationEnabled = true;
-            _useHeadingFromHandheld = false;
+            _headingMode = HeadingMode.Unknown;
             _forceTankSensorEnable = false;
         }
 
@@ -57,13 +55,12 @@ namespace DisplayControl.ViewModels
             _headerHeight = 50;
             DataContainer = dataContainer;
             // Get value from settings
-            DeviationEnabled = dataContainer.IsDeviationCorrectionEnabled();
+            HeadingMode = dataContainer.CurrentHeadingMode();
             foreach (var elem in dataContainer.SensorValueSources)
             {
                 m_allViewModels.Add(new SensorValueViewModel(elem));
             }
 
-            UseHeadingFromHandheld = DataContainer.IsHandheldHeadingEnabled();
             UpdateVisibleModels();
             DataContainer.AisTargetsUpdated += UpdateTargets;
         }
@@ -177,30 +174,25 @@ namespace DisplayControl.ViewModels
             }
         }
 
-        public bool DeviationEnabled
+        public HeadingMode HeadingMode
         {
             get
             {
-                return _deviationEnabled;
+                return _headingMode;
             }
 
             set
             {
-                this.RaiseAndSetIfChanged(ref _deviationEnabled, value);
-                this.RaisePropertyChanged(nameof(DeviationButtonColor));
+                this.RaiseAndSetIfChanged(ref _headingMode, value);
+                this.RaisePropertyChanged(nameof(HeadingModeText));
             }
         }
 
-        public bool UseHeadingFromHandheld
+        public string HeadingModeText
         {
             get
             {
-                return _useHeadingFromHandheld;
-            }
-            set
-            {
-                this.RaiseAndSetIfChanged(ref _useHeadingFromHandheld, value);
-                this.RaisePropertyChanged(nameof(HeadingFromHandheldColor));
+                return _headingMode.ToString();
             }
         }
 
@@ -230,9 +222,7 @@ namespace DisplayControl.ViewModels
             }
         }
 
-        public ISolidColorBrush DeviationButtonColor => _deviationEnabled ? Brushes.Green : Brushes.Yellow;
-
-        public ISolidColorBrush HeadingFromHandheldColor => _useHeadingFromHandheld ? Brushes.Green : Brushes.LightGray;
+        public ISolidColorBrush HeadingModeColor => HeadingMode == HeadingMode.CompassCorrected ? Brushes.Green : Brushes.LightGray;
 
         public bool AisTargetsVisible
         {
@@ -346,27 +336,27 @@ namespace DisplayControl.ViewModels
             DataContainer.ReinitDisplay();
         }
 
-        public async void EnableDisableDeviationCorrection()
+        public async void ChangeHeadingMode()
         {
-            if (DeviationEnabled)
+            HeadingMode newMode = HeadingMode switch
             {
-                var box = MessageBoxManager
-                    .GetMessageBoxStandard("Disable deviation correction", "Are you sure you want to disable deviation correction?",
+                HeadingMode.CompassCorrected => HeadingMode.CompassRaw,
+                HeadingMode.CompassRaw => HeadingMode.Course,
+                HeadingMode.Course => HeadingMode.Handheld,
+                HeadingMode.Handheld => HeadingMode.HandheldInverted,
+                HeadingMode.HandheldInverted => HeadingMode.CompassCorrected,
+                _ => HeadingMode.CompassCorrected,
+            };
+            var box = MessageBoxManager.GetMessageBoxStandard("Heading Mode Change", $"Are you sure you want to change the mode to {newMode}?",
                         ButtonEnum.YesNo);
-                ButtonResult ret = await box.ShowAsync();
-                if (ret == ButtonResult.No)
-                {
-                    return;
-                }
+            ButtonResult ret = await box.ShowAsync();
+            if (ret == ButtonResult.No)
+            { 
+                return;
             }
-            DeviationEnabled = !DeviationEnabled;
-            DataContainer.EnableDeviationCorrection(DeviationEnabled);
-        }
-
-        public void EnableDisableHandheldForHeading()
-        {
-            UseHeadingFromHandheld = !UseHeadingFromHandheld;
-            DataContainer.UseHandheldForHeading(UseHeadingFromHandheld);
+            
+            HeadingMode = newMode;
+            DataContainer.SetHeadingMode(newMode);
         }
 
         public void EnableDisableForceTankSensorEnable()

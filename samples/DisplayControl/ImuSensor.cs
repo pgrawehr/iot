@@ -21,8 +21,7 @@ namespace DisplayControl
     internal class ImuSensor : PollingSensorBase
     {
         private readonly PersistentBool _correctionEnabled;
-        private readonly PersistentBool _externalHeadingConsidered;
-        private readonly PersistentDouble _externalHeadingStaticCorrection;
+        private readonly PersistentInt _headingMode;
 
         private Ig500Sensor _imu;
         private SerialPort _serialPort;
@@ -45,8 +44,7 @@ namespace DisplayControl
             _lastEulerAngles = new Vector3();
             _imuTemperature = new SensorMeasurement("IMU Temperature", Temperature.Zero, SensorSource.Compass);
             _correctionEnabled = new PersistentBool(file, "DeviationCorrectionEnabled", true);
-            _externalHeadingConsidered = new PersistentBool(file, "ExternalHeadingConsidered", true);
-            _externalHeadingStaticCorrection = new PersistentDouble(file, "ExternalHeadingStaticCorrection", -5, TimeSpan.Zero);
+            _headingMode = new PersistentInt(file, "HeadingMode", (int)HeadingMode.CompassCorrected);
             _deltaHistory = new List<HistoricValue>();
             _deltaAccelXY = new List<HistoricValue>();
             _deltaAccelZ = new List<HistoricValue>();
@@ -58,43 +56,32 @@ namespace DisplayControl
         {
             get
             {
-                return _correctionEnabled.Value;
-            }
-            set
-            {
-                _correctionEnabled.Value = value;
+                return HeadingMode == HeadingMode.CompassCorrected;
             }
         }
 
         /// <summary>
-        /// Take value from the external heading sensor (it seems that the internal compass sometimes plays
-        /// havoc, need to analyze)
+        /// Operation mode
         /// </summary>
-        public bool PreferExternalHeading
+        public HeadingMode HeadingMode
         {
             get
             {
-                return _externalHeadingConsidered.Value;
+                return (HeadingMode)_headingMode.Value;
             }
             set
             {
-                _externalHeadingConsidered.Value = value;
-            }
-        }
-
-        public double ExternalHeadingStaticCorrection
-        {
-            get
-            {
-                return _externalHeadingStaticCorrection.Value;
-            }
-            set
-            {
-                _externalHeadingStaticCorrection.Value = value;
+                _headingMode.Value = (int)value;
             }
         }
 
         public HeadingAndDeclination ExternalHeading
+        {
+            get;
+            set;
+        }
+
+        public Angle CurrentCourseOverGround
         {
             get;
             set;
@@ -253,30 +240,44 @@ namespace DisplayControl
         {
             hdgUncorrected = Angle.FromDegrees(angles.X);
 
-            if (PreferExternalHeading && ExternalHeading != null && ExternalHeading.Declination.HasValue)
+            switch (HeadingMode)
             {
-                Angle hdgext = ExternalHeading.HeadingMagnetic.GetValueOrDefault(Angle.Zero);
-                hdgext = (hdgext + Angle.FromDegrees(ExternalHeadingStaticCorrection)).Normalize(true);
-                // Will show us the error of the internal sensor
-                deviation = (hdgext - hdgUncorrected).Normalize(false);
-                var local = new HeadingAndDeclination(hdgUncorrected, ExternalHeading.Declination, Angle.Zero);
-                local.DateTime = _lastTimeStamp;
-                if (MangleHeadingAngles(
-                        new List<(HeadingAndDeclination Heading, double Quality)>()
-                        {
-                            (local, 1),
-                            (ExternalHeading, 1)
-                        },
-                        out Angle mangledAngle))
+                case HeadingMode.Handheld:
+                case HeadingMode.HandheldInverted:
                 {
-                    hdg = mangledAngle;
-                    return;
-                }
+                    if (ExternalHeading != null && ExternalHeading.Declination.HasValue)
+                    {
+                        Angle hdgext = ExternalHeading.HeadingMagnetic.GetValueOrDefault(Angle.Zero);
+                        hdgext =
+                            (hdgext + Angle.FromDegrees(HeadingMode == HeadingMode.Handheld ? 0 : 180)).Normalize(true);
+                        // Will show us the error of the internal sensor
+                        deviation = (hdgext - hdgUncorrected).Normalize(false);
+                        hdg = hdgext;
+                    }
+                    else
+                    {
+                        // Something is wrong (e.g handheld is not available) - switch back to normal mode
+                        HeadingMode = HeadingMode.CompassCorrected;
+                        hdg = hdgUncorrected;
+                    }
 
-                // Something is wrong (e.g handheld is not in position) - switch back to normal mode
+                    break;
+                } 
+                case HeadingMode.CompassRaw:
+                    hdg = hdgUncorrected;
+                    deviation = Angle.Zero;
+                    return;
+                case HeadingMode.CompassCorrected:
+                    // This should be the default case
+                    hdg = hdgUncorrected;
+                    break;
+                case DisplayControl.HeadingMode.Course:
+                    hdg = CurrentCourseOverGround;
+                    break;
+                default:
+                    throw new InvalidOperationException("Invalid heading mode");
             }
 
-            hdg = hdgUncorrected;
             deviation = Angle.Zero;
             if (DeviationCorrectionEnabled)
             {

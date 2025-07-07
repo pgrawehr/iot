@@ -1012,40 +1012,22 @@ namespace DisplayControl
             InitializeDisplay();
         }
 
-        public void EnableDeviationCorrection(bool enable)
+        public void SetHeadingMode(HeadingMode mode)
         {
             if (_imuSensor != null)
             {
-                _imuSensor.DeviationCorrectionEnabled = enable;
+                _imuSensor.HeadingMode = mode;
             }
         }
 
-        public bool IsDeviationCorrectionEnabled()
+        public HeadingMode CurrentHeadingMode()
         {
             if (_imuSensor != null)
             {
-                return _imuSensor.DeviationCorrectionEnabled;
+                return _imuSensor.HeadingMode;
             }
 
-            return true; // default
-        }
-
-        public void UseHandheldForHeading(bool enable)
-        {
-            if (_imuSensor != null)
-            {
-                _imuSensor.PreferExternalHeading = enable;
-            }
-        }
-
-        public bool IsHandheldHeadingEnabled()
-        {
-            if (_imuSensor != null)
-            {
-                return _imuSensor.PreferExternalHeading;
-            }
-
-            return false;
+            return HeadingMode.Unknown;
         }
 
         public void ForceTankSensorEnable(bool enable)
