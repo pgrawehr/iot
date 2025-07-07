@@ -31,6 +31,7 @@ namespace DisplayControl.ViewModels
         private bool _useHeadingFromHandheld;
         private bool _forceTankSensorEnable;
         private bool _aisTargetsVisible;
+        private bool _aisWarningsSuppressed;
         private Func<SensorValueViewModel, bool> m_filterFunc;
 
         public MainWindowViewModel()
@@ -51,7 +52,7 @@ namespace DisplayControl.ViewModels
         public MainWindowViewModel(DataContainer dataContainer)
             : this()
         {
-            _size = new Size(400, 420);
+            _size = new Size(450, 420);
             _clientHeight = 320; // The above height - 2 * the height of the toolbars
             _headerHeight = 50;
             DataContainer = dataContainer;
@@ -216,6 +217,19 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public bool SuppressAisWarnings
+        {
+            get
+            {
+                return _aisWarningsSuppressed;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _aisWarningsSuppressed, value);
+                this.RaisePropertyChanged(nameof(SuppressAisWarningText));
+            }
+        }
+
         public ISolidColorBrush DeviationButtonColor => _deviationEnabled ? Brushes.Green : Brushes.Yellow;
 
         public ISolidColorBrush HeadingFromHandheldColor => _useHeadingFromHandheld ? Brushes.Green : Brushes.LightGray;
@@ -271,6 +285,21 @@ namespace DisplayControl.ViewModels
                 }
 
                 return "Tank sensor auto";
+            }
+        }
+
+        public string SuppressAisWarningText
+        {
+            get
+            {
+                if (_aisWarningsSuppressed)
+                {
+                    return "Enable Vessel Warnings";
+                }
+                else
+                {
+                    return "Disable Vessel Warnings";
+                }
             }
         }
 
@@ -345,6 +374,12 @@ namespace DisplayControl.ViewModels
             // Call operation first, because the property will update the gui and reflect the actual state
             DataContainer.ForceTankSensorEnable(!ForceTankSensorEnable);
             ForceTankSensorEnable = !ForceTankSensorEnable;
+        }
+
+        public void EnableDisableAisTargetWarnings()
+        {
+            DataContainer.SuppressAisWarnings(!SuppressAisWarnings);
+            SuppressAisWarnings = !SuppressAisWarnings;
         }
 
         public void LockDisplay()

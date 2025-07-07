@@ -99,8 +99,8 @@ namespace Iot.Device.Nmea0183.Ais
         public Speed? IgnoreVesselsSlowerThan { get; set; } = Speed.FromKnots(0.2);
 
         /// <summary>
-        /// Assume we're moored ourselves if the speed is less than this value. Set to null to disable. Default: 0.1 Knots.
+        /// Disables all warnings about vessels. Useful e.g. when approaching a busy port.
         /// </summary>
-        public Speed? AssumeMooredWhenSlowerThan { get; set; } = Speed.FromKnots(0.1);
+        public bool SuppressAllVesselWarnings { get; set; }
     }
 }

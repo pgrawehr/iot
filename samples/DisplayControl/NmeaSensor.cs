@@ -104,6 +104,7 @@ namespace DisplayControl
         private readonly CustomData<string> _autoPilotStatus;
         private readonly SensorMeasurement _autoPilotHeading;
         private readonly SensorMeasurement _autoPilotDesiredHeading;
+        private readonly CustomData<string> _autoPilotControllerStatus;
         private NmeaSentence m_lastMessageFromHandheld;
 
         public NmeaSensor(MeasurementManager manager, bool hasPlotter)
@@ -138,6 +139,8 @@ namespace DisplayControl
             _autoPilotHeading = new SensorMeasurement("Autopilot heading", Angle.Zero, SensorSource.Autopilot);
             _autoPilotDesiredHeading =
                 new SensorMeasurement("Autopilot desired Heading", Angle.Zero, SensorSource.Autopilot);
+            _autoPilotControllerStatus =
+                new CustomData<string>("Autopilot Controller Status", "Not set", SensorSource.Autopilot);
 
             _logger = this.GetCurrentClassLogger();
 
@@ -472,7 +475,8 @@ namespace DisplayControl
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint, SensorMeasurement.CrossTrackError,
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus, _rearPosition, _forwardPosition,
                 _forwardRearSeparation, _forwardRearAngle, _aisNumberOfTargets, _aisNearestShip, _aisDistanceToNearestShip,
-                _aisDangerousTargets, _aisTrigger, _autoPilotStatus, _autoPilotHeading, _autoPilotDesiredHeading
+                _aisDangerousTargets, _aisTrigger, _autoPilotStatus, _autoPilotHeading, _autoPilotDesiredHeading,
+                _autoPilotControllerStatus,
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA2", 115200);
@@ -620,6 +624,10 @@ namespace DisplayControl
 
         private void ParserOnNewSequence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
+            if (_autopilot.OperationState.ToString() != _autoPilotControllerStatus.Value)
+            {
+                _autoPilotControllerStatus.UpdateValue(_autopilot.OperationState.ToString());
+            }
             Stopwatch sw = Stopwatch.StartNew();
             switch (sentence)
             {

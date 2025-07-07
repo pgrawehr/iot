@@ -1084,5 +1084,13 @@ namespace DisplayControl
                 _nmeaSensor.SendWarningMessage("TEST_" + msg, $"It is now {msg}");
             }
         }
+
+        public void SuppressAisWarnings(bool suppress)
+        {
+            if (_nmeaSensor != null)
+            {
+                _nmeaSensor.AisManger.TrackEstimationParameters.SuppressAllVesselWarnings = suppress;
+            }
+        }
     }
 }
