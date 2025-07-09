@@ -185,6 +185,7 @@ namespace DisplayControl.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref _headingMode, value);
                 this.RaisePropertyChanged(nameof(HeadingModeText));
+                this.RaisePropertyChanged(nameof(HeadingModeColor));
             }
         }
 
@@ -336,7 +337,7 @@ namespace DisplayControl.ViewModels
             DataContainer.ReinitDisplay();
         }
 
-        public async void ChangeHeadingMode()
+        public void ChangeHeadingMode()
         {
             HeadingMode newMode = HeadingMode switch
             {
@@ -347,13 +348,13 @@ namespace DisplayControl.ViewModels
                 HeadingMode.HandheldInverted => HeadingMode.CompassCorrected,
                 _ => HeadingMode.CompassCorrected,
             };
-            var box = MessageBoxManager.GetMessageBoxStandard("Heading Mode Change", $"Are you sure you want to change the mode to {newMode}?",
-                        ButtonEnum.YesNo);
-            ButtonResult ret = await box.ShowAsync();
-            if (ret == ButtonResult.No)
-            { 
-                return;
-            }
+            ////var box = MessageBoxManager.GetMessageBoxStandard("Heading Mode Change", $"Are you sure you want to change the mode to {newMode}?",
+            ////            ButtonEnum.YesNo);
+            ////ButtonResult ret = await box.ShowAsync();
+            ////if (ret == ButtonResult.No)
+            ////{ 
+            ////    return;
+            ////}
             
             HeadingMode = newMode;
             DataContainer.SetHeadingMode(newMode);
