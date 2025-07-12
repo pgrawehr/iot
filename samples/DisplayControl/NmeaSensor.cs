@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
+using System.Threading;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Ais;
@@ -922,7 +923,13 @@ namespace DisplayControl
                 _aisDangerousTargets.UpdateValue("No ships", SensorMeasurementStatus.NoData);
             }
 
-            _aisTrigger.UpdateValue(++_aisUpdates, SensorMeasurementStatus.None);
+            UpdateAisTrigger();
+        }
+
+        public void UpdateAisTrigger()
+        {
+            int newValue = Interlocked.Increment(ref _aisUpdates);
+            _aisTrigger.UpdateValue(newValue, SensorMeasurementStatus.None);
         }
 
         private void OnParserError(NmeaSinkAndSource source, string error, NmeaError errorCode)

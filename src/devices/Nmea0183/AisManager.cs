@@ -392,6 +392,20 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
+        /// Gets the list of targets filtered with the predicate
+        /// </summary>
+        /// <param name="predicate">A filter method</param>
+        /// <returns>The filtered list</returns>
+        public IEnumerable<AisTarget> GetTargets(Func<AisTarget, bool> predicate)
+        {
+            ArgumentNullException.ThrowIfNull(predicate, nameof(predicate));
+            lock (_lock)
+            {
+                return _targets.Values.Where(predicate);
+            }
+        }
+
+        /// <summary>
         /// Gets the list of all active targets of the given type
         /// </summary>
         /// <typeparam name="T">A type of target, must be a derivative of <see cref="AisTarget"/>.</typeparam>
@@ -406,7 +420,7 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Processes incomming sequences. Use this method to input an NMEA stream to this component.
+        /// Processes incoming sequences. Use this method to input an NMEA stream to this component.
         /// Note that _all_ messages should be forwarded to this method, as AIS target tracking requires the position and speed of our own vessel.
         /// </summary>
         /// <param name="source">Message source</param>

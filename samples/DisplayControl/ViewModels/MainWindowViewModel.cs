@@ -9,9 +9,11 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using DynamicData;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183.Ais;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using ReactiveUI;
+using UnitsNet;
 
 namespace DisplayControl.ViewModels
 {
@@ -32,6 +34,8 @@ namespace DisplayControl.ViewModels
         private bool _aisTargetsVisible;
         private bool _aisWarningsSuppressed;
         private Func<SensorValueViewModel, bool> m_filterFunc;
+        private AisFilterMode _aisFilterMode = AisFilterMode.None;
+        private AisSortMode _aisSortMode = AisSortMode.Name;
 
         public MainWindowViewModel()
         {
@@ -294,6 +298,50 @@ namespace DisplayControl.ViewModels
             }
         }
 
+        public AisSortMode AisSortMode
+        {
+            get
+            {
+                return _aisSortMode;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _aisSortMode, value);
+                this.RaisePropertyChanged(nameof(AisSortModeText));
+                DataContainer.TriggerAisRefresh();
+            }
+        }
+
+        public string AisSortModeText
+        {
+            get
+            {
+                return $"Sort By: {_aisSortMode}";
+            }
+        }
+
+        public AisFilterMode AisFilterMode
+        {
+            get
+            {
+                return _aisFilterMode;
+            }
+            set
+            {
+                this.RaiseAndSetIfChanged(ref _aisFilterMode, value);
+                this.RaisePropertyChanged(nameof(AisFilterModeText));
+                DataContainer.TriggerAisRefresh();
+            }
+        }
+
+        public string AisFilterModeText
+        {
+            get
+            {
+                return $"Filter: {_aisFilterMode}";
+            }
+        }
+
         public void ActivateValueSingle(object sender)
         {
             SensorValueViewModel vm = (SensorValueViewModel)sender;
@@ -358,6 +406,36 @@ namespace DisplayControl.ViewModels
             
             HeadingMode = newMode;
             DataContainer.SetHeadingMode(newMode);
+        }
+
+        public void ChangeAisFilterMode()
+        {
+            AisFilterMode newMode = AisFilterMode switch
+            {
+                AisFilterMode.None => AisFilterMode.DangerousOnly,
+                AisFilterMode.DangerousOnly => AisFilterMode.ShipsOnly,
+                AisFilterMode.ShipsOnly => AisFilterMode.NoShipsOnly,
+                _ => AisFilterMode.None,
+            };
+
+            m_aisTargetViewModels.Clear();
+            AisFilterMode = newMode;
+        }
+
+        public void ChangeAisSortMode()
+        {
+            AisSortMode newMode = AisSortMode switch
+            {
+                AisSortMode.Unsorted => AisSortMode.Mmsi,
+                AisSortMode.Mmsi => AisSortMode.Name,
+                AisSortMode.Name => AisSortMode.Distance,
+                AisSortMode.Distance => AisSortMode.Cpa,
+                AisSortMode.Cpa => AisSortMode.Tcpa,
+                _ => AisSortMode.Mmsi, // Can't return to unsorted
+            };
+
+            m_aisTargetViewModels.Clear();
+            AisSortMode = newMode;
         }
 
         public void EnableDisableForceTankSensorEnable()
@@ -447,9 +525,32 @@ namespace DisplayControl.ViewModels
             UpdateVisibleModels();
         }
 
+        private Func<AisTarget, bool> AisFilter()
+        {
+            return AisFilterMode switch
+            {
+                AisFilterMode.DangerousOnly => x => x.RelativePosition != null && x.RelativePosition.SafetyState == AisSafetyState.Dangerous,
+                AisFilterMode.ShipsOnly => x => x is Ship,
+                AisFilterMode.NoShipsOnly => x => x is not Ship,
+                _ => x => true,
+            };
+        }
+
+        private Func<AisTarget, object> AisSorter(DateTimeOffset now)
+        {
+            return AisSortMode switch
+            {
+                AisSortMode.Mmsi => x => x.Mmsi,
+                AisSortMode.Distance => x => x.RelativePosition == null ? Length.FromAstronomicalUnits(1) : x.RelativePosition.Distance,
+                AisSortMode.Cpa => x => x.RelativePosition == null ? Length.FromAstronomicalUnits(1) : x.RelativePosition.ClosestPointOfApproach,
+                AisSortMode.Tcpa => x => x.RelativePosition == null ? TimeSpan.FromDays(1) : x.RelativePosition.TimeToClosestPointOfApproach(now),
+                _ => x => x.Name,
+            };
+        }
+
         public void UpdateTargets(int dummy)
         {
-            var newData = DataContainer.AisManager.GetTargets().ToList();
+            var newData = DataContainer.AisManager.GetTargets(AisFilter()).OrderBy(AisSorter(DateTimeOffset.UtcNow)).ToList();
             for (int index = 0; index < m_aisTargetViewModels.Count; index++)
             {
                 AisTargetViewModel x = m_aisTargetViewModels[index];

@@ -47,21 +47,23 @@
         <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
                 <TextBlock Name="StatusBar" Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" 
                            Height ="{Binding HeaderHeight}"/>
-                <Button Name="ShowAll" Content="No Filter" Width="150" Command="{Binding FilterShowAll}">
+                <Button Name="ShowAll" Content="No Filter" Width="150" Command="{Binding FilterShowAll}" IsVisible="{Binding SensorsVisible}">
                 </Button>
-                <Button Name="Navigation" Content="Navigation" Width="150" Command="{Binding FilterNavigation}">
+                <Button Name="Navigation" Content="Navigation" Width="150" Command="{Binding FilterNavigation}" IsVisible="{Binding SensorsVisible}">
                 </Button>
-                <Button Name="EngineFilter" Content="Engine" Width="100" Command="{Binding FilterForEngine}">
+                <Button Name="EngineFilter" Content="Engine" Width="100" Command="{Binding FilterForEngine}" IsVisible="{Binding SensorsVisible}">
                 </Button>
-                <Button Name="AisFilter" Content="AIS" Width="100" Command="{Binding FilterForAis}">
+                <Button Name="AisFilter" Content="AIS" Width="100" Command="{Binding FilterForAis}" IsVisible="{Binding SensorsVisible}">
                 </Button>
-                <Button Name="WeatherFilter" Content="Weather" Width="120" Command="{Binding FilterForWeather}">
+                <Button Name="WeatherFilter" Content="Weather" Width="120" Command="{Binding FilterForWeather}" IsVisible="{Binding SensorsVisible}">
                 </Button>
-                <Button Name="WarningFilter" Content="Warn" Width="100" Command="{Binding FilterForWarn}">
+                <Button Name="WarningFilter" Content="Warn" Width="100" Command="{Binding FilterForWarn}" IsVisible="{Binding SensorsVisible}">
                 </Button>
                 <Button Name="AisTargets" Content="AisTargets" Width="120" Command="{Binding ShowAisTargets}" IsVisible="{Binding SensorsVisible}"/>
                 <Button Name="Sensors" Content="Sensors" Width="120" Command="{Binding ShowSensors}" IsVisible="{Binding AisTargetsVisible}"/>
-            </StackPanel>
+                <Button Name="AisTargetFilter" Content="{Binding AisFilterModeText}" Command="{Binding ChangeAisFilterMode}" IsVisible="{Binding AisTargetsVisible}"/>
+                <Button Name="AisSorting" Content="{Binding AisSortModeText}" Command="{Binding ChangeAisSortMode}" IsVisible="{Binding AisTargetsVisible}"/>
+        </StackPanel>
         <Panel ClipToBounds="True" Height="{Binding ClientHeight}" IsVisible="{Binding SensorsVisible}">
             <ScrollViewer VerticalScrollBarVisibility="Visible" DockPanel.Dock="Bottom" ClipToBounds="True">
                 <ItemsControl ItemsSource="{Binding SensorValues}">

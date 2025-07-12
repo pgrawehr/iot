@@ -304,6 +304,11 @@ namespace DisplayControl
             _nmeaSensor?.SendEngineData(data);
         }
 
+        public void TriggerAisRefresh()
+        {
+            _nmeaSensor.UpdateAisTrigger();
+        }
+
 
         /// <summary>
         /// Writes a line to the console and the display (for logging)
