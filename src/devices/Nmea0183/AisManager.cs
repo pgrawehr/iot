@@ -1059,13 +1059,13 @@ namespace Iot.Device.Nmea0183
 
             foreach (var target in targets)
             {
-                _logger.LogInformation($"{target.NameOrMssi()}: Last known position {target.Position} at {target.LastSeen:T}");
+                _logger.LogDebug($"{target.NameOrMssi()}: Last known position {target.Position} at {target.LastSeen:T}");
                 var rel = target.RelativePosition;
                 if (rel != null)
                 {
                     var cpa = rel.ClosestPointOfApproach.GetValueOrDefault();
                     var tcpa = rel.TimeToClosestPointOfApproach(now).GetValueOrDefault();
-                    _logger.LogInformation($"MMSI {target.Mmsi}. Distance {rel.Distance}, Bearing {rel.Bearing}, CPA: {cpa.NauticalMiles}nm, TCPA:{tcpa:g}");
+                    _logger.LogDebug($"MMSI {target.Mmsi}. Distance {rel.Distance}, Bearing {rel.Bearing}, CPA: {cpa.NauticalMiles}nm, TCPA:{tcpa:g}");
                 }
             }
         }
