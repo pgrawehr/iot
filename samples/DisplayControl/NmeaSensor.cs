@@ -106,6 +106,10 @@ namespace DisplayControl
         private readonly SensorMeasurement _autoPilotHeading;
         private readonly SensorMeasurement _autoPilotDesiredHeading;
         private readonly CustomData<string> _autoPilotControllerStatus;
+        private readonly CustomData<string> _positionProviderName;
+        private readonly CustomData<bool> _handheldOnline;
+        private readonly CustomData<bool> _auxiliaryOnline;
+        private readonly CustomData<bool> _shipOnline;
         private NmeaSentence m_lastMessageFromHandheld;
 
         public NmeaSensor(MeasurementManager manager, bool hasPlotter)
@@ -136,20 +140,25 @@ namespace DisplayControl
 
             _aisDangerousTargets = new CustomData<string>("AIS dangerous targets", "None", SensorSource.Ais);
             _aisTrigger = new CustomData<int>("Ais update counter", 0, SensorSource.Ais, 1);
-            _autoPilotStatus = new CustomData<string>("Autopilot mode", "Offline", SensorSource.Autopilot);
+            _autoPilotStatus = new CustomData<string>("Autopilot mode", "Offline", SensorSource.Autopilot, 1, TimeSpan.MaxValue);
             _autoPilotHeading = new SensorMeasurement("Autopilot heading", Angle.Zero, SensorSource.Autopilot);
             _autoPilotDesiredHeading =
                 new SensorMeasurement("Autopilot desired Heading", Angle.Zero, SensorSource.Autopilot);
             _autoPilotControllerStatus =
-                new CustomData<string>("Autopilot Controller Status", "Not set", SensorSource.Autopilot);
+                new CustomData<string>("Autopilot Controller Status", "Not set", SensorSource.Autopilot, 1, TimeSpan.MaxValue);
+            _positionProviderName =
+                new CustomData<string>("Main Position Provider", "Unknown", SensorSource.Position, 1);
+            _handheldOnline = new CustomData<bool>("Handheld Online", false, SensorSource.Navigation, 2);
+            _auxiliaryOnline = new CustomData<bool>("Auxiliary Online", false, SensorSource.Navigation, 3);
+            _shipOnline = new CustomData<bool>("Ship Online", false, SensorSource.Navigation, 4);
 
             _logger = this.GetCurrentClassLogger();
 
             _valueLogger = LogDispatcher.GetLogger("HeadingRawLogger");
             // Don't use dashes in the following line, as it makes evaluating in excel more difficult (the dash is used as main separator in the logs)
-            _valueLogger.LogDebug($"Compass | Handheld | Rear to Forward | " +
-                                  $"Rear to Handheld | Handheld to Forward | " +
-                                  $"COG | Dist RF | corrected HDG");
+            _valueLogger.LogDebug($"Compass; Handheld; Rear to Forward; " +
+                                  $"Rear to Handheld; Handheld to Forward; " +
+                                  $"COG; Dist RF;| corrected HDG");
         }
 
         public AisManager AisManger => _aisManager;
@@ -468,9 +477,10 @@ namespace DisplayControl
             {
                 SensorMeasurement.WindSpeedAbsolute, SensorMeasurement.WindSpeedApparent, SensorMeasurement.WindSpeedTrue, 
                 SensorMeasurement.WindDirectionAbsolute, SensorMeasurement.WindDirectionApparent, SensorMeasurement.WindDirectionTrue,
-                SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position,
+                SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position, _positionProviderName,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
                 _hdgFromHandheld, _handheldRxErrors,
+                _handheldOnline, _auxiliaryOnline, _shipOnline,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.LogTotal,
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint, SensorMeasurement.CrossTrackError,
@@ -488,6 +498,8 @@ namespace DisplayControl
             // Can be helpful for debugging, but generates lots of data
             // _parserShipInterface.LogSend = true;
             _parserShipInterface.OnParserError += OnParserError;
+            _parserShipInterface.OnNewSequence +=
+                (source, msg) => _shipOnline.UpdateValue(true, SensorMeasurementStatus.None);
             _parserShipInterface.StartDecode();
 
             _serialPortHandheld = new SerialPort("/dev/ttyAMA3", 4800);
@@ -500,12 +512,18 @@ namespace DisplayControl
 
             _parserHandheldInterface = new NmeaParser(HandheldSourceName, _streamHandheld, _streamHandheld);
             _parserHandheldInterface.OnParserError += OnParserError;
-            _parserHandheldInterface.OnNewSequence += (source, msg) => m_lastMessageFromHandheld = msg;
+            _parserHandheldInterface.OnNewSequence += (source, msg) =>
+            {
+                m_lastMessageFromHandheld = msg;
+                _handheldOnline.UpdateValue(true, SensorMeasurementStatus.None);
+            };
             _parserHandheldInterface.StartDecode();
 
             _parserForwardInterface =
                 new NmeaParser(AuxiliaryGps, _serialPortForward.BaseStream, _serialPortForward.BaseStream);
             _parserForwardInterface.OnParserError += OnParserError;
+            _parserForwardInterface.OnNewSequence +=
+                (source, msg) => _auxiliaryOnline.UpdateValue(true, SensorMeasurementStatus.None);
             _parserForwardInterface.StartDecode();
 
             _seatalkPort = new SeatalkToNmeaConverter(Seatalk1Name, "/dev/ttyAMA5");
@@ -634,6 +652,8 @@ namespace DisplayControl
             {
                 case GlobalPositioningSystemFixData gga:
                 {
+                    _logger.LogInformation($"Received valid gga sentence from {source.InterfaceName}");
+
                     if (gga.TalkerId == new TalkerId('Y', 'D'))
                     {
                         if (gga.Valid)
@@ -672,7 +692,7 @@ namespace DisplayControl
                                         var gnssTrack = SensorMeasurement.Track;
                                         var trackV = gnssTrack.Value != null ? gnssTrack.Value.Value : 0;
 
-                                        _valueLogger.LogDebug($"{trueFromCompass.Degrees} | {trueFromHandheld.Degrees} | {anglerf.Degrees} | {trackV} | {distance.Meters} | {trueHeading.Degrees:F2}");
+                                        _valueLogger.LogDebug($"{trueFromCompass.Degrees}; {trueFromHandheld.Degrees}; {anglerf.Degrees}; {trackV}; {distance.Meters}; {trueHeading.Degrees:F2}");
                                     }
                                 }
                                 else
@@ -688,7 +708,11 @@ namespace DisplayControl
                             _rearPosition.UpdateValue(new GeographicPosition(), SensorMeasurementStatus.NoData);
                         }
 
-                        break;
+                        // If this GNSS source is the only operational, use it!
+                        if (!HandheldOffline || _forwardPosition.Status == SensorMeasurementStatus.None)
+                        {
+                            break;
+                        }
                     }
 
                     if (source == _parserForwardInterface)
@@ -702,19 +726,19 @@ namespace DisplayControl
                             _forwardPosition.UpdateValue(new GeographicPosition(), SensorMeasurementStatus.NoData);
                         }
 
-                        // If it is offline, we continue here and update the values below
+                        // If the handheld is NOT offline, we don't do anything more with this message
                         if (!HandheldOffline)
                         {
-                            _autopilot.NmeaSourceName = HandheldSourceName;
                             break;
                         }
-
-                        _autopilot.NmeaSourceName = AuxiliaryGps;
                     }
 
                     if (gga.Valid)
                     {
-                        _logger.LogInformation($"Received valid gga sentence from {source.InterfaceName}");
+                        // Whatever we use as the main position provider, we also use for the autopilot controller
+                        _autopilot.NmeaSourceName = source.InterfaceName;
+
+                        _positionProviderName.UpdateValue(source.InterfaceName);
                         _position.UpdateValue(gga.Position);
                         _manager.UpdateValues(new[] { SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid },
                             new IQuantity[] { Angle.FromDegrees(gga.LatitudeDegrees.GetValueOrDefault(0)), Angle.FromDegrees(gga.LongitudeDegrees.GetValueOrDefault(0)),
