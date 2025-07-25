@@ -179,7 +179,7 @@ namespace DisplayControl
             IList<FilterRule> rules = new List<FilterRule>();
             // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
             // (we actually send everything to the AisManager, as it also needs the current position and time)
-            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager }, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager, OpenCpn }, true, true));
             rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new[] { ShipSourceName }, true, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false, true));
@@ -208,7 +208,7 @@ namespace DisplayControl
             // Anything from OpenCpn is distributed everywhere
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, AutopilotSink }));
             // Anything from the ship is sent locally
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { OpenCpn, MessageRouter.LocalMessageSource, Udp }, false, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
             // Anything remaining from the handheld is sent to our processor
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
@@ -249,12 +249,12 @@ namespace DisplayControl
             {
                 // - Maybe we need to be able to switch between using OpenCpn and the Handheld for autopilot / navigation control
                 // - For now, we forward anything from our own processor to the real autopilot and the ship (so it gets displayed on the displays)
-                rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilotSentence), new[] { AutopilotSink }, false, true));
+                rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, new SentenceId(autopilotSentence), new[] { AutopilotSink, OpenCpn }, false, true));
             }
 
             // The messages VWR and VHW (Wind measurement / speed trough water) come from the ship and need to go to the autopilot
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VWR"), new[] { AutopilotSink }, true, true));
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { AutopilotSink }, true, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VWR"), new[] { AutopilotSink, OpenCpn }, true, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { AutopilotSink, OpenCpn }, true, true));
 
             // Messages from the Autopilot go everywhere
             rules.Add(new FilterRule(Seatalk1Name, TalkerId.Any, SentenceId.Any, new List<string>() { OpenCpn, ShipSourceName, MessageRouter.LocalMessageSource, Udp }, false, true));
