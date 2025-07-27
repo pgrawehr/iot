@@ -172,7 +172,8 @@ namespace Iot.Device.Nmea0183.Tests.Ais
             List<string> messages = new List<string>();
             List<AisMessageId> warnings = new List<AisMessageId>();
             _manager.TrackEstimationParameters.AisSafetyCheckInterval = TimeSpan.Zero;
-            _manager.TrackEstimationParameters.WarningDistance = Length.FromMeters(warningDistance);
+            _manager.TrackEstimationParameters.WarningDistanceLargeVessels = Length.FromMeters(warningDistance);
+            _manager.TrackEstimationParameters.WarningDistanceSmallVessels = Length.FromMeters(warningDistance) / 2;
             _manager.TrackEstimationParameters.WarningRepeatTimeout = TimeSpan.FromSeconds(warningRepeatSeconds);
             _manager.OnMessage += (received, sourceMmsi, destinationMmsi, text) =>
             {

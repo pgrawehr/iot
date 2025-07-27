@@ -102,14 +102,14 @@ namespace Iot.Device.Ili934x.Samples
 
             // The local sink gets everything from the server
             _messageRouter.AddFilterRule(new FilterRule(_tcpClient.InterfaceName, TalkerId.Any, SentenceId.Any, new List<string>() { _messageRouter.InterfaceName },
-                false, true));
+                false));
             // Anything from the local sink (typically output from the Autopilot controller) is only cached for later reuse
             _messageRouter.AddFilterRule(new FilterRule(_messageRouter.InterfaceName, TalkerId.ElectronicChartDisplayAndInformationSystem, SentenceId.Any, 
                 new List<string>(), (source, destination, before) =>
                 {
                     _cache.Add(before);
-                    return null;
-                }, true, false));
+                    return (null, true);
+                }, true));
 
             _messageRouter.StartDecode();
 

@@ -9,6 +9,17 @@ using Iot.Device.Nmea0183.Sentences;
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
+    /// Delegate used for message filtering.
+    /// </summary>
+    /// <param name="source">The source of the message that is being inspected</param>
+    /// <param name="destination">The destination to which we intend to send the message</param>
+    /// <param name="originalMessage">The message in question</param>
+    /// <returns>The original message or a modified message, or null if the message should be suppressed for this target.
+    /// The second value can be set to true to suppress any further processing of this message</returns>
+    public delegate (NmeaSentence? UpdatedSentence, bool StopProcessing) ForwardingActionHandler(
+        NmeaSinkAndSource source, NmeaSinkAndSource destination, NmeaSentence originalMessage);
+
+    /// <summary>
     /// A filter rule for the <see cref="MessageRouter"/>.
     /// </summary>
     public class FilterRule
@@ -24,16 +35,13 @@ namespace Iot.Device.Nmea0183
         /// <param name="sinks">Where to send the message when the filter matches</param>
         /// <param name="rawMessagesOnly">The filter matches raw messages only. This is the default, because otherwise known message
         /// types would be implicitly duplicated on forwarding</param>
-        /// <param name="continueAfterMatch">True to continue processing after a match, false to stop processing this message</param>
-        public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, IEnumerable<string> sinks, bool rawMessagesOnly = true,
-            bool continueAfterMatch = false)
+        public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, IEnumerable<string> sinks, bool rawMessagesOnly = true)
         {
             _rawMessagesOnly = rawMessagesOnly;
             SourceName = sourceName;
             TalkerId = talkerId;
             SentenceId = sentenceId;
             Sinks = sinks;
-            ContinueAfterMatch = continueAfterMatch;
         }
 
         /// <summary>
@@ -47,10 +55,8 @@ namespace Iot.Device.Nmea0183
         /// message. First arg is the source of the message, second the designated sink.</param>
         /// <param name="rawMessagesOnly">The filter matches raw messages only. This is the default, because otherwise known message
         /// types would be implicitly duplicated on forwarding</param>
-        /// <param name="continueAfterMatch">True to continue processing after a match, false to stop processing this message</param>
         public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, IEnumerable<string> sinks,
-            Func<NmeaSinkAndSource, NmeaSinkAndSource, NmeaSentence, NmeaSentence?> forwardingAction, bool rawMessagesOnly = true,
-            bool continueAfterMatch = false)
+            ForwardingActionHandler? forwardingAction, bool rawMessagesOnly = true)
         {
             _rawMessagesOnly = rawMessagesOnly;
             SourceName = sourceName;
@@ -58,7 +64,6 @@ namespace Iot.Device.Nmea0183
             SentenceId = sentenceId;
             Sinks = sinks;
             ForwardingAction = forwardingAction;
-            ContinueAfterMatch = continueAfterMatch;
         }
 
         /// <summary>
@@ -87,14 +92,7 @@ namespace Iot.Device.Nmea0183
         /// Note that the input message shall not be modified, clone it if necessary.
         /// The return value can be null to suppress the message. That way, advanced filter testing can be done using this callback.
         /// </summary>
-        public Func<NmeaSinkAndSource, NmeaSinkAndSource, NmeaSentence, NmeaSentence?>? ForwardingAction { get; }
-
-        /// <summary>
-        /// If this is true, filter testing is continued even after a match.
-        /// If it is false (the default), no further filters are tested after the first match (which typically means
-        /// that a message is only matching one filter)
-        /// </summary>
-        public bool ContinueAfterMatch { get; }
+        public ForwardingActionHandler? ForwardingAction { get; }
 
         /// <summary>
         /// True if this filter matches the given sentence and source

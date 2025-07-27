@@ -110,6 +110,7 @@ namespace DisplayControl
         private readonly CustomData<bool> _handheldOnline;
         private readonly CustomData<bool> _auxiliaryOnline;
         private readonly CustomData<bool> _shipOnline;
+        private readonly CustomData<bool> _plotterOnline;
         private NmeaSentence m_lastMessageFromHandheld;
 
         public NmeaSensor(MeasurementManager manager, bool hasPlotter)
@@ -151,6 +152,7 @@ namespace DisplayControl
             _handheldOnline = new CustomData<bool>("Handheld Online", false, SensorSource.Navigation, 2);
             _auxiliaryOnline = new CustomData<bool>("Auxiliary Online", false, SensorSource.Navigation, 3);
             _shipOnline = new CustomData<bool>("Ship Online", false, SensorSource.Navigation, 4);
+            _plotterOnline = new CustomData<bool>("Plotter online", false, SensorSource.Navigation, 5, TimeSpan.FromSeconds(30));
 
             _logger = this.GetCurrentClassLogger();
 
@@ -174,15 +176,15 @@ namespace DisplayControl
         /// <returns></returns>
         public IList<FilterRule> ConstructRulesWithPlotter()
         {
-            TalkerId yd = new TalkerId('Y', 'D');
+            TalkerId yd = TalkerId.YachtDevicesInterface;
             // Note: Order is important. First ones are checked first
             IList<FilterRule> rules = new List<FilterRule>();
             // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
             // (we actually send everything to the AisManager, as it also needs the current position and time)
-            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager, OpenCpn }, true, true));
-            rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new[] { ShipSourceName }, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager, OpenCpn }, true));
+            rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new[] { ShipSourceName }, true));
             // The time message is required by the time component
-            rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false, true));
+            rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false));
 
             // Messages from Aux are currently disabled (TBD)
             // rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
@@ -190,28 +192,28 @@ namespace DisplayControl
             // rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
 
             // Navigation and waypoint stuff disabled from handheld
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BOD"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BWC"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("XTE"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RTE"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("WPT"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RMB"), new List<string>(), false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BOD"), new List<string>(), false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BWC"), new List<string>(), false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("XTE"), new List<string>(), false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RTE"), new List<string>(), false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("WPT"), new List<string>(), false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RMB"), new List<string>(), false));
 
             // Drop this, it's wrong (seems not to use the heading, even if it should).
             // We're instead reconstructing this message - but in that case, don't send it back to the ship, as this causes confusion
             // for the wind displays
-            rules.Add(new FilterRule("*", yd, WindDirectionWithRespectToNorth.Id, new List<string>(), false, false));
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.ElectronicChartDisplayAndInformationSystem, WindDirectionWithRespectToNorth.Id, new List<string>() { OpenCpn, Udp }, false, false));
+            rules.Add(new FilterRule("*", yd, WindDirectionWithRespectToNorth.Id, new List<string>(), (source, sink, msg) => (null, true), false));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.ElectronicChartDisplayAndInformationSystem, WindDirectionWithRespectToNorth.Id, new List<string>() { OpenCpn, Udp }, false));
             // Anything from the local software (i.e. IMU data, temperature data) is sent to the ship and other nav software
-            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, Udp }, false, true));
+            rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, Udp }, (source, sink, msg) => (msg, true), false));
 
             // Anything from OpenCpn is distributed everywhere
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, AutopilotSink }));
             // Anything from the ship is sent locally
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, (source, sink, msg) => (msg, true), false));
 
             // Anything remaining from the handheld is sent to our processor
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, (source, sink, msg) => (msg, true), false));
 
             // The GPS messages are sent everywhere (as raw)
             // If we also have the plotter enabled, we send our stuff to the ship, because it needs to be reprocessed
@@ -225,7 +227,7 @@ namespace DisplayControl
             {
                 rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any,
                     new SentenceId(gpsSequence),
-                    new[] { OpenCpn, ShipSourceName, Udp }, true, true));
+                    new[] { OpenCpn, ShipSourceName, Udp }, (source, sink, msg) => (msg, true), false));
             }
 
             // If handheld is not connected or not working, use aux instead
@@ -480,7 +482,7 @@ namespace DisplayControl
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position, _positionProviderName,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
                 _hdgFromHandheld, _handheldRxErrors,
-                _handheldOnline, _auxiliaryOnline, _shipOnline,
+                _handheldOnline, _auxiliaryOnline, _shipOnline, _plotterOnline,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.LogTotal,
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint, SensorMeasurement.CrossTrackError,
@@ -499,7 +501,14 @@ namespace DisplayControl
             // _parserShipInterface.LogSend = true;
             _parserShipInterface.OnParserError += OnParserError;
             _parserShipInterface.OnNewSequence +=
-                (source, msg) => _shipOnline.UpdateValue(true, SensorMeasurementStatus.None);
+                (source, msg) =>
+                {
+                    _shipOnline.UpdateValue(true, SensorMeasurementStatus.None);
+                    if (msg.SentenceId == CrossTrackError.Id && msg.TalkerId == TalkerId.YachtDevicesInterface)
+                    {
+                        _plotterOnline.UpdateValue(true, SensorMeasurementStatus.None);
+                    }
+                };
             _parserShipInterface.StartDecode();
 
             _serialPortHandheld = new SerialPort("/dev/ttyAMA3", 4800);

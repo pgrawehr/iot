@@ -51,6 +51,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NmeaSimulator", "..\..\src\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisplayControl.Tests", "tests\DisplayControl.Tests.csproj", "{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nmea0183.Tests", "..\..\src\devices\Nmea0183\tests\Nmea0183.Tests.csproj", "{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -149,12 +151,17 @@ Global
 		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{DCADDEF2-3E8D-4B06-BBA5-2601502816D6} = {25C6F468-399B-46C6-84AF-D33C25135933}
+		{0E3485EC-9A16-3977-A3E8-E18EA7523CA3} = {25C6F468-399B-46C6-84AF-D33C25135933}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2799B6AD-B634-446F-AEC1-90D325A19B98}

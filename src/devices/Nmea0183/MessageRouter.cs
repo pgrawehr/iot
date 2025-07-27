@@ -60,13 +60,13 @@ namespace Iot.Device.Nmea0183
                 {
                     if (source != null && source.LogReceive)
                     {
-                        return message;
+                        return (message, false);
                     }
                     else
                     {
-                        return null;
+                        return (null, false);
                     }
-                }, false, true));
+                }, false));
             _localInterfaceActive = true;
         }
 
@@ -108,17 +108,16 @@ namespace Iot.Device.Nmea0183
             {
                 if (filter.SentenceMatch(name, sentence))
                 {
-                    SendSentenceToFilterItems(source, sentence, filter);
-
-                    if (!filter.ContinueAfterMatch)
+                    if (SendSentenceToFilterItems(source, sentence, filter) == false)
                     {
+                        // fully abort processing of this message
                         return;
                     }
                 }
             }
         }
 
-        private void SendSentenceToFilterItems(NmeaSinkAndSource source, NmeaSentence sentence, FilterRule filter)
+        private bool SendSentenceToFilterItems(NmeaSinkAndSource source, NmeaSentence sentence, FilterRule filter)
         {
             foreach (var sinkName in filter.Sinks)
             {
@@ -134,9 +133,15 @@ namespace Iot.Device.Nmea0183
                     }
 
                     var newMsg = sentence;
+                    var abort = false;
                     if (filter.ForwardingAction != null)
                     {
-                        newMsg = filter.ForwardingAction(source, sink, sentence);
+                        (newMsg, abort) = filter.ForwardingAction(source, sink, sentence);
+                    }
+
+                    if (abort)
+                    {
+                        return false;
                     }
 
                     if (newMsg != null)
@@ -150,6 +155,8 @@ namespace Iot.Device.Nmea0183
                     }
                 }
             }
+
+            return true;
         }
 
         /// <summary>
