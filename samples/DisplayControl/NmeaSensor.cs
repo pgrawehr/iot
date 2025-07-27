@@ -510,11 +510,15 @@ namespace DisplayControl
             // Can be helpful for debugging, but generates lots of data
             // _parserShipInterface.LogSend = true;
             _parserShipInterface.OnParserError += OnParserError;
+            // This is some kind of "map projection" message that is only sent when the plotter is online
+            // It's contents are quite irrelevant (as we know that everything here is WGS84), but it's a nice trick
+            // to check for the presence of the plotter (and not only whether the plotter has an active route)
+            var dtmSentence = new SentenceId("DTM");
             _parserShipInterface.OnNewSequence +=
                 (source, msg) =>
                 {
                     _shipOnline.UpdateValue(true, SensorMeasurementStatus.None);
-                    if (msg.SentenceId == new SentenceId("DTM") && msg.TalkerId == TalkerId.YachtDevicesInterface)
+                    if (msg.SentenceId == dtmSentence && msg.TalkerId == TalkerId.YachtDevicesInterface)
                     {
                         _plotterOnline.UpdateValue(true, SensorMeasurementStatus.None);
                     }

@@ -97,6 +97,8 @@ namespace Iot.Device.Nmea0183
 
         private ILogger _logger;
 
+        private DateTimeOffset _startupTime;
+
         /// <summary>
         /// Creates an instance of an <see cref="AisManager"/>
         /// </summary>
@@ -159,6 +161,7 @@ namespace Iot.Device.Nmea0183
             AutoSendWarnings = true;
             _lastCleanupCheck = null;
             _aisAlarmsEnabled = false;
+            _startupTime = DateTimeOffset.UtcNow;
             TrackEstimationParameters = new TrackEstimationParameters();
         }
 
@@ -995,7 +998,9 @@ namespace Iot.Device.Nmea0183
             Ship ownShip;
             if (GetOwnShipData(out ownShip, time) == false)
             {
-                if (TrackEstimationParameters.WarnIfGnssMissing)
+                // Only emit this warning if we didn't just start the application.
+                // That message gets otherwise always triggered at startup, which is annoying.
+                if (TrackEstimationParameters.WarnIfGnssMissing && (_startupTime - time).Duration() > TimeSpan.FromMinutes(1))
                 {
                     SendWarningMessage(new AisMessageId(AisWarningType.NoGnss, ownShip.Mmsi), ownShip.Mmsi, "No GNSS data or GNSS fix lost", null);
                 }
