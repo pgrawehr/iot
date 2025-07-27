@@ -152,7 +152,7 @@ namespace DisplayControl
             _handheldOnline = new CustomData<bool>("Handheld Online", false, SensorSource.Navigation, 2);
             _auxiliaryOnline = new CustomData<bool>("Auxiliary Online", false, SensorSource.Navigation, 3);
             _shipOnline = new CustomData<bool>("Ship Online", false, SensorSource.Navigation, 4);
-            _plotterOnline = new CustomData<bool>("Plotter online", false, SensorSource.Navigation, 5, TimeSpan.FromSeconds(30));
+            _plotterOnline = new CustomData<bool>("Plotter Online", false, SensorSource.Navigation, 5, TimeSpan.FromSeconds(30));
 
             _logger = this.GetCurrentClassLogger();
 
@@ -192,12 +192,12 @@ namespace DisplayControl
             // rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
 
             // Navigation and waypoint stuff disabled from handheld
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BOD"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BWC"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("XTE"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RTE"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("WPT"), new List<string>(), false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RMB"), new List<string>(), false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BOD"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BWC"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("XTE"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RTE"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("WPT"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RMB"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
 
             // Drop this, it's wrong (seems not to use the heading, even if it should).
             // We're instead reconstructing this message - but in that case, don't send it back to the ship, as this causes confusion
@@ -208,7 +208,7 @@ namespace DisplayControl
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, Udp }, false, true));
 
             // Anything from OpenCpn is distributed everywhere
-            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, AutopilotSink }));
+            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, AutopilotSink }, true, false));
             // Anything from the ship is sent locally
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
@@ -271,6 +271,16 @@ namespace DisplayControl
             return rules;
         }
 
+        private NmeaSentence ForwardIfPlotterOffline(NmeaSinkAndSource source, NmeaSinkAndSource destination, NmeaSentence originalMessage)
+        {
+            if (_plotterOnline.Status != SensorMeasurementStatus.None)
+            {
+                return originalMessage;
+            }
+
+            return null;
+        }
+
         private NmeaSentence ForwardIfNoHandheldData(NmeaSinkAndSource source, NmeaSinkAndSource target, NmeaSentence sentence)
         {
             if (source.InterfaceName != AuxiliaryGps)
@@ -319,7 +329,7 @@ namespace DisplayControl
             rules.Add(new FilterRule(MessageRouter.LocalMessageSource, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, OpenCpn, Udp }, false, true));
 
             // Anything from OpenCpn is distributed everywhere
-            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { ShipSourceName, HandheldSourceName }));
+            rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new [] { ShipSourceName, HandheldSourceName }, true, false));
             // Anything from the ship is sent locally
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new [] { OpenCpn, MessageRouter.LocalMessageSource, Udp }, false, true));
             // Anything from the handheld is sent to our processor
@@ -504,7 +514,7 @@ namespace DisplayControl
                 (source, msg) =>
                 {
                     _shipOnline.UpdateValue(true, SensorMeasurementStatus.None);
-                    if (msg.SentenceId == CrossTrackError.Id && msg.TalkerId == TalkerId.YachtDevicesInterface)
+                    if (msg.SentenceId == new SentenceId("DTM") && msg.TalkerId == TalkerId.YachtDevicesInterface)
                     {
                         _plotterOnline.UpdateValue(true, SensorMeasurementStatus.None);
                     }
