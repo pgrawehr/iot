@@ -35,13 +35,16 @@ namespace Iot.Device.Nmea0183
         /// <param name="sinks">Where to send the message when the filter matches</param>
         /// <param name="rawMessagesOnly">The filter matches raw messages only. This is the default, because otherwise known message
         /// types would be implicitly duplicated on forwarding</param>
-        public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, IEnumerable<string> sinks, bool rawMessagesOnly = true)
+        /// <param name="continueAfterMatch">True to continue processing after a match, false to stop processing this message</param>
+        public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, IEnumerable<string> sinks, bool rawMessagesOnly = true,
+            bool continueAfterMatch = false)
         {
             _rawMessagesOnly = rawMessagesOnly;
             SourceName = sourceName;
             TalkerId = talkerId;
             SentenceId = sentenceId;
             Sinks = sinks;
+            ContinueAfterMatch = continueAfterMatch;
         }
 
         /// <summary>
@@ -55,8 +58,10 @@ namespace Iot.Device.Nmea0183
         /// message. First arg is the source of the message, second the designated sink.</param>
         /// <param name="rawMessagesOnly">The filter matches raw messages only. This is the default, because otherwise known message
         /// types would be implicitly duplicated on forwarding</param>
+        /// <param name="continueAfterMatch">True to continue processing after a match, false to stop processing this message</param>
         public FilterRule(string sourceName, TalkerId talkerId, SentenceId sentenceId, IEnumerable<string> sinks,
-            ForwardingActionHandler? forwardingAction, bool rawMessagesOnly = true)
+            Func<NmeaSinkAndSource, NmeaSinkAndSource, NmeaSentence, NmeaSentence?> forwardingAction, bool rawMessagesOnly = true,
+            bool continueAfterMatch = false)
         {
             _rawMessagesOnly = rawMessagesOnly;
             SourceName = sourceName;
@@ -64,6 +69,7 @@ namespace Iot.Device.Nmea0183
             SentenceId = sentenceId;
             Sinks = sinks;
             ForwardingAction = forwardingAction;
+            ContinueAfterMatch = continueAfterMatch;
         }
 
         /// <summary>
@@ -93,6 +99,13 @@ namespace Iot.Device.Nmea0183
         /// The return value can be null to suppress the message. That way, advanced filter testing can be done using this callback.
         /// </summary>
         public ForwardingActionHandler? ForwardingAction { get; }
+
+        /// <summary>
+        /// If this is true, filter testing is continued even after a match.
+        /// If it is false (the default), no further filters are tested after the first match (which typically means
+        /// that a message is only matching one filter)
+        /// </summary>
+        public bool ContinueAfterMatch { get; }
 
         /// <summary>
         /// True if this filter matches the given sentence and source
