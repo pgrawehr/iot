@@ -546,7 +546,16 @@ namespace DisplayControl
                 new NmeaParser(AuxiliaryGps, _serialPortForward.BaseStream, _serialPortForward.BaseStream);
             _parserForwardInterface.OnParserError += OnParserError;
             _parserForwardInterface.OnNewSequence +=
-                (source, msg) => _auxiliaryOnline.UpdateValue(true, SensorMeasurementStatus.None);
+                (source, msg) =>
+                {
+                    _auxiliaryOnline.UpdateValue(true, SensorMeasurementStatus.None);
+                    // Hack to update this field, as the routing discards these messages when
+                    // the handheld is available, and we better keep it that way to avoid confusion.
+                    if (msg is GlobalPositioningSystemFixData gga && gga.Valid)
+                    {
+                        _forwardPosition.UpdateValue(gga.Position, SensorMeasurementStatus.None);
+                    }
+                };
             _parserForwardInterface.StartDecode();
 
             _seatalkPort = new SeatalkToNmeaConverter(Seatalk1Name, "/dev/ttyAMA5");
@@ -738,11 +747,11 @@ namespace DisplayControl
                         }
                     }
 
-                    if (source == _parserForwardInterface)
+                    if (source.InterfaceName == _parserForwardInterface.InterfaceName)
                     {
                         if (gga.Valid)
                         {
-                            _forwardPosition.UpdateValue(gga.Position);
+                            _forwardPosition.UpdateValue(gga.Position, SensorMeasurementStatus.None);
                         }
                         else
                         {
