@@ -317,6 +317,43 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
+        /// Adds the given sentence explicitly to the cache
+        /// </summary>
+        /// <param name="source">The source of the sentence</param>
+        /// <param name="sentence">The sentence</param>
+        public void Add(NmeaSinkAndSource source, NmeaSentence sentence)
+        {
+            OnNewSequence(source, sentence);
+        }
+
+        /// <summary>
+        /// Adds a sentence to the cache, but only to the list of sentences from this particular source,
+        /// so the message will not override the effect of a <see cref="GetLastSentence(Iot.Device.Nmea0183.SentenceId)"/> call.
+        /// </summary>
+        /// <param name="source">The source. Must be non-null</param>
+        /// <param name="sentence">The sentence. Must be non-null</param>
+        public void AddFromSource(NmeaSinkAndSource source, NmeaSentence sentence)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(sentence);
+            string sourceName = source.InterfaceName;
+            lock (_lock)
+            {
+                // We already own the lock to do that a bit more complex update.
+                if (_sentencesBySource.TryGetValue(sourceName, out var dict))
+                {
+                    dict[sentence.SentenceId] = sentence;
+                }
+                else
+                {
+                    var d = new Dictionary<SentenceId, NmeaSentence>();
+                    d[sentence.SentenceId] = sentence;
+                    _sentencesBySource[sourceName] = d;
+                }
+            }
+        }
+
+        /// <summary>
         /// Tries to get a DIN sentence type
         /// </summary>
         /// <typeparam name="T">The type of the sentence to query</typeparam>

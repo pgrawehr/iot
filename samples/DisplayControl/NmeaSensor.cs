@@ -186,10 +186,8 @@ namespace DisplayControl
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false, true));
 
-            // Messages from Aux are currently disabled (TBD)
-            // rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
-            // And from handheld, too
-            // rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+            // The XTE sentence from the plotter is always ignored
+            rules.Add(new FilterRule(ShipSourceName, yd, CrossTrackError.Id, Array.Empty<string>(), false, false));
 
             // Navigation and waypoint stuff disabled from handheld
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BOD"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
@@ -523,6 +521,7 @@ namespace DisplayControl
                         _plotterOnline.UpdateValue(true, SensorMeasurementStatus.None);
                     }
                 };
+
             _parserShipInterface.StartDecode();
 
             _serialPortHandheld = new SerialPort("/dev/ttyAMA3", 4800);
@@ -554,6 +553,12 @@ namespace DisplayControl
                     if (msg is GlobalPositioningSystemFixData gga && gga.Valid)
                     {
                         _forwardPosition.UpdateValue(gga.Position, SensorMeasurementStatus.None);
+                    }
+
+                    if (msg is GlobalPositioningSystemFixData || msg is RecommendedMinimumNavigationInformation ||
+                        msg is TrackMadeGood)
+                    {
+                        _cache.AddFromSource(source, msg);
                     }
                 };
             _parserForwardInterface.StartDecode();
@@ -696,7 +701,7 @@ namespace DisplayControl
                                     out _, out _, out _, out var time1))
                             {
                                 GreatCircle.DistAndDir(gga.Position, forwardPos, out var distance, out var anglerf);
-                                    if (DateTimeOffset.UtcNow - time1 < TimeSpan.FromSeconds(10))
+                                if (DateTimeOffset.UtcNow - time1 < TimeSpan.FromSeconds(10))
                                 {
                                     _forwardRearSeparation.UpdateValue(distance);
                                     _forwardRearAngle.UpdateValue(anglerf);
@@ -727,12 +732,13 @@ namespace DisplayControl
                                         _valueLogger.LogDebug($"{trueFromCompass.Degrees}; {trueFromHandheld.Degrees}; {anglerf.Degrees}; {trackV}; {distance.Meters}; {trueHeading.Degrees:F2}");
                                     }
                                 }
-                                else
-                                {
-                                    _forwardRearSeparation.UpdateValue(null, SensorMeasurementStatus.NoData, false);
-                                    _forwardRearAngle.UpdateValue(null, SensorMeasurementStatus.NoData, false);
-                                    _logger.LogWarning("No recent data from forward GNSS receiver");
-                                }
+                                
+                            }
+                            else
+                            {
+                                _forwardRearSeparation.UpdateValue(null, SensorMeasurementStatus.NoData, false);
+                                _forwardRearAngle.UpdateValue(null, SensorMeasurementStatus.NoData, false);
+                                _logger.LogWarning("No recent data from forward GNSS receiver");
                             }
                         }
                         else
