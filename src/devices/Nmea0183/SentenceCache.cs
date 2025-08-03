@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
@@ -28,7 +29,6 @@ namespace Iot.Device.Nmea0183
         private readonly Dictionary<String, Dictionary<SentenceId, NmeaSentence>> _sentencesBySource;
         private readonly ILogger _logger;
 
-        private long _ticksLastCleanup;
         private Queue<RoutePart> _lastRouteSentences;
         private Dictionary<string, Waypoint> _wayPoints;
         private Queue<SatellitesInView> _lastSatelliteInfos;
@@ -64,7 +64,6 @@ namespace Iot.Device.Nmea0183
             _logger = this.GetCurrentClassLogger();
             _source.OnNewSequence += OnNewSequence;
             MaxDataAge = TimeSpan.FromSeconds(30);
-            _ticksLastCleanup = 0;
         }
 
         /// <summary>
@@ -207,6 +206,21 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        /// <summary>
+        /// Let's the cache remember this waypoint.
+        /// The method can be called multiple times to update a waypoint (e.g. new position with same name)
+        /// </summary>
+        /// <param name="wpt">The waypoint. Must have a valid name.</param>
+        public void AddWayPoint(Waypoint wpt)
+        {
+            ArgumentNullException.ThrowIfNull(wpt);
+            ArgumentException.ThrowIfNullOrWhiteSpace(wpt.Name);
+            lock (_lock)
+            {
+                _wayPoints[wpt.Name] = wpt;
+            }
+        }
+
         private void OnNewSequence(NmeaSinkAndSource? source, NmeaSentence sentence)
         {
             // Cache only valid sentences
@@ -236,6 +250,11 @@ namespace Iot.Device.Nmea0183
                 if (!_groupSentences.Contains(sentence.SentenceId))
                 {
                     // Standalone sequences. Only the last message needs to be kept
+                    if (sentence.SentenceId == RecommendedMinimumNavToDestination.Id)
+                    {
+                        _logger.LogWarning($"Now adding/updating RMB sentence: {sentence.ToNmeaMessage()}");
+                    }
+
                     _sentences[sentence.SentenceId] = sentence;
 
                     // We already own the lock to do that a bit more complex update.
@@ -470,10 +489,9 @@ namespace Iot.Device.Nmea0183
 
         private void CleanOutdatedEntries()
         {
-            var now = Environment.TickCount64;
-            if (_ticksLastCleanup < Environment.TickCount64 - 5000)
+            if (MaxDataAge == Timeout.InfiniteTimeSpan)
             {
-                _ticksLastCleanup = now;
+                return;
             }
 
             lock (_lock)
@@ -484,6 +502,7 @@ namespace Iot.Device.Nmea0183
                     if (entry.Value.Age > MaxDataAge)
                     {
                         _sentences.Remove(entry.Key);
+                        _logger.LogInformation($"Discarding outdated entries of type {entry.Key}");
                     }
                 }
 

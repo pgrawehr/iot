@@ -585,6 +585,9 @@ namespace DisplayControl
             _router = new MessageRouter(new LoggingConfiguration() { Path = "/home/pi/projects/ShipLogs", MaxFileSize = 1024 * 1024 * 10 , SortByDate = true });
 
             _cache = new SentenceCache(_router);
+            // The plotter seems to send RMB and BOD messages only about every 35 seconds, causing havoc in the AutopilotController,
+            // because the messages are already discarded each time.
+            _cache.MaxDataAge = TimeSpan.FromMinutes(1);
             _autopilot = new AutopilotController(_router, _router, _cache);
             _autopilot.NmeaSourceName = HandheldSourceName;
 
