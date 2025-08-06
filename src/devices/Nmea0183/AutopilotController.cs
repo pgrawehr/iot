@@ -286,7 +286,7 @@ namespace Iot.Device.Nmea0183
                 {
                     // No route. But if we have an RMB message, there could still be a current target (typically one that was
                     // directly selected with "Goto")
-                    if (currentLeg == null)
+                    if (currentLeg == null || currentLeg.NextWayPoint.ContainsValidPosition() == false)
                     {
                         OperationState = AutopilotErrorState.NoRoute;
                         PreviousWaypoint = null;
