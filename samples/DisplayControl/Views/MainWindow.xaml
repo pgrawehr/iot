@@ -38,7 +38,7 @@
     <StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="2">
             <Button Content="{Binding TankSensorText}" Command="{Binding EnableDisableForceTankSensorEnable}"/>
-            <Button Content="{Binding SuppressAisWarningText}" Command="{Binding EnableDisableAisTargetWarnings}"></Button>
+            <Button Content="{Binding SuppressAisWarningText}" Command="{Binding EnableDisableAisTargetWarnings}" Background="{Binding AisTargetWarningsColor}"/>
             <Button Content="Test Msg" Command="{Binding SendTestMessage}"/>
             <Button Content="{Binding HeadingModeText}" Command="{Binding ChangeHeadingMode}" Background="{Binding HeadingModeColor}"/>
             <Button Content="Exit" Command="{Binding ExitCommand}" />

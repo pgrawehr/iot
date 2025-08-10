@@ -596,7 +596,7 @@ namespace DisplayControl
             _autopilot.NmeaSourceName = HandheldSourceName;
 
             var tse = new TrackEstimationParameters();
-
+            tse.WarningRepeatTimeout = TimeSpan.FromMinutes(15);
             _positionProvider = new PositionProvider(_cache);
 
             _aisManager = new AisManager("AIS", false, 269110660, "CIRRUS", _positionProvider);

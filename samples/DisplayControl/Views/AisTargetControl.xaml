@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:vm="clr-namespace:DisplayControl.ViewModels;assembly=DisplayControl"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="850" d:DesignHeight="450"
+             mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="450"
              x:Class="DisplayControl.Views.AisTargetControl">
     <Design.DataContext>
         <vm:AisTargetViewModel/>

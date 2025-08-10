@@ -224,10 +224,13 @@ namespace DisplayControl.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref _aisWarningsSuppressed, value);
                 this.RaisePropertyChanged(nameof(SuppressAisWarningText));
+                this.RaisePropertyChanged(nameof(AisTargetWarningsColor));
             }
         }
 
-        public ISolidColorBrush HeadingModeColor => HeadingMode == HeadingMode.CompassCorrected ? Brushes.Green : Brushes.LightGray;
+        public ISolidColorBrush HeadingModeColor => HeadingMode == HeadingMode.CompassCorrected ? Brushes.LightGreen : Brushes.LightGray;
+
+        public ISolidColorBrush AisTargetWarningsColor => SuppressAisWarnings ? Brushes.LightGray : Brushes.LightGreen;
 
         public bool AisTargetsVisible
         {
@@ -289,11 +292,11 @@ namespace DisplayControl.ViewModels
             {
                 if (_aisWarningsSuppressed)
                 {
-                    return "Enable Vessel Warnings";
+                    return "AIS Warnings disabled (dangerous)";
                 }
                 else
                 {
-                    return "Disable Vessel Warnings";
+                    return "AIS Warnings enabled";
                 }
             }
         }
@@ -530,8 +533,8 @@ namespace DisplayControl.ViewModels
             return AisFilterMode switch
             {
                 AisFilterMode.DangerousOnly => x => x.RelativePosition != null && x.RelativePosition.SafetyState == AisSafetyState.Dangerous,
-                AisFilterMode.ShipsOnly => x => x is Ship,
-                AisFilterMode.NoShipsOnly => x => x is not Ship,
+                AisFilterMode.ShipsOnly => x => x is Ship, // Includes some non-ship types, but doesn't matter in this list
+                AisFilterMode.NoShipsOnly => x => x is not Ship || x.IdentifyMmsiType() != MmsiType.Ship,
                 _ => x => true,
             };
         }
@@ -551,26 +554,20 @@ namespace DisplayControl.ViewModels
         public void UpdateTargets(int dummy)
         {
             var newData = DataContainer.AisManager.GetTargets(AisFilter()).OrderBy(AisSorter(DateTimeOffset.UtcNow)).ToList();
+            while (m_aisTargetViewModels.Count > newData.Count)
+            {
+                m_aisTargetViewModels.RemoveAt(m_aisTargetViewModels.Count - 1);
+            }
+
+            while (m_aisTargetViewModels.Count < newData.Count)
+            {
+                m_aisTargetViewModels.Add(new AisTargetViewModel());
+            }
+
             for (int index = 0; index < m_aisTargetViewModels.Count; index++)
             {
                 AisTargetViewModel x = m_aisTargetViewModels[index];
-                var copyFrom = newData.FirstOrDefault(y => y.Mmsi == x.Mmsi);
-                if (copyFrom != null)
-                {
-                    x.UpdateFrom(copyFrom);
-                    newData.Remove(copyFrom);
-                }
-                else
-                {
-                    m_aisTargetViewModels.Remove(x);
-                    index--;
-                }
-            }
-
-            foreach (var newelem in newData) // What is still left is new
-            {
-                var newViewModel = new AisTargetViewModel(newelem);
-                m_aisTargetViewModels.Add(newViewModel);
+                x.UpdateFrom(newData[index]);
             }
         }
 

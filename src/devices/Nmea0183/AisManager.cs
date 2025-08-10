@@ -48,7 +48,8 @@ namespace Iot.Device.Nmea0183
         /// <param name="now">The current time</param>
         /// <param name="message">The message text</param>
         /// <param name="source">The source, if any</param>
-        public delegate void AisWarning(AisMessageId id, uint sourceMmsi, DateTimeOffset now, string message, AisTarget? source);
+        public delegate void AisWarning(AisMessageId id, uint sourceMmsi, DateTimeOffset now, string message,
+            AisTarget? source);
 
         private readonly bool _throwOnUnknownMessage;
 
@@ -106,7 +107,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="ownMmsi">The MMSI of the own ship</param>
         /// <param name="ownShipName">The name of the own ship</param>
         public AisManager(string interfaceName, uint ownMmsi, string ownShipName)
-        : this(interfaceName, false, ownMmsi, ownShipName)
+            : this(interfaceName, false, ownMmsi, ownShipName)
         {
         }
 
@@ -266,7 +267,8 @@ namespace Iot.Device.Nmea0183
                 (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
             {
                 // then use any source
-                if (PreferredPositionSource == null || !_positionProvider.TryGetCurrentPosition(out position, null, false,
+                if (PreferredPositionSource == null || !_positionProvider.TryGetCurrentPosition(out position, null,
+                        false,
                         out track, out sog, out heading,
                         out messageTime, currentTime) ||
                     (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
@@ -337,7 +339,7 @@ namespace Iot.Device.Nmea0183
         }
 
         private T GetOrCreateTarget<T>(uint mmsi, Func<uint, T> constructor, DateTimeOffset? lastSeenTime)
-        where T : AisTarget
+            where T : AisTarget
         {
             lock (_lock)
             {
@@ -362,7 +364,8 @@ namespace Iot.Device.Nmea0183
                 }
 
                 // Remove any "Vessel lost" messages about this target - it cannot be lost at this point
-                var obsoleteWarnings = _activeWarnings.Where(x => x.Key.Mmsi == mmsi && x.Key.Type == AisWarningType.VesselLost);
+                var obsoleteWarnings =
+                    _activeWarnings.Where(x => x.Key.Mmsi == mmsi && x.Key.Type == AisWarningType.VesselLost);
                 foreach (var obsoleteWarning in obsoleteWarnings)
                 {
                     _activeWarnings.TryRemove(obsoleteWarning.Key, out _);
@@ -372,7 +375,8 @@ namespace Iot.Device.Nmea0183
             }
         }
 
-        private BaseStation GetOrCreateBaseStation(uint mmsi, AisTransceiverClass transceiverClass, DateTimeOffset? lastSeenTime)
+        private BaseStation GetOrCreateBaseStation(uint mmsi, AisTransceiverClass transceiverClass,
+            DateTimeOffset? lastSeenTime)
         {
             return GetOrCreateTarget<BaseStation>(mmsi, x => new BaseStation(mmsi), lastSeenTime);
         }
@@ -414,7 +418,7 @@ namespace Iot.Device.Nmea0183
         /// <typeparam name="T">A type of target, must be a derivative of <see cref="AisTarget"/>.</typeparam>
         /// <returns>An enumeration of all targets of that type</returns>
         public IEnumerable<T> GetSpecificTargets<T>()
-        where T : AisTarget
+            where T : AisTarget
         {
             lock (_lock)
             {
@@ -596,7 +600,8 @@ namespace Iot.Device.Nmea0183
                     case AisMessageType.AidToNavigationReport:
                     {
                         AidToNavigationReportMessage aton = (AidToNavigationReportMessage)msg;
-                        var navigationTarget = GetOrCreateTarget(aton.Mmsi, x => new AidToNavigation(x), sentence.DateTime);
+                        var navigationTarget =
+                            GetOrCreateTarget(aton.Mmsi, x => new AidToNavigation(x), sentence.DateTime);
                         navigationTarget.Position = new GeographicPosition(aton.Latitude, aton.Longitude, 0);
                         navigationTarget.Name = aton.Name + aton.NameExtension;
                         navigationTarget.DimensionToBow = Length.FromMeters(aton.DimensionToBow);
@@ -622,8 +627,10 @@ namespace Iot.Device.Nmea0183
 
                     case AisMessageType.AddressedSafetyRelatedMessage:
                     {
-                        AddressedSafetyRelatedMessage addressedSafetyRelatedMessage = (AddressedSafetyRelatedMessage)msg;
-                        OnMessage?.Invoke(true, addressedSafetyRelatedMessage.Mmsi, addressedSafetyRelatedMessage.DestinationMmsi, addressedSafetyRelatedMessage.Text);
+                        AddressedSafetyRelatedMessage addressedSafetyRelatedMessage =
+                            (AddressedSafetyRelatedMessage)msg;
+                        OnMessage?.Invoke(true, addressedSafetyRelatedMessage.Mmsi,
+                            addressedSafetyRelatedMessage.DestinationMmsi, addressedSafetyRelatedMessage.Text);
                         break;
                     }
 
@@ -637,7 +644,8 @@ namespace Iot.Device.Nmea0183
                     default:
                         if (_throwOnUnknownMessage)
                         {
-                            throw new NotSupportedException($"Received a message of type {msg.MessageType} which was not handled");
+                            throw new NotSupportedException(
+                                $"Received a message of type {msg.MessageType} which was not handled");
                         }
 
                         break;
@@ -675,12 +683,13 @@ namespace Iot.Device.Nmea0183
 
         private void CheckIsExceptionalTarget(Ship ship, DateTimeOffset now)
         {
-            void SendMessage(Ship ship, string type)
+            void SendMessage(Ship ship1, string type)
             {
-                GetOwnShipData(out Ship ownShip); // take in in either case
-                Length distance = ownShip.DistanceTo(ship);
-                SendWarningMessage(new AisMessageId(AisWarningType.ExceptionalTargetSeen, ship.Mmsi), ship.Mmsi,
-                    $"{type} Target activated: MMSI {ship.Mmsi} in Position {ship.Position:M1N M1E}! Distance {distance}", now, ship);
+                GetOwnShipData(out Ship ownShip);
+                Length distance = ownShip.DistanceTo(ship1);
+                SendWarningMessage(new AisMessageId(AisWarningType.ExceptionalTargetSeen, ship1.Mmsi), ship1.Mmsi,
+                    $"{type} Target activated: MMSI {ship1.Mmsi} in Position {ship1.Position:M1N M1E}! Distance {distance}",
+                    now, ship1, true);
             }
 
             if (AutoSendWarnings == false)
@@ -717,7 +726,8 @@ namespace Iot.Device.Nmea0183
         /// <returns>True if the message was sent, false otherwise</returns>
         public bool SendWarningMessage(string messageId, uint sourceMmsi, string messageText)
         {
-            return SendWarningMessage(new AisMessageId(AisWarningType.UserMessage, sourceMmsi), sourceMmsi, messageText, DateTimeOffset.UtcNow, null);
+            return SendWarningMessage(new AisMessageId(AisWarningType.UserMessage, sourceMmsi), sourceMmsi, messageText,
+                DateTimeOffset.UtcNow, null);
         }
 
         /// <summary>
@@ -741,10 +751,27 @@ namespace Iot.Device.Nmea0183
         /// <param name="messageText">The text of the message. Supports only the AIS 6-bit character set.</param>
         /// <param name="now">The current time (to verify the timeout against)</param>
         /// <param name="target">The AIS target this warning is about. May be null for generic messages</param>
-        /// <returns>True if the message was sent, false otherwise</returns>
-        public bool SendWarningMessage(AisMessageId messageId, uint sourceMmsi, string messageText, DateTimeOffset now, AisTarget? target)
+        /// <returns>True if the message was sent, false otherwise (sending disabled, repeat timeout not elapsed, etc)</returns>
+        public bool SendWarningMessage(AisMessageId messageId, uint sourceMmsi, string messageText, DateTimeOffset now,
+            AisTarget? target)
         {
-            if (TrackEstimationParameters.SuppressAllVesselWarnings)
+            return SendWarningMessage(messageId, sourceMmsi, messageText, now, target, false);
+        }
+
+        /// <summary>
+        /// Sends a message with the given <paramref name="messageText"/> as an AIS broadcast message
+        /// </summary>
+        /// <param name="messageId">Identifies the message. Messages with the same ID are only sent once, until the timeout elapses</param>
+        /// <param name="sourceMmsi">Source MMSI, can be 0 if irrelevant/unknown</param>
+        /// <param name="messageText">The text of the message. Supports only the AIS 6-bit character set.</param>
+        /// <param name="now">The current time (to verify the timeout against)</param>
+        /// <param name="target">The AIS target this warning is about. May be null for generic messages</param>
+        /// <param name="emergencyMessage">This is a message indicating a possible emergency. It cannot be suppressed</param>
+        /// <returns>True if the message was sent, false otherwise (sending disabled, repeat timeout not elapsed, etc)</returns>
+        public bool SendWarningMessage(AisMessageId messageId, uint sourceMmsi, string messageText,
+            DateTimeOffset now, AisTarget? target, bool emergencyMessage)
+        {
+            if (TrackEstimationParameters.SuppressAllVesselWarnings && !emergencyMessage)
             {
                 return false;
             }

@@ -119,10 +119,16 @@ namespace DisplayControl.ViewModels
                 sb.AppendLine($"Dist: {FormatLength(relPos.Distance)} ");
                 if (_target is MovingTarget mt)
                 {
-                    sb.Append($"SPD: {FormatSpeed(mt.SpeedOverGround)} TRK: {FormatAngle(mt.CourseOverGround)}");
+                    sb.Append($"SPD: {FormatSpeed(mt.SpeedOverGround)} TRK: {FormatAngle(mt.CourseOverGround)} ");
                 }
                 sb.Append($"CPA: {FormatLength(relPos.ClosestPointOfApproach)} ");
-                sb.AppendLine($"TCPA: {relPos.TimeToClosestPointOfApproach(now):g} ");
+                sb.Append($"BTT: {FormatAngle(relPos.Bearing)} " );
+                var tcpa = relPos.TimeToClosestPointOfApproach(now);
+                if (tcpa.HasValue && tcpa.Value.Duration() < TimeSpan.FromDays(1))
+                {
+                    sb.AppendLine($"TCPA: {tcpa:hh:mm:ss} ");
+                }
+
                 sb.Append($"Status: {relPos.SafetyState}");
             }
             else
