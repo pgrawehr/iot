@@ -250,11 +250,6 @@ namespace Iot.Device.Nmea0183
                 if (!_groupSentences.Contains(sentence.SentenceId))
                 {
                     // Standalone sequences. Only the last message needs to be kept
-                    if (sentence.SentenceId == RecommendedMinimumNavToDestination.Id)
-                    {
-                        _logger.LogWarning($"Now adding/updating RMB sentence: {sentence.ToNmeaMessage()}");
-                    }
-
                     _sentences[sentence.SentenceId] = sentence;
 
                     // We already own the lock to do that a bit more complex update.

@@ -398,11 +398,6 @@ namespace Iot.Device.Nmea0183
                     return;
                 }
 
-                if (previous != null)
-                {
-                    _logger.LogInformation($"Navigating from {previous.WaypointName} at {previous.Position} to {next.WaypointName} at {next.Position}");
-                }
-
                 Length distanceToNext = Length.Zero;
                 Length distanceOnTrackToNext = Length.Zero;
                 Length crossTrackError = Length.Zero;

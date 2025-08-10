@@ -111,6 +111,7 @@ namespace DisplayControl
         private readonly CustomData<bool> _auxiliaryOnline;
         private readonly CustomData<bool> _shipOnline;
         private readonly CustomData<bool> _plotterOnline;
+        private readonly CustomData<string> _currentDestinationWaypoint;
         private NmeaSentence m_lastMessageFromHandheld;
 
         public NmeaSensor(MeasurementManager manager, bool hasPlotter)
@@ -153,6 +154,9 @@ namespace DisplayControl
             _auxiliaryOnline = new CustomData<bool>("Auxiliary Online", false, SensorSource.Navigation, 3);
             _shipOnline = new CustomData<bool>("Ship Online", false, SensorSource.Navigation, 4);
             _plotterOnline = new CustomData<bool>("Plotter Online", false, SensorSource.Navigation, 5, TimeSpan.FromSeconds(30));
+            _currentDestinationWaypoint =
+                new CustomData<string>("Next Waypoint Name", string.Empty, SensorSource.Navigation, 1,
+                    TimeSpan.FromSeconds(10));
 
             _logger = this.GetCurrentClassLogger();
 
@@ -497,7 +501,7 @@ namespace DisplayControl
                 SensorMeasurement.UtcTime, _smoothedTrueWindSpeed, _maxWindGusts, _numSatellites, _satStatus, _rearPosition, _forwardPosition,
                 _forwardRearSeparation, _forwardRearAngle, _aisNumberOfTargets, _aisNearestShip, _aisDistanceToNearestShip,
                 _aisDangerousTargets, _aisTrigger, _autoPilotStatus, _autoPilotHeading, _autoPilotDesiredHeading,
-                _autoPilotControllerStatus,
+                _autoPilotControllerStatus, _currentDestinationWaypoint
             });
 
             _serialPortShip = new SerialPort("/dev/ttyAMA2", 115200);
@@ -879,6 +883,15 @@ namespace DisplayControl
                 case RecommendedMinimumNavToDestination rmb when rmb.Valid:
                     _manager.UpdateValue(SensorMeasurement.DistanceToNextWaypoint, rmb.DistanceToWayPoint, 
                         rmb.DistanceToWayPoint.HasValue ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData);
+                    if (!string.IsNullOrWhiteSpace(rmb.NextWayPointName))
+                    {
+                        _currentDestinationWaypoint.UpdateValue(rmb.NextWayPointName, SensorMeasurementStatus.None);
+                    }
+                    else
+                    {
+                        _currentDestinationWaypoint.UpdateValue(string.Empty, SensorMeasurementStatus.NoData);
+                    }
+
                     if (rmb.DistanceToWayPoint.HasValue &&
                         _positionProvider.TryGetCurrentPosition(out var position, HandheldOffline ? AuxiliaryGps : HandheldSourceName, false, out var track, out var sog, out var heading, out var time))
                     {
