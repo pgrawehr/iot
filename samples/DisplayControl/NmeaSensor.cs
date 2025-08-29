@@ -185,7 +185,8 @@ namespace DisplayControl
             IList<FilterRule> rules = new List<FilterRule>();
             // Send incoming AIS sequences (with "VDM") to the AIS manager, and outgoing (VDO) to the ship.
             // (we actually send everything to the AisManager, as it also needs the current position and time)
-            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager, OpenCpn }, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any, new[] { MessageRouter.AisManager }, true, true));
+            rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDM"), new[] { OpenCpn }, true, true));
             rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new[] { ShipSourceName }, true, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false, true));
@@ -193,13 +194,13 @@ namespace DisplayControl
             // The XTE sentence from the plotter is always ignored
             rules.Add(new FilterRule(ShipSourceName, yd, CrossTrackError.Id, Array.Empty<string>(), false, false));
 
-            // Navigation and waypoint stuff disabled from handheld
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BOD"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BWC"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("XTE"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RTE"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("WPT"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
-            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RMB"), new[] { MessageRouter.LocalMessageSource }, ForwardIfPlotterOffline, false, false));
+            // Navigation and waypoint stuff disabled from handheld if the plotter is online
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BOD"), new[] { MessageRouter.LocalMessageSource, OpenCpn }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("BWC"), new[] { MessageRouter.LocalMessageSource, OpenCpn }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("XTE"), new[] { MessageRouter.LocalMessageSource, OpenCpn }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RTE"), new[] { MessageRouter.LocalMessageSource, OpenCpn }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("WPT"), new[] { MessageRouter.LocalMessageSource, OpenCpn }, ForwardIfPlotterOffline, false, false));
+            rules.Add(new FilterRule(HandheldSourceName, TalkerId.GlobalPositioningSystem, new SentenceId("RMB"), new[] { MessageRouter.LocalMessageSource, OpenCpn }, ForwardIfPlotterOffline, false, false));
 
             // Drop this, it's wrong (seems not to use the heading, even if it should).
             // We're instead reconstructing this message - but in that case, don't send it back to the ship, as this causes confusion
@@ -234,7 +235,7 @@ namespace DisplayControl
 
             // If handheld is not connected or not working, use aux instead
             rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, SentenceId.Any,
-                new[] { MessageRouter.LocalMessageSource }, ForwardIfNoHandheldData, false, true));
+                new[] { MessageRouter.LocalMessageSource, OpenCpn }, ForwardIfNoHandheldData, false, true));
             foreach (var gpsSequence in gpsSequences)
             {
                 rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any,
