@@ -157,6 +157,18 @@ namespace Iot.Device.Common
         public static readonly SensorMeasurement FuelTank0Level =
             new SensorMeasurement("Fuel Tank 0 level", Ratio.FromPercent(0), SensorSource.Fuel, 0, TimeSpan.MaxValue);
 
+        public static readonly SensorMeasurement BilgeWaterLevel =
+            new SensorMeasurement("Bilge Water Level", Ratio.FromPercent(0), SensorSource.Sewage, 0, TimeSpan.MaxValue);
+
+        public static readonly SensorMeasurement GrayWaterLevel =
+            new SensorMeasurement("Gray Water Level", Ratio.FromPercent(0), SensorSource.Sewage, 0, TimeSpan.MaxValue);
+
+        public static readonly SensorMeasurement BlackWaterLevel =
+            new SensorMeasurement("Black Water Level", Ratio.FromPercent(0), SensorSource.Sewage, 0, TimeSpan.MaxValue);
+
+        public static readonly SensorMeasurement FreshWaterLevel =
+            new SensorMeasurement("Fresh Water Level", Ratio.FromPercent(0), SensorSource.Water, 0, TimeSpan.MaxValue);
+
         public static readonly SensorMeasurement Windchill = new SensorMeasurement("Windchill temperature", Temperature.Zero, SensorSource.Air);
 
         public static readonly SensorMeasurement WindForce =

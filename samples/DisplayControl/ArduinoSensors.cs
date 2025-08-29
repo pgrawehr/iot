@@ -25,11 +25,13 @@ namespace DisplayControl
         private FrequencySensor _frequencySensor;
         private SensorMeasurement _frequencyMeasurement;
         private SensorMeasurement _tankFillLevelRaw;
+        private SensorMeasurement _bilgeFillLevelRaw;
         private GpioController _gpioController;
         private bool _tankSensorIsOn;
         private HysteresisFilter _tankSensorEnableFilter;
         private AnalogController _analogController;
         private AnalogInputPin _tankSensorValuePin;
+        private AnalogInputPin _bilgeSensorValuePin;
 
         public ArduinoSensors(MeasurementManager manager, EngineSurveillance engine) : base(manager,
             TimeSpan.FromSeconds(1))
@@ -114,8 +116,14 @@ namespace DisplayControl
 
             Manager.AddMeasurement(SensorMeasurement.FuelTank0Level);
 
+            _bilgeFillLevelRaw = new SensorMeasurement("Bilge Water Raw Value", ElectricPotential.Zero,
+                SensorSource.Sewage, 1, TimeSpan.FromSeconds(100));
+            Manager.AddMeasurement(_bilgeFillLevelRaw);
+            Manager.AddMeasurement(SensorMeasurement.BilgeWaterLevel);
+
             _analogController = _board.CreateAnalogController(0);
             _tankSensorValuePin = _analogController.OpenPin(18); // A4
+            _bilgeSensorValuePin = _analogController.OpenPin(14); // A0
 
             DhtInterface = _board.GetCommandHandler<DhtSensor>();
             _board.SetPinMode(3, SupportedMode.Dht);
@@ -174,6 +182,12 @@ namespace DisplayControl
                     SensorMeasurement.FuelTank0Level.UpdateValue(Ratio.FromPercent(percentage), SensorMeasurementStatus.None, false);
                 }
             }
+
+            var rawBilgeLevel = _bilgeSensorValuePin.ReadVoltage();
+            _bilgeFillLevelRaw.UpdateValue(rawBilgeLevel, SensorMeasurementStatus.None, false);
+            // If the voltage is Zero, the sensor is completely dry. If it's near 5V, it's soaked.
+            double fillValue = Math.Clamp(rawBilgeLevel / ElectricPotential.FromVolts(5.0), 0, 1);
+            SensorMeasurement.BilgeWaterLevel.UpdateValue(Ratio.FromPercent(fillValue * 100.0));
         }
 
         protected override void Dispose(bool disposing)

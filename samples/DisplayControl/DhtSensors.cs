@@ -40,7 +40,7 @@ namespace DisplayControl
         /// </summary>
         protected override void UpdateSensors()
         {
-            if (_dhtSensorConnection.TryReadDht(3, 11, out var temperature, out var humidity))
+            if (_dhtSensorConnection.TryReadDht(3, 22, out var temperature, out var humidity))
             {
                 SensorMeasurement.Engine0Temperature.UpdateValue(temperature);
                 _engineHumidity.UpdateValue(humidity);

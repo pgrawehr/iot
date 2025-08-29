@@ -1170,7 +1170,7 @@ namespace DisplayControl
                 return; // cleanup in progress
             }
 
-            if (engineData.EngineTemperature > Temperature.FromDegreesCelsius(70))
+            if (engineData.EngineTemperature > Temperature.FromDegreesCelsius(50))
             {
                 SendWarningMessage("ENGINETEMP",
                     $"Engine room temperature critical: {engineData.EngineTemperature} Degrees celsius");
@@ -1200,6 +1200,22 @@ namespace DisplayControl
             FluidData fuel = new FluidData(FluidType.Fuel, level, Volume.FromLiters(55), 0, true);
             var tankLevel = new SeaSmartFluidLevel(fuel);
             _router.SendSentence(tankLevel);
+
+            if (!SensorMeasurement.BilgeWaterLevel.TryGetAs(out level))
+            {
+                level = Ratio.Zero;
+            }
+
+            FluidData bilge = new FluidData(FluidType.BlackWater, level, Volume.FromLiters(30), 0,
+                highLevelIsGood: false);
+            var bilgeLevel = new SeaSmartFluidLevel(bilge);
+            _router.SendSentence(bilgeLevel);
+
+            if (bilge.Level > Ratio.FromPercent(50))
+            {
+                // Commented out until we have some idea about the reliability of the measurement
+                // SendWarningMessage("BILGE", "Bilge Water Level High");
+            }
         }
     }
 }
