@@ -260,6 +260,8 @@ namespace DisplayControl
             // The messages VWR and VHW (Wind measurement / speed trough water) come from the ship and need to go to the autopilot
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VWR"), new[] { AutopilotSink, OpenCpn }, true, true));
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { AutopilotSink, OpenCpn }, true, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("MWV"), new[] { OpenCpn }, true, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("MDA"), new[] { OpenCpn }, true, true));
 
             // Messages from the Autopilot go everywhere
             rules.Add(new FilterRule(Seatalk1Name, TalkerId.Any, SentenceId.Any, new List<string>() { OpenCpn, ShipSourceName, MessageRouter.LocalMessageSource, Udp }, false, true));
@@ -1214,8 +1216,7 @@ namespace DisplayControl
 
             if (bilge.Level > Ratio.FromPercent(50))
             {
-                // Commented out until we have some idea about the reliability of the measurement
-                // SendWarningMessage("BILGE", "Bilge Water Level High");
+                SendWarningMessage("BILGE", "Bilge Water Level High");
             }
         }
     }
