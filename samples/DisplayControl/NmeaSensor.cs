@@ -25,8 +25,6 @@ namespace DisplayControl
 {
     public sealed class NmeaSensor : IDisposable
     {
-        private readonly MeasurementManager _manager;
-        private readonly bool _hasPlotter;
         private const string ShipSourceName = "Ship";
         private const string HandheldSourceName = "Handheld";
         // The NMEA0183 connection physically connects to the AP when sending
@@ -35,7 +33,11 @@ namespace DisplayControl
         private const string Udp = "Udp";
         private const string AuxiliaryGps = "AuxiliaryGps";
         private const string Seatalk1Name = "Seatalk1";
-        
+
+        private readonly MeasurementManager _manager;
+        private readonly bool _hasPlotter;
+        private readonly double _logCorrectionFactor;
+
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
         /// </summary>
@@ -114,10 +116,11 @@ namespace DisplayControl
         private readonly CustomData<string> _currentDestinationWaypoint;
         private NmeaSentence m_lastMessageFromHandheld;
 
-        public NmeaSensor(MeasurementManager manager, bool hasPlotter)
+        public NmeaSensor(MeasurementManager manager, bool hasPlotter, double logCorrectionFactor)
         {
             _manager = manager;
             _hasPlotter = hasPlotter;
+            _logCorrectionFactor = logCorrectionFactor;
             _magneticVariation = null;
             _aisUpdates = 0;
             _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.Wind);
@@ -213,7 +216,7 @@ namespace DisplayControl
             // Anything from OpenCpn is distributed everywhere
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, AutopilotSink }, true, false));
             // Anything from the ship is sent locally
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, WaterSpeedCorrection, false, true));
 
             // Anything remaining from the handheld is sent to our processor
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
@@ -248,7 +251,7 @@ namespace DisplayControl
             {
                 "APB", "APA", "RMB", "XTE", "XTR",
                 "BPI", "BWR", "BWC",
-                "BER", "BEC", "WDR", "WDC", "BOD", "WCV", "VWR", "VHW"
+                "BER", "BEC", "WDR", "WDC", "BOD", "WCV", "VWR"
             };
             foreach (var autopilotSentence in autoPilotSentences)
             {
@@ -259,7 +262,10 @@ namespace DisplayControl
 
             // The messages VWR and VHW (Wind measurement / speed trough water) come from the ship and need to go to the autopilot
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VWR"), new[] { AutopilotSink, OpenCpn }, true, true));
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { AutopilotSink, OpenCpn }, true, true));
+            // Send this also back to the ship, with a speed factor fix
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { AutopilotSink, OpenCpn, ShipSourceName },
+                WaterSpeedCorrection, 
+                true, true));
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("MWV"), new[] { OpenCpn }, true, true));
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("MDA"), new[] { OpenCpn }, true, true));
 
@@ -274,6 +280,18 @@ namespace DisplayControl
             }, false, true));
 
             return rules;
+        }
+
+        private NmeaSentence WaterSpeedCorrection(NmeaSinkAndSource src, NmeaSinkAndSource dest, NmeaSentence msg)
+        {
+            if (msg is WaterSpeedAndAngle uncorrected)
+            {
+                return new WaterSpeedAndAngle(uncorrected.HeadingTrue, uncorrected.HeadingMagnetic, uncorrected.Speed * _logCorrectionFactor);
+            }
+            else
+            {
+                return msg;
+            }
         }
 
         private NmeaSentence ForwardIfPlotterOffline(NmeaSinkAndSource source, NmeaSinkAndSource destination, NmeaSentence originalMessage)
@@ -370,7 +388,7 @@ namespace DisplayControl
                 // rules.Add(new FilterRule(SignalKIn, new TalkerId('I', 'I'), SentenceId.Any, new []{ ShipSourceName }, true, true));
             }
 
-            // Send the autopilot anything he can use, but only from the ship (we need special filters to send him info from ourselves, if there are any)
+            // Send the autopilot anything he can use, preferably from ourselves
             string[] autoPilotSentences = new string[]
             {
                 "APB", "APA", "RMB", "XTE", "XTR",

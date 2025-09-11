@@ -23,7 +23,7 @@ namespace Iot.Device.Nmea0183.Sentences
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
         /// <summary>
-        /// Constructs a new MWV sentence
+        /// Constructs a new VHW sentence
         /// </summary>
         public WaterSpeedAndAngle(Angle? headingTrue, Angle? headingMagnetic, Speed speed)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)

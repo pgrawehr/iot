@@ -262,7 +262,8 @@ namespace DisplayControl
 
             WriteLineToConsoleAndDisplay("NMEA Sources...");
             var hasPlotter = new PersistentBool(_configFile, "HasPlotter", false);
-            _nmeaSensor = new NmeaSensor(_sensorManager, hasPlotter.Value);
+            var logSensorCorrectionFactor = new PersistentDouble(_configFile, "LogCorrectionFactor", 0.862, TimeSpan.Zero);
+            _nmeaSensor = new NmeaSensor(_sensorManager, hasPlotter.Value, logSensorCorrectionFactor.Value);
             _nmeaSensor.Initialize(_fusionEngine, _imuSensor);
 
             WriteLineToConsoleAndDisplay("Motor...");
