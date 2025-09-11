@@ -32,6 +32,7 @@ namespace DisplayControl
         private AnalogController _analogController;
         private AnalogInputPin _tankSensorValuePin;
         private AnalogInputPin _bilgeSensorValuePin;
+        private double _autoRpmCorrectionFactor;
 
         public ArduinoSensors(MeasurementManager manager, EngineSurveillance engine) : base(manager,
             TimeSpan.FromSeconds(1))
@@ -43,6 +44,7 @@ namespace DisplayControl
             _tankSensorEnableFilter.FallingDelayTime = TimeSpan.FromSeconds(60);
             ForceTankSensorEnable = false;
             _tankSensorIsOn = false;
+            _autoRpmCorrectionFactor = 1.0;
         }
 
         public bool ForceTankSensorEnable
@@ -135,6 +137,27 @@ namespace DisplayControl
         {
             var freq = _frequencySensor.GetMeasuredFrequency();
             freq = freq / _engine.EngineArduinoRpmCorrectionFactor;
+
+            if (freq > Frequency.FromCyclesPerMinute(4500))
+            {
+                // The sensor appears to report double-frequencies (or even more)
+                _autoRpmCorrectionFactor /= 2.0;
+                _logger.LogWarning($"RPM auto correction factor decreased to {_autoRpmCorrectionFactor:F1}");
+            }
+            else if (freq < Frequency.FromCyclesPerMinute(1000) && _autoRpmCorrectionFactor < 0.99)
+            {
+                _autoRpmCorrectionFactor *= 2.0;
+                _logger.LogWarning($"RPM auto correction factor increased to {_autoRpmCorrectionFactor:F1}");
+            }
+
+            if (freq.Equals(Frequency.Zero, Frequency.FromCyclesPerMinute(5)) && Math.Abs(_autoRpmCorrectionFactor - 1.0) > 1E-5)
+            {
+                _autoRpmCorrectionFactor = 1.0;
+                _logger.LogWarning($"RPM auto correction factor set to {_autoRpmCorrectionFactor:F1}");
+            }
+
+            freq = freq * _autoRpmCorrectionFactor;
+
             SensorMeasurement.Engine0Rpm.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
             _frequencyMeasurement.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
 
