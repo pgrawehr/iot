@@ -63,6 +63,23 @@ namespace DisplayControl
 
         public DhtSensor DhtInterface { get; set; }
 
+        public double AutoRpmCorrectionFactor
+        {
+            get
+            {
+                return _autoRpmCorrectionFactor;
+            }
+            private set
+            {
+                if (Math.Abs(_autoRpmCorrectionFactor - value) > 1E-5)
+                {
+                    _logger.LogWarning($"RPM auto correction factor set to {value:F1}");
+                }
+
+                _autoRpmCorrectionFactor = value;
+            }
+        }
+
         public override void Init(GpioController gpioController)
         {
             if (!ArduinoBoard.TryFindBoard(new string[] { "/dev/ttyACM0", "/dev/ttyUSB0", "/dev/ttyS0" }, new int[] { 115200 }, out _board))
@@ -135,28 +152,25 @@ namespace DisplayControl
 
         protected override void UpdateSensors()
         {
-            var freq = _frequencySensor.GetMeasuredFrequency();
-            freq = freq / _engine.EngineArduinoRpmCorrectionFactor;
-
-            if (freq > Frequency.FromCyclesPerMinute(4500))
+            var rawFrequency = _frequencySensor.GetMeasuredFrequency();
+            rawFrequency = rawFrequency / _engine.EngineArduinoRpmCorrectionFactor;
+            // Values below 100 are random glitches.
+            if (rawFrequency < Frequency.FromCyclesPerMinute(100))
             {
-                // The sensor appears to report double-frequencies (or even more)
-                _autoRpmCorrectionFactor /= 2.0;
-                _logger.LogWarning($"RPM auto correction factor decreased to {_autoRpmCorrectionFactor:F1}");
-            }
-            else if (freq < Frequency.FromCyclesPerMinute(1000) && _autoRpmCorrectionFactor < 0.99)
-            {
-                _autoRpmCorrectionFactor *= 2.0;
-                _logger.LogWarning($"RPM auto correction factor increased to {_autoRpmCorrectionFactor:F1}");
+                rawFrequency = Frequency.FromCyclesPerMinute(0);
             }
 
-            if (freq.Equals(Frequency.Zero, Frequency.FromCyclesPerMinute(5)) && Math.Abs(_autoRpmCorrectionFactor - 1.0) > 1E-5)
-            {
-                _autoRpmCorrectionFactor = 1.0;
-                _logger.LogWarning($"RPM auto correction factor set to {_autoRpmCorrectionFactor:F1}");
-            }
+            ////if (rawFrequency > Frequency.FromCyclesPerMinute(4300))
+            ////{
+            ////    // The sensor appears to report double-frequencies
+            ////    AutoRpmCorrectionFactor = 0.5;
+            ////}
+            ////else if (rawFrequency < Frequency.FromCyclesPerMinute(1000))
+            ////{
+            ////    AutoRpmCorrectionFactor = 1.0;
+            ////}
 
-            freq = freq * _autoRpmCorrectionFactor;
+            var freq = rawFrequency * _autoRpmCorrectionFactor;
 
             SensorMeasurement.Engine0Rpm.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));
             _frequencyMeasurement.UpdateValue(RotationalSpeed.FromRevolutionsPerMinute(freq.CyclesPerMinute));

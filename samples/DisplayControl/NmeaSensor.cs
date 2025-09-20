@@ -717,7 +717,7 @@ namespace DisplayControl
             {
                 case GlobalPositioningSystemFixData gga:
                 {
-                    _logger.LogInformation($"Received valid gga sentence from {source.InterfaceName}");
+                    _logger.LogDebug($"Received valid gga sentence from {source.InterfaceName}");
 
                     if (gga.TalkerId == new TalkerId('Y', 'D'))
                     {
