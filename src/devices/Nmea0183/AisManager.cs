@@ -532,7 +532,7 @@ namespace Iot.Device.Nmea0183
                         // This is an alternative static data report for class B transceivers
                         StandardClassBCsPositionReportMessage msgPos = (StandardClassBCsPositionReportMessage)msg;
                         ship = GetOrCreateShip(msgPos.Mmsi, msg.TransceiverType, sentence.DateTime);
-                        ship.Position = new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0);
+                        ship.Position = ValidatePosition(() => new GeographicPosition(msgPos.Latitude, msgPos.Longitude, 0));
                         ship.RateOfTurn = null;
                         if (msgPos.TrueHeading.HasValue)
                         {
@@ -580,7 +580,7 @@ namespace Iot.Device.Nmea0183
                     {
                         BaseStationReportMessage rpt = (BaseStationReportMessage)msg;
                         var station = GetOrCreateBaseStation(rpt.Mmsi, rpt.TransceiverType, sentence.DateTime);
-                        station.Position = new GeographicPosition(rpt.Latitude, rpt.Longitude, 0);
+                        station.Position = ValidatePosition(() => new GeographicPosition(rpt.Latitude, rpt.Longitude, 0));
                         break;
                     }
 
@@ -590,7 +590,7 @@ namespace Iot.Device.Nmea0183
                         var sarAircraft = GetOrCreateSarAircraft(sar.Mmsi, sentence.DateTime);
                         // Is the altitude here ellipsoid or geoid? Ships are normally at 0m geoid (unless on a lake, but the AIS system doesn't seem to be designed
                         // for that)
-                        sarAircraft.Position = new GeographicPosition(sar.Latitude, sar.Longitude, sar.Altitude);
+                        sarAircraft.Position = ValidatePosition(() => new GeographicPosition(sar.Latitude, sar.Longitude, sar.Altitude));
                         sarAircraft.CourseOverGround = Angle.FromDegrees(sar.CourseOverGround);
                         sarAircraft.SpeedOverGround = Speed.FromKnots(sar.SpeedOverGround);
                         sarAircraft.RateOfTurn = RotationalSpeed.Zero;
@@ -602,7 +602,7 @@ namespace Iot.Device.Nmea0183
                         AidToNavigationReportMessage aton = (AidToNavigationReportMessage)msg;
                         var navigationTarget =
                             GetOrCreateTarget(aton.Mmsi, x => new AidToNavigation(x), sentence.DateTime);
-                        navigationTarget.Position = new GeographicPosition(aton.Latitude, aton.Longitude, 0);
+                        navigationTarget.Position = ValidatePosition(() => new GeographicPosition(aton.Latitude, aton.Longitude, 0));
                         navigationTarget.Name = aton.Name + aton.NameExtension;
                         navigationTarget.DimensionToBow = Length.FromMeters(aton.DimensionToBow);
                         navigationTarget.DimensionToStern = Length.FromMeters(aton.DimensionToStern);
@@ -653,9 +653,22 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        private GeographicPosition ValidatePosition(Func<GeographicPosition> attempt)
+        {
+            try
+            {
+                return attempt();
+            }
+            catch (Exception e) when (e is ArgumentException || e is ArgumentOutOfRangeException)
+            {
+                _logger.LogError($"Invalid position received: {e.Message}");
+                return new GeographicPosition();
+            }
+        }
+
         internal void PositionReportClassAToShip(Ship ship, PositionReportClassAMessageBase positionReport)
         {
-            ship.Position = new GeographicPosition(positionReport.Latitude, positionReport.Longitude, 0);
+            ship.Position = ValidatePosition(() => new GeographicPosition(positionReport.Latitude, positionReport.Longitude, 0));
             if (positionReport.RateOfTurn.HasValue)
             {
                 // See the cheat sheet at https://gpsd.gitlab.io/gpsd/AIVDM.html

@@ -108,6 +108,7 @@ namespace DisplayControl
                     _gpioController.Write(TankSensorRelaisPin, _tankSensorIsOn);
 
                     _frequencySensor.EnableFrequencyReporting(RpmSensorPin, FrequencyMode.Falling, 1000);
+                    _frequencySensor.SetDebouncingPeriod(RpmSensorPin, TimeSpan.FromMicroseconds(4500));
                     break;
                 }
                 catch (TimeoutException x)

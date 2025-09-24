@@ -118,9 +118,11 @@ namespace DisplayControl
 
         public NmeaSensor(MeasurementManager manager, bool hasPlotter, double logCorrectionFactor)
         {
+            _logger = this.GetCurrentClassLogger();
             _manager = manager;
             _hasPlotter = hasPlotter;
             _logCorrectionFactor = logCorrectionFactor;
+            _logger.LogInformation($"Ship log will be corrected with a factor of {_logCorrectionFactor:F2}");
             _magneticVariation = null;
             _aisUpdates = 0;
             _smoothedTrueWindSpeed = new SensorMeasurement("Smoothed True Wind Speed", Speed.Zero, SensorSource.Wind);
@@ -160,8 +162,6 @@ namespace DisplayControl
             _currentDestinationWaypoint =
                 new CustomData<string>("Next Waypoint Name", string.Empty, SensorSource.Navigation, 1,
                     TimeSpan.FromSeconds(10));
-
-            _logger = this.GetCurrentClassLogger();
 
             _valueLogger = LogDispatcher.GetLogger("HeadingRawLogger");
             // Don't use dashes in the following line, as it makes evaluating in excel more difficult (the dash is used as main separator in the logs)
@@ -215,8 +215,11 @@ namespace DisplayControl
 
             // Anything from OpenCpn is distributed everywhere
             rules.Add(new FilterRule(OpenCpn, TalkerId.Any, SentenceId.Any, new[] { ShipSourceName, AutopilotSink }, true, false));
-            // Anything from the ship is sent locally
-            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, WaterSpeedCorrection, false, true));
+
+            // Anything from the ship is sent locally. The VHW sentence is blocked from further processing though,
+            // as we need to fix it first
+            rules.Add(new FilterRule(ShipSourceName, yd, WaterSpeedAndAngle.Id, new[] { MessageRouter.LocalMessageSource }, false, false));
+            rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
 
             // Anything remaining from the handheld is sent to our processor
             rules.Add(new FilterRule(HandheldSourceName, TalkerId.Any, SentenceId.Any, new[] { MessageRouter.LocalMessageSource }, false, true));
@@ -264,7 +267,6 @@ namespace DisplayControl
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VWR"), new[] { AutopilotSink, OpenCpn }, true, true));
             // Send this also back to the ship, with a speed factor fix
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("VHW"), new[] { AutopilotSink, OpenCpn, ShipSourceName },
-                WaterSpeedCorrection, 
                 true, true));
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("MWV"), new[] { OpenCpn }, true, true));
             rules.Add(new FilterRule(ShipSourceName, TalkerId.Any, new SentenceId("MDA"), new[] { OpenCpn }, true, true));
@@ -282,16 +284,10 @@ namespace DisplayControl
             return rules;
         }
 
-        private NmeaSentence WaterSpeedCorrection(NmeaSinkAndSource src, NmeaSinkAndSource dest, NmeaSentence msg)
+        private WaterSpeedAndAngle WaterSpeedCorrection(WaterSpeedAndAngle msg)
         {
-            if (msg is WaterSpeedAndAngle uncorrected)
-            {
-                return new WaterSpeedAndAngle(uncorrected.HeadingTrue, uncorrected.HeadingMagnetic, uncorrected.Speed * _logCorrectionFactor);
-            }
-            else
-            {
-                return msg;
-            }
+            return new WaterSpeedAndAngle(msg.HeadingTrue, msg.HeadingMagnetic, msg.Speed * _logCorrectionFactor);
+            // return new WaterSpeedAndAngle(msg.HeadingTrue, msg.HeadingMagnetic, Speed.FromKnots(5.0));
         }
 
         private NmeaSentence ForwardIfPlotterOffline(NmeaSinkAndSource source, NmeaSinkAndSource destination, NmeaSentence originalMessage)
@@ -564,7 +560,6 @@ namespace DisplayControl
                 m_lastMessageFromHandheld = msg;
                 _handheldOnline.UpdateValue(true, SensorMeasurementStatus.None);
             };
-            _parserHandheldInterface.StartDecode();
 
             _parserForwardInterface =
                 new NmeaParser(AuxiliaryGps, _serialPortForward.BaseStream, _serialPortForward.BaseStream);
@@ -586,7 +581,6 @@ namespace DisplayControl
                         _cache.AddFromSource(source, msg);
                     }
                 };
-            _parserForwardInterface.StartDecode();
 
             _seatalkPort = new SeatalkToNmeaConverter(Seatalk1Name, "/dev/ttyAMA5");
             _seatalkPort.LogSend = true;
@@ -594,16 +588,13 @@ namespace DisplayControl
             _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControlStatus.Id);
             _seatalkPort.SentencesToTranslate.Add(RudderSensorAngle.Id);
             _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControl.Id);
-            _seatalkPort.StartDecode();
 
             _openCpnServer = new NmeaTcpServer(OpenCpn, IPAddress.Any, 10110);
             _openCpnServer.OnParserError += OnParserError;
-            _openCpnServer.StartDecode();
+            
 
             _udpServer = new NmeaUdpServer(Udp, 10101);
             _udpServer.OnParserError += OnParserError;
-            _udpServer.StartDecode();
-
             _clockSynchronizer = new SystemClockSynchronizer();
             _clockSynchronizer.StartDecode();
 
@@ -615,6 +606,13 @@ namespace DisplayControl
             _cache.MaxDataAge = TimeSpan.FromMinutes(1);
             _autopilot = new AutopilotController(_router, _router, _cache);
             _autopilot.NmeaSourceName = HandheldSourceName;
+
+            _udpServer.StartDecode();
+            _openCpnServer.StartDecode();
+            _seatalkPort.StartDecode();
+
+            _parserHandheldInterface.StartDecode();
+            _parserForwardInterface.StartDecode();
 
             var tse = new TrackEstimationParameters();
             tse.WarningRepeatTimeout = TimeSpan.FromMinutes(15);
@@ -864,8 +862,23 @@ namespace DisplayControl
                     break;
 
                 case WaterSpeedAndAngle vhw when vhw.Valid:
-                    _manager.UpdateValue(SensorMeasurement.SpeedTroughWater, vhw.Speed);
+                {
+                    var correctedMessage = WaterSpeedCorrection(vhw);
+                    _manager.UpdateValue(SensorMeasurement.SpeedTroughWater, correctedMessage.Speed);
+                    _router.SendSentence(correctedMessage);
                     break;
+                }
+
+                case DistanceTraveledTroughWater vlw when vlw.Valid:
+                {
+                    // Just re-send this one, it is often used in combination with the one above and thus expected
+                    // to come from the same device.
+                    var replication =
+                        new DistanceTraveledTroughWater(vlw.TotalDistanceTraveled, vlw.DistanceTraveledSinceReset);
+                    _manager.UpdateValue(SensorMeasurement.LogTotal, vlw.TotalDistanceTraveled, SensorMeasurementStatus.None);
+                        _router.SendSentence(replication);
+                    break;
+                }
 
                 case TransducerMeasurement xdr when xdr.Valid:
                     foreach(var ds in xdr.DataSets)
@@ -941,12 +954,6 @@ namespace DisplayControl
                 case SeatalkNmeaMessageWithDecoding stalk:
                 {
                     ParserOnNewStalkMessage(source, stalk);
-                    break;
-                }
-
-                case DistanceTraveledTroughWater vtw:
-                {
-                    _manager.UpdateValue(SensorMeasurement.LogTotal, vtw.TotalDistanceTraveled, SensorMeasurementStatus.None);
                     break;
                 }
             }
