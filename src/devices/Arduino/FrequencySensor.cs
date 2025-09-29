@@ -200,7 +200,7 @@ namespace Iot.Device.Arduino
             sequence.WriteByte((byte)FirmataSysexCommand.FREQUENCY_COMMAND);
             sequence.WriteByte(3);
             sequence.WriteByte((byte)pinNumber);
-            sequence.SendInt32(us);
+            sequence.SendUInt32(us);
             sequence.WriteByte((byte)FirmataCommand.END_SYSEX);
             SendCommand(sequence);
         }
