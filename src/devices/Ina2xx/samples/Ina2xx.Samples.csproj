@@ -4,6 +4,6 @@
     <TargetFramework>$(DefaultSampleTfms)</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)\..\Ina219.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)\..\Ina2xx.csproj" />
   </ItemGroup>
 </Project>

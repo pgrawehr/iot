@@ -22,7 +22,7 @@ namespace Iot.Device.Adc
     /// <see href="http://www.ti.com/lit/ds/symlink/ina219.pdf"/>
     /// </summary>
     [Interface("INA219 Bidirectional Current/Power monitor")]
-    public class Ina219 : IDisposable
+    public class Ina219 : Ina2xx
     {
         // These values are the datasheet defined delays in micro seconds between requesting a Current or Power value from the INA219 and the ADC sampling having completed
         // along with any conversions.
@@ -92,12 +92,12 @@ namespace Iot.Device.Adc
         /// Property representing the Operating mode of the INA219
         /// </summary>
         /// <remarks>
-        /// This allows the user to selects continuous, triggered, or power-down mode of operation along with which of the shunt and bus voltage measurements are made.
+        /// This allows the user to select continuous, triggered, or power-down mode of operation along with which of the shunt and bus voltage measurements are made.
         /// </remarks>
         [Property]
-        public Ina219OperatingMode OperatingMode
+        public InaOperatingMode OperatingMode
         {
-            get => (Ina219OperatingMode)(ReadRegister(Ina219Register.Configuration) & (ushort)Ina219ConfigurationFlags.ModeMask);
+            get => (InaOperatingMode)(ReadRegister(Ina219Register.Configuration) & (ushort)Ina219ConfigurationFlags.ModeMask);
             set
             {
                 ushort regValue = ReadRegister(Ina219Register.Configuration);
