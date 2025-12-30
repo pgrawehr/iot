@@ -141,7 +141,11 @@ namespace ArduinoCsCompiler
             }
 
             _methods = new(setToClone._methods);
-            _classes = new List<ClassDeclaration>(setToClone._classes);
+            _classes = new List<ClassDeclaration>(setToClone._classes.Count);
+            foreach (var c1 in setToClone._classes)
+            {
+                _classes.Add(c1.DeepClone());
+            }
 
             _patchedTypeTokens = new Dictionary<TypeInfo, int>(setToClone._patchedTypeTokens);
             _patchedMethodTokens = new Dictionary<EquatableMethod, int>(setToClone._patchedMethodTokens);

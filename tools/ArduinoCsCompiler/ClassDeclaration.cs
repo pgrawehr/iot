@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 #pragma warning disable CS1591
 namespace ArduinoCsCompiler
@@ -28,6 +29,23 @@ namespace ArduinoCsCompiler
             UseOriginalType = false;
         }
 
+        public ClassDeclaration(ClassDeclaration other)
+        {
+            TheType = other.TheType;
+            DynamicSize = other.DynamicSize;
+            StaticSize = other.StaticSize;
+            NewToken = other.NewToken;
+            Name = TheType.ClassSignature(true);
+            ReadOnly = other.ReadOnly;
+            UseOriginalType = other.UseOriginalType;
+            _interfaces = other._interfaces;
+            _members = new List<ClassMember>(other.Members.Count);
+            foreach (var m in other.Members)
+            {
+                _members.Add(m.DeepClone());
+            }
+        }
+
         public Type TheType
         {
             get;
@@ -42,7 +60,7 @@ namespace ArduinoCsCompiler
             {
                 return _fullNameSet ?? TheType.FullName;
             }
-            set
+            private set
             {
                 _fullNameSet = value;
             }
@@ -170,6 +188,75 @@ namespace ArduinoCsCompiler
         public override string ToString()
         {
             return Name;
+        }
+
+        public ClassDeclaration DeepClone()
+        {
+            return new ClassDeclaration(this);
+        }
+
+        public void ConstructName(ExecutionSet set)
+        {
+            if (FullName == null)
+            {
+                return;
+            }
+
+            if (TheType.IsGenericType && TheType.IsConstructedGenericType)
+            {
+                // We will later remove these alltogether, as the runtime now really supports generics.
+                // However, for now we just make sure they have a valid name (can be anything, actually, just not their full name)
+                string newName = FullName.Substring(0, FullName.IndexOf("[[", StringComparison.Ordinal));
+                newName += "_with_";
+                IEnumerable<string?> genericArgs = TheType.GenericTypeArguments.Select(x => GetClassDeclaration(set, x)?.FullName ?? x.FullName);
+                newName += string.Join("_and_", genericArgs);
+                FullName = newName;
+            }
+
+            if (FullName.Contains('+'))
+            {
+                FullName = FullName.Replace("+", "_sub_");
+            }
+
+            if (RemoveAnyOf(FullName, new[] { '<', '>', '/' }, out string changed))
+            {
+                FullName = changed;
+            }
+        }
+
+        private bool RemoveAnyOf(string input, char[] forbiddenChars, out string changed)
+        {
+            changed = input;
+            var idx = input.IndexOfAny(forbiddenChars);
+            if (idx == -1)
+            {
+                return false;
+            }
+
+            while (idx != -1)
+            {
+                changed = changed.Remove(idx, 1);
+                idx = changed.IndexOfAny(forbiddenChars);
+            }
+
+            return true;
+        }
+
+        public static ClassDeclaration? GetClassDeclaration(ExecutionSet set, Type? ofClass)
+        {
+            if (ofClass == null)
+            {
+                return null;
+            }
+
+            int tk = set.GetOrAddClassToken(ofClass.GetTypeInfo());
+            ClassDeclaration? ret = set.Classes.FirstOrDefault(y => y.NewToken == tk);
+            if (ret != null)
+            {
+                ret.ConstructName(set);
+            }
+
+            return ret;
         }
     }
 }

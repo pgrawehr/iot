@@ -39,6 +39,19 @@ namespace ArduinoCsCompiler
             Name = $"Method: {method.MethodSignature()}";
         }
 
+        public ClassMember(ClassMember other)
+        {
+            VariableType = other.VariableType;
+            Token = other.Token;
+            BaseTokens = other.BaseTokens;
+            SizeOfField = other.SizeOfField;
+            StaticFieldSize = other.StaticFieldSize;
+            Method = other.Method;
+            Field = other.Field;
+            Name = other.Name;
+            Offset = other.Offset;
+        }
+
         public string Name
         {
             get;
@@ -96,6 +109,11 @@ namespace ArduinoCsCompiler
         public override string ToString()
         {
             return Name;
+        }
+
+        public ClassMember DeepClone()
+        {
+            return new ClassMember(this);
         }
     }
 }

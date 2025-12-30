@@ -49,12 +49,16 @@ public class IlWriter
     /// </summary>
     private void PatchAndUpdate()
     {
-        foreach (var cls1 in _set.Classes)
+        var ordered = _set.Classes.ToList();
+        ordered.Sort(new ByNestingSorter(_set));
+        foreach (var cls1 in ordered)
         {
             // Fill the list (interfaces as ClassDeclarations, so we later get their fixed names as well)
             // Strip any interfaces that are not found from the declaration (these include those earlier suppressed, such
             // as IConvertible)
             cls1.WrappedInterfaces = cls1.RawInterfaces.Select(GetClassDeclaration).Where(z => z != null).ToList()!;
+
+            string? n = cls1.FullName;
 
             if (cls1.FullName == null)
             {
@@ -67,37 +71,18 @@ public class IlWriter
                 cls1.UseOriginalType = true;
             }
 
-            if (cls1.TheType.IsGenericType && cls1.TheType.IsConstructedGenericType)
-            {
-                // We will later remove these alltogether, as the runtime now really supports generics.
-                // However, for now we just make sure they have a valid name (can be anything, actually, just not their full name)
-                string newName = cls1.FullName.Substring(0, cls1.FullName.IndexOf("[[", StringComparison.Ordinal));
-                newName += "_with_";
-                newName += string.Join("_and_", cls1.TheType.GenericTypeArguments.Select(x => x.Name));
-                cls1.FullName = newName;
-            }
-
-            if (cls1.FullName.Contains('+'))
-            {
-                cls1.FullName = cls1.FullName.Replace("+", "_in_");
-            }
-
             if (_originalClassesToUse.Contains(cls1.FullName!))
             {
                 cls1.UseOriginalType = true;
             }
+
+            cls1.ConstructName(_set);
         }
     }
 
-    private ClassDeclaration? GetClassDeclaration(Type? ofClass)
+    public ClassDeclaration? GetClassDeclaration(Type? ofClass)
     {
-        if (ofClass == null)
-        {
-            return null;
-        }
-
-        int tk = _set.GetOrAddClassToken(ofClass.GetTypeInfo());
-        return _set.Classes.FirstOrDefault(y => y.NewToken == tk);
+        return ClassDeclaration.GetClassDeclaration(_set, ofClass);
     }
 
     private void WriteClasses(IndentedTextWriter tw)
@@ -107,6 +92,13 @@ public class IlWriter
             var baseClass = GetClassDeclaration(cl.TheType.BaseType);
             if (cl.UseOriginalType)
             {
+                continue;
+            }
+
+            // TODO: These should be written, not the concrete types
+            if (cl.TheType.IsGenericType && cl.TheType.ContainsGenericParameters)
+            {
+                // Open generic type
                 continue;
             }
 
@@ -121,11 +113,17 @@ public class IlWriter
 
             string name = cl.FullName!;
 
-            tw.WriteLine($".class public auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} extends {baseName}");
+            string extends = "extends";
+            if (string.IsNullOrWhiteSpace(baseName))
+            {
+                extends = string.Empty; // E.g open generic classes end up here
+            }
+
+            tw.WriteLine($".class public auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} {extends} {baseName}");
             if (cl.WrappedInterfaces != null && cl.WrappedInterfaces.Any())
             {
                 tw.Write("implements ");
-                tw.WriteLine(String.Join(", " + Environment.NewLine, cl.WrappedInterfaces!.Select(x => x.FullName)));
+                tw.WriteLine(String.Join(", " + Environment.NewLine + "    ", cl.WrappedInterfaces!.Select(x => x.FullName).Where(y => !string.IsNullOrWhiteSpace(y))));
             }
 
             tw.WriteLine("{");
@@ -151,5 +149,70 @@ public class IlWriter
   .publickeytoken = (C0 7D 48 1E 97 58 C7 31 )                         // .}H..X.1
   .ver 1:15:6:0
 }");
+    }
+
+    /// <summary>
+    /// Sort types according to their generic nesting levels (e.g 'int' comes before 'Nullable{int}' and this before 'List{Nullable{int}}')
+    /// </summary>
+    private class ByNestingSorter : IComparer<ClassDeclaration>
+    {
+        private ExecutionSet _set;
+
+        public ByNestingSorter(ExecutionSet set)
+        {
+            _set = set;
+        }
+
+        public int Compare(ClassDeclaration? x, ClassDeclaration? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return 0;
+            }
+
+            if (x == null || y == null)
+            {
+                return 0;
+            }
+
+            int leftNesting = GenericNesting(x);
+            int rightNesting = GenericNesting(y);
+
+            return leftNesting.CompareTo(rightNesting);
+        }
+
+        private int GenericNesting(ClassDeclaration x)
+        {
+            int ret = 0;
+            GenericNestingRecursion(ref ret, x);
+            return ret;
+        }
+
+        private void GenericNestingRecursion(ref int value, ClassDeclaration? x)
+        {
+            if (x == null)
+            {
+                return;
+            }
+
+            if (x.TheType.IsGenericType == false)
+            {
+                return;
+            }
+
+            value++;
+            int max = value;
+            foreach (var genericArg in x.TheType.GenericTypeArguments)
+            {
+                int c = value;
+                GenericNestingRecursion(ref c, ClassDeclaration.GetClassDeclaration(_set, genericArg));
+                if (c > max)
+                {
+                    max = c;
+                }
+            }
+
+            value = max;
+        }
     }
 }
