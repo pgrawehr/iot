@@ -113,6 +113,11 @@ public class IlWriter
 
             string name = cl.FullName!;
 
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue; // Things like {T} itself
+            }
+
             string extends = "extends";
             if (string.IsNullOrWhiteSpace(baseName))
             {

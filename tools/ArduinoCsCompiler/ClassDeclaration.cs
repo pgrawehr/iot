@@ -206,11 +206,21 @@ namespace ArduinoCsCompiler
             {
                 // We will later remove these alltogether, as the runtime now really supports generics.
                 // However, for now we just make sure they have a valid name (can be anything, actually, just not their full name)
-                string newName = FullName.Substring(0, FullName.IndexOf("[[", StringComparison.Ordinal));
-                newName += "_with_";
-                IEnumerable<string?> genericArgs = TheType.GenericTypeArguments.Select(x => GetClassDeclaration(set, x)?.FullName ?? x.FullName);
-                newName += string.Join("_and_", genericArgs);
-                FullName = newName;
+
+                // String looks like
+                // System.Nullable`1[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]
+                // and in a nested form, so replace from inside to outside
+                int idx = FullName.LastIndexOf("[[", StringComparison.Ordinal);
+                while (idx != -1)
+                {
+                    int idxEnd = FullName.IndexOf("]]", idx + 1, StringComparison.Ordinal);
+                    int idxEndName = FullName.IndexOf(",", idx + 1, StringComparison.Ordinal);
+                    string name = FullName.Substring(idx + 2, idxEndName - idx - 2);
+                    name = name.Replace("[]", "Arr"); // When the type parameter is an array, note that, but not using []
+                    FullName = FullName.Remove(idx, idxEnd - idx + 2);
+                    FullName = FullName.Insert(idx, $"_arg_{name}_");
+                    idx = FullName.LastIndexOf("[[", StringComparison.Ordinal);
+                }
             }
 
             if (FullName.Contains('+'))
