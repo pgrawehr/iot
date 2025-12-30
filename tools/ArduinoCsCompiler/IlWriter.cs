@@ -3,9 +3,11 @@
 
 using System;
 using System.CodeDom.Compiler;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Linq;
+using System.Reflection;
 
 namespace ArduinoCsCompiler;
 
@@ -16,6 +18,14 @@ public class IlWriter
 {
     private readonly ExecutionSet _set;
     private readonly string _outputFile;
+
+    private List<string> _originalClassesToUse = new List<string>()
+    {
+        "System.Object",
+        "System.ValueType",
+        "System.Enum",
+        "<PrivateImplementationDetails>" // What was this one about?
+    };
 
     public IlWriter(ExecutionSet set, string outputFile)
     {
@@ -39,25 +49,83 @@ public class IlWriter
     /// </summary>
     private void PatchAndUpdate()
     {
-        // Remove "System.Object" from the list of classes
-        _set.Classes.Remove(_set.Classes.First(x => x.TheType.BaseType == null));
+        foreach (var cls1 in _set.Classes)
+        {
+            // Fill the list (interfaces as ClassDeclarations, so we later get their fixed names as well)
+            // Strip any interfaces that are not found from the declaration (these include those earlier suppressed, such
+            // as IConvertible)
+            cls1.WrappedInterfaces = cls1.RawInterfaces.Select(GetClassDeclaration).Where(z => z != null).ToList()!;
+
+            if (cls1.FullName == null)
+            {
+                continue;
+            }
+
+            if (cls1.TheType.IsArray)
+            {
+                // We do not need to write out array types, they're rebuilt automatically again by the compiler
+                cls1.UseOriginalType = true;
+            }
+
+            if (cls1.TheType.IsGenericType && cls1.TheType.IsConstructedGenericType)
+            {
+                // We will later remove these alltogether, as the runtime now really supports generics.
+                // However, for now we just make sure they have a valid name (can be anything, actually, just not their full name)
+                string newName = cls1.FullName.Substring(0, cls1.FullName.IndexOf("[[", StringComparison.Ordinal));
+                newName += "_with_";
+                newName += string.Join("_and_", cls1.TheType.GenericTypeArguments.Select(x => x.Name));
+                cls1.FullName = newName;
+            }
+
+            if (cls1.FullName.Contains('+'))
+            {
+                cls1.FullName = cls1.FullName.Replace("+", "_in_");
+            }
+
+            if (_originalClassesToUse.Contains(cls1.FullName!))
+            {
+                cls1.UseOriginalType = true;
+            }
+        }
+    }
+
+    private ClassDeclaration? GetClassDeclaration(Type? ofClass)
+    {
+        if (ofClass == null)
+        {
+            return null;
+        }
+
+        int tk = _set.GetOrAddClassToken(ofClass.GetTypeInfo());
+        return _set.Classes.FirstOrDefault(y => y.NewToken == tk);
     }
 
     private void WriteClasses(IndentedTextWriter tw)
     {
         foreach (var cl in _set.Classes)
         {
-            var baseClass = cl.TheType.BaseType;
+            var baseClass = GetClassDeclaration(cl.TheType.BaseType);
+            if (cl.UseOriginalType)
+            {
+                continue;
+            }
+
             string baseName = "System.Object";
             if (baseClass != null)
             {
-                baseName = baseClass.FullName!;
+                var cls1 = _set.Classes.First(x => x.FullName == baseClass.FullName);
+                baseName = cls1.FullName ?? string.Empty;
             }
 
-            tw.WriteLine($".class public auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {cl.TheType.FullName} extends {baseName}");
-            foreach (var interf in cl.Interfaces)
+            bool isClass = !cl.TheType.IsValueType;
+
+            string name = cl.FullName!;
+
+            tw.WriteLine($".class public auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} extends {baseName}");
+            if (cl.WrappedInterfaces != null && cl.WrappedInterfaces.Any())
             {
-                tw.WriteLine($"implements {interf.FullName}");
+                tw.Write("implements ");
+                tw.WriteLine(String.Join(", " + Environment.NewLine, cl.WrappedInterfaces!.Select(x => x.FullName)));
             }
 
             tw.WriteLine("{");

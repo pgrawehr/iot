@@ -1410,7 +1410,7 @@ namespace ArduinoCsCompiler
                 }
 
                 _logger.LogDebug($"Sending class {idx + 1} of {classesToLoad.Count}: Declaration for {cls.MemberInfoSignature()} (Token 0x{token:x8}). Number of members: {c.Members.Count}, Dynamic size {c.DynamicSize} Bytes, Static Size {c.StaticSize} Bytes.");
-                _commandHandler.SendClassDeclaration(token, parentToken, (c.DynamicSize, c.StaticSize), classFlags, c.Members, c.Interfaces.Select(x => set.GetOrAddClassToken(x.GetTypeInfo())).ToArray());
+                _commandHandler.SendClassDeclaration(token, parentToken, (c.DynamicSize, c.StaticSize), classFlags, c.Members, c.RawInterfaces.Select(x => set.GetOrAddClassToken(x.GetTypeInfo())).ToArray());
 
                 progress.Report((double)idx / classesToLoad.Count);
                 if (markAsReadOnly)

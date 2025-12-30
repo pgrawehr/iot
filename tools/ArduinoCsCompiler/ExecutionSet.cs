@@ -1039,7 +1039,6 @@ namespace ArduinoCsCompiler
 
         internal MemberInfo? InverseResolveToken(int token)
         {
-            // Todo: This is very slow - consider inversing the dictionaries during data prep
             if (_inversePatchedMethodTokens.TryGetValue(token, out var method))
             {
                 return method.Method;

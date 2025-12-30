@@ -110,11 +110,13 @@ namespace ArduinoCsCompiler
 
                 RunCompiler(inputInfo);
             }
+#if !DEBUG
             catch (Exception x) when (!(x is NullReferenceException))
             {
                 Logger.LogError(x.Message);
                 return false;
             }
+#endif
             finally
             {
                 board?.Dispose();

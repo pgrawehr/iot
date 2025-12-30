@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 #pragma warning disable CS1591
 namespace ArduinoCsCompiler
@@ -11,8 +12,10 @@ namespace ArduinoCsCompiler
     {
         private readonly List<ClassMember> _members;
         private readonly List<Type> _interfaces;
+        private string? _fullNameSet;
 
-        public ClassDeclaration(Type type, int dynamicSize, int staticSize, int newToken, List<ClassMember> members, List<Type> interfaces)
+        public ClassDeclaration(Type type, int dynamicSize, int staticSize, int newToken,
+            List<ClassMember> members, List<Type> interfaces)
         {
             TheType = type;
             DynamicSize = dynamicSize;
@@ -22,11 +25,27 @@ namespace ArduinoCsCompiler
             _interfaces = interfaces;
             Name = type.ClassSignature(true);
             ReadOnly = false;
+            UseOriginalType = false;
         }
 
         public Type TheType
         {
             get;
+        }
+
+        /// <summary>
+        /// Allows overriding the original name of this class
+        /// </summary>
+        public string? FullName
+        {
+            get
+            {
+                return _fullNameSet ?? TheType.FullName;
+            }
+            set
+            {
+                _fullNameSet = value;
+            }
         }
 
         /// <summary>
@@ -48,12 +67,24 @@ namespace ArduinoCsCompiler
             get;
         }
 
+        public bool UseOriginalType
+        {
+            get;
+            set;
+        }
+
         public int DynamicSize { get; }
         public int StaticSize { get; }
 
         public IList<ClassMember> Members => _members.AsReadOnly();
 
-        public IEnumerable<Type> Interfaces => _interfaces;
+        public IEnumerable<Type> RawInterfaces => _interfaces;
+
+        public List<ClassDeclaration>? WrappedInterfaces
+        {
+            get;
+            set;
+        }
 
         public bool SuppressInit
         {
