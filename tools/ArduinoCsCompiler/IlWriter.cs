@@ -24,6 +24,7 @@ public class IlWriter
         "System.Object",
         "System.ValueType",
         "System.Enum",
+        "System.String",
         "<PrivateImplementationDetails>" // What was this one about?
     };
 
@@ -31,6 +32,7 @@ public class IlWriter
     {
         _set = new ExecutionSet(set, null!, set.CompilerSettings);
         _outputFile = outputFile;
+        _originalClassesToUse.AddRange(ClassDeclaration.ShortTypeNames.Values);
     }
 
     public void Write()
@@ -41,6 +43,7 @@ public class IlWriter
 
         WriteHeader(tw);
         WriteClasses(tw);
+        tw.Flush();
     }
 
     /// <summary>
@@ -85,6 +88,59 @@ public class IlWriter
         return ClassDeclaration.GetClassDeclaration(_set, ofClass);
     }
 
+    private long GetFieldValue(Type classType, FieldInfo field)
+    {
+        var fieldValue = field.GetValue(null)!;
+        long token = 0;
+        Type underlyingType = Enum.GetUnderlyingType(classType);
+        if (underlyingType == typeof(int))
+        {
+            unchecked
+            {
+                int v = (int)fieldValue;
+                token = v;
+            }
+        }
+        else if (underlyingType == typeof(UInt32))
+        {
+            unchecked
+            {
+                uint v = (UInt32)fieldValue;
+                token = (int)v;
+            }
+        }
+        else if (underlyingType == typeof(byte))
+        {
+            unchecked
+            {
+                byte v = (byte)fieldValue;
+                token = v;
+            }
+        }
+        else if (underlyingType == typeof(UInt16))
+        {
+            unchecked
+            {
+                UInt16 v = (UInt16)fieldValue;
+                token = v;
+            }
+        }
+        else if (underlyingType == typeof(Int16))
+        {
+            unchecked
+            {
+                Int16 v = (Int16)fieldValue;
+                token = v;
+            }
+        }
+        else
+        {
+            throw new NotSupportedException($"Unable to cast {fieldValue} to a constant, when trying to read constant {field.Name} of {classType.MemberInfoSignature()}");
+        }
+
+        return token;
+    }
+
     private void WriteClasses(IndentedTextWriter tw)
     {
         foreach (var cl in _set.Classes)
@@ -92,6 +148,30 @@ public class IlWriter
             var baseClass = GetClassDeclaration(cl.TheType.BaseType);
             if (cl.UseOriginalType)
             {
+                continue;
+            }
+
+            if (cl.TheType.IsEnum)
+            {
+                tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends System.Enum");
+                tw.WriteLine("{");
+                var declared = cl.TheType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                tw.Indent++;
+                String? enumTypeName;
+                if (!ClassDeclaration.ShortTypeNames.TryGetValue(declared[0].FieldType, out enumTypeName))
+                {
+                    throw new InvalidOperationException($"{declared[0].FieldType} is not a known enum base type");
+                }
+
+                tw.WriteLine($".field public specialname rtspecialname {enumTypeName} {declared[0].Name}");
+                for (int i = 1; i < declared.Length; i++)
+                {
+                    long value = GetFieldValue(cl.TheType, declared[i]);
+                    tw.WriteLine($".field public static literal valuetype {cl.FullName} {declared[i].Name} = {enumTypeName}({value})");
+                }
+
+                tw.Indent--;
+                tw.WriteLine("}");
                 continue;
             }
 
