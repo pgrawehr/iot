@@ -43,6 +43,18 @@ namespace ArduinoCsCompiler
                 },
                 {
                     typeof(System.SByte), "int8"
+                },
+                {
+                    typeof(System.Object), "object"
+                },
+                {
+                    typeof(System.Boolean), "bool"
+                },
+                {
+                    typeof(System.Double), "float64"
+                },
+                {
+                    typeof(System.Single), "float32"
                 }
             };
         }
@@ -149,6 +161,41 @@ namespace ArduinoCsCompiler
                 // Don't run these init functions, to complicated or depend on native functions
                 return TheType.FullName == "System.SR";
             }
+        }
+
+        public static bool RemoveAnyOf(string input, char[] forbiddenChars, out string changed)
+        {
+            changed = input;
+            var idx = input.IndexOfAny(forbiddenChars);
+            if (idx == -1)
+            {
+                return false;
+            }
+
+            while (idx != -1)
+            {
+                changed = changed.Remove(idx, 1);
+                idx = changed.IndexOfAny(forbiddenChars);
+            }
+
+            return true;
+        }
+
+        public static ClassDeclaration? GetClassDeclaration(ExecutionSet set, Type? ofClass)
+        {
+            if (ofClass == null)
+            {
+                return null;
+            }
+
+            int tk = set.GetOrAddClassToken(ofClass.GetTypeInfo());
+            ClassDeclaration? ret = set.Classes.FirstOrDefault(y => y.NewToken == tk);
+            if (ret != null)
+            {
+                ret.ConstructName(set);
+            }
+
+            return ret;
         }
 
         public bool Equals(ClassDeclaration? other)
@@ -270,41 +317,6 @@ namespace ArduinoCsCompiler
             {
                 FullName = changed;
             }
-        }
-
-        private bool RemoveAnyOf(string input, char[] forbiddenChars, out string changed)
-        {
-            changed = input;
-            var idx = input.IndexOfAny(forbiddenChars);
-            if (idx == -1)
-            {
-                return false;
-            }
-
-            while (idx != -1)
-            {
-                changed = changed.Remove(idx, 1);
-                idx = changed.IndexOfAny(forbiddenChars);
-            }
-
-            return true;
-        }
-
-        public static ClassDeclaration? GetClassDeclaration(ExecutionSet set, Type? ofClass)
-        {
-            if (ofClass == null)
-            {
-                return null;
-            }
-
-            int tk = set.GetOrAddClassToken(ofClass.GetTypeInfo());
-            ClassDeclaration? ret = set.Classes.FirstOrDefault(y => y.NewToken == tk);
-            if (ret != null)
-            {
-                ret.ConstructName(set);
-            }
-
-            return ret;
         }
     }
 }

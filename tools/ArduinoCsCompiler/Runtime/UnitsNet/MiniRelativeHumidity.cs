@@ -11,7 +11,7 @@ namespace ArduinoCsCompiler.Runtime.UnitsNet
     internal struct MiniRelativeHumidity
     {
         private double _value;
-        private RelativeHumidityUnit? _unit;
+        private RelativeHumidityUnit _unit;
 
         private MiniRelativeHumidity(double value, RelativeHumidityUnit unit)
         {

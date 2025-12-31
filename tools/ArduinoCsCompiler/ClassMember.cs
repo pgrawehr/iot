@@ -1,7 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Reflection;
 
 #pragma warning disable CS1591
@@ -16,6 +18,7 @@ namespace ArduinoCsCompiler
             BaseTokens = null;
             SizeOfField = sizeOfField;
             Name = name;
+            FieldName = name;
         }
 
         public ClassMember(FieldInfo field, VariableKind variableType, int token, int sizeOfField, int staticFieldSize)
@@ -26,6 +29,28 @@ namespace ArduinoCsCompiler
             SizeOfField = sizeOfField;
             Field = field;
             StaticFieldSize = staticFieldSize;
+            string fieldName = Field.Name;
+            if (ClassDeclaration.RemoveAnyOf(fieldName, new char[]
+                {
+                    '<', '>'
+                }, out string changed))
+            {
+                fieldName = changed;
+            }
+
+            if (Char.IsDigit(fieldName[0]))
+            {
+                // The field name begins with a digit.
+                // (This happens on some auto-generated fields that have the actual name as '<>9' or similar)
+                fieldName = "Number" + fieldName;
+            }
+
+            if (fieldName == "value")
+            {
+                fieldName = "theValue"; // "value" is a reserved word in IL, but not in C#
+            }
+
+            FieldName = fieldName + $"0x{token:X8}";
             Name = $"Field: {field.MemberInfoSignature()}";
         }
 
@@ -36,6 +61,7 @@ namespace ArduinoCsCompiler
             BaseTokens = baseTokens;
             SizeOfField = 0;
             Method = method;
+            FieldName = string.Empty;
             Name = $"Method: {method.MethodSignature()}";
         }
 
@@ -49,10 +75,16 @@ namespace ArduinoCsCompiler
             Method = other.Method;
             Field = other.Field;
             Name = other.Name;
+            FieldName = other.FieldName;
             Offset = other.Offset;
         }
 
         public string Name
+        {
+            get;
+        }
+
+        public string FieldName
         {
             get;
         }

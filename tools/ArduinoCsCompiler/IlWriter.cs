@@ -213,13 +213,78 @@ public class IlWriter
 
             tw.WriteLine("{");
             tw.Indent = 1;
-            WriteMethods(tw);
+            WriteFields(tw, cl);
+            WriteMethods(tw, cl);
             tw.Indent = 0;
             tw.WriteLine("}");
         }
     }
 
-    private void WriteMethods(IndentedTextWriter tw)
+    /// <summary>
+    /// Prefixes the type with "class" when it's a reference type and not a short name
+    /// </summary>
+    private string PrefixWithClassKeyword(ClassDeclaration ty, string name)
+    {
+        // TODO: That's a bit of a hack to detect a short name (which is not to be prefixed with 'class' or 'valuetype')
+        if (!name.Contains(".", StringComparison.Ordinal))
+        {
+            return name;
+        }
+
+        if (!ty.TheType.IsValueType)
+        {
+            return $"class {name}";
+        }
+        else
+        {
+            return $"valuetype {name}";
+        }
+    }
+
+    private void WriteFields(IndentedTextWriter tw, ClassDeclaration cl)
+    {
+        foreach (ClassMember f in cl.Members.Where(x => x.Field != null))
+        {
+            bool isStatic = f.Field!.IsStatic;
+            String fieldTypeName;
+            if (f.Field.FieldType.IsArray)
+            {
+                Type baseType = f.Field.FieldType.GetElementType()!;
+                var t = GetClassDeclaration(baseType);
+                if (t != null)
+                {
+                    fieldTypeName = $"{t.FullName}[]";
+                    fieldTypeName = PrefixWithClassKeyword(t, fieldTypeName);
+                }
+                else if (f.Field.FieldType.IsValueType)
+                {
+                    fieldTypeName = $"int32 /* Unknown enum type {f.Field.FieldType} */";
+                }
+                else
+                {
+                    fieldTypeName = $"object /* unknown type {f.Field.FieldType} */";
+                }
+            }
+            else
+            {
+                var t = GetClassDeclaration(f.Field.FieldType);
+                if (t != null)
+                {
+                    fieldTypeName = t.FullName!;
+                    // TODO: That's a bit of a hack to detect a short name (which is not to be prefixed with 'class')
+                    fieldTypeName = PrefixWithClassKeyword(t, fieldTypeName);
+                }
+                else
+                {
+                    fieldTypeName = $"object /* Unknown type {f.Field.FieldType} */";
+                }
+            }
+
+            tw.WriteLine($".field public {(isStatic ? "static " : string.Empty)}{fieldTypeName} {f.FieldName}");
+        }
+    }
+
+    private void WriteMethods(IndentedTextWriter tw, ClassDeclaration cl)
     {
     }
 

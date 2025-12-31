@@ -485,6 +485,13 @@ namespace ArduinoCsCompiler
             PrepareClass(set, typeof(System.Exception), stack);
             PrepareClass(set, typeof(System.DivideByZeroException), stack);
 
+            // Because of the replacement, we need to explicitly include the enums
+            PrepareClass(set, typeof(UnitsNet.Units.DurationUnit), stack);
+            PrepareClass(set, typeof(UnitsNet.Units.LengthUnit), stack);
+            PrepareClass(set, typeof(UnitsNet.Units.PressureUnit), stack);
+            PrepareClass(set, typeof(UnitsNet.Units.RelativeHumidityUnit), stack);
+            PrepareClass(set, typeof(UnitsNet.Units.TemperatureUnit), stack);
+
             // We'll always need to provide these methods, or we'll get into trouble because they're not explicitly used before anything that depends on
             // them in the runtime
             type = typeof(System.Object);
