@@ -294,15 +294,33 @@ public class IlWriter
     private void WriteHeader(IndentedTextWriter tw)
     {
         String moduleName = _set.CompilerSettings.ProcessName ?? "CompiledLibrary";
-        tw.WriteLine($".module {moduleName}");
+        moduleName = moduleName.Replace(".dll", string.Empty);
+        tw.WriteLine($".module {moduleName}.dll");
 
         // This is the nanoframework core dependency
         // TODO: Replace with contents of ExternalAssemblyReference
-        tw.WriteLine(@".assembly extern mscorlib
-{
-  .publickeytoken = (C0 7D 48 1E 97 58 C7 31 )                         // .}H..X.1
-  .ver 1:15:6:0
-}");
+        tw.WriteLine("""
+                     .assembly extern mscorlib
+                     {
+                       .publickeytoken = (C0 7D 48 1E 97 58 C7 31 )                         // .}H..X.1
+                       .ver 1:15:6:0
+                     }
+                     
+                     """ +
+
+                     $".assembly {moduleName}" +
+                     """
+                     
+                     {
+                       .custom instance void [mscorlib]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1E 2E 4E 45 54 6E 61 6E 6F 46 72 61 6D 65   // ....NETnanoFrame
+                                                                                                                             77 6F 72 6B 2C 56 65 72 73 69 6F 6E 3D 76 31 2E   // work,Version=v1.
+                                                                                                                             30 01 00 54 0E 14 46 72 61 6D 65 77 6F 72 6B 44   // 0..T..FrameworkD
+                                                                                                                             69 73 70 6C 61 79 4E 61 6D 65 16 2E 4E 45 54 20   // isplayName..NET 
+                                                                                                                             6E 61 6E 6F 46 72 61 6D 65 77 6F 72 6B 20 31 2E   // nanoFramework 1.
+                                                                                                                             30 )
+                       .ver 1:0:0:0
+                     }
+                     """);
     }
 
     /// <summary>
