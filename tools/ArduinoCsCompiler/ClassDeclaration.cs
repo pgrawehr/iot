@@ -11,53 +11,9 @@ namespace ArduinoCsCompiler
 {
     public class ClassDeclaration : IEquatable<ClassDeclaration>
     {
-        public static readonly Dictionary<Type, string> ShortTypeNames;
         private readonly List<ClassMember> _members;
         private readonly List<Type> _interfaces;
         private string? _fullNameSet;
-
-        /// <summary>
-        /// For some types, we need to use the short names in IL, or the compiler will complain about a syntax error.
-        /// </summary>
-        static ClassDeclaration()
-        {
-            ShortTypeNames = new Dictionary<Type, string>()
-            {
-                {
-                    typeof(System.String), "string"
-                },
-                {
-                    typeof(System.Int32), "int32"
-                },
-                {
-                    typeof(System.UInt32), "uint32"
-                },
-                {
-                    typeof(System.Byte), "uint8"
-                },
-                {
-                    typeof(System.UInt16), "uint16"
-                },
-                {
-                    typeof(System.Int16), "int16"
-                },
-                {
-                    typeof(System.SByte), "int8"
-                },
-                {
-                    typeof(System.Object), "object"
-                },
-                {
-                    typeof(System.Boolean), "bool"
-                },
-                {
-                    typeof(System.Double), "float64"
-                },
-                {
-                    typeof(System.Single), "float32"
-                }
-            };
-        }
 
         public ClassDeclaration(Type type, int dynamicSize, int staticSize, int newToken,
             List<ClassMember> members, List<Type> interfaces)
@@ -281,9 +237,9 @@ namespace ArduinoCsCompiler
                 return;
             }
 
-            if (ShortTypeNames.TryGetValue(TheType, out string? name1))
+            if (ExternalSystemReferences.TryGetValue(TheType, out ExternalTypeReference? reference))
             {
-                FullName = name1;
+                FullName = string.IsNullOrWhiteSpace(reference.Assembly.Name) ? reference.Name : $"[{reference.Assembly.Name}]{reference.Name}";
                 return;
             }
 

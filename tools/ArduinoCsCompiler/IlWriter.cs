@@ -19,20 +19,10 @@ public class IlWriter
     private readonly ExecutionSet _set;
     private readonly string _outputFile;
 
-    private List<string> _originalClassesToUseFromMscorlib = new List<string>()
-    {
-        "System.Object",
-        "System.ValueType",
-        "System.Enum",
-        "System.String",
-        "<PrivateImplementationDetails>" // What was this one about?
-    };
-
     public IlWriter(ExecutionSet set, string outputFile)
     {
         _set = new ExecutionSet(set, null!, set.CompilerSettings);
         _outputFile = outputFile;
-        _originalClassesToUseFromMscorlib.AddRange(ClassDeclaration.ShortTypeNames.Values);
     }
 
     public void Write()
@@ -74,7 +64,7 @@ public class IlWriter
                 cls1.UseOriginalType = true;
             }
 
-            if (_originalClassesToUseFromMscorlib.Contains(cls1.FullName!))
+            if (ExternalSystemReferences.TryGetValue(cls1.TheType, out var reference))
             {
                 cls1.UseOriginalType = true;
             }
@@ -153,21 +143,21 @@ public class IlWriter
 
             if (cl.TheType.IsEnum)
             {
-                tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends System.Enum");
+                tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends [mscorlib]System.Enum");
                 tw.WriteLine("{");
                 var declared = cl.TheType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
                 tw.Indent++;
-                String? enumTypeName;
-                if (!ClassDeclaration.ShortTypeNames.TryGetValue(declared[0].FieldType, out enumTypeName))
+
+                if (!ExternalSystemReferences.TryGetValue(declared[0].FieldType, out var enumTypeName))
                 {
                     throw new InvalidOperationException($"{declared[0].FieldType} is not a known enum base type");
                 }
 
-                tw.WriteLine($".field public specialname rtspecialname {enumTypeName} {declared[0].Name}");
+                tw.WriteLine($".field public specialname rtspecialname {enumTypeName.Name} {declared[0].Name}");
                 for (int i = 1; i < declared.Length; i++)
                 {
                     long value = GetFieldValue(cl.TheType, declared[i]);
-                    tw.WriteLine($".field public static literal valuetype {cl.FullName} {declared[i].Name} = {enumTypeName}({value})");
+                    tw.WriteLine($".field public static literal valuetype {cl.FullName} {declared[i].Name} = {enumTypeName.Name}({value})");
                 }
 
                 tw.Indent--;
@@ -250,10 +240,23 @@ public class IlWriter
             if (f.Field.FieldType.IsArray)
             {
                 Type baseType = f.Field.FieldType.GetElementType()!;
+                int arrayLevel = 1;
+                // Stagged arrays
+                while (baseType.IsArray)
+                {
+                    arrayLevel++;
+                    baseType = baseType.GetElementType()!;
+                }
+
                 var t = GetClassDeclaration(baseType);
                 if (t != null)
                 {
-                    fieldTypeName = $"{t.FullName}[]";
+                    fieldTypeName = $"{t.FullName}";
+                    for (int i = 0; i < arrayLevel; i++)
+                    {
+                        fieldTypeName += "[]";
+                    }
+
                     fieldTypeName = PrefixWithClassKeyword(t, fieldTypeName);
                 }
                 else if (f.Field.FieldType.IsValueType)

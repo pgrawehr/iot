@@ -1,5 +1,9 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,6 +40,21 @@ namespace ArduinoCsCompiler
                 new("System.ValueType", typeof(System.ValueType), mscorlib),
                 new("System.Enum", typeof(System.Enum), mscorlib),
             });
+        }
+
+        public static bool TryGetValue(Type theType, [NotNullWhen(true)]out ExternalTypeReference? externalTypeReference)
+        {
+            foreach (var e in References)
+            {
+                if (e.Type == theType)
+                {
+                    externalTypeReference = e;
+                    return true;
+                }
+            }
+
+            externalTypeReference = null;
+            return false;
         }
     }
 }
