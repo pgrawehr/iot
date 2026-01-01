@@ -19,7 +19,7 @@ public class IlWriter
     private readonly ExecutionSet _set;
     private readonly string _outputFile;
 
-    private List<string> _originalClassesToUse = new List<string>()
+    private List<string> _originalClassesToUseFromMscorlib = new List<string>()
     {
         "System.Object",
         "System.ValueType",
@@ -32,7 +32,7 @@ public class IlWriter
     {
         _set = new ExecutionSet(set, null!, set.CompilerSettings);
         _outputFile = outputFile;
-        _originalClassesToUse.AddRange(ClassDeclaration.ShortTypeNames.Values);
+        _originalClassesToUseFromMscorlib.AddRange(ClassDeclaration.ShortTypeNames.Values);
     }
 
     public void Write()
@@ -74,7 +74,7 @@ public class IlWriter
                 cls1.UseOriginalType = true;
             }
 
-            if (_originalClassesToUse.Contains(cls1.FullName!))
+            if (_originalClassesToUseFromMscorlib.Contains(cls1.FullName!))
             {
                 cls1.UseOriginalType = true;
             }
@@ -291,9 +291,10 @@ public class IlWriter
     private void WriteHeader(IndentedTextWriter tw)
     {
         String moduleName = _set.CompilerSettings.ProcessName ?? "CompiledLibrary";
-        tw.WriteLine($".module {moduleName}.dll");
+        tw.WriteLine($".module {moduleName}");
 
         // This is the nanoframework core dependency
+        // TODO: Replace with contents of ExternalAssemblyReference
         tw.WriteLine(@".assembly extern mscorlib
 {
   .publickeytoken = (C0 7D 48 1E 97 58 C7 31 )                         // .}H..X.1
