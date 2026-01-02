@@ -295,6 +295,25 @@ public class IlWriter
 
     private void WriteMethods(IndentedTextWriter tw, ClassDeclaration cl)
     {
+        var methodsInClass = _set.Methods().Where(x => x.Key.DeclaringType == cl.TheType);
+        foreach (var m in methodsInClass)
+        {
+            var m1 = m.Value;
+            string isStatic = m1.Flags.HasFlag(MethodFlags.Static) ? "static" : "instance";
+            if (m1.Flags.HasFlag(MethodFlags.Ctor) || m1.MethodBase.Name == ".cctor")
+            {
+                // Can be ..ctor or ..cctor!
+                tw.WriteLine($".method public hidebysig specialname rtspecialname {isStatic} void {m1.MethodBase.Name}(");
+            }
+            else
+            {
+                tw.WriteLine($".method public {isStatic} object {m1.MethodInfo.Name}(");
+            }
+
+            tw.WriteLine(") cil managed");
+            tw.WriteLine("{");
+            tw.WriteLine("}");
+        }
     }
 
     private void WriteHeader(IndentedTextWriter tw)

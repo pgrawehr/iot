@@ -315,7 +315,7 @@ namespace ArduinoCsCompiler
 
             var stack = new AnalysisStack();
 
-            void AddMethod(EquatableMethod method, int nativeMethod)
+            void AddMethod(EquatableMethod method, Type declaringType, int nativeMethod)
             {
                 stack.Push(method);
                 if (!set.HasMethod(method, stack, out _, out _))
@@ -333,7 +333,7 @@ namespace ArduinoCsCompiler
                     }
 
                     int token = set.GetOrAddMethodToken(method, stack);
-                    ArduinoMethodDeclaration decl = new ArduinoMethodDeclaration(token, method, stack, MethodFlags.SpecialMethod, nativeMethod);
+                    ArduinoMethodDeclaration decl = new ArduinoMethodDeclaration(token, method, stack, MethodFlags.SpecialMethod, nativeMethod, declaringType);
                     set.AddMethod(decl);
                 }
 
@@ -344,7 +344,7 @@ namespace ArduinoCsCompiler
             foreach (var method in lowLevelInterface.GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly))
             {
                 var attr = (ArduinoImplementationAttribute)method.GetCustomAttributes(typeof(ArduinoImplementationAttribute)).First();
-                AddMethod(new EquatableMethod(method), attr.MethodNumber);
+                AddMethod(new EquatableMethod(method), lowLevelInterface, attr.MethodNumber);
             }
 
             MethodInfo? methodToReplace;
@@ -497,11 +497,11 @@ namespace ArduinoCsCompiler
             type = typeof(System.Object);
             replacementMethodInfo = type.GetMethod("Equals", BindingFlags.Public | BindingFlags.Instance)!; // Not the static one
             // Method numbers are hardcoded in attribute ctors!
-            AddMethod(replacementMethodInfo, 2);
+            AddMethod(replacementMethodInfo, type, 2);
             replacementMethodInfo = type.GetMethod("ToString")!;
-            AddMethod(replacementMethodInfo, 4);
+            AddMethod(replacementMethodInfo, type, 4);
             replacementMethodInfo = type.GetMethod("GetHashCode")!;
-            AddMethod(replacementMethodInfo, 3);
+            AddMethod(replacementMethodInfo, type, 3);
 
             if (set.CompilerSettings.CreateKernelForFlashing)
             {
@@ -2347,7 +2347,7 @@ namespace ArduinoCsCompiler
                 if (EquatableMethod.HasArduinoImplementationAttribute(methodInfo, out var implementation) && implementation.MethodNumber != 0)
                 {
                     int tk1 = set.GetOrAddMethodToken(methodInfo, stack);
-                    var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, stack, MethodFlags.SpecialMethod, implementation.MethodNumber);
+                    var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, stack, MethodFlags.SpecialMethod, implementation.MethodNumber, classReplacement ?? methodInfo.DeclaringType);
                     set.AddMethod(newInfo1);
                     return newInfo1.Token;
                 }
@@ -2359,7 +2359,8 @@ namespace ArduinoCsCompiler
                     if (methodInfo.Name == ".ctor" && methodInfo.DeclaringType!.Name == "ByReference`1")
                     {
                         int tk1 = set.GetOrAddMethodToken(methodInfo, stack);
-                        var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, stack, MethodFlags.SpecialMethod, ArduinoImplementationAttribute.GetStaticHashCode("ByReferenceCtor"));
+                        var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, stack, MethodFlags.SpecialMethod,
+                            ArduinoImplementationAttribute.GetStaticHashCode("ByReferenceCtor"), classReplacement);
                         set.AddMethod(newInfo1);
                         return newInfo1.Token;
                     }
@@ -2367,7 +2368,8 @@ namespace ArduinoCsCompiler
                     if (methodInfo.Name == "get_Value" && methodInfo.DeclaringType!.Name == "ByReference`1")
                     {
                         int tk1 = set.GetOrAddMethodToken(methodInfo, stack);
-                        var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, stack, MethodFlags.SpecialMethod, ArduinoImplementationAttribute.GetStaticHashCode("ByReferenceValue"));
+                        var newInfo1 = new ArduinoMethodDeclaration(tk1, methodInfo, stack, MethodFlags.SpecialMethod,
+                            ArduinoImplementationAttribute.GetStaticHashCode("ByReferenceValue"), classReplacement);
                         set.AddMethod(newInfo1);
                         return newInfo1.Token;
                     }
@@ -2690,11 +2692,12 @@ namespace ArduinoCsCompiler
                 ArduinoMethodDeclaration newInfo;
                 if (constructedCode)
                 {
-                    newInfo = new ArduinoMethodDeclaration(tk, methodInfo, stack, extraFlags, 0, Math.Max(8, methodInfo.GetParameters().Length + 3), parserResult);
+                    newInfo = new ArduinoMethodDeclaration(tk, methodInfo, stack, extraFlags, 0,
+                        Math.Max(8, methodInfo.GetParameters().Length + 3), parserResult, classReplacement ?? methodInfo.DeclaringType);
                 }
                 else
                 {
-                    newInfo = new ArduinoMethodDeclaration(tk, methodInfo, stack, parserResult, extraFlags);
+                    newInfo = new ArduinoMethodDeclaration(tk, methodInfo, stack, parserResult, extraFlags, classReplacement ?? methodInfo.DeclaringType);
                 }
 
                 if (set.AddMethod(newInfo))
