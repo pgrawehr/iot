@@ -172,14 +172,12 @@ public class IlWriter
                 continue;
             }
 
-            string baseName = "System.Object";
+            string baseName = "object";
             if (baseClass != null)
             {
                 var cls1 = _set.Classes.First(x => x.FullName == baseClass.FullName);
                 baseName = cls1.FullName ?? string.Empty;
             }
-
-            bool isClass = !cl.TheType.IsValueType;
 
             string name = cl.FullName!;
 
@@ -194,7 +192,15 @@ public class IlWriter
                 extends = string.Empty; // E.g open generic classes end up here
             }
 
-            tw.WriteLine($".class public auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} {extends} {baseName}");
+            if (cl.TheType.IsInterface)
+            {
+                tw.WriteLine($".class interface public abstract auto ansi beforefieldinit {name}"); // No "extends System.Object"
+            }
+            else
+            {
+                tw.WriteLine($".class public auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} {extends} {baseName}");
+            }
+
             if (cl.WrappedInterfaces != null && cl.WrappedInterfaces.Any())
             {
                 tw.Write("implements ");
