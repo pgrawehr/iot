@@ -239,7 +239,7 @@ namespace ArduinoCsCompiler
 
             if (ExternalSystemReferences.TryGetValue(TheType, out ExternalTypeReference? reference))
             {
-                FullName = string.IsNullOrWhiteSpace(reference.Assembly.Name) ? reference.Name : $"[{reference.Assembly.Name}]{reference.Name}";
+                FullName = reference.IlName;
                 return;
             }
 

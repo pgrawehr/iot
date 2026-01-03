@@ -19,5 +19,18 @@ namespace ArduinoCsCompiler
         public Type Type { get; }
 
         public ExternalAssemblyReference Assembly { get; }
+
+        public string IlName
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(Assembly.Name))
+                {
+                    return Name;
+                }
+
+                return $"[{Assembly.Name}]{Name}";
+            }
+        }
     }
 }

@@ -45,10 +45,7 @@ namespace ArduinoCsCompiler
                 fieldName = "Number" + fieldName;
             }
 
-            if (fieldName == "value")
-            {
-                fieldName = "theValue"; // "value" is a reserved word in IL, but not in C#
-            }
+            fieldName = ExternalSystemReferences.ReplaceInvalidFieldOrArgumentNames(fieldName);
 
             FieldName = fieldName + $"0x{token:X8}";
             Name = $"Field: {field.MemberInfoSignature()}";

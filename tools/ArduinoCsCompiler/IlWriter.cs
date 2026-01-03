@@ -242,55 +242,83 @@ public class IlWriter
         foreach (ClassMember f in cl.Members.Where(x => x.Field != null))
         {
             bool isStatic = f.Field!.IsStatic;
-            String fieldTypeName;
-            if (f.Field.FieldType.IsArray)
+            string fieldTypeName = TypeNameForIl(f.Field.FieldType);
+
+            tw.WriteLine($".field public {(isStatic ? "static " : string.Empty)}{fieldTypeName} {f.FieldName}");
+        }
+    }
+
+    private string TypeNameForIl(Type type)
+    {
+        String fieldTypeName;
+        if (type.IsArray)
+        {
+            Type baseType = type.GetElementType()!;
+            int arrayLevel = 1;
+            // Stagged arrays
+            while (baseType.IsArray)
             {
-                Type baseType = f.Field.FieldType.GetElementType()!;
-                int arrayLevel = 1;
-                // Stagged arrays
-                while (baseType.IsArray)
+                arrayLevel++;
+                baseType = baseType.GetElementType()!;
+            }
+
+            var t = GetClassDeclaration(baseType);
+            if (t != null)
+            {
+                fieldTypeName = $"{t.FullName}";
+                for (int i = 0; i < arrayLevel; i++)
                 {
-                    arrayLevel++;
-                    baseType = baseType.GetElementType()!;
+                    fieldTypeName += "[]";
                 }
 
-                var t = GetClassDeclaration(baseType);
-                if (t != null)
+                fieldTypeName = PrefixWithClassKeyword(t, fieldTypeName);
+            }
+            else if (type.IsValueType)
+            {
+                fieldTypeName = $"int32 /* Unknown enum type {type} */";
+            }
+            else
+            {
+                fieldTypeName = $"object /* unknown type {type} */";
+            }
+        }
+        else
+        {
+            var t = GetClassDeclaration(type);
+            if (t != null)
+            {
+                fieldTypeName = t.FullName!;
+                fieldTypeName = PrefixWithClassKeyword(t, fieldTypeName);
+            }
+            else if (type == typeof(void))
+            {
+                fieldTypeName = "void";
+            }
+            else if (type.IsEnum)
+            {
+                // An enum type, but we don't have the actual type in the set. So use the base type instead
+                fieldTypeName = GetClassDeclaration(type.GetEnumUnderlyingType())!.FullName!;
+            }
+            else if (ExternalSystemReferences.TryGetValue(type, out ExternalTypeReference? externalTypeReference))
+            {
+                fieldTypeName = externalTypeReference.IlName;
+                if (!externalTypeReference.Type.IsValueType)
                 {
-                    fieldTypeName = $"{t.FullName}";
-                    for (int i = 0; i < arrayLevel; i++)
-                    {
-                        fieldTypeName += "[]";
-                    }
-
-                    fieldTypeName = PrefixWithClassKeyword(t, fieldTypeName);
-                }
-                else if (f.Field.FieldType.IsValueType)
-                {
-                    fieldTypeName = $"int32 /* Unknown enum type {f.Field.FieldType} */";
+                    fieldTypeName = $"class {fieldTypeName}";
                 }
                 else
                 {
-                    fieldTypeName = $"object /* unknown type {f.Field.FieldType} */";
+                    fieldTypeName = $"valuetype {fieldTypeName}";
                 }
             }
             else
             {
-                var t = GetClassDeclaration(f.Field.FieldType);
-                if (t != null)
-                {
-                    fieldTypeName = t.FullName!;
-                    // TODO: That's a bit of a hack to detect a short name (which is not to be prefixed with 'class')
-                    fieldTypeName = PrefixWithClassKeyword(t, fieldTypeName);
-                }
-                else
-                {
-                    fieldTypeName = $"object /* Unknown type {f.Field.FieldType} */";
-                }
+                fieldTypeName = $"object /* TODO: {type.FullName} is unknown here*/";
+                // throw new InvalidOperationException($"Don't know what to do with {type}");
             }
-
-            tw.WriteLine($".field public {(isStatic ? "static " : string.Empty)}{fieldTypeName} {f.FieldName}");
         }
+
+        return fieldTypeName;
     }
 
     private void WriteMethods(IndentedTextWriter tw, ClassDeclaration cl)
@@ -300,14 +328,71 @@ public class IlWriter
         {
             var m1 = m.Value;
             string isStatic = m1.Flags.HasFlag(MethodFlags.Static) ? "static" : "instance";
-            if (m1.Flags.HasFlag(MethodFlags.Ctor) || m1.MethodBase.Name == ".cctor")
+            if (m1.Flags.HasFlag(MethodFlags.Ctor) || m1.IlName == ArduinoMethodDeclaration.CctorName)
             {
                 // Can be ..ctor or ..cctor!
-                tw.WriteLine($".method public hidebysig specialname rtspecialname {isStatic} void {m1.MethodBase.Name}(");
+                tw.WriteLine($".method public hidebysig specialname rtspecialname {isStatic} void {m1.IlName}(");
             }
             else
             {
-                tw.WriteLine($".method public {isStatic} object {m1.MethodInfo.Name}(");
+                if (m1.MethodInfo.IsGenericMethodDefinition || m1.MethodInfo.ContainsGenericParameters)
+                {
+                    // TODO: Write _only_ these, not their implementations
+                    continue;
+                }
+
+                string isvirtual = m1.Flags.HasFlag(MethodFlags.Virtual) ? "virtual " : string.Empty;
+                tw.WriteLine($".method public {isvirtual}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} {m1.IlName}(");
+            }
+
+            ParameterInfo[] args = m1.MethodBase.GetParameters();
+            for (int index = 0; index < args.Length; index++)
+            {
+                ParameterInfo? arg = args[index];
+                if (arg == null)
+                {
+                    throw new InvalidOperationException("Argument type is null");
+                }
+
+                Type paramType = arg.ParameterType;
+                string byRef = string.Empty;
+                string isPointer = string.Empty;
+
+                if (arg.ParameterType.IsByRef)
+                {
+                    if (arg.IsOut)
+                    {
+                        byRef = "[out] ";
+                        paramType = arg.ParameterType.GetElementType()!;
+                        isPointer = "&";
+                    }
+                    else
+                    {
+                        paramType = arg.ParameterType.GetElementType()!;
+                        isPointer = "&";
+                    }
+                }
+                else if (arg.ParameterType.IsPointer)
+                {
+                    isPointer = "*";
+                    paramType = arg.ParameterType.GetElementType()!;
+                }
+
+                string typeName;
+                if (paramType == typeof(void))
+                {
+                    typeName = "void";
+                }
+                else
+                {
+                    typeName = TypeNameForIl(paramType);
+                }
+
+                tw.Write($"{byRef}{typeName}{isPointer} {ExternalSystemReferences.ReplaceInvalidFieldOrArgumentNames(arg.Name!)}");
+                if (index != args.Length - 1)
+                {
+                    tw.Write(", ");
+                }
             }
 
             tw.WriteLine(") cil managed");
