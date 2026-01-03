@@ -300,12 +300,6 @@ namespace ArduinoCsCompiler
             {
                 WriteTokenMap(set); // If we don't load, do this anyway
             }
-
-            if (!string.IsNullOrWhiteSpace(CommandLineOptions.IlOutputFile))
-            {
-                var ilWriter = new IlWriter(set, CommandLineOptions.IlOutputFile);
-                ilWriter.Write();
-            }
         }
 
         private void WriteTokenMap(ExecutionSet set)

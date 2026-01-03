@@ -23,6 +23,10 @@
     "Test": {
       "commandName": "Project",
       "commandLineArgs": "test -p COM5"
+    },
+    "BlinkingLedIL": {
+      "commandName": "Project",
+      "commandLineArgs": "nano ..\\..\\..\\BlinkingLed\\$(Configuration)\\net8.0\\BlinkingLed.exe \r\n--ilout ..\\..\\..\\BlinkingLed\\$(Configuration)\\net8.0\\BlinkingLed.il"
     }
   }
 }

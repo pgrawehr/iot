@@ -51,7 +51,7 @@ namespace ArduinoCsCompiler
 
         internal static readonly string PrivateImplementationDetailsName = "<PrivateImplementationDetails>";
 
-        private readonly ArduinoBoard _board;
+        private readonly ArduinoBoard? _board;
         private readonly List<ArduinoTask> _activeTasks;
         private readonly object _activeTasksLock;
         private readonly ILogger _logger;
@@ -69,7 +69,7 @@ namespace ArduinoCsCompiler
         private bool _disposed = false;
         private Debugger? _debugger;
 
-        public MicroCompiler(ArduinoBoard board, bool resetExistingCode = true)
+        public MicroCompiler(ArduinoBoard? board, bool resetExistingCode = true)
         {
             _logger = this.GetCurrentClassLogger();
             _board = board;
@@ -83,7 +83,7 @@ namespace ArduinoCsCompiler
             _arraySortHelper = GetSystemPrivateType("System.Collections.Generic.ArraySortHelper`1");
 
             _commandHandler = new CompilerCommandHandler(this);
-            board.AddCommandHandler(_commandHandler);
+            board?.AddCommandHandler(_commandHandler);
 
             if (resetExistingCode)
             {

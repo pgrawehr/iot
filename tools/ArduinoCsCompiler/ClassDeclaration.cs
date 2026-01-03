@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Xml.Linq;
 
 #pragma warning disable CS1591
 namespace ArduinoCsCompiler
@@ -117,6 +118,16 @@ namespace ArduinoCsCompiler
                 // Don't run these init functions, to complicated or depend on native functions
                 return TheType.FullName == "System.SR";
             }
+        }
+
+        public static string RemoveAnyOf(string input, char[] forbiddenChars)
+        {
+            if (RemoveAnyOf(input, forbiddenChars, out string result))
+            {
+                return result;
+            }
+
+            return input;
         }
 
         public static bool RemoveAnyOf(string input, char[] forbiddenChars, out string changed)
@@ -251,17 +262,29 @@ namespace ArduinoCsCompiler
                 // String looks like
                 // System.Nullable`1[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]
                 // and in a nested form, so replace from inside to outside
-                int idx = FullName.LastIndexOf("[[", StringComparison.Ordinal);
+                string result = FullName;
+                result = result.Replace("[]", "Arr"); // When the type parameter is an array, note that, but not using []
+                int idx = result.LastIndexOf("[", StringComparison.Ordinal);
                 while (idx != -1)
                 {
-                    int idxEnd = FullName.IndexOf("]]", idx + 1, StringComparison.Ordinal);
-                    int idxEndName = FullName.IndexOf(",", idx + 1, StringComparison.Ordinal);
-                    string name = FullName.Substring(idx + 2, idxEndName - idx - 2);
-                    name = name.Replace("[]", "Arr"); // When the type parameter is an array, note that, but not using []
-                    FullName = FullName.Remove(idx, idxEnd - idx + 2);
-                    FullName = FullName.Insert(idx, $"_arg_{name}_");
-                    idx = FullName.LastIndexOf("[[", StringComparison.Ordinal);
+                    int idxEnd = result.IndexOf("]", idx + 1, StringComparison.Ordinal);
+                    int idxEndName = result.IndexOf(",", idx + 1, StringComparison.Ordinal);
+                    string name = result.Substring(idx + 1, idxEndName - idx - 1);
+                    result = result.Remove(idx, idxEnd - idx + 1);
+                    result = result.Insert(idx, $"_arg_{name}_");
+                    idx = result.LastIndexOf("[", StringComparison.Ordinal);
+                    if (idx == result.IndexOf("[", StringComparison.Ordinal))
+                    {
+                        // Last is also first, thus this is the only one (outermost brackets are duplicated somehow)
+                        break;
+                    }
                 }
+
+                // Remove remaining clauses
+                FullName = RemoveAnyOf(result, new char[]
+                {
+                    '[', ']'
+                });
             }
 
             if (FullName.Contains('+'))

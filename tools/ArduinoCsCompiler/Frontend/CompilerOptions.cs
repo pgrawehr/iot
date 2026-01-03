@@ -21,7 +21,6 @@ namespace ArduinoCsCompiler
             TokenMapFile = string.Empty;
             UsePreviewFeatures = false;
             Suppressions = new List<string>();
-            IlOutputFile = string.Empty;
         }
 
         [Usage(ApplicationAlias = "acs")]
@@ -55,9 +54,6 @@ namespace ArduinoCsCompiler
 
         [Option("mapfile", HelpText = "File to store the token map into.")]
         public string TokenMapFile { get; set; }
-
-        [Option("ilout", HelpText = "Generate IL output (to include in another build).")]
-        public string IlOutputFile { get; set; }
 
         [Option("keepifcurrent", Default = false, HelpText = "If specified, the program will not be transmitted if it is already loaded. Defaults to false, because not all changes might be caught.")]
         public bool DoNotWriteFlashIfAlreadyCurrent { get; set; }

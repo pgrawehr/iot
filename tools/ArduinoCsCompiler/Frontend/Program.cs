@@ -46,7 +46,7 @@ namespace ArduinoCsCompiler
                 x.HelpWriter = Console.Out;
             });
 
-            var result = parser.ParseArguments<CompilerOptions, PrepareOptions, TestOptions, ExecOptions>(args)
+            var result = parser.ParseArguments<CompilerOptions, PrepareOptions, TestOptions, ExecOptions, NanoConversionOptions>(args)
                 .WithParsed<CompilerOptions>(o =>
                 {
                     using var program = new CompilerRun(o);
@@ -67,6 +67,11 @@ namespace ArduinoCsCompiler
                 {
                     using var cmd = new ExecRun(o);
                     runResult = cmd.RunCommand();
+                })
+                .WithParsed<NanoConversionOptions>(o =>
+                {
+                    using var nano = new NanoConversionRun(o);
+                    runResult = nano.RunCommand();
                 });
 
             if (result.Tag != ParserResultType.Parsed)
