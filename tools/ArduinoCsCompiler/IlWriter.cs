@@ -71,6 +71,19 @@ public class IlWriter
 
             cls1.ConstructName(_set);
         }
+
+        // This extra loop is necessary because we might have two classes with the same name from two assemblies
+        ClassDeclaration? previous = null;
+        foreach (var cls1 in _set.Classes.OrderBy(x => x.FullName))
+        {
+            if (previous?.FullName == cls1.FullName)
+            {
+                cls1.FullName += $"{cls1.NewToken:X8}";
+                continue; // Because there can also be three of them
+            }
+
+            previous = cls1;
+        }
     }
 
     public ClassDeclaration? GetClassDeclaration(Type? ofClass)
@@ -181,7 +194,7 @@ public class IlWriter
 
             string name = cl.FullName!;
 
-            if (string.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(cl.TheType.FullName))
             {
                 continue; // Things like {T} itself
             }
@@ -192,6 +205,7 @@ public class IlWriter
                 extends = string.Empty; // E.g open generic classes end up here
             }
 
+            tw.WriteLine($"// {cl.TheType.FullName}");
             if (cl.TheType.IsInterface)
             {
                 tw.WriteLine($".class interface public abstract auto ansi beforefieldinit {name}"); // No "extends System.Object"
@@ -331,6 +345,7 @@ public class IlWriter
             if (m1.Flags.HasFlag(MethodFlags.Ctor) || m1.IlName == ArduinoMethodDeclaration.CctorName)
             {
                 // Can be ..ctor or ..cctor!
+                tw.WriteLine($"// {m1.Name}");
                 tw.WriteLine($".method public hidebysig specialname rtspecialname {isStatic} void {m1.IlName}(");
             }
             else
@@ -342,6 +357,7 @@ public class IlWriter
                 }
 
                 string isvirtual = m1.Flags.HasFlag(MethodFlags.Virtual) ? "virtual " : string.Empty;
+                tw.WriteLine($"// {m1.Name}");
                 tw.WriteLine($".method public {isvirtual}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} {m1.IlName}(");
             }
 

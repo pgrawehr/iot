@@ -61,7 +61,7 @@ namespace ArduinoCsCompiler
             {
                 return _fullNameSet ?? TheType.FullName;
             }
-            private set
+            internal set
             {
                 _fullNameSet = value;
             }
@@ -264,20 +264,11 @@ namespace ArduinoCsCompiler
                 // and in a nested form, so replace from inside to outside
                 string result = FullName;
                 result = result.Replace("[]", "Arr"); // When the type parameter is an array, note that, but not using []
-                int idx = result.LastIndexOf("[", StringComparison.Ordinal);
-                while (idx != -1)
+                int idx = result.IndexOf("[", StringComparison.Ordinal);
+                if (idx != -1)
                 {
-                    int idxEnd = result.IndexOf("]", idx + 1, StringComparison.Ordinal);
-                    int idxEndName = result.IndexOf(",", idx + 1, StringComparison.Ordinal);
-                    string name = result.Substring(idx + 1, idxEndName - idx - 1);
-                    result = result.Remove(idx, idxEnd - idx + 1);
-                    result = result.Insert(idx, $"_arg_{name}_");
-                    idx = result.LastIndexOf("[", StringComparison.Ordinal);
-                    if (idx == result.IndexOf("[", StringComparison.Ordinal))
-                    {
-                        // Last is also first, thus this is the only one (outermost brackets are duplicated somehow)
-                        break;
-                    }
+                    result = result.Substring(0, idx);
+                    result = $"{result}0x{NewToken:X8}";
                 }
 
                 // Remove remaining clauses
