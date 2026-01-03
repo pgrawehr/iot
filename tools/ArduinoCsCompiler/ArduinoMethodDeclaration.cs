@@ -262,7 +262,7 @@ namespace ArduinoCsCompiler
             string suffix = string.Empty;
             if (MethodBase.IsConstructedGenericMethod)
             {
-                suffix = $"0x{Token:X8}";
+                suffix = $"0x_{Token:X8}";
             }
 
             if (ClassDeclaration.RemoveAnyOf(MethodBase.Name, new char[]

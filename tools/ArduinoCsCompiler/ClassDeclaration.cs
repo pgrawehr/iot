@@ -268,7 +268,7 @@ namespace ArduinoCsCompiler
                 if (idx != -1)
                 {
                     result = result.Substring(0, idx);
-                    result = $"{result}0x{NewToken:X8}";
+                    result = $"{result}_0x{NewToken:X8}";
                 }
 
                 // Remove remaining clauses

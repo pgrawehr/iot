@@ -199,6 +199,7 @@ public class IlWriter
                 continue; // Things like {T} itself
             }
 
+            bool isAbstract = cl.TheType.IsAbstract;
             string extends = "extends";
             if (string.IsNullOrWhiteSpace(baseName))
             {
@@ -212,7 +213,7 @@ public class IlWriter
             }
             else
             {
-                tw.WriteLine($".class public auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} {extends} {baseName}");
+                tw.WriteLine($".class public {(isAbstract ? "abstract " : string.Empty)}auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} {extends} {baseName}");
             }
 
             if (cl.WrappedInterfaces != null && cl.WrappedInterfaces.Any())
@@ -342,6 +343,7 @@ public class IlWriter
         {
             var m1 = m.Value;
             string isStatic = m1.Flags.HasFlag(MethodFlags.Static) ? "static" : "instance";
+            string isAbstract = m1.Flags.HasFlag(MethodFlags.Abstract) ? "abstract " : string.Empty;
             if (m1.Flags.HasFlag(MethodFlags.Ctor) || m1.IlName == ArduinoMethodDeclaration.CctorName)
             {
                 // Can be ..ctor or ..cctor!
@@ -358,7 +360,7 @@ public class IlWriter
 
                 string isvirtual = m1.Flags.HasFlag(MethodFlags.Virtual) ? "virtual " : string.Empty;
                 tw.WriteLine($"// {m1.Name}");
-                tw.WriteLine($".method public {isvirtual}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} {m1.IlName}(");
+                tw.WriteLine($".method public {isvirtual}{isAbstract}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} {m1.IlName}(");
             }
 
             ParameterInfo[] args = m1.MethodBase.GetParameters();
@@ -413,6 +415,11 @@ public class IlWriter
 
             tw.WriteLine(") cil managed");
             tw.WriteLine("{");
+            if (isAbstract.Length == 0)
+            {
+                tw.WriteLine("ret"); // TODO
+            }
+
             tw.WriteLine("}");
         }
     }
