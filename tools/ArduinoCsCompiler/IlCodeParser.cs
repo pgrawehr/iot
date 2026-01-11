@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -110,14 +111,14 @@ namespace ArduinoCsCompiler
                 sb.Append($"{instruction.Name.PadRight(10)} ");
                 if (instruction.ArgumentAddress.Length > 0)
                 {
-                    string? decodedArgument = instruction.DecodeArgument(set);
+                    string? decodedArgument = instruction.DecodeArgument(set, null);
                     if (decodedArgument != null)
                     {
                         sb.Append(decodedArgument);
                     }
                     else
                     {
-                        sb.Append("(Argument not decoded)");
+                        sb.Append("(unknown) // Argument not decoded");
                     }
                 }
 
@@ -125,6 +126,32 @@ namespace ArduinoCsCompiler
             }
 
             return sb.ToString();
+        }
+
+        public static void DecodeForAssembler(TextWriter tw, ArduinoMethodDeclaration method, ExecutionSet set, Func<ExecutionSet, int, string> tokenDecoder)
+        {
+            var instructions = DecodeMethod(method);
+
+            foreach (var instruction in instructions)
+            {
+                tw.Write($"IL_{instruction.Pc:X4}: ");
+
+                tw.Write($"{instruction.Name.PadRight(10)} ");
+                if (instruction.ArgumentAddress.Length > 0)
+                {
+                    string? decodedArgument = instruction.DecodeArgument(set, tokenDecoder);
+                    if (decodedArgument != null)
+                    {
+                        tw.Write(decodedArgument);
+                    }
+                    else
+                    {
+                        tw.Write("(unknown) // TODO Argument not decoded");
+                    }
+                }
+
+                tw.WriteLine();
+            }
         }
 
         public static List<IlInstruction> DecodeMethod(ArduinoMethodDeclaration method)

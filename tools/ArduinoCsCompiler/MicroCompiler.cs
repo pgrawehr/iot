@@ -1318,7 +1318,7 @@ namespace ArduinoCsCompiler
             {
                 // this adds MiniArray.GetEnumerator(T[]) as implementation of T[].IList<T>()
                 PrepareMethod(set, a.Value, new AnalysisStack(a.Value));
-                var m = set.GetMethod(a.Value);
+                var m = set.GetMethod(a.Value) ?? throw new InvalidOperationException($"Unable to resolve {a.Value}");
                 var arrayClass = set.Classes.Single(x => x.NewToken == (int)KnownTypeTokens.Array);
                 if (arrayClass.Members.All(y => y.Method != a.Value))
                 {
@@ -2118,7 +2118,7 @@ namespace ArduinoCsCompiler
             {
                 unchecked
                 {
-                    var tsk = new ArduinoTask(this, set.GetMethod(methodInfo), (short)_activeTasks.Count);
+                    var tsk = new ArduinoTask(this, set.GetMethod(methodInfo) ?? throw new InvalidOperationException($"Unable to resolve {methodInfo}"), (short)_activeTasks.Count);
                     lock (_activeTasksLock)
                     {
                         _activeTasks.Add(tsk);
@@ -3122,6 +3122,12 @@ namespace ArduinoCsCompiler
             }
 
             var decl = _activeExecutionSet.GetMethod(method);
+            if (decl == null)
+            {
+                Console.WriteLine($"Internal error: Unable to resolve method {method}");
+                return;
+            }
+
             if (!decl.Name.Contains("..cctor"))
             {
                 _logger.LogInformation($"Starting execution on {decl}...");
@@ -3145,6 +3151,11 @@ namespace ArduinoCsCompiler
                 }
 
                 var decl = _activeExecutionSet.GetMethod(methodInfo);
+                if (decl == null)
+                {
+                    Console.WriteLine($"Internal error: Unable to resolve method {methodInfo}");
+                    return;
+                }
 
                 _commandHandler.SendKillTask(decl.Token);
             }

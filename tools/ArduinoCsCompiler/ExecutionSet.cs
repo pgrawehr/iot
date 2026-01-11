@@ -1532,11 +1532,16 @@ namespace ArduinoCsCompiler
             return entry.StringData;
         }
 
-        internal ArduinoMethodDeclaration GetMethod(EquatableMethod methodInfo)
+        internal ArduinoMethodDeclaration? GetMethod(EquatableMethod methodInfo, bool doThrow = true)
         {
             if (_methods.TryGetValue(methodInfo, out var m))
             {
                 return m;
+            }
+
+            if (doThrow)
+            {
+                return null;
             }
 
             throw new InvalidOperationException($"No such method: {methodInfo.MemberInfoSignature()}");

@@ -132,13 +132,14 @@ namespace ArduinoCsCompiler
             Logger.LogInformation("Collecting method information and metadata...");
             ExecutionSet set = _compiler.PrepareProgram(startup, settings);
 
-            Logger.LogInformation($"Compile successful. {ErrorManager.NumErrors} Errors, {ErrorManager.NumWarnings} Warnings");
-
+            Logger.LogInformation("Done processing input. Now writing output file...");
             if (!string.IsNullOrWhiteSpace(CommandLineOptions.IlOutputFile))
             {
                 var ilWriter = new IlWriter(set, CommandLineOptions.IlOutputFile);
                 ilWriter.Write();
             }
+
+            Logger.LogInformation($"Compile successful. {ErrorManager.NumErrors} Errors, {ErrorManager.NumWarnings} Warnings");
         }
 
         private MethodInfo LocateStartupMethod(Assembly assemblyUnderTest)

@@ -125,7 +125,7 @@ namespace ArduinoCsCompiler
             }
         }
 
-        public string? DecodeArgument(ExecutionSet set)
+        public string? DecodeArgument(ExecutionSet set, Func<ExecutionSet, int, string>? tokenDecoder)
         {
             switch (OpcodeType)
             {
@@ -133,7 +133,7 @@ namespace ArduinoCsCompiler
                 case OpCodeType.ShortInlineI:
                     {
                         int arg = DecodeIntegerArgument();
-                        return $"{arg} (0x{arg:X})";
+                        return $"{arg} // (0x{arg:X})";
                     }
 
                 case OpCodeType.ShortInlineVar:
@@ -147,7 +147,14 @@ namespace ArduinoCsCompiler
                 case OpCodeType.InlineBrTarget:
                     {
                         int offset = DecodeIntegerArgument();
-                        return $"Offset {offset}, --> 0x{(offset + Pc + Size):X}"; // Offset is from beginning of next instruction
+                        if (tokenDecoder == null)
+                        {
+                            return $"Offset {offset}, --> 0x{(offset + Pc + Size):X}"; // Offset is from beginning of next instruction
+                        }
+                        else
+                        {
+                            return $"IL_{(offset + Pc + Size):X4} // Offset: {offset}";
+                        }
                     }
 
                 case OpCodeType.InlineField:
@@ -156,7 +163,8 @@ namespace ArduinoCsCompiler
                         var field = set.InverseResolveToken(token);
                         if (field != null)
                         {
-                            return $"{token} - {field.Name}";
+                            string? fieldName = tokenDecoder?.Invoke(set, token);
+                            return $"{fieldName} // Token 0x{token:X}";
                         }
                         else
                         {
@@ -168,9 +176,16 @@ namespace ArduinoCsCompiler
                     {
                         int token = DecodeIntegerArgument();
                         var method = set.InverseResolveToken(token);
+
                         if (method == null)
                         {
                             return $"{token} - Unable to resolve";
+                        }
+
+                        if (tokenDecoder != null)
+                        {
+                            string? me = tokenDecoder.Invoke(set, token);
+                            return $"{me} // {method.MemberInfoSignature(false)}";
                         }
 
                         return $"{token} - {method.MemberInfoSignature(false)}";
@@ -180,7 +195,7 @@ namespace ArduinoCsCompiler
                     {
                         int token = DecodeIntegerArgument();
                         string value = set.GetString(token);
-                        return $"{token} \"{value}\"";
+                        return $"\"{value}\" // Token {token}";
                     }
             }
 

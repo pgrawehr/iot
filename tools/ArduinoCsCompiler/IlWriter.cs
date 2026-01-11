@@ -372,29 +372,7 @@ public class IlWriter
                     throw new InvalidOperationException("Argument type is null");
                 }
 
-                Type paramType = arg.ParameterType;
-                string byRef = string.Empty;
-                string isPointer = string.Empty;
-
-                if (arg.ParameterType.IsByRef)
-                {
-                    if (arg.IsOut)
-                    {
-                        byRef = "[out] ";
-                        paramType = arg.ParameterType.GetElementType()!;
-                        isPointer = "&";
-                    }
-                    else
-                    {
-                        paramType = arg.ParameterType.GetElementType()!;
-                        isPointer = "&";
-                    }
-                }
-                else if (arg.ParameterType.IsPointer)
-                {
-                    isPointer = "*";
-                    paramType = arg.ParameterType.GetElementType()!;
-                }
+                Type paramType = ParamTypeName(arg, out string byRef, out string isPointer);
 
                 string typeName;
                 if (paramType == typeof(void))
@@ -417,11 +395,113 @@ public class IlWriter
             tw.WriteLine("{");
             if (isAbstract.Length == 0)
             {
-                tw.WriteLine("ret"); // TODO
+                tw.Indent++;
+                if (!m1.Flags.HasFlag(MethodFlags.SpecialMethod))
+                {
+                    tw.WriteLine($".maxstack {m1.MaxStack}");
+                    IlCodeParser.DecodeForAssembler(tw, m1, _set, TokenDecoder);
+                }
+                else
+                {
+                    // A method that used to do an internalcall. This needs a new patching approach
+                    tw.WriteLine("ret // TODO: Replace with new native call");
+                }
+
+                tw.Indent--;
             }
 
             tw.WriteLine("}");
+            tw.WriteLine();
         }
+    }
+
+    private Type ParamTypeName(ParameterInfo arg, out string byRef, out string isPointer)
+    {
+        Type paramType = arg.ParameterType;
+        byRef = string.Empty;
+        isPointer = string.Empty;
+
+        if (arg.ParameterType.IsByRef)
+        {
+            if (arg.IsOut)
+            {
+                byRef = "[out] ";
+                paramType = arg.ParameterType.GetElementType()!;
+                isPointer = "&";
+            }
+            else
+            {
+                paramType = arg.ParameterType.GetElementType()!;
+                isPointer = "&";
+            }
+        }
+        else if (arg.ParameterType.IsPointer)
+        {
+            isPointer = "*";
+            paramType = arg.ParameterType.GetElementType()!;
+        }
+
+        return paramType;
+    }
+
+    private string TokenDecoder(ExecutionSet s, int tk)
+    {
+        var elem = s.InverseResolveToken(tk);
+        if (elem == null)
+        {
+            throw new InvalidOperationException($"Cannot decode token {tk}");
+        }
+
+        if (elem is FieldInfo fi && fi.DeclaringType != null)
+        {
+            // Prefixes the member name with the class declaring it
+            return $"{TypeNameForIl(fi.DeclaringType)}::{fi.Name}";
+        }
+        else if (elem is ConstructorInfo ci && ci.DeclaringType != null)
+        {
+            // A constructor is always an instance member and always implicitly void
+            // (even though the latter is technically not correct, as the constructor call returns the new instance)
+            var param = ci.GetParameters();
+            string args = GetArgsList(param);
+
+            string n = $"instance void {TypeNameForIl(ci.DeclaringType)}::{ci.Name}({args})";
+            return n;
+        }
+        else if (elem is MethodInfo mi && mi.DeclaringType != null)
+        {
+            ArduinoMethodDeclaration? decl = _set.GetMethod(mi);
+            var param = mi.GetParameters();
+            string args = GetArgsList(param);
+            if (decl == null)
+            {
+                return $"instance void {TypeNameForIl(mi.DeclaringType)}::{mi.Name}({args}) /* TODO Not part of execution set */";
+            }
+
+            string instanceOrStatic = decl.Flags.HasFlag(MethodFlags.Static) ? string.Empty : "instance";
+            // It seems the return type doesn't matter for the compiler, but there needs to be some token here
+            string returnType = decl.Flags.HasFlag(MethodFlags.Void) ? "void" : "object";
+            string n = $"{instanceOrStatic} {returnType} {TypeNameForIl(mi.DeclaringType)}::{decl.IlName}({args})";
+            return n;
+        }
+
+        throw new NotImplementedException($"Don't know how to handle {elem}");
+    }
+
+    private string GetArgsList(ParameterInfo[] param)
+    {
+        string args = string.Empty;
+
+        for (int i = 0; i < param.Length; i++)
+        {
+            var t = ParamTypeName(param[i], out string byRef, out string isPointer);
+            args += $"{TypeNameForIl(t)}{isPointer}";
+            if (i != param.Length - 1)
+            {
+                args += ", ";
+            }
+        }
+
+        return args;
     }
 
     private void WriteHeader(IndentedTextWriter tw)

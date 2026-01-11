@@ -213,6 +213,12 @@ Use -1 to allow breaking on all threads.")
             var top = stack.First();
 
             var method = _set.GetMethod(top.Method!);
+            if (method == null)
+            {
+                Console.WriteLine($"Internal error: Unable to resolve method {top.Method}");
+                return;
+            }
+
             var next = IlCodeParser.GetNextInstruction(method, _set, top.Pc);
 
             if (next.OpCode == OpCode.CEE_RET)
@@ -420,6 +426,12 @@ Use -1 to allow breaking on all threads.")
 
             var top = stack.First();
             var method = _set.GetMethod(top.Method!);
+            if (method == null)
+            {
+                Console.WriteLine($"Internal error: Unable to resolve method {top.Method}");
+                return;
+            }
+
             if (method.HasBody == false)
             {
                 Console.WriteLine($"In internal method {method.MethodBase.MethodSignature()}");
