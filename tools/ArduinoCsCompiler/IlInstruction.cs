@@ -160,16 +160,8 @@ namespace ArduinoCsCompiler
                 case OpCodeType.InlineField:
                     {
                         int token = DecodeIntegerArgument();
-                        var field = set.InverseResolveToken(token);
-                        if (field != null)
-                        {
-                            string? fieldName = tokenDecoder?.Invoke(set, token);
-                            return $"{fieldName} // Token 0x{token:X}";
-                        }
-                        else
-                        {
-                            return $"{token} - (unknown field)";
-                        }
+                        string? fieldName = tokenDecoder?.Invoke(set, token) ?? $"0x{token:X8} // Field token";
+                        return $"{fieldName} // Token 0x{token:X}";
                     }
 
                 case OpCodeType.InlineMethod:
@@ -196,6 +188,22 @@ namespace ArduinoCsCompiler
                         int token = DecodeIntegerArgument();
                         string value = set.GetString(token);
                         return $"\"{value}\" // Token {token}";
+                    }
+
+                case OpCodeType.InlineType:
+                    {
+                        int token = DecodeIntegerArgument();
+                        string typeName;
+                        if (tokenDecoder != null)
+                        {
+                            typeName = tokenDecoder.Invoke(set, token);
+                        }
+                        else
+                        {
+                            typeName = $"0x{token:X8} // Type token";
+                        }
+
+                        return $"{typeName}";
                     }
             }
 

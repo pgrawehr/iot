@@ -347,6 +347,7 @@ public class IlWriter
             if (m1.Flags.HasFlag(MethodFlags.Ctor) || m1.IlName == ArduinoMethodDeclaration.CctorName)
             {
                 // Can be ..ctor or ..cctor!
+                tw.WriteLine();
                 tw.WriteLine($"// {m1.Name}");
                 tw.WriteLine($".method public hidebysig specialname rtspecialname {isStatic} void {m1.IlName}(");
             }
@@ -358,6 +359,7 @@ public class IlWriter
                     continue;
                 }
 
+                tw.WriteLine();
                 string isvirtual = m1.Flags.HasFlag(MethodFlags.Virtual) ? "virtual " : string.Empty;
                 tw.WriteLine($"// {m1.Name}");
                 tw.WriteLine($".method public {isvirtual}{isAbstract}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} {m1.IlName}(");
@@ -399,6 +401,7 @@ public class IlWriter
                 if (!m1.Flags.HasFlag(MethodFlags.SpecialMethod))
                 {
                     tw.WriteLine($".maxstack {m1.MaxStack}");
+                    tw.WriteLine("// TODO: Insert local declarations");
                     IlCodeParser.DecodeForAssembler(tw, m1, _set, TokenDecoder);
                 }
                 else
@@ -454,8 +457,8 @@ public class IlWriter
 
         if (elem is FieldInfo fi && fi.DeclaringType != null)
         {
-            // Prefixes the member name with the class declaring it
-            return $"{TypeNameForIl(fi.DeclaringType)}::{fi.Name}";
+            // Prefixes the member name with the class declaring it and also the type of the field
+            return $"{TypeNameForIl(fi.FieldType)} {TypeNameForIl(fi.DeclaringType)}::{fi.Name}";
         }
         else if (elem is ConstructorInfo ci && ci.DeclaringType != null)
         {
@@ -482,6 +485,16 @@ public class IlWriter
             string returnType = decl.Flags.HasFlag(MethodFlags.Void) ? "void" : "object";
             string n = $"{instanceOrStatic} {returnType} {TypeNameForIl(mi.DeclaringType)}::{decl.IlName}({args})";
             return n;
+        }
+        else if (elem is Type t)
+        {
+            string fieldTypeName = t.FullName!;
+            if (ExternalSystemReferences.TryGetValue(t, out ExternalTypeReference? externalTypeReference))
+            {
+                fieldTypeName = externalTypeReference.IlName;
+            }
+
+            return fieldTypeName;
         }
 
         throw new NotImplementedException($"Don't know how to handle {elem}");

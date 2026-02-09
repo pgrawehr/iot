@@ -132,25 +132,27 @@ namespace ArduinoCsCompiler
         {
             var instructions = DecodeMethod(method);
 
+            StringBuilder sb = new StringBuilder();
             foreach (var instruction in instructions)
             {
-                tw.Write($"IL_{instruction.Pc:X4}: ");
+                sb.Clear();
+                sb.Append($"IL_{instruction.Pc:X4}: ");
 
-                tw.Write($"{instruction.Name.PadRight(10)} ");
+                sb.Append($"{instruction.Name.PadRight(10)} ");
                 if (instruction.ArgumentAddress.Length > 0)
                 {
                     string? decodedArgument = instruction.DecodeArgument(set, tokenDecoder);
                     if (decodedArgument != null)
                     {
-                        tw.Write(decodedArgument);
+                        sb.Append(decodedArgument);
                     }
                     else
                     {
-                        tw.Write("(unknown) // TODO Argument not decoded");
+                        sb.Append("(unknown) // TODO Argument not decoded");
                     }
                 }
 
-                tw.WriteLine();
+                tw.WriteLine(sb.ToString().TrimEnd());
             }
         }
 
@@ -241,7 +243,8 @@ namespace ArduinoCsCompiler
         /// method depends on (fields, classes and other methods). Then we do a lookup and patch the token with a replacement token that
         /// is unique within our program. So we do not have to care about module boundaries.
         /// </summary>
-        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack, byte[] byteCode)
+        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack, 
+            byte[] byteCode, bool allowRoundTrip)
         {
             // We need to copy the code, because we're going to patch it
             if (byteCode == null)
@@ -538,18 +541,21 @@ namespace ArduinoCsCompiler
                             TypeInfo mb = (TypeInfo)typeTarget; // This must work, or the IL is invalid
                             patchValue = set.GetOrAddClassToken(mb);
                             typesUsed.Add((TypeInfo)set.InverseResolveToken(patchValue)!);
-                            if (opCode == OpCode.CEE_CONSTRAINED_)
+                            if (!allowRoundTrip)
                             {
-                                int tempPc = idx;
-                                OpCode nextOpCode = DecodeOpcode(byteCode, ref tempPc);
-                                // According to the ECMA specification, CONSTRAINED is only allowed immediately before CALLVIRT,
-                                // but to implement "static virtual" methods, it now is also used before CALL. In the later case,
-                                // we will patch the call site with a static call to the target method and remove the CONSTRAINED
-                                // prefix (by just setting its argument token to 0, which makes it a NOP)
-                                if (nextOpCode == OpCode.CEE_CALL)
+                                if (opCode == OpCode.CEE_CONSTRAINED_)
                                 {
-                                    staticAbstractType = mb;
-                                    patchValue = 0; // We don't later need to care about this one.
+                                    int tempPc = idx;
+                                    OpCode nextOpCode = DecodeOpcode(byteCode, ref tempPc);
+                                    // According to the ECMA specification, CONSTRAINED is only allowed immediately before CALLVIRT,
+                                    // but to implement "static virtual" methods, it now is also used before CALL. In the later case,
+                                    // we will patch the call site with a static call to the target method and remove the CONSTRAINED
+                                    // prefix (by just setting its argument token to 0, which makes it a NOP)
+                                    if (nextOpCode == OpCode.CEE_CALL)
+                                    {
+                                        staticAbstractType = mb;
+                                        patchValue = 0; // We don't later need to care about this one.
+                                    }
                                 }
                             }
 
