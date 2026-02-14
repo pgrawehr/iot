@@ -23,7 +23,7 @@ internal class ExecRun : Run<ExecOptions>
             return false;
         }
 
-        var compiler = new MicroCompiler(_board, true);
+        var compiler = new MicroCompiler(_board, true, false);
 
         if (!compiler.QueryBoardCapabilities(true, out var caps))
         {

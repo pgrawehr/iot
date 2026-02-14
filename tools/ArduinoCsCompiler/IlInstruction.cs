@@ -190,6 +190,7 @@ namespace ArduinoCsCompiler
                         return $"\"{value}\" // Token {token}";
                     }
 
+                case OpCodeType.InlineTok:
                 case OpCodeType.InlineType:
                     {
                         int token = DecodeIntegerArgument();

@@ -52,6 +52,7 @@ namespace ArduinoCsCompiler
         internal static readonly string PrivateImplementationDetailsName = "<PrivateImplementationDetails>";
 
         private readonly ArduinoBoard? _board;
+        private readonly bool _nanoFrameworkRun;
         private readonly List<ArduinoTask> _activeTasks;
         private readonly object _activeTasksLock;
         private readonly ILogger _logger;
@@ -69,10 +70,11 @@ namespace ArduinoCsCompiler
         private bool _disposed = false;
         private Debugger? _debugger;
 
-        public MicroCompiler(ArduinoBoard? board, bool resetExistingCode = true)
+        public MicroCompiler(ArduinoBoard? board, bool resetExistingCode, bool nanoFrameworkRun)
         {
             _logger = this.GetCurrentClassLogger();
             _board = board;
+            _nanoFrameworkRun = nanoFrameworkRun;
             _debugger = null;
             _lastMessages = new ConcurrentQueue<string>();
 
@@ -2041,7 +2043,7 @@ namespace ArduinoCsCompiler
             if (code == null)
             {
                 // TODO: Cache result of this (result is thrown away when called in this context and only used later)
-                code = IlCodeParser.FindAndPatchTokens(set, methodInfo.Method, stack);
+                code = IlCodeParser.FindAndPatchTokens(set, methodInfo.Method, stack, true);
             }
 
             foreach (var method in code.DependentMethods)
@@ -2672,7 +2674,7 @@ namespace ArduinoCsCompiler
                 }
                 else if (hasBody)
                 {
-                    parserResult = IlCodeParser.FindAndPatchTokens(set, methodInfo, stack, ilBytes!);
+                    parserResult = IlCodeParser.FindAndPatchTokens(set, methodInfo, stack, ilBytes!, _nanoFrameworkRun);
 
                     foreach (var type in parserResult.DependentTypes)
                     {

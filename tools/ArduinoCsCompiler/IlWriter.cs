@@ -447,6 +447,25 @@ public class IlWriter
         return paramType;
     }
 
+    private string FieldNameForIl(FieldInfo fi)
+    {
+        var cls = ClassDeclaration.GetClassDeclaration(_set, fi.DeclaringType);
+        if (cls == null)
+        {
+            return fi.Name;
+        }
+
+        foreach (var m in cls.Members)
+        {
+            if (m.Name == fi.Name)
+            {
+                return m.FieldName;
+            }
+        }
+
+        return fi.Name;
+    }
+
     private string TokenDecoder(ExecutionSet s, int tk)
     {
         var elem = s.InverseResolveToken(tk);
@@ -458,7 +477,7 @@ public class IlWriter
         if (elem is FieldInfo fi && fi.DeclaringType != null)
         {
             // Prefixes the member name with the class declaring it and also the type of the field
-            return $"{TypeNameForIl(fi.FieldType)} {TypeNameForIl(fi.DeclaringType)}::{fi.Name}";
+            return $"{TypeNameForIl(fi.FieldType)} {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
         }
         else if (elem is ConstructorInfo ci && ci.DeclaringType != null)
         {
@@ -488,13 +507,7 @@ public class IlWriter
         }
         else if (elem is Type t)
         {
-            string fieldTypeName = t.FullName!;
-            if (ExternalSystemReferences.TryGetValue(t, out ExternalTypeReference? externalTypeReference))
-            {
-                fieldTypeName = externalTypeReference.IlName;
-            }
-
-            return fieldTypeName;
+            return TypeNameForIl(t);
         }
 
         throw new NotImplementedException($"Don't know how to handle {elem}");

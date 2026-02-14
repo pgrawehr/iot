@@ -46,7 +46,7 @@ namespace ArduinoCsCompiler
             return opcode;
         }
 
-        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack)
+        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack, bool allowRoundTrip)
         {
             var body = method.GetMethodBody();
             if (body == null)
@@ -62,7 +62,7 @@ namespace ArduinoCsCompiler
 
             // We need to copy the code, because we're going to patch it
             var byteCode = body.GetILAsByteArray()!.ToArray();
-            var result = FindAndPatchTokens(set, method, analysisStack, byteCode);
+            var result = FindAndPatchTokens(set, method, analysisStack, byteCode, allowRoundTrip);
             set.TryAddCachedCode(method, result);
             return result;
         }
@@ -243,7 +243,7 @@ namespace ArduinoCsCompiler
         /// method depends on (fields, classes and other methods). Then we do a lookup and patch the token with a replacement token that
         /// is unique within our program. So we do not have to care about module boundaries.
         /// </summary>
-        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack, 
+        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack,
             byte[] byteCode, bool allowRoundTrip)
         {
             // We need to copy the code, because we're going to patch it
