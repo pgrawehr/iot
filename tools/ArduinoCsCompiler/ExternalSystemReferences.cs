@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.Intrinsics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -475,7 +476,8 @@ namespace ArduinoCsCompiler
                 new("System.RuntimeArgumentHandle", typeof(System.RuntimeArgumentHandle), mscorlib),
                 new("System.IDisposable", typeof(System.IDisposable), mscorlib),
                 new("System.Reflection.MethodBase", typeof(System.Reflection.MethodBase), mscorlib),
-                new("System.Array", typeof(System.Array), mscorlib)
+                new("System.Array", typeof(System.Array), mscorlib),
+                new("System.Runtime.Intrinsics.Vector512<T>", typeof(Vector512<>), mscorlib),
             });
         }
 

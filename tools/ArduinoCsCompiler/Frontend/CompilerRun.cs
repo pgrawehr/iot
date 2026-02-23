@@ -55,7 +55,7 @@ namespace ArduinoCsCompiler
 
                 Logger.LogInformation($"Connected to Board with firmware {board.FirmwareName} version {board.FirmwareVersion}.");
 
-                _compiler = new MicroCompiler(board, true, false);
+                _compiler = new MicroCompiler(board, true, TargetFramework.Firmata);
 
                 if (!_compiler.QueryBoardCapabilities(true, out var caps))
                 {

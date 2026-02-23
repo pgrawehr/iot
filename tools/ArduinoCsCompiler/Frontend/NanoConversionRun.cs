@@ -44,7 +44,7 @@ namespace ArduinoCsCompiler
 
             try
             {
-                _compiler = new MicroCompiler(null, false, true);
+                _compiler = new MicroCompiler(null, false, TargetFramework.Nano);
 
                 FileInfo inputInfo = new FileInfo(CommandLineOptions.InputAssembly);
                 if (!inputInfo.Exists)

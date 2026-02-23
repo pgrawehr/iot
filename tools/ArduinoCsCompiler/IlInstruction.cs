@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace ArduinoCsCompiler
 {
@@ -125,6 +126,24 @@ namespace ArduinoCsCompiler
             }
         }
 
+        private long DecodeLongArgument()
+        {
+            return BitConverter.ToInt64(ArgumentAddress);
+        }
+
+        private double DecodeDoubleArgument()
+        {
+            return BitConverter.ToDouble(ArgumentAddress);
+        }
+
+        /// <summary>
+        /// Escapes the provided string, so it can be used as argument to ldstr
+        /// </summary>
+        private string EscapeString(string input)
+        {
+            return Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(input, true);
+        }
+
         public string? DecodeArgument(ExecutionSet set, Func<ExecutionSet, int, string>? tokenDecoder)
         {
             switch (OpcodeType)
@@ -187,7 +206,19 @@ namespace ArduinoCsCompiler
                     {
                         int token = DecodeIntegerArgument();
                         string value = set.GetString(token);
-                        return $"\"{value}\" // Token {token}";
+                        value = EscapeString(value);
+                        return $"{value} // Token {token}";
+                    }
+
+                case OpCodeType.InlineI8:
+                    {
+                        long value = DecodeLongArgument();
+                        return value.ToString(CultureInfo.InvariantCulture);
+                    }
+
+                case OpCodeType.InlineR:
+                    {
+                        return DecodeDoubleArgument().ToString(CultureInfo.InvariantCulture);
                     }
 
                 case OpCodeType.InlineTok:

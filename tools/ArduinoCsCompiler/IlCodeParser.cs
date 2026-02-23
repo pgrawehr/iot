@@ -46,7 +46,7 @@ namespace ArduinoCsCompiler
             return opcode;
         }
 
-        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack, bool allowRoundTrip)
+        public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack, TargetFramework target)
         {
             var body = method.GetMethodBody();
             if (body == null)
@@ -62,7 +62,7 @@ namespace ArduinoCsCompiler
 
             // We need to copy the code, because we're going to patch it
             var byteCode = body.GetILAsByteArray()!.ToArray();
-            var result = FindAndPatchTokens(set, method, analysisStack, byteCode, allowRoundTrip);
+            var result = FindAndPatchTokens(set, method, analysisStack, byteCode, target);
             set.TryAddCachedCode(method, result);
             return result;
         }
@@ -244,7 +244,7 @@ namespace ArduinoCsCompiler
         /// is unique within our program. So we do not have to care about module boundaries.
         /// </summary>
         public static IlCode FindAndPatchTokens(ExecutionSet set, EquatableMethod method, AnalysisStack analysisStack,
-            byte[] byteCode, bool allowRoundTrip)
+            byte[] byteCode, TargetFramework target)
         {
             // We need to copy the code, because we're going to patch it
             if (byteCode == null)
@@ -541,7 +541,7 @@ namespace ArduinoCsCompiler
                             TypeInfo mb = (TypeInfo)typeTarget; // This must work, or the IL is invalid
                             patchValue = set.GetOrAddClassToken(mb);
                             typesUsed.Add((TypeInfo)set.InverseResolveToken(patchValue)!);
-                            if (!allowRoundTrip)
+                            if (target == TargetFramework.Firmata)
                             {
                                 if (opCode == OpCode.CEE_CONSTRAINED_)
                                 {

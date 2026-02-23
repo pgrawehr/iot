@@ -33,7 +33,7 @@ namespace Iot.Device.Arduino.Tests
 
             ErrorManager.Logger = this.GetCurrentClassLogger();
 
-            _compiler = new MicroCompiler(_fixture.Board!, true, false);
+            _compiler = new MicroCompiler(_fixture.Board!, true, TargetFramework.Firmata);
 
             if (!_compiler.QueryBoardCapabilities(false, out IlCapabilities data))
             {

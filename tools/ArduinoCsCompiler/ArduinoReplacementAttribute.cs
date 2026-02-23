@@ -28,6 +28,7 @@ namespace ArduinoCsCompiler
         /// </summary>
         public ArduinoReplacementAttribute(Type typeToReplace, bool replaceEntireType = false)
         {
+            TargetFramework = TargetFramework.Any;
             if (typeToReplace == null)
             {
                 throw new ArgumentNullException(nameof(typeToReplace));
@@ -43,6 +44,7 @@ namespace ArduinoCsCompiler
         /// </summary>
         public ArduinoReplacementAttribute(string typeNameToReplace, string? assemblyName = null, bool replaceEntireType = false, Type? typeInSameAssembly = null)
         {
+            TargetFramework = TargetFramework.Any;
             TypeNameToReplace = typeNameToReplace;
             if (assemblyName != null)
             {
@@ -91,6 +93,11 @@ namespace ArduinoCsCompiler
         /// True if all subclasses should be replaced the same way (used i.e. to replace all Exception types at once)
         /// </summary>
         public bool IncludingSubclasses { get; set; }
+
+        /// <summary>
+        /// When set, this replacement is only considered when the target framework matches
+        /// </summary>
+        public TargetFramework TargetFramework { get; set; }
 
         public bool IncludingPrivates
         {

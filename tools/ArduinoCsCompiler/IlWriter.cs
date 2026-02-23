@@ -5,9 +5,10 @@ using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Xml.Linq;
 
 namespace ArduinoCsCompiler;
 
@@ -326,10 +327,23 @@ public class IlWriter
                     fieldTypeName = $"valuetype {fieldTypeName}";
                 }
             }
+            else if (type.FullName != null && type.FullName!.Contains(MicroCompiler.PrivateImplementationDetailsName))
+            {
+                string typeName = type.FullName!;
+                typeName = typeName.Replace("/", "'/'"); // Slashes must be un-escaped
+                fieldTypeName = $"valuetype '{typeName}'";
+            }
             else
             {
-                fieldTypeName = $"object /* TODO: {type.FullName} is unknown here*/";
-                // throw new InvalidOperationException($"Don't know what to do with {type}");
+                // Not sure when we end here. Maybe on type duplication with Mini-Types?
+                if (!type.IsValueType)
+                {
+                    return $"class {type.FullName}";
+                }
+                else
+                {
+                    return $"valuetype {type.FullName}";
+                }
             }
         }
 
@@ -457,7 +471,7 @@ public class IlWriter
 
         foreach (var m in cls.Members)
         {
-            if (m.Name == fi.Name)
+            if (fi.Name == m.Field?.Name)
             {
                 return m.FieldName;
             }

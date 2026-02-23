@@ -29,7 +29,17 @@ namespace ArduinoCsCompiler
             SizeOfField = sizeOfField;
             Field = field;
             StaticFieldSize = staticFieldSize;
-            string fieldName = Field.Name;
+            FieldName = SanitizeFieldName(Field.Name);
+            if (!FieldName.Contains('\'', StringComparison.Ordinal))
+            {
+                FieldName = FieldName + $"0x{token:X8}";
+            }
+
+            Name = $"Field: {field.MemberInfoSignature()}";
+        }
+
+        private static string SanitizeFieldName(string fieldName)
+        {
             if (ClassDeclaration.RemoveAnyOf(fieldName, new char[]
                 {
                     '<', '>'
@@ -42,13 +52,11 @@ namespace ArduinoCsCompiler
             {
                 // The field name begins with a digit.
                 // (This happens on some auto-generated fields that have the actual name as '<>9' or similar)
-                fieldName = "Number" + fieldName;
+                fieldName = $"'{fieldName}'";
             }
 
             fieldName = ExternalSystemReferences.ReplaceInvalidFieldOrArgumentNames(fieldName);
-
-            FieldName = fieldName + $"0x{token:X8}";
-            Name = $"Field: {field.MemberInfoSignature()}";
+            return fieldName;
         }
 
         public ClassMember(MethodBase method, VariableKind variableType, int token, List<int> baseTokens)

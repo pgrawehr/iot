@@ -52,7 +52,7 @@ namespace ArduinoCsCompiler
         internal static readonly string PrivateImplementationDetailsName = "<PrivateImplementationDetails>";
 
         private readonly ArduinoBoard? _board;
-        private readonly bool _nanoFrameworkRun;
+        private readonly TargetFramework _target;
         private readonly List<ArduinoTask> _activeTasks;
         private readonly object _activeTasksLock;
         private readonly ILogger _logger;
@@ -70,11 +70,11 @@ namespace ArduinoCsCompiler
         private bool _disposed = false;
         private Debugger? _debugger;
 
-        public MicroCompiler(ArduinoBoard? board, bool resetExistingCode, bool nanoFrameworkRun)
+        public MicroCompiler(ArduinoBoard? board, bool resetExistingCode, TargetFramework target)
         {
             _logger = this.GetCurrentClassLogger();
             _board = board;
-            _nanoFrameworkRun = nanoFrameworkRun;
+            _target = target;
             _debugger = null;
             _lastMessages = new ConcurrentQueue<string>();
 
@@ -96,7 +96,8 @@ namespace ArduinoCsCompiler
             _replacementClasses = new List<Type>();
             foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
             {
-                if (type.GetCustomAttribute<ArduinoReplacementAttribute>() != null)
+                var attr = type.GetCustomAttribute<ArduinoReplacementAttribute>();
+                if (attr != null && (attr.TargetFramework == TargetFramework.Any || attr.TargetFramework == _target))
                 {
                     _replacementClasses.Add(type);
                 }
@@ -2043,7 +2044,7 @@ namespace ArduinoCsCompiler
             if (code == null)
             {
                 // TODO: Cache result of this (result is thrown away when called in this context and only used later)
-                code = IlCodeParser.FindAndPatchTokens(set, methodInfo.Method, stack, true);
+                code = IlCodeParser.FindAndPatchTokens(set, methodInfo.Method, stack, TargetFramework.Nano);
             }
 
             foreach (var method in code.DependentMethods)
@@ -2674,7 +2675,7 @@ namespace ArduinoCsCompiler
                 }
                 else if (hasBody)
                 {
-                    parserResult = IlCodeParser.FindAndPatchTokens(set, methodInfo, stack, ilBytes!, _nanoFrameworkRun);
+                    parserResult = IlCodeParser.FindAndPatchTokens(set, methodInfo, stack, ilBytes!, _target);
 
                     foreach (var type in parserResult.DependentTypes)
                     {
