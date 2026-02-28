@@ -14,7 +14,7 @@ namespace ArduinoCsCompiler.Runtime
     /// Mini-Implementation for the System.String type. Uses unicode characters (16 bits per char). To avoid including rarely used functions with the kernel, this
     /// does not implement <see cref="IConvertible"/>, but is otherwise equivalent to the original implementation.
     /// </summary>
-    [ArduinoReplacement(typeof(System.String), false, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.String), false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal unsafe partial class MiniString : ICloneable, IComparable, IComparable<string>, IEquatable<string>, System.Collections.Generic.IEnumerable<char>
     {
 #pragma warning disable SA1122 // Use string.Empty for empty strings (This is the definition of an empty string!)

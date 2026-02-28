@@ -450,21 +450,21 @@ namespace ArduinoCsCompiler
             var builtin = new ExternalAssemblyReference(string.Empty, string.Empty, string.Empty); // for built-in types, such as object or int
 
             References.AddRange(new ExternalTypeReference[]
-                    {
-                        new("int64", typeof(System.Int64), builtin),
-                        new("uint64", typeof(System.UInt64), builtin),
-                        new("int32", typeof(System.Int32), builtin),
-                        new("uint32", typeof(System.UInt32), builtin),
-                        new("int16", typeof(System.Int16), builtin),
-                        new("uint16", typeof(System.UInt16), builtin),
-                        new("int8", typeof(System.SByte), builtin),
-                        new("uint8", typeof(System.Byte), builtin),
-                        new("object", typeof(System.Object), builtin),
-                        new("string", typeof(System.String), builtin),
-                        new("bool", typeof(System.Boolean), builtin),
-                        new("float64", typeof(System.Double), builtin),
-                        new("float32", typeof(System.Single), builtin)
-                    });
+            {
+                new("int64", typeof(System.Int64), builtin),
+                new("uint64", typeof(System.UInt64), builtin),
+                new("int32", typeof(System.Int32), builtin),
+                new("uint32", typeof(System.UInt32), builtin),
+                new("int16", typeof(System.Int16), builtin),
+                new("uint16", typeof(System.UInt16), builtin),
+                new("int8", typeof(System.SByte), builtin),
+                new("uint8", typeof(System.Byte), builtin),
+                new("object", typeof(System.Object), builtin),
+                new("string", typeof(System.String), builtin),
+                new("bool", typeof(System.Boolean), builtin),
+                new("float64", typeof(System.Double), builtin),
+                new("float32", typeof(System.Single), builtin)
+            });
 
             References.AddRange(new ExternalTypeReference[]
             {
@@ -478,6 +478,8 @@ namespace ArduinoCsCompiler
                 new("System.Reflection.MethodBase", typeof(System.Reflection.MethodBase), mscorlib),
                 new("System.Array", typeof(System.Array), mscorlib),
                 new("System.Runtime.Intrinsics.Vector512<T>", typeof(Vector512<>), mscorlib),
+                new("System.Globalization.CultureInfo", typeof(System.Globalization.CultureInfo), mscorlib),
+                new(typeof(System.Runtime.InteropServices.Marshal), mscorlib),
             });
         }
 

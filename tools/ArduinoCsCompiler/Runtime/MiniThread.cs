@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Threading.Thread), false, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Threading.Thread), false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniThread
     {
 #pragma warning disable 414, SA1306

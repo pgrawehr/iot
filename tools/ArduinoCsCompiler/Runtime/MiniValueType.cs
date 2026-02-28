@@ -6,7 +6,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.ValueType), true)]
+    [ArduinoReplacement(typeof(System.ValueType), true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniValueType
     {
         public MiniValueType()

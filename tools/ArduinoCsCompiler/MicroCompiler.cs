@@ -52,7 +52,6 @@ namespace ArduinoCsCompiler
         internal static readonly string PrivateImplementationDetailsName = "<PrivateImplementationDetails>";
 
         private readonly ArduinoBoard? _board;
-        private readonly TargetFramework _target;
         private readonly List<ArduinoTask> _activeTasks;
         private readonly object _activeTasksLock;
         private readonly ILogger _logger;
@@ -74,7 +73,7 @@ namespace ArduinoCsCompiler
         {
             _logger = this.GetCurrentClassLogger();
             _board = board;
-            _target = target;
+            TargetFramework = target;
             _debugger = null;
             _lastMessages = new ConcurrentQueue<string>();
 
@@ -97,7 +96,7 @@ namespace ArduinoCsCompiler
             foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
             {
                 var attr = type.GetCustomAttribute<ArduinoReplacementAttribute>();
-                if (attr != null && (attr.TargetFramework == TargetFramework.Any || attr.TargetFramework == _target))
+                if (attr != null && (attr.TargetFramework == TargetFramework.Any || attr.TargetFramework == TargetFramework))
                 {
                     _replacementClasses.Add(type);
                 }
@@ -107,6 +106,11 @@ namespace ArduinoCsCompiler
         internal CompilerCommandHandler CommandHandler => _commandHandler;
 
         public ILogger Logger => _logger;
+
+        public TargetFramework TargetFramework
+        {
+            get;
+        }
 
         private static bool HasStaticFields(Type cls)
         {
@@ -451,6 +455,12 @@ namespace ArduinoCsCompiler
                         }
                     }
                 }
+            }
+
+            if (TargetFramework == TargetFramework.Nano)
+            {
+                // These will be replaced with their true types instead of the complex stuff below
+                return;
             }
 
             // Some special replacements required
@@ -2041,6 +2051,13 @@ namespace ArduinoCsCompiler
                 return;
             }
 
+            if (TargetFramework == TargetFramework.Nano && methodInfo.DeclaringType != null &&
+                ExternalSystemReferences.TryGetValue(methodInfo.DeclaringType, out var reference))
+            {
+                // No need to parse this - we'll be using a reference call
+                return;
+            }
+
             if (code == null)
             {
                 // TODO: Cache result of this (result is thrown away when called in this context and only used later)
@@ -2166,42 +2183,49 @@ namespace ArduinoCsCompiler
             if (ExecutionSet.CompiledKernel == null || ExecutionSet.CompiledKernel.CompilerSettings != compilerSettings)
             {
                 set = new ExecutionSet(this, compilerSettings);
-                // We never want these types in our execution set - reflection is not supported, except in very specific cases
-                set.SuppressType("System.Reflection.MethodBase");
-                set.SuppressType("System.Reflection.MethodInfo");
-                set.SuppressType("System.Reflection.ConstructorInfo");
-                set.SuppressType("System.Reflection.Module");
-                set.SuppressType("System.Reflection.Assembly");
-                set.SuppressType("System.Reflection.RuntimeAssembly");
-                set.SuppressType("System.Globalization.HebrewNumber");
-                set.SuppressType("System.Resources.RuntimeResourceSet");
-                set.SuppressType("System.Resources.ResourceReader");
-                // exec.SuppressNamespace("System.Runtime.Intrinsics", true);
-                // Native libraries are not supported
-                set.SuppressType(typeof(System.Runtime.InteropServices.NativeLibrary));
+                if (TargetFramework == TargetFramework.Firmata)
+                {
+                    // We never want these types in our execution set - reflection is not supported, except in very specific cases
+                    set.SuppressType("System.Reflection.MethodBase");
+                    set.SuppressType("System.Reflection.MethodInfo");
+                    set.SuppressType("System.Reflection.ConstructorInfo");
+                    set.SuppressType("System.Reflection.Module");
+                    set.SuppressType("System.Reflection.Assembly");
+                    set.SuppressType("System.Reflection.RuntimeAssembly");
+                    set.SuppressType("System.Globalization.HebrewNumber");
+                    set.SuppressType("System.Resources.RuntimeResourceSet");
+                    set.SuppressType("System.Resources.ResourceReader");
+                    // exec.SuppressNamespace("System.Runtime.Intrinsics", true);
+                    // Native libraries are not supported
+                    set.SuppressType(typeof(System.Runtime.InteropServices.NativeLibrary));
 
-                // Only the invariant culture is supported (we might later change this to "only one culture is supported", and
-                // upload the strings matching a specific culture)
-                set.SuppressType(typeof(System.Globalization.HebrewCalendar));
-                set.SuppressType(typeof(System.Globalization.JapaneseCalendar));
-                set.SuppressType(typeof(System.Globalization.JapaneseLunisolarCalendar));
-                set.SuppressType(typeof(System.Globalization.ChineseLunisolarCalendar));
-                set.SuppressType(typeof(IDeserializationCallback));
-                set.SuppressType(typeof(IConvertible)); // Remove support for this rarely used interface which links many methods (i.e. on String)
-                set.SuppressType(typeof(OutOfMemoryException)); // For the few cases, where this is explicitly called, we don't need to keep it - it's quite fatal, anyway.
-                set.SuppressType(typeof(Microsoft.Win32.Registry));
-                set.SuppressType(typeof(Microsoft.Win32.RegistryKey));
-                // These shall never be loaded - they're host only (but might slip into the execution set when the startup code is referencing them)
-                set.SuppressType(typeof(MicroCompiler));
-                set.SuppressType(typeof(System.Device.Gpio.Drivers.LibGpiodDriver));
-                set.SuppressType(typeof(System.Device.Gpio.Drivers.RaspberryPi3Driver));
-                set.SuppressType(typeof(System.Device.Gpio.Drivers.UnixDriver));
-                set.SuppressType(typeof(Iot.Device.Board.DummyGpioDriver));
-                set.SuppressType(typeof(Iot.Device.Board.KeyboardGpioDriver));
+                    // Only the invariant culture is supported (we might later change this to "only one culture is supported", and
+                    // upload the strings matching a specific culture)
+                    set.SuppressType(typeof(System.Globalization.HebrewCalendar));
+                    set.SuppressType(typeof(System.Globalization.JapaneseCalendar));
+                    set.SuppressType(typeof(System.Globalization.JapaneseLunisolarCalendar));
+                    set.SuppressType(typeof(System.Globalization.ChineseLunisolarCalendar));
+                    set.SuppressType(typeof(IDeserializationCallback));
+                    set.SuppressType(typeof(IConvertible)); // Remove support for this rarely used interface which links many methods (i.e. on String)
+                    set.SuppressType(typeof(OutOfMemoryException)); // For the few cases, where this is explicitly called, we don't need to keep it - it's quite fatal, anyway.
+                    set.SuppressType(typeof(Microsoft.Win32.Registry));
+                    set.SuppressType(typeof(Microsoft.Win32.RegistryKey));
+                    // These shall never be loaded - they're host only (but might slip into the execution set when the startup code is referencing them)
+                    set.SuppressType(typeof(MicroCompiler));
+                    set.SuppressType(typeof(System.Device.Gpio.Drivers.LibGpiodDriver));
+                    set.SuppressType(typeof(System.Device.Gpio.Drivers.RaspberryPi3Driver));
+                    set.SuppressType(typeof(System.Device.Gpio.Drivers.UnixDriver));
+                    set.SuppressType(typeof(Iot.Device.Board.DummyGpioDriver));
+                    set.SuppressType(typeof(Iot.Device.Board.KeyboardGpioDriver));
 
-                // Can't afford to load these, at least not on the Arduino Due. They're way to big.
-                set.SuppressType(typeof(UnitsNet.QuantityFormatter));
-                set.SuppressType(typeof(UnitsNet.UnitAbbreviationsCache));
+                    // Can't afford to load these, at least not on the Arduino Due. They're way to big.
+                    set.SuppressType(typeof(UnitsNet.QuantityFormatter));
+                    set.SuppressType(typeof(UnitsNet.UnitAbbreviationsCache));
+                }
+                else
+                {
+                    set.SuppressType(typeof(MicroCompiler));
+                }
 
                 foreach (string compilerSettingsAdditionalSuppression in compilerSettings.AdditionalSuppressions)
                 {
@@ -2675,7 +2699,7 @@ namespace ArduinoCsCompiler
                 }
                 else if (hasBody)
                 {
-                    parserResult = IlCodeParser.FindAndPatchTokens(set, methodInfo, stack, ilBytes!, _target);
+                    parserResult = IlCodeParser.FindAndPatchTokens(set, methodInfo, stack, ilBytes!, TargetFramework);
 
                     foreach (var type in parserResult.DependentTypes)
                     {

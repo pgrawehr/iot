@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Type), true, IncludingSubclasses = true)]
+    [ArduinoReplacement(typeof(System.Type), true, IncludingSubclasses = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniType
     {
         public static readonly Type[] EmptyTypes = new Type[0];

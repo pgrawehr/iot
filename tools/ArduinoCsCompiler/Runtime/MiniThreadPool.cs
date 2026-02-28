@@ -6,7 +6,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(ThreadPool), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(ThreadPool), IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal sealed class MiniThreadPool
     {
         public static bool UseWindowsThreadPool

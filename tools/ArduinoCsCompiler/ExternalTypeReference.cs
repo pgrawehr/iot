@@ -14,6 +14,11 @@ namespace ArduinoCsCompiler
             Assembly = assembly;
         }
 
+        public ExternalTypeReference(Type type, ExternalAssemblyReference assembly)
+            : this(type.FullName!, type, assembly)
+        {
+        }
+
         public string Name { get; }
 
         public Type Type { get; }

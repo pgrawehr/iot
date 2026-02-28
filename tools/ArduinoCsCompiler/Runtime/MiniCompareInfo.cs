@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(CompareInfo), false, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(CompareInfo), false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniCompareInfo
     {
         [ArduinoImplementation]

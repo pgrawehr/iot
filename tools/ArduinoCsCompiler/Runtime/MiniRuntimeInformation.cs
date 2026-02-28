@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Runtime.InteropServices.RuntimeInformation), true)]
+    [ArduinoReplacement(typeof(System.Runtime.InteropServices.RuntimeInformation), true, TargetFramework = TargetFramework.Firmata)]
     public class MiniRuntimeInformation
     {
         public static string FrameworkDescription

@@ -62,7 +62,7 @@ namespace ArduinoCsCompiler.Runtime
     //  object inside of the debugger.
     //
     ////////////////////////////////////////////////////////////////////////////
-    [ArduinoReplacement(typeof(CultureInfo), true, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(CultureInfo), true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniCultureInfo : IFormatProvider, ICloneable
     {
         // We use an RFC4646 type string to construct CultureInfo.
@@ -691,7 +691,7 @@ namespace ArduinoCsCompiler.Runtime
             return CurrentCulture;
         }
 
-        [ArduinoReplacement("System.Globalization.CultureData", null, true, IncludingPrivates = true)]
+        [ArduinoReplacement("System.Globalization.CultureData", null, true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
         private class MiniCultureData
         {
             private static readonly string[] _saLongTimes;

@@ -51,7 +51,7 @@ namespace ArduinoCsCompiler.Runtime
         ELEMENT_TYPE_PINNED = 0x45,
     }
 
-    [ArduinoReplacement("System.RuntimeTypeHandle", "System.Private.CoreLib.dll", true, IncludingPrivates = true)]
+    [ArduinoReplacement("System.RuntimeTypeHandle", "System.Private.CoreLib.dll", true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     // Note: Be aware that this replaces a value type
     internal struct MiniRuntimeTypeHandle : ISerializable
     {

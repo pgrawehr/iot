@@ -6,7 +6,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Runtime.CompilerServices.RuntimeHelpers), true)]
+    [ArduinoReplacement(typeof(System.Runtime.CompilerServices.RuntimeHelpers), true, TargetFramework = TargetFramework.Firmata)]
     internal static class MiniRuntimeHelpers
     {
         [ArduinoImplementation("RuntimeHelpersInitializeArray")]

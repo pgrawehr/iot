@@ -8,7 +8,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(Marshal), true)]
+    [ArduinoReplacement(typeof(Marshal), true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniMarshal
     {
         [ArduinoImplementation("Interop_Kernel32SetLastError", 0x205)]

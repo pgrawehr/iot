@@ -6,7 +6,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(Calendar), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(Calendar), IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniCalendar
     {
         [ArduinoImplementation(CompareByParameterNames = true)]
