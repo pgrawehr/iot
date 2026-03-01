@@ -6,7 +6,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(DateTime), false, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(DateTime), false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal struct MiniDateTime
     {
         public static DateTime UtcNow

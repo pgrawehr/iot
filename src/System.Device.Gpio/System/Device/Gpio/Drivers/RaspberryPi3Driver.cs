@@ -100,11 +100,7 @@ public class RaspberryPi3Driver : GpioDriver
         }
         else
         {
-            _internalDriver = CreateWindows10GpioDriver();
-            _setSetRegister = (value) => throw new PlatformNotSupportedException();
-            _setClearRegister = (value) => throw new PlatformNotSupportedException();
-            _getSetRegister = () => throw new PlatformNotSupportedException();
-            _getClearRegister = () => throw new PlatformNotSupportedException();
+            throw new PlatformNotSupportedException($"This driver is not supported on {Environment.OSVersion.Platform}");
         }
     }
 
@@ -146,12 +142,6 @@ public class RaspberryPi3Driver : GpioDriver
             RaspberryBoardInfo.Model.RaspberryPiComputeModule3 => new RaspberryPiCm3Driver(),
             _ => null,
         };
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static GpioDriver CreateWindows10GpioDriver()
-    {
-        throw new PlatformNotSupportedException();
     }
 
     private GpioDriver InternalDriver

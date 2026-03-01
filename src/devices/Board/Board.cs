@@ -363,34 +363,13 @@ namespace Iot.Device.Board
         }
 
         /// <summary>
-        /// Attempt to get the best applicable driver for the board the program is executing on.
+        /// This would return a GPIO driver for Windows, but there's currently no build-in driver for this OS.
+        /// On Windows, you need to use one of the USB-based drivers, e.g. with an FTDI chip.
         /// </summary>
-        /// <returns>A driver that works with the board the program is executing on.</returns>
-        /// <remarks>
-        ///     This really feels like it needs a driver-based pattern, where each driver exposes a static method:
-        ///     public static bool IsSpecificToCurrentEnvironment { get; }
-        ///     The GpioController could use reflection to find all GpioDriver-derived classes and call this
-        ///     static method to determine if the driver considers itself to be the best match for the environment.
-        /// (Implementation copied from <see cref="GpioController"/>, where it is private)
-        /// </remarks>
+        /// <returns>Never</returns>
+        /// <exception cref="PlatformNotSupportedException">Always</exception>
         private static GpioDriver GetBestDriverForBoardOnWindows()
         {
-#pragma warning disable CA1416 // Registry.LocalMachine is only supported on Windows, but we will only hit this method if we are on Windows.
-            string? baseBoardProduct = Registry.LocalMachine.GetValue(BaseBoardProductRegistryValue, string.Empty)?.ToString();
-#pragma warning restore CA1416
-
-            if (baseBoardProduct is null)
-            {
-                throw new Exception("Single board computer type cannot be detected.");
-            }
-
-            if (baseBoardProduct == RaspberryPi3Product || baseBoardProduct.StartsWith($"{RaspberryPi3Product} ") ||
-                baseBoardProduct == RaspberryPi2Product || baseBoardProduct.StartsWith($"{RaspberryPi2Product} "))
-            {
-                return new RaspberryPi3Driver();
-            }
-
-            // Default for Windows IoT Core on a non-specific device
             throw new PlatformNotSupportedException();
         }
 

@@ -808,7 +808,7 @@ namespace ArduinoCsCompiler
                 int staticFieldSize = 0;
                 var field = fields[index];
                 // For static fields, the minimum size is 4, so exact alignment is not necessary
-                var fieldType = GetVariableType(field.Name, field.FieldType, StructAlignmentMinRequirement(classType, fields), out var size);
+                var fieldType = GetVariableType(field.Name, field.FieldType, StructAlignmentMinRequirement(classType, fields), 0, out var size);
                 if (field.IsStatic)
                 {
                     fieldType |= VariableKind.StaticMember;
@@ -1677,7 +1677,7 @@ namespace ArduinoCsCompiler
             for (var index = 0; index < fields.Count; index++)
             {
                 var f = fields[index];
-                GetVariableType(f.Name, f.FieldType, minSizeOfMember, out int sizeOfMember);
+                GetVariableType(f.Name, f.FieldType, minSizeOfMember, 0, out int sizeOfMember);
                 offset = sizeDynamic;
                 if (f.IsStatic)
                 {
@@ -1813,13 +1813,19 @@ namespace ArduinoCsCompiler
         /// <param name="fieldName">Name of the field</param>
         /// <param name="t">Type to query</param>
         /// <param name="minSizeOfMember">Minimum size of the member (used to force alignment)</param>
+        /// <param name="recursionLevel">For debugging purposes</param>
         /// <param name="sizeOfMember">Returns the actual size of the member, used for value-type arrays (because byte[] should use just one byte per entry)</param>
         /// <returns>VariableKind instance</returns>
-        internal static VariableKind GetVariableType(string fieldName, Type t, int minSizeOfMember, out int sizeOfMember)
+        internal static VariableKind GetVariableType(string fieldName, Type t, int minSizeOfMember, int recursionLevel, out int sizeOfMember)
         {
             if (fieldName == null)
             {
                 throw new InvalidOperationException();
+            }
+
+            if (recursionLevel > 20)
+            {
+                throw new InvalidOperationException("Types aren't expected to be so complex");
             }
 
             string typeName = t.Name;
@@ -1919,7 +1925,9 @@ namespace ArduinoCsCompiler
                 var elemType = t.GetElementType();
                 if (elemType!.IsValueType)
                 {
-                    GetVariableType(elemType.Name, elemType, minSizeOfMember, out sizeOfMember);
+                    // GetVariableType(elemType.Name, elemType, minSizeOfMember, recursionLevel + 1, out sizeOfMember);
+                    // The size of the array reference itself is always just a reference.
+                    sizeOfMember = SizeOfVoidPointer();
                     return VariableKind.ValueArray;
                 }
                 else
@@ -1968,7 +1976,7 @@ namespace ArduinoCsCompiler
 
                 foreach (var f in t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)) // Not the static ones
                 {
-                    GetVariableType(f.Name, f.FieldType, minSizeOfMember, out var s);
+                    GetVariableType(f.Name, f.FieldType, minSizeOfMember, recursionLevel + 1, out var s);
                     sizeOfMember += s;
                 }
 
@@ -2179,6 +2187,7 @@ namespace ArduinoCsCompiler
             }
 
             ExecutionSet set;
+            AnalysisStack stack = new AnalysisStack(mainEntryPoint);
 
             if (ExecutionSet.CompiledKernel == null || ExecutionSet.CompiledKernel.CompilerSettings != compilerSettings)
             {
@@ -2224,7 +2233,12 @@ namespace ArduinoCsCompiler
                 }
                 else
                 {
+                    // Nano case
                     set.SuppressType(typeof(MicroCompiler));
+                    set.SuppressType(typeof(System.Device.Gpio.Drivers.LibGpiodDriver));
+                    set.SuppressType(typeof(System.Device.Gpio.Drivers.RaspberryPi3Driver));
+                    set.SuppressType(typeof(System.Device.Gpio.Drivers.UnixDriver));
+                    PrepareClass(set, typeof(System.Array), stack);
                 }
 
                 foreach (string compilerSettingsAdditionalSuppression in compilerSettings.AdditionalSuppressions)
@@ -2248,8 +2262,6 @@ namespace ArduinoCsCompiler
                 // Another clone, to leave the static member alone. Replace the compiler in that kernel with the current one.
                 set = new ExecutionSet(ExecutionSet.CompiledKernel, this, compilerSettings);
             }
-
-            AnalysisStack stack = new AnalysisStack(mainEntryPoint);
 
             if (mainEntryPoint.DeclaringType != null)
             {
@@ -2902,7 +2914,7 @@ namespace ArduinoCsCompiler
                         minSize = SizeOfVoidPointer();
                     }
 
-                    var type = GetVariableType($"Local{i}", classType, minSize, out int size);
+                    var type = GetVariableType($"Local{i}", classType, minSize, 0, out int size);
                     ClassMember local = new ClassMember($"Local #{i}", type, 0, (ushort)size);
                     localTypes[i] = local;
                 }
@@ -2922,7 +2934,7 @@ namespace ArduinoCsCompiler
             for (i = startOffset; i < decl.ArgumentCount; i++)
             {
                 var classType = parameters[i - startOffset].ParameterType;
-                var type = GetVariableType($"Argument{i}", classType, SizeOfVoidPointer(), out var size);
+                var type = GetVariableType($"Argument{i}", classType, SizeOfVoidPointer(), 0, out var size);
                 ClassMember arg = new ClassMember($"Argument {i}", type, 0, size);
                 argTypes[i] = arg;
             }

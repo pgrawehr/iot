@@ -41,4 +41,8 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="mscorlib.dll" />
+  </ItemGroup>
+
 </Project>

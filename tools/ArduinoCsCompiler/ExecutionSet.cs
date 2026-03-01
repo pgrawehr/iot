@@ -908,12 +908,6 @@ namespace ArduinoCsCompiler
                 return false;
             }
 
-            if (_compiler.TargetFramework == TargetFramework.Nano && ExternalSystemReferences.TryGetValue(type.TheType, out var reference))
-            {
-                // Auto-suppress all classes that are implemented in the framework
-                return false;
-            }
-
             // Unless this compiler setting is enabled, we automatically suppress all preview features (in .NET 6.0 for instance the INumber<T> interfaces)
             if (!_compilerSettings.UsePreviewFeatures && type.TheType.GetCustomAttributes(typeof(RequiresPreviewFeaturesAttribute), true).Any())
             {

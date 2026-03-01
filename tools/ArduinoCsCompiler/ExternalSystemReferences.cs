@@ -480,6 +480,8 @@ namespace ArduinoCsCompiler
                 new("System.Runtime.Intrinsics.Vector512<T>", typeof(Vector512<>), mscorlib),
                 new("System.Globalization.CultureInfo", typeof(System.Globalization.CultureInfo), mscorlib),
                 new(typeof(System.Runtime.InteropServices.Marshal), mscorlib),
+                new(typeof(System.Threading.Thread), mscorlib),
+                new(typeof(System.DateTime), mscorlib),
             });
         }
 
