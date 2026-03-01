@@ -5,18 +5,24 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Intrinsics;
 using System.Text;
 using System.Threading.Tasks;
+using Mono.Cecil;
 
 namespace ArduinoCsCompiler
 {
     internal static class ExternalSystemReferences
     {
-        public static List<ExternalTypeReference> References;
-        private static List<string> _keywords;
+        public static List<ExternalTypeReference> References = new List<ExternalTypeReference>();
+        private static List<string> _keywords = new List<string>();
 
-        static ExternalSystemReferences()
+        /// <summary>
+        /// This method is actually a static ctor, but it's a bit too complex to be implemented as one
+        /// (if things fail, the exception ends up in a random place)
+        /// </summary>
+        public static void Init()
         {
             // Keywords can't be used as argument or class names (many of them are valid C# identifiers, though)
             _keywords = new List<string>()
@@ -466,23 +472,45 @@ namespace ArduinoCsCompiler
                 new("float32", typeof(System.Single), builtin)
             });
 
-            References.AddRange(new ExternalTypeReference[]
+            ////References.AddRange(new ExternalTypeReference[]
+            ////{
+            ////    new("System.ValueType", typeof(System.ValueType), mscorlib),
+            ////    new("System.Enum", typeof(System.Enum), mscorlib),
+            ////    new("System.RuntimeFieldHandle", typeof(System.RuntimeFieldHandle), mscorlib),
+            ////    new("System.RuntimeMethodHandle", typeof(System.RuntimeMethodHandle), mscorlib),
+            ////    new("System.RuntimeTypeHandle", typeof(System.RuntimeTypeHandle), mscorlib),
+            ////    new("System.RuntimeArgumentHandle", typeof(System.RuntimeArgumentHandle), mscorlib),
+            ////    new("System.IDisposable", typeof(System.IDisposable), mscorlib),
+            ////    new("System.Reflection.MethodBase", typeof(System.Reflection.MethodBase), mscorlib),
+            ////    new("System.Array", typeof(System.Array), mscorlib),
+            ////    new("System.Runtime.Intrinsics.Vector512<T>", typeof(Vector512<>), mscorlib),
+            ////    new("System.Globalization.CultureInfo", typeof(System.Globalization.CultureInfo), mscorlib),
+            ////    new(typeof(System.Runtime.InteropServices.Marshal), mscorlib),
+            ////    new(typeof(System.Threading.Thread), mscorlib),
+            ////    new(typeof(System.DateTime), mscorlib),
+            ////});
+
+            var streams = typeof(ExternalSystemReferences).Assembly.GetManifestResourceNames();
+            // Get all the types the nanoframework base library offers
+            using var data = AssemblyDefinition.ReadAssembly(Assembly.GetExecutingAssembly().GetManifestResourceStream(
+                streams.First(x => x.EndsWith("mscorlib.dll", StringComparison.Ordinal))));
+            var systemAssembly = typeof(string).Assembly;
+            var mod = data.Modules[0];
+            foreach (TypeDefinition cls in mod.GetTypes())
             {
-                new("System.ValueType", typeof(System.ValueType), mscorlib),
-                new("System.Enum", typeof(System.Enum), mscorlib),
-                new("System.RuntimeFieldHandle", typeof(System.RuntimeFieldHandle), mscorlib),
-                new("System.RuntimeMethodHandle", typeof(System.RuntimeMethodHandle), mscorlib),
-                new("System.RuntimeTypeHandle", typeof(System.RuntimeTypeHandle), mscorlib),
-                new("System.RuntimeArgumentHandle", typeof(System.RuntimeArgumentHandle), mscorlib),
-                new("System.IDisposable", typeof(System.IDisposable), mscorlib),
-                new("System.Reflection.MethodBase", typeof(System.Reflection.MethodBase), mscorlib),
-                new("System.Array", typeof(System.Array), mscorlib),
-                new("System.Runtime.Intrinsics.Vector512<T>", typeof(Vector512<>), mscorlib),
-                new("System.Globalization.CultureInfo", typeof(System.Globalization.CultureInfo), mscorlib),
-                new(typeof(System.Runtime.InteropServices.Marshal), mscorlib),
-                new(typeof(System.Threading.Thread), mscorlib),
-                new(typeof(System.DateTime), mscorlib),
-            });
+                if (!cls.IsPublic)
+                {
+                    continue;
+                }
+
+                if (!cls.IsClass && !cls.IsInterface && !cls.IsValueType)
+                {
+                    continue;
+                }
+
+                Type? effectiveType = systemAssembly.GetType(cls.FullName, true, false);
+                References.Add(new ExternalTypeReference(effectiveType!, mscorlib));
+            }
         }
 
         public static string ReplaceInvalidFieldOrArgumentNames(string input)

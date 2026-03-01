@@ -72,6 +72,8 @@ namespace ArduinoCsCompiler
         public MicroCompiler(ArduinoBoard? board, bool resetExistingCode, TargetFramework target)
         {
             _logger = this.GetCurrentClassLogger();
+            ExternalSystemReferences.Init();
+
             _board = board;
             TargetFramework = target;
             _debugger = null;
