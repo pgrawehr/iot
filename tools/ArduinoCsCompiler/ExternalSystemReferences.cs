@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.Intrinsics;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Mono.Cecil;
 
 namespace ArduinoCsCompiler
@@ -22,7 +23,8 @@ namespace ArduinoCsCompiler
         /// This method is actually a static ctor, but it's a bit too complex to be implemented as one
         /// (if things fail, the exception ends up in a random place)
         /// </summary>
-        public static void Init()
+        /// <param name="logger">A logger</param>
+        public static void Init(ILogger logger)
         {
             // Keywords can't be used as argument or class names (many of them are valid C# identifiers, though)
             _keywords = new List<string>()
@@ -472,23 +474,11 @@ namespace ArduinoCsCompiler
                 new("float32", typeof(System.Single), builtin)
             });
 
-            ////References.AddRange(new ExternalTypeReference[]
-            ////{
-            ////    new("System.ValueType", typeof(System.ValueType), mscorlib),
-            ////    new("System.Enum", typeof(System.Enum), mscorlib),
-            ////    new("System.RuntimeFieldHandle", typeof(System.RuntimeFieldHandle), mscorlib),
-            ////    new("System.RuntimeMethodHandle", typeof(System.RuntimeMethodHandle), mscorlib),
-            ////    new("System.RuntimeTypeHandle", typeof(System.RuntimeTypeHandle), mscorlib),
-            ////    new("System.RuntimeArgumentHandle", typeof(System.RuntimeArgumentHandle), mscorlib),
-            ////    new("System.IDisposable", typeof(System.IDisposable), mscorlib),
-            ////    new("System.Reflection.MethodBase", typeof(System.Reflection.MethodBase), mscorlib),
-            ////    new("System.Array", typeof(System.Array), mscorlib),
-            ////    new("System.Runtime.Intrinsics.Vector512<T>", typeof(Vector512<>), mscorlib),
-            ////    new("System.Globalization.CultureInfo", typeof(System.Globalization.CultureInfo), mscorlib),
-            ////    new(typeof(System.Runtime.InteropServices.Marshal), mscorlib),
-            ////    new(typeof(System.Threading.Thread), mscorlib),
-            ////    new(typeof(System.DateTime), mscorlib),
-            ////});
+            References.AddRange(new ExternalTypeReference[]
+            {
+                // this one is in mscorlib, but in a separate library on the standard BCL
+                new(typeof(System.Console), mscorlib),
+            });
 
             var streams = typeof(ExternalSystemReferences).Assembly.GetManifestResourceNames();
             // Get all the types the nanoframework base library offers
@@ -508,7 +498,20 @@ namespace ArduinoCsCompiler
                     continue;
                 }
 
-                Type? effectiveType = systemAssembly.GetType(cls.FullName, true, false);
+                Type? effectiveType = systemAssembly.GetType(cls.FullName, false, false);
+
+                if (effectiveType == null)
+                {
+                    logger.LogWarning($"Type {cls.FullName} does not exist in the system library of the standard BCL");
+                    continue;
+                }
+
+                if (References.Any(x => x.Type == effectiveType))
+                {
+                    // Exists already in the list above
+                    continue;
+                }
+
                 References.Add(new ExternalTypeReference(effectiveType!, mscorlib));
             }
         }
