@@ -711,7 +711,9 @@ namespace ArduinoCsCompiler
                 PrepareClassDeclaration(set, dependent.Field!.FieldType, stack);
             }
 
-            FindDependentClasses(set, classType, stack);
+            // Can't do this here, as it would include types in the execution set that are return values or arguments
+            // to methods we're never even touching.
+            // FindDependentClasses(set, classType, stack);
             FindIndirectDependentClasses(set, classType, stack);
         }
 

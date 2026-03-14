@@ -267,6 +267,7 @@ public class IlWriter
     private string TypeNameForIl(Type type)
     {
         String fieldTypeName;
+        string suffix = string.Empty;
         if (type.IsArray)
         {
             Type baseType = type.GetElementType()!;
@@ -300,7 +301,19 @@ public class IlWriter
         }
         else
         {
-            var t = GetClassDeclaration(type);
+            Type t1 = type;
+            if (t1.IsPointer)
+            {
+                suffix = "*";
+                t1 = t1.GetElementType()!;
+            }
+            else if (t1.IsByRef)
+            {
+                suffix = "&";
+                t1 = t1.GetElementType()!;
+            }
+
+            var t = GetClassDeclaration(t1);
             if (t != null)
             {
                 fieldTypeName = t.FullName!;
@@ -323,7 +336,7 @@ public class IlWriter
                     fieldTypeName = underlyingDecl!.FullName!;
                 }
             }
-            else if (ExternalSystemReferences.TryGetValue(type, out ExternalTypeReference? externalTypeReference))
+            else if (ExternalSystemReferences.TryGetValue(t1, out ExternalTypeReference? externalTypeReference))
             {
                 fieldTypeName = externalTypeReference.IlName;
                 if (externalTypeReference.RequiresPrefix)
@@ -338,27 +351,27 @@ public class IlWriter
                     }
                 }
             }
-            else if (type.FullName != null && type.FullName!.Contains(MicroCompiler.PrivateImplementationDetailsName))
+            else if (t1.FullName != null && t1.FullName!.Contains(MicroCompiler.PrivateImplementationDetailsName))
             {
-                string typeName = type.FullName!;
+                string typeName = t1.FullName!;
                 typeName = typeName.Replace("/", "'/'"); // Slashes must be un-escaped
                 fieldTypeName = $"valuetype '{typeName}'";
             }
             else
             {
                 // Not sure when we end here. Maybe on type duplication with Mini-Types?
-                if (!type.IsValueType)
+                if (!t1.IsValueType)
                 {
-                    return $"class {type.FullName}";
+                    return $"class {t1.FullName}";
                 }
                 else
                 {
-                    return $"valuetype {type.FullName}";
+                    return $"valuetype {t1.FullName}";
                 }
             }
         }
 
-        return fieldTypeName;
+        return fieldTypeName + suffix;
     }
 
     private void WriteMethods(IndentedTextWriter tw, ClassDeclaration cl)

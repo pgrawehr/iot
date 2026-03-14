@@ -412,6 +412,20 @@ namespace ArduinoCsCompiler
                                 methodsUsed.Add((MethodBase)set.InverseResolveToken(patchValue)!);
                             }
 
+                            if (mb.IsConstructor == false && mb is MethodInfo mi2)
+                            {
+                                if (mi2.ReturnType != typeof(void))
+                                {
+                                    var t = mi2.ReturnType;
+                                    if (t.IsPointer || t.IsByRef)
+                                    {
+                                        t = t.GetElementType()!;
+                                    }
+
+                                    typesUsed.Add(t.GetTypeInfo());
+                                }
+                            }
+
                             staticAbstractType = null;
                             analysisStack.Pop();
 
