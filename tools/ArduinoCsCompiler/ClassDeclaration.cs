@@ -268,7 +268,14 @@ namespace ArduinoCsCompiler
                 if (idx != -1)
                 {
                     result = result.Substring(0, idx);
-                    result = $"{result}_0x{NewToken:X8}";
+                    var p = TheType.GetGenericArguments();
+                    result += "_of_";
+                    foreach (var arg in p)
+                    {
+                        result += $"{arg.Name}_";
+                    }
+
+                    result = $"{result}0x{NewToken:X8}";
                 }
 
                 // Remove remaining clauses

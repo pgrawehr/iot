@@ -313,18 +313,29 @@ public class IlWriter
             else if (type.IsEnum)
             {
                 // An enum type, but we don't have the actual type in the set. So use the base type instead
-                fieldTypeName = GetClassDeclaration(type.GetEnumUnderlyingType())!.FullName!;
+                if (ExternalSystemReferences.TryGetValue(type.GetEnumUnderlyingType(), out var ext))
+                {
+                    fieldTypeName = $"{ext.IlName}";
+                }
+                else
+                {
+                    var underlyingDecl = GetClassDeclaration(type.GetEnumUnderlyingType());
+                    fieldTypeName = underlyingDecl!.FullName!;
+                }
             }
             else if (ExternalSystemReferences.TryGetValue(type, out ExternalTypeReference? externalTypeReference))
             {
                 fieldTypeName = externalTypeReference.IlName;
-                if (!externalTypeReference.Type.IsValueType)
+                if (externalTypeReference.RequiresPrefix)
                 {
-                    fieldTypeName = $"class {fieldTypeName}";
-                }
-                else
-                {
-                    fieldTypeName = $"valuetype {fieldTypeName}";
+                    if (!externalTypeReference.Type.IsValueType)
+                    {
+                        fieldTypeName = $"class {fieldTypeName}";
+                    }
+                    else
+                    {
+                        fieldTypeName = $"valuetype {fieldTypeName}";
+                    }
                 }
             }
             else if (type.FullName != null && type.FullName!.Contains(MicroCompiler.PrivateImplementationDetailsName))

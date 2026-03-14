@@ -459,19 +459,19 @@ namespace ArduinoCsCompiler
 
             References.AddRange(new ExternalTypeReference[]
             {
-                new("int64", typeof(System.Int64), builtin),
-                new("uint64", typeof(System.UInt64), builtin),
-                new("int32", typeof(System.Int32), builtin),
-                new("uint32", typeof(System.UInt32), builtin),
-                new("int16", typeof(System.Int16), builtin),
-                new("uint16", typeof(System.UInt16), builtin),
-                new("int8", typeof(System.SByte), builtin),
-                new("uint8", typeof(System.Byte), builtin),
-                new("object", typeof(System.Object), builtin),
-                new("string", typeof(System.String), builtin),
-                new("bool", typeof(System.Boolean), builtin),
-                new("float64", typeof(System.Double), builtin),
-                new("float32", typeof(System.Single), builtin)
+                new("int64", typeof(System.Int64), builtin, false),
+                new("uint64", typeof(System.UInt64), builtin, false),
+                new("int32", typeof(System.Int32), builtin, false),
+                new("uint32", typeof(System.UInt32), builtin, false),
+                new("int16", typeof(System.Int16), builtin, false),
+                new("uint16", typeof(System.UInt16), builtin, false),
+                new("int8", typeof(System.SByte), builtin, false),
+                new("uint8", typeof(System.Byte), builtin, false),
+                new("object", typeof(System.Object), builtin, false),
+                new("string", typeof(System.String), builtin, false),
+                new("bool", typeof(System.Boolean), builtin, false),
+                new("float64", typeof(System.Double), builtin, false),
+                new("float32", typeof(System.Single), builtin, false)
             });
 
             References.AddRange(new ExternalTypeReference[]

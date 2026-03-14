@@ -561,6 +561,13 @@ namespace ArduinoCsCompiler
                 }
             }
 
+            if (TargetFramework == TargetFramework.Nano && ExternalSystemReferences.TryGetValue(classType, out var reference))
+            {
+                // No need to prepare this class, but the token should be reserved anyway
+                set.GetOrAddClassToken(classType.GetTypeInfo());
+                return;
+            }
+
             List<FieldInfo> fields = new List<FieldInfo>();
             List<MemberInfo> methods = new List<MemberInfo>();
 
@@ -697,6 +704,11 @@ namespace ArduinoCsCompiler
             foreach (var iface in interfaces)
             {
                 PrepareClassDeclaration(set, iface, stack);
+            }
+
+            foreach (var dependent in memberTypes.Where(f => f.Field != null))
+            {
+                PrepareClassDeclaration(set, dependent.Field!.FieldType, stack);
             }
 
             FindDependentClasses(set, classType, stack);
@@ -1329,20 +1341,23 @@ namespace ArduinoCsCompiler
         /// </summary>
         private void DetectRequiredVirtualMethodImplementations(ExecutionSet set, List<ClassDeclaration> declarations, AnalysisStack stack)
         {
-            foreach (var a in set.ArrayListImplementation)
+            if (TargetFramework == TargetFramework.Firmata)
             {
-                // this adds MiniArray.GetEnumerator(T[]) as implementation of T[].IList<T>()
-                PrepareMethod(set, a.Value, new AnalysisStack(a.Value));
-                var m = set.GetMethod(a.Value) ?? throw new InvalidOperationException($"Unable to resolve {a.Value}");
-                var arrayClass = set.Classes.Single(x => x.NewToken == (int)KnownTypeTokens.Array);
-                if (arrayClass.Members.All(y => y.Method != a.Value))
+                foreach (var a in set.ArrayListImplementation)
                 {
-                    var interestingInterface = typeof(IEnumerable<>).MakeGenericType(a.Key);
-                    var method = interestingInterface.GetMethod("GetEnumerator", BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy) ?? throw new MissingMethodException(interestingInterface.Name, "GetEnumerator");
-                    stack.Push(method);
-                    int interfaceMethodToken = set.GetOrAddMethodToken(method, stack);
-                    stack.Pop();
-                    arrayClass.AddClassMember(new ClassMember(a.Value, VariableKind.Method, m.Token, new List<int>() { interfaceMethodToken }));
+                    // this adds MiniArray.GetEnumerator(T[]) as implementation of T[].IList<T>()
+                    PrepareMethod(set, a.Value, new AnalysisStack(a.Value));
+                    var m = set.GetMethod(a.Value) ?? throw new InvalidOperationException($"Unable to resolve {a.Value}");
+                    var arrayClass = set.Classes.Single(x => x.NewToken == (int)KnownTypeTokens.Array);
+                    if (arrayClass.Members.All(y => y.Method != a.Value))
+                    {
+                        var interestingInterface = typeof(IEnumerable<>).MakeGenericType(a.Key);
+                        var method = interestingInterface.GetMethod("GetEnumerator", BindingFlags.Public | BindingFlags.Instance | BindingFlags.FlattenHierarchy) ?? throw new MissingMethodException(interestingInterface.Name, "GetEnumerator");
+                        stack.Push(method);
+                        int interfaceMethodToken = set.GetOrAddMethodToken(method, stack);
+                        stack.Pop();
+                        arrayClass.AddClassMember(new ClassMember(a.Value, VariableKind.Method, m.Token, new List<int>() { interfaceMethodToken }));
+                    }
                 }
             }
 
