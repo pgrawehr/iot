@@ -478,6 +478,8 @@ namespace ArduinoCsCompiler
             {
                 // this one is in mscorlib, but in a separate library on the standard BCL
                 new(typeof(System.Console), mscorlib),
+                // TODO: Needs a proper replacement
+                new(typeof(System.Runtime.InteropServices.Marshal), builtin),
             });
 
             var streams = typeof(ExternalSystemReferences).Assembly.GetManifestResourceNames();

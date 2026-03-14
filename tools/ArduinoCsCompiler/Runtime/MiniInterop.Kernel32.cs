@@ -409,6 +409,12 @@ namespace ArduinoCsCompiler.Runtime
             }
 
             [ArduinoImplementation]
+            public static void Sleep(uint ms)
+            {
+                Thread.Sleep((int)ms);
+            }
+
+            [ArduinoImplementation]
             internal static SafeWaitHandle OpenMutex(
                 uint desiredAccess,
                 bool inheritHandle,
@@ -643,6 +649,12 @@ namespace ArduinoCsCompiler.Runtime
 
             [ArduinoImplementation(CompareByParameterNames = true)]
             public static void CancelThreadpoolIo(SafeHandle pio)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static void CloseThreadpoolIo(SafeHandle pio)
             {
                 throw new NotImplementedException();
             }

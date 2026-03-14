@@ -712,6 +712,22 @@ namespace ArduinoCsCompiler
             }
 
             FindDependentClasses(set, classType, stack);
+            FindIndirectDependentClasses(set, classType, stack);
+        }
+
+        /// <summary>
+        /// The method searches for direct dependencies of this class (return values, argument types, etc)
+        /// </summary>
+        private void FindDependentClasses(ExecutionSet set, Type classType, AnalysisStack stack)
+        {
+            foreach (var m in classType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var t = m.ReturnType;
+                if (t != typeof(void))
+                {
+                    PrepareClassDeclaration(set, t, stack);
+                }
+            }
         }
 
         /// <summary>
@@ -721,7 +737,7 @@ namespace ArduinoCsCompiler
         /// <param name="set">The execution set</param>
         /// <param name="classType">The class that's being observed</param>
         /// <param name="stack">Analyzer stack</param>
-        private void FindDependentClasses(ExecutionSet set, Type classType, AnalysisStack stack)
+        private void FindIndirectDependentClasses(ExecutionSet set, Type classType, AnalysisStack stack)
         {
             if (classType.IsConstructedGenericType)
             {
