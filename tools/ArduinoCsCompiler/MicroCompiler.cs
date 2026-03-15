@@ -708,7 +708,13 @@ namespace ArduinoCsCompiler
 
             foreach (var dependent in memberTypes.Where(f => f.Field != null))
             {
-                PrepareClassDeclaration(set, dependent.Field!.FieldType, stack);
+                Type ft = dependent.Field!.FieldType;
+                if (ft.IsPointer || ft.IsByRef)
+                {
+                    ft = ft.GetElementType()!;
+                }
+
+                PrepareClassDeclaration(set, ft, stack);
             }
 
             // Can't do this here, as it would include types in the execution set that are return values or arguments

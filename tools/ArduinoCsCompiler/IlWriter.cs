@@ -17,6 +17,7 @@ namespace ArduinoCsCompiler;
 /// </summary>
 public class IlWriter
 {
+    private const string StaticMethods = "StaticMethods";
     private readonly ExecutionSet _set;
     private readonly string _outputFile;
 
@@ -147,7 +148,7 @@ public class IlWriter
 
     private void WriteClasses(IndentedTextWriter tw)
     {
-        foreach (var cl in _set.Classes)
+        foreach (ClassDeclaration cl in _set.Classes)
         {
             var baseClass = GetClassDeclaration(cl.TheType.BaseType);
             if (cl.UseOriginalType)
@@ -230,6 +231,14 @@ public class IlWriter
             tw.Indent = 0;
             tw.WriteLine("}");
         }
+
+        // Finally don't forget to write all the static methods (they had lost their class relationship earlier, since we don't need it)
+        tw.WriteLine($".class public auto ansi sealed {StaticMethods} extends object");
+        tw.WriteLine("{");
+        tw.Indent += 1;
+        WriteMethods(tw, null);
+        tw.Indent -= 1;
+        tw.WriteLine("}");
     }
 
     /// <summary>
@@ -374,9 +383,21 @@ public class IlWriter
         return fieldTypeName + suffix;
     }
 
-    private void WriteMethods(IndentedTextWriter tw, ClassDeclaration cl)
+    private void WriteMethods(IndentedTextWriter tw, ClassDeclaration? cl)
     {
-        var methodsInClass = _set.Methods().Where(x => x.Key.DeclaringType == cl.TheType);
+        IEnumerable<KeyValuePair<EquatableMethod, ArduinoMethodDeclaration>> methodsInClass;
+        // We have previously removed the class enclosure for static methods, so re-add a dummy class around all those without one
+        if (cl != null)
+        {
+            methodsInClass = _set.Methods().Where(x => x.Key.DeclaringType == cl.TheType);
+        }
+        else
+        {
+            // cctors (despite being static) are included in the above lists already (luckily)
+            methodsInClass = _set.Methods().Where(x => x.Value.Flags.HasFlag(MethodFlags.Static)
+            && x.Value.IlName != ArduinoMethodDeclaration.CctorName);
+        }
+
         foreach (var m in methodsInClass)
         {
             var m1 = m.Value;
@@ -386,7 +407,7 @@ public class IlWriter
             {
                 // Can be ..ctor or ..cctor!
                 tw.WriteLine();
-                tw.WriteLine($"// {m1.Name}");
+                tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
                 tw.WriteLine($".method public hidebysig specialname rtspecialname {isStatic} void {m1.IlName}(");
             }
             else
@@ -399,7 +420,7 @@ public class IlWriter
 
                 tw.WriteLine();
                 string isvirtual = m1.Flags.HasFlag(MethodFlags.Virtual) ? "virtual " : string.Empty;
-                tw.WriteLine($"// {m1.Name}");
+                tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
                 tw.WriteLine($".method public {isvirtual}{isAbstract}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} {m1.IlName}(");
             }
 
