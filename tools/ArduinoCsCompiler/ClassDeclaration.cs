@@ -285,6 +285,25 @@ namespace ArduinoCsCompiler
                 });
             }
 
+            if (FullName.Contains(MicroCompiler.PrivateImplementationDetailsName))
+            {
+                string f = FullName;
+                int idx = f.IndexOf('+', StringComparison.Ordinal);
+                if (idx != -1)
+                {
+                    string f2 = f.Substring(idx + 1);
+                    f = $"'{MicroCompiler.PrivateImplementationDetailsName}_sub_{f2}'";
+                    FullName = f;
+                    return;
+                }
+                else
+                {
+                    // The outer class itself
+                    FullName = $"'{MicroCompiler.PrivateImplementationDetailsName}'";
+                    return;
+                }
+            }
+
             if (FullName.Contains('+'))
             {
                 FullName = FullName.Replace("+", "_sub_");

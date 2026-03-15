@@ -336,6 +336,12 @@ public class IlWriter
                     fieldTypeName = underlyingDecl!.FullName!;
                 }
             }
+            else if (t1.FullName != null && t1.FullName!.Contains(MicroCompiler.PrivateImplementationDetailsName))
+            {
+                string typeName = t1.FullName!;
+                typeName = typeName.Replace("/", "'/'"); // Slashes must be un-escaped
+                fieldTypeName = $"valuetype '{typeName}'";
+            }
             else if (ExternalSystemReferences.TryGetValue(t1, out ExternalTypeReference? externalTypeReference))
             {
                 fieldTypeName = externalTypeReference.IlName;
@@ -350,12 +356,6 @@ public class IlWriter
                         fieldTypeName = $"valuetype {fieldTypeName}";
                     }
                 }
-            }
-            else if (t1.FullName != null && t1.FullName!.Contains(MicroCompiler.PrivateImplementationDetailsName))
-            {
-                string typeName = t1.FullName!;
-                typeName = typeName.Replace("/", "'/'"); // Slashes must be un-escaped
-                fieldTypeName = $"valuetype '{typeName}'";
             }
             else
             {
@@ -514,6 +514,13 @@ public class IlWriter
 
         if (elem is FieldInfo fi && fi.DeclaringType != null)
         {
+            if (fi.DeclaringType.Name.Contains(MicroCompiler.PrivateImplementationDetailsName))
+            {
+                // These special types define the size of static data.
+                // We just use them exactly as declared.
+                return $"valuetype '<PrivateImplementationDetails>_sub_{fi.FieldType.Name}' {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
+            }
+
             // Prefixes the member name with the class declaring it and also the type of the field
             return $"{TypeNameForIl(fi.FieldType)} {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
         }
