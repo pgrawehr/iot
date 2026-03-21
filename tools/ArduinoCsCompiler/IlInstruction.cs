@@ -115,7 +115,7 @@ namespace ArduinoCsCompiler
                 if ((a & 0x80) == 0x80)
                 {
                     // Manual sign-extension
-                    a = a & 0xFFFFFF00;
+                    a = a | 0xFFFFFF00;
                 }
 
                 return (int)a;
@@ -144,7 +144,7 @@ namespace ArduinoCsCompiler
             return Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(input, true);
         }
 
-        public string? DecodeArgument(ExecutionSet set, Func<ExecutionSet, int, string>? tokenDecoder)
+        public string? DecodeArgument(ExecutionSet set, Func<ExecutionSet, IlInstruction, int, string>? tokenDecoder)
         {
             switch (OpcodeType)
             {
@@ -179,7 +179,7 @@ namespace ArduinoCsCompiler
                 case OpCodeType.InlineField:
                     {
                         int token = DecodeIntegerArgument();
-                        string? fieldName = tokenDecoder?.Invoke(set, token) ?? $"0x{token:X8} // Field token";
+                        string? fieldName = tokenDecoder?.Invoke(set, this, token) ?? $"0x{token:X8} // Field token";
                         return $"{fieldName} // Token 0x{token:X}";
                     }
 
@@ -195,7 +195,7 @@ namespace ArduinoCsCompiler
 
                         if (tokenDecoder != null)
                         {
-                            string? me = tokenDecoder.Invoke(set, token);
+                            string? me = tokenDecoder.Invoke(set, this, token);
                             return $"{me} // {method.MemberInfoSignature(false)}";
                         }
 
@@ -228,7 +228,7 @@ namespace ArduinoCsCompiler
                         string typeName;
                         if (tokenDecoder != null)
                         {
-                            typeName = tokenDecoder.Invoke(set, token);
+                            typeName = tokenDecoder.Invoke(set, this, token);
                         }
                         else
                         {

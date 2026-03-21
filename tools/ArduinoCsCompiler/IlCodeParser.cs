@@ -128,7 +128,7 @@ namespace ArduinoCsCompiler
             return sb.ToString();
         }
 
-        public static void DecodeForAssembler(TextWriter tw, ArduinoMethodDeclaration method, ExecutionSet set, Func<ExecutionSet, int, string> tokenDecoder)
+        public static void DecodeForAssembler(TextWriter tw, ArduinoMethodDeclaration method, ExecutionSet set, Func<ExecutionSet, IlInstruction, int, string> tokenDecoder)
         {
             var instructions = DecodeMethod(method);
 

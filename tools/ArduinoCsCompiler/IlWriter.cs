@@ -525,7 +525,7 @@ public class IlWriter
         return fi.Name;
     }
 
-    private string TokenDecoder(ExecutionSet s, int tk)
+    private string TokenDecoder(ExecutionSet s, IlInstruction instruction, int tk)
     {
         var elem = s.InverseResolveToken(tk);
         if (elem == null)
@@ -539,7 +539,7 @@ public class IlWriter
             {
                 // These special types define the size of static data.
                 // We just use them exactly as declared.
-                return $"valuetype '<PrivateImplementationDetails>_sub_{fi.FieldType.Name}' {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
+                return $"{(instruction.OpCode == OpCode.CEE_LDTOKEN ? "field " : string.Empty)}valuetype '<PrivateImplementationDetails>_sub_{fi.FieldType.Name}' {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
             }
 
             // Prefixes the member name with the class declaring it and also the type of the field
