@@ -565,10 +565,21 @@ public class IlWriter
                 return $"instance void {TypeNameForIl(mi.DeclaringType)}::{mi.Name}({args}) /* TODO Not part of execution set */";
             }
 
-            string instanceOrStatic = decl.Flags.HasFlag(MethodFlags.Static) ? string.Empty : "instance";
+            string instanceOrStatic = string.Empty;
+            string targetType;
+            if (decl.Flags.HasFlag(MethodFlags.Static))
+            {
+                targetType = StaticMethods;
+            }
+            else
+            {
+                instanceOrStatic = "instance";
+                targetType = TypeNameForIl(mi.DeclaringType);
+            }
+
             // It seems the return type doesn't matter for the compiler, but there needs to be some token here
             string returnType = decl.Flags.HasFlag(MethodFlags.Void) ? "void" : "object";
-            string n = $"{instanceOrStatic} {returnType} {TypeNameForIl(mi.DeclaringType)}::{decl.IlName}({args})";
+            string n = $"{instanceOrStatic} {returnType} {targetType}::{decl.IlName}({args})";
             return n;
         }
         else if (elem is Type t)
