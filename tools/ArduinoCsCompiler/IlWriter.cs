@@ -509,20 +509,36 @@ public class IlWriter
     private string FieldNameForIl(FieldInfo fi)
     {
         var cls = ClassDeclaration.GetClassDeclaration(_set, fi.DeclaringType);
+        string ret = string.Empty;
         if (cls == null)
         {
-            return fi.Name;
+            ret = fi.Name;
         }
-
-        foreach (var m in cls.Members)
+        else
         {
-            if (fi.Name == m.Field?.Name)
+            foreach (var m in cls.Members)
             {
-                return m.FieldName;
+                if (fi.Name == m.Field?.Name)
+                {
+                    ret = m.FieldName;
+                }
+            }
+
+            if (string.IsNullOrEmpty(ret))
+            {
+                ret = fi.Name;
             }
         }
 
-        return fi.Name;
+        // IL accepts anything as identifier, if it's only quoted.
+        if (Char.IsDigit(ret[0]))
+        {
+            return $"'{ret}'";
+        }
+        else
+        {
+            return ret;
+        }
     }
 
     private string TokenDecoder(ExecutionSet s, IlInstruction instruction, int tk)

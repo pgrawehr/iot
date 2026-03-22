@@ -136,6 +136,11 @@ namespace ArduinoCsCompiler
             return BitConverter.ToDouble(ArgumentAddress);
         }
 
+        private float DecodeFloatArgument()
+        {
+            return BitConverter.ToSingle(ArgumentAddress);
+        }
+
         /// <summary>
         /// Escapes the provided string, so it can be used as argument to ldstr
         /// </summary>
@@ -216,6 +221,11 @@ namespace ArduinoCsCompiler
                         return value.ToString(CultureInfo.InvariantCulture);
                     }
 
+                case OpCodeType.ShortInlineR:
+                    {
+                        return DecodeFloatArgument().ToString(CultureInfo.InvariantCulture);
+                    }
+
                 case OpCodeType.InlineR:
                     {
                         return DecodeDoubleArgument().ToString(CultureInfo.InvariantCulture);
@@ -240,6 +250,11 @@ namespace ArduinoCsCompiler
             }
 
             return null;
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 }

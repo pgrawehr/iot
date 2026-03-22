@@ -490,11 +490,6 @@ namespace ArduinoCsCompiler
             var mod = data.Modules[0];
             foreach (TypeDefinition cls in mod.GetTypes())
             {
-                if (!cls.IsPublic)
-                {
-                    continue;
-                }
-
                 if (!cls.IsClass && !cls.IsInterface && !cls.IsValueType)
                 {
                     continue;
