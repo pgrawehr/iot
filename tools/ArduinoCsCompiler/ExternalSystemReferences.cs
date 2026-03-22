@@ -503,6 +503,16 @@ namespace ArduinoCsCompiler
                     continue;
                 }
 
+                if (effectiveType.IsGenericType)
+                {
+                    var typeParams = effectiveType.GetGenericArguments();
+                    if (typeParams.Any(x => !x.IsGenericParameter))
+                    {
+                        logger.LogError($"The assembly {systemAssembly} contains closed generic types in the definition??");
+                        continue;
+                    }
+                }
+
                 if (References.Any(x => x.Type == effectiveType))
                 {
                     // Exists already in the list above
@@ -523,14 +533,37 @@ namespace ArduinoCsCompiler
             return input;
         }
 
-        public static bool TryGetValue(Type theType, [NotNullWhen(true)]out ExternalTypeReference? externalTypeReference)
+        public static bool TryGetValue(Type theType, [NotNullWhen(true)] out ExternalTypeReference? externalTypeReference)
         {
+            // Todo: Remove this overload and assume true
+            return TryGetValue(theType, false, out externalTypeReference);
+        }
+
+        public static bool TryGetValue(Type theType, bool supportsGenerics, [NotNullWhen(true)]out ExternalTypeReference? externalTypeReference)
+        {
+            string? name = theType.FullName;
+            if (name != null && name.Contains("System.Func", StringComparison.Ordinal))
+            {
+                name = name + "1";
+            }
+
             foreach (var e in References)
             {
                 if (e.Type == theType)
                 {
                     externalTypeReference = e;
                     return true;
+                }
+
+                if (supportsGenerics && e.Type.IsGenericTypeDefinition && theType.IsGenericType)
+                {
+                    var typeDef = theType.GetGenericTypeDefinition();
+                    if (typeDef == e.Type)
+                    {
+                        var args = theType.GetGenericArguments();
+                        var fullNewType = e.Type.MakeGenericType(args);
+                        externalTypeReference = new ExternalTypeReference(fullNewType, e.Assembly);
+                    }
                 }
             }
 

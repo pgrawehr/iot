@@ -351,7 +351,7 @@ public class IlWriter
                 typeName = typeName.Replace("/", "'/'"); // Slashes must be un-escaped
                 fieldTypeName = $"valuetype '{typeName}'";
             }
-            else if (ExternalSystemReferences.TryGetValue(t1, out ExternalTypeReference? externalTypeReference))
+            else if (ExternalSystemReferences.TryGetValue(t1, true, out ExternalTypeReference? externalTypeReference))
             {
                 fieldTypeName = externalTypeReference.IlName;
                 if (externalTypeReference.RequiresPrefix)
