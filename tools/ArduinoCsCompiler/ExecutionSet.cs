@@ -215,6 +215,8 @@ namespace ArduinoCsCompiler
             }
         }
 
+        internal Dictionary<EquatableField, (int Token, byte[]? InitializerData)> FieldTokens => _patchedFieldTokens;
+
         public CompilerSettings CompilerSettings => _compilerSettings;
 
         /// <summary>

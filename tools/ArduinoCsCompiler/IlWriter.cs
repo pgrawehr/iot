@@ -278,7 +278,24 @@ public class IlWriter
 
             if (cl.FullName != null && cl.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName, StringComparison.Ordinal))
             {
-                tw.WriteLine($".field public static initonly {fieldTypeName} {f.FieldName} = bytearray (0)");
+                tw.WriteLine($".field public static initonly {fieldTypeName} {f.FieldName} = bytearray");
+                tw.WriteLine("(");
+                var fieldData = _set.FieldTokens[f.Field];
+                if (fieldData.InitializerData == null || fieldData.InitializerData.Length == 0)
+                {
+                    throw new InvalidProgramException("An initializer variable has no data");
+                }
+
+                for (int i = 0; i < fieldData.InitializerData.Length; i++)
+                {
+                    tw.Write($"{fieldData.InitializerData[i]:X2} ");
+                    if (i % 16 == 0)
+                    {
+                        tw.WriteLine();
+                    }
+                }
+
+                tw.WriteLine(")");
             }
             else
             {
