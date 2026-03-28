@@ -66,7 +66,7 @@ public class IlWriter
                 cls1.UseOriginalType = true;
             }
 
-            if (ExternalSystemReferences.TryGetValue(cls1.TheType, out var reference))
+            if (ExternalSystemReferences.TryGetValue(cls1.TheType, true, out var reference))
             {
                 cls1.UseOriginalType = true;
             }
@@ -80,7 +80,7 @@ public class IlWriter
         {
             if (previous?.FullName == cls1.FullName)
             {
-                cls1.FullName += $"{cls1.NewToken:X8}";
+                cls1.UpdateFullName($"{cls1.FullName}_{cls1.NewToken:X8}");
                 continue; // Because there can also be three of them
             }
 
@@ -188,7 +188,13 @@ public class IlWriter
             }
 
             string baseName = "object";
-            if (baseClass != null)
+
+            if (baseClass == null && cl.TheType.BaseType != null &&
+                ExternalSystemReferences.TryGetValue(cl.TheType.BaseType, out var knownType))
+            {
+                baseName = knownType.IlName;
+            }
+            else if (baseClass != null)
             {
                 var cls1 = _set.Classes.First(x => x.FullName == baseClass.FullName);
                 baseName = cls1.FullName ?? string.Empty;
@@ -247,7 +253,8 @@ public class IlWriter
     private string PrefixWithClassKeyword(ClassDeclaration ty, string name)
     {
         // TODO: That's a bit of a hack to detect a short name (which is not to be prefixed with 'class' or 'valuetype')
-        if (!name.Contains(".", StringComparison.Ordinal))
+        // The second condition is for our own patches, where we create things like '<PrivateImplementationDetails>__sub_XYZ'
+        if (!name.Contains(".", StringComparison.Ordinal) && !name.Contains('_', StringComparison.Ordinal))
         {
             return name;
         }
@@ -269,7 +276,14 @@ public class IlWriter
             bool isStatic = f.Field!.IsStatic;
             string fieldTypeName = TypeNameForIl(f.Field.FieldType);
 
-            tw.WriteLine($".field public {(isStatic ? "static " : string.Empty)}{fieldTypeName} {f.FieldName}");
+            if (cl.FullName != null && cl.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName, StringComparison.Ordinal))
+            {
+                tw.WriteLine($".field public static initonly {fieldTypeName} {f.FieldName} = bytearray (0)");
+            }
+            else
+            {
+                tw.WriteLine($".field public {(isStatic ? "static " : string.Empty)}{fieldTypeName} {f.FieldName}");
+            }
         }
     }
 

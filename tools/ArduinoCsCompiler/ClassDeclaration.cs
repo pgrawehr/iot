@@ -15,6 +15,7 @@ namespace ArduinoCsCompiler
         private readonly List<ClassMember> _members;
         private readonly List<Type> _interfaces;
         private string? _fullNameSet;
+        private bool _fullNameConfigured;
 
         public ClassDeclaration(Type type, int dynamicSize, int staticSize, int newToken,
             List<ClassMember> members, List<Type> interfaces)
@@ -27,6 +28,7 @@ namespace ArduinoCsCompiler
             _interfaces = interfaces;
             Name = type.ClassSignature(true);
             ReadOnly = false;
+            _fullNameConfigured = false;
             UseOriginalType = false;
         }
 
@@ -61,7 +63,7 @@ namespace ArduinoCsCompiler
             {
                 return _fullNameSet ?? TheType.FullName;
             }
-            internal set
+            private set
             {
                 _fullNameSet = value;
             }
@@ -241,12 +243,25 @@ namespace ArduinoCsCompiler
             return new ClassDeclaration(this);
         }
 
+        public void UpdateFullName(string newName)
+        {
+            FullName = newName;
+            _fullNameConfigured = true;
+        }
+
         public void ConstructName(ExecutionSet set)
         {
             if (FullName == null)
             {
                 return;
             }
+
+            if (_fullNameConfigured)
+            {
+                return;
+            }
+
+            _fullNameConfigured = true;
 
             if (ExternalSystemReferences.TryGetValue(TheType, out ExternalTypeReference? reference))
             {

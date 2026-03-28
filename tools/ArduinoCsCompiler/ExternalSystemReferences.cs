@@ -563,6 +563,7 @@ namespace ArduinoCsCompiler
                         var args = theType.GetGenericArguments();
                         var fullNewType = e.Type.MakeGenericType(args);
                         externalTypeReference = new ExternalTypeReference(fullNewType, e.Assembly);
+                        return true;
                     }
                 }
             }

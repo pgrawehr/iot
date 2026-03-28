@@ -42,6 +42,12 @@ namespace ArduinoCsCompiler
 
         public override string ToString()
         {
+            if (string.IsNullOrEmpty(Assembly.Name))
+            {
+                // The standard types int, string, object, etc, need no prefix
+                return Name;
+            }
+
             return $"[{Assembly.Name}]{Name}";
         }
     }
