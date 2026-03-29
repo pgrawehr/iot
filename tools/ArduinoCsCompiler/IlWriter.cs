@@ -232,6 +232,7 @@ public class IlWriter
 
             tw.WriteLine("{");
             tw.Indent = 1;
+            WriteClassProperties(tw, cl);
             WriteFields(tw, cl);
             WriteMethods(tw, cl);
             tw.Indent = 0;
@@ -245,6 +246,26 @@ public class IlWriter
         WriteMethods(tw, null);
         tw.Indent -= 1;
         tw.WriteLine("}");
+    }
+
+    private void WriteClassProperties(IndentedTextWriter tw, ClassDeclaration cl)
+    {
+        if (cl.TheType.IsValueType)
+        {
+            var sa = cl.TheType.StructLayoutAttribute;
+            if (sa != null)
+            {
+                if (sa.Pack > 0)
+                {
+                    tw.WriteLine($".pack {sa.Pack}");
+                }
+
+                if (sa.Size > 0)
+                {
+                    tw.WriteLine($".size {sa.Size}");
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -289,7 +310,7 @@ public class IlWriter
                 for (int i = 0; i < fieldData.InitializerData.Length; i++)
                 {
                     tw.Write($"{fieldData.InitializerData[i]:X2} ");
-                    if (i % 16 == 0)
+                    if (i % 16 == 0 && i != 0)
                     {
                         tw.WriteLine();
                     }
@@ -609,6 +630,7 @@ public class IlWriter
             string args = GetArgsList(param);
             if (decl == null)
             {
+                // the method is not part of the execution set, possibly because the class is external.
                 return $"instance void {TypeNameForIl(mi.DeclaringType)}::{mi.Name}({args}) /* TODO Not part of execution set */";
             }
 
