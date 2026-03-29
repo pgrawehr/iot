@@ -9,7 +9,7 @@ using Iot.Device.Arduino;
 #pragma warning disable CA2208 // ArgumentException should be used with proper parameters (No: Saves memory)
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Array), false, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Array), false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniArray
     {
         public int Length

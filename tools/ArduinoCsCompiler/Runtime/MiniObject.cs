@@ -9,7 +9,7 @@ namespace ArduinoCsCompiler.Runtime
     /// <summary>
     /// This (basically empty) class replaces the implementation of <see cref="System.Object"/> in the interpreter
     /// </summary>
-    [ArduinoReplacement(typeof(Object), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(Object), IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal abstract class MiniObject
     {
         // The method numbers might be used elsewhere, so be careful when changing them!

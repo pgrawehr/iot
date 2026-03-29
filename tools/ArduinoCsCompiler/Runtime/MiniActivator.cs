@@ -8,7 +8,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Activator), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Activator), IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal static class MiniActivator
     {
         [ArduinoImplementation("ActivatorCreateInstance")]

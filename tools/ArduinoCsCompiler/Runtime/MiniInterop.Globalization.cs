@@ -12,7 +12,8 @@ namespace ArduinoCsCompiler.Runtime
 {
     internal partial class MiniInterop
     {
-        [ArduinoReplacement("Interop+Globalization", "System.Private.CoreLib.dll", false, IncludingSubclasses = true, IncludingPrivates = true)]
+        [ArduinoReplacement("Interop+Globalization", "System.Private.CoreLib.dll", false, IncludingSubclasses = true, IncludingPrivates = true,
+            TargetFramework = TargetFramework.Firmata)]
         internal static class Globalization
         {
             [ArduinoImplementation]

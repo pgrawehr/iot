@@ -15,7 +15,8 @@ namespace ArduinoCsCompiler.Runtime
     /// low-level-infrastructure component that was historically not susceptible to a pending interrupt, and for compatibility
     /// reasons, to ensure that it still would not be susceptible after porting that component to managed code.
     /// </summary>
-    [ArduinoReplacement("System.Threading.LowLevelLock", "System.Private.Corelib.dll", replaceEntireType: true, typeInSameAssembly: typeof(System.String))]
+    [ArduinoReplacement("System.Threading.LowLevelLock", "System.Private.Corelib.dll", replaceEntireType: true,
+        typeInSameAssembly: typeof(System.String), TargetFramework = TargetFramework.Firmata)]
     internal sealed class MiniLowLevelLock : IDisposable
     {
         private object _lock;

@@ -10,7 +10,7 @@ namespace ArduinoCsCompiler.Runtime
     /// <summary>
     /// These locking primitives are no-ops as long as we're not supporting threads.
     /// </summary>
-    [ArduinoReplacement(typeof(Monitor), true)]
+    [ArduinoReplacement(typeof(Monitor), true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniMonitor
     {
         [ArduinoImplementation]

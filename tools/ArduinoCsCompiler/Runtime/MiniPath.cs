@@ -9,7 +9,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.IO.Path))]
+    [ArduinoReplacement(typeof(System.IO.Path), TargetFramework = TargetFramework.Firmata)]
     internal static partial class MiniPath
     {
         [ArduinoImplementation]

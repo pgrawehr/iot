@@ -5,7 +5,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Exception), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Exception), IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniException
     {
         [ArduinoImplementation]

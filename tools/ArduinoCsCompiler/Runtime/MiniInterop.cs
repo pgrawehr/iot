@@ -9,7 +9,7 @@ using Iot.Device.Arduino;
 namespace ArduinoCsCompiler.Runtime
 {
     // We're not replacing the helper methods of this class itself
-    [ArduinoReplacement("Interop", "System.Private.CoreLib.dll", false, IncludingPrivates = true)]
+    [ArduinoReplacement("Interop", "System.Private.CoreLib.dll", false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal partial class MiniInterop
     {
         internal enum LocaleNumberData

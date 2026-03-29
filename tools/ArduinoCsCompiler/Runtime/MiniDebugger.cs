@@ -5,7 +5,7 @@ using System;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Diagnostics.Debugger), true)]
+    [ArduinoReplacement(typeof(System.Diagnostics.Debugger), true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniDebugger
     {
         public static bool IsAttached

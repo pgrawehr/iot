@@ -6,7 +6,8 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement("System.Runtime.Intrinsics.X86.X86Base", null, true, IncludingPrivates = true, IncludingSubclasses = true)]
+    [ArduinoReplacement("System.Runtime.Intrinsics.X86.X86Base", null, true, IncludingPrivates = true, IncludingSubclasses = true,
+        TargetFramework = TargetFramework.Firmata)]
     internal class MiniX86Intrinsics
     {
         /// <summary>

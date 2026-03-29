@@ -5,7 +5,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement("System.SR", IncludingPrivates = true)]
+    [ArduinoReplacement("System.SR", IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniSR
     {
         public static string GetResourceString(string resourceKey, string? defaultString)

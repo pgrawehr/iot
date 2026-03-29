@@ -9,7 +9,7 @@ using Iot.Device.Arduino;
 namespace ArduinoCsCompiler.Runtime
 {
     // This uses the unix implementation
-    [ArduinoReplacement("System.IO.PathInternal", "System.Private.CoreLib.dll", true, IncludingPrivates = true)]
+    [ArduinoReplacement("System.IO.PathInternal", "System.Private.CoreLib.dll", true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniPathInternal
     {
         internal const char DirectorySeparatorChar = '/';

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Console))]
+    [ArduinoReplacement(typeof(System.Console), TargetFramework = TargetFramework.Firmata)]
     internal class MiniConsole
     {
         public static bool KeyAvailable

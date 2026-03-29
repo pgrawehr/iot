@@ -503,6 +503,7 @@ namespace ArduinoCsCompiler
                     continue;
                 }
 
+                // Todo: We're missing static members later (error is probably not here, though)
                 if (effectiveType.IsGenericType)
                 {
                     var typeParams = effectiveType.GetGenericArguments();

@@ -6,7 +6,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Runtime.InteropServices.MemoryMarshal), false, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Runtime.InteropServices.MemoryMarshal), false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal static class MiniMemoryMarshal
     {
         [ArduinoImplementation("MemoryMarshalGetArrayDataReference", CompareByParameterNames = true, IgnoreGenericTypes = true)]

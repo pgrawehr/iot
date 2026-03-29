@@ -922,6 +922,19 @@ namespace ArduinoCsCompiler
                             token = v;
                         }
                     }
+                    else if (underlyingType == typeof(Int64))
+                    {
+                        unchecked
+                        {
+                            Int64 v = (Int64)fieldValue;
+                            if (v > 0xFFFF_FFFF)
+                            {
+                                _logger.LogWarning("Warning: Use of enum with a value > 2^32");
+                            }
+
+                            token = (int)v;
+                        }
+                    }
                     else
                     {
                         throw new NotSupportedException($"Unable to cast {fieldValue} to a constant, when trying to read constant {field.Name} of {classType.MemberInfoSignature()}");

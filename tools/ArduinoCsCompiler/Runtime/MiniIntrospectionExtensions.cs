@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(IntrospectionExtensions), true)]
+    [ArduinoReplacement(typeof(IntrospectionExtensions), true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniIntrospectionExtensions
     {
         [ArduinoImplementation(CompareByParameterNames = true)]

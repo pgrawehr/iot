@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(StackTrace), true, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(StackTrace), true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniStackTrace
     {
         private Exception _exception;

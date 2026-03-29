@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement("System.Numerics.BitOperations", replaceEntireType: true, IncludingPrivates = true)]
+    [ArduinoReplacement("System.Numerics.BitOperations", replaceEntireType: true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniBitOperations
     {
         /// <summary>

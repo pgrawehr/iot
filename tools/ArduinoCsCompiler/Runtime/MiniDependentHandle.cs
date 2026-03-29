@@ -11,7 +11,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(DependentHandle), false, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(DependentHandle), false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal struct MiniDependentHandle
     {
         [ArduinoImplementation("DependentHandle_InternalInitialize")]

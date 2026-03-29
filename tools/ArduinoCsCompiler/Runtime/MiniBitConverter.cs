@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(BitConverter), true)]
+    [ArduinoReplacement(typeof(BitConverter), true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniBitConverter
     {
         // This must be set to the endianness of the target platform, but currently all Microcontrollers that are supported seem to use little endian

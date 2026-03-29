@@ -11,7 +11,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Enum), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Enum), IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniEnum
     {
         public static object ToObject(Type enumType, sbyte value) =>

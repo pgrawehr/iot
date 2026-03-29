@@ -7,7 +7,7 @@ namespace ArduinoCsCompiler.Runtime
 {
     internal partial class MiniInterop
     {
-        [ArduinoReplacement("Interop+Ole32", null, true)]
+        [ArduinoReplacement("Interop+Ole32", null, true, TargetFramework = TargetFramework.Firmata)]
         internal class Ole32
         {
             public static Int32 CoCreateGuid(out System.Guid guid)

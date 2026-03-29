@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ArduinoCsCompiler
 {
-    [ArduinoReplacement(typeof(Microsoft.Win32.Registry), true, TargetFramework = TargetFramework.Nano)]
+    // [ArduinoReplacement(typeof(Microsoft.Win32.Registry), true, TargetFramework = TargetFramework.Nano)]
     internal class MiniRegistryKey
     {
     }

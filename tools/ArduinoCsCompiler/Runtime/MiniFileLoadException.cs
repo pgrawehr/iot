@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(FileLoadException), false, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(FileLoadException), false, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniFileLoadException
     {
         [ArduinoImplementation(CompareByParameterNames = true)]

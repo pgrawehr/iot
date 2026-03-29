@@ -11,7 +11,8 @@ namespace ArduinoCsCompiler.Runtime
 {
     internal partial class MiniInterop
     {
-        [ArduinoReplacement("Interop+User32", "System.Private.CoreLib.dll", false, IncludingSubclasses = true, IncludingPrivates = true)]
+        [ArduinoReplacement("Interop+User32", "System.Private.CoreLib.dll", false, IncludingSubclasses = true, IncludingPrivates = true,
+            TargetFramework = TargetFramework.Firmata)]
         internal static class User32
         {
             [ArduinoImplementation]

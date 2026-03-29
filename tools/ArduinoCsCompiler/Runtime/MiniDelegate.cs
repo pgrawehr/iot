@@ -6,7 +6,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Delegate), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Delegate), IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniDelegate
     {
         [ArduinoImplementation("DelegateInternalEqualTypes")]

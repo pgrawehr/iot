@@ -6,7 +6,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Math), false)]
+    [ArduinoReplacement(typeof(System.Math), false, TargetFramework = TargetFramework.Firmata)]
     internal class MiniMath
     {
         [ArduinoImplementation("MathCeiling", 100)]

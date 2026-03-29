@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Environment), true)]
+    [ArduinoReplacement(typeof(System.Environment), true, TargetFramework = TargetFramework.Firmata)]
     internal static class MiniEnvironment
     {
         public static int CurrentManagedThreadId => Thread.CurrentThread.ManagedThreadId;

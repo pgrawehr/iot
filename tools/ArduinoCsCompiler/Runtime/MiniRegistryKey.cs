@@ -16,7 +16,8 @@ namespace ArduinoCsCompiler.Runtime
     /// <summary>
     /// Replaces only the minimalistic implementation in Corelib, not (yet) the variant in Microsoft.Win32.Registry.dll
     /// </summary>
-    [ArduinoReplacement("Internal.Win32.RegistryKey", "System.Private.Corelib.dll", true, typeof(System.String), IncludingPrivates = true)]
+    [ArduinoReplacement("Internal.Win32.RegistryKey", "System.Private.Corelib.dll", true, typeof(System.String),
+        IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal sealed class MiniRegistryKey : IDisposable
     {
         private string _name;

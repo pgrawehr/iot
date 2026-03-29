@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(WaitHandle), IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(WaitHandle), IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal class MiniWaitHandle
     {
         [ArduinoImplementation("WaitHandleWaitOneCore")]

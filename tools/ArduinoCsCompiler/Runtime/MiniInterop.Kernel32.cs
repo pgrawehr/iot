@@ -14,7 +14,7 @@ namespace ArduinoCsCompiler.Runtime
 {
     internal partial class MiniInterop
     {
-        [ArduinoReplacement("Interop+Kernel32", "System.Private.CoreLib.dll", true, IncludingPrivates = true)]
+        [ArduinoReplacement("Interop+Kernel32", "System.Private.CoreLib.dll", true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
         internal static partial class Kernel32
         {
             internal const uint LOCALE_ALLOW_NEUTRAL_NAMES = 0x08000000; // Flag to allow returning neutral names/lcids for name conversion

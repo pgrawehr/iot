@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.IO.Ports.SerialPort))]
+    [ArduinoReplacement(typeof(System.IO.Ports.SerialPort), TargetFramework = TargetFramework.Firmata)]
     internal class MiniSerialPort
     {
         [ArduinoImplementation]

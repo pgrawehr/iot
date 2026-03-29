@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 #pragma warning disable SA1300 // Element should begin with an uppercase letter
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.Buffer), true, IncludingPrivates = true)]
+    [ArduinoReplacement(typeof(System.Buffer), true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
     internal static class MiniBuffer
     {
         [ArduinoImplementation("BufferMemmove")]
