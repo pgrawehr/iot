@@ -682,8 +682,29 @@ namespace ArduinoCsCompiler
 
             // If the class is being replaced, search the replacement class
             var classReplacement = GetReplacement(methodBase.DeclaringType);
+
+            if (replacement == null &&
+                _compiler.TargetFramework == TargetFramework.Nano && methodBase.DeclaringType != null &&
+                ExternalSystemReferences.TryGetValue(methodBase.DeclaringType, out var reference))
+            {
+                classReplacement = reference.Type;
+                EquatableMethod m1 = methodBase;
+                foreach (var needle in classReplacement.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+                {
+                    if (m1.Equals(new EquatableMethod(needle)))
+                    {
+                        replacement = needle;
+                    }
+                }
+            }
+
             if (classReplacement != null && replacement == null)
             {
+                if (_compiler.TargetFramework == TargetFramework.Nano)
+                {
+                    _logger.LogWarning($"Method {methodBase.MethodSignature()} is expected to be part of the built-in class {classReplacement} (or replaced) but it isn't");
+                }
+
                 replacement = GetReplacement(methodBase, analysisStack, classReplacement);
                 if (replacement == null)
                 {
@@ -1204,11 +1225,6 @@ namespace ArduinoCsCompiler
             {
                 return null;
             }
-
-            ////if (_compiler.TargetFramework == TargetFramework.Nano && ExternalSystemReferences.TryGetValue(original, out var reference))
-            ////{
-            ////    return reference.Type;
-            ////}
 
             foreach (var x in _classesReplaced)
             {
