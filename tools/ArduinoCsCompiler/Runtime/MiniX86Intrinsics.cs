@@ -33,7 +33,8 @@ namespace ArduinoCsCompiler.Runtime
             throw new PlatformNotSupportedException("This operation should never be executed");
         }
 
-        [ArduinoReplacement("System.Runtime.Intrinsics.X86.X86Base+X64", null, true, IncludingPrivates = true, IncludingSubclasses = true)]
+        [ArduinoReplacement("System.Runtime.Intrinsics.X86.X86Base+X64", null, true, IncludingPrivates = true, IncludingSubclasses = true,
+            TargetFramework = TargetFramework.Firmata)]
         public class MiniX64
         {
             /// <summary>

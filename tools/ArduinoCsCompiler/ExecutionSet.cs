@@ -683,6 +683,7 @@ namespace ArduinoCsCompiler
             // If the class is being replaced, search the replacement class
             var classReplacement = GetReplacement(methodBase.DeclaringType);
 
+            bool searchForNanoReplacement = false;
             if (replacement == null &&
                 _compiler.TargetFramework == TargetFramework.Nano && methodBase.DeclaringType != null &&
                 ExternalSystemReferences.TryGetValue(methodBase.DeclaringType, out var reference))
@@ -696,30 +697,64 @@ namespace ArduinoCsCompiler
                         replacement = needle;
                     }
                 }
+
+                foreach (var needle in classReplacement.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                {
+                    if (m1.Equals(new EquatableMethod(needle)))
+                    {
+                        replacement = needle;
+                    }
+                }
+
+                // Since "classReplacement" is not actually a replacement class here, we need to remember that, or we'll run into
+                // an infinite recursion in the next step.
+                searchForNanoReplacement = true;
             }
 
             if (classReplacement != null && replacement == null)
             {
                 if (_compiler.TargetFramework == TargetFramework.Nano)
                 {
-                    _logger.LogWarning($"Method {methodBase.MethodSignature()} is expected to be part of the built-in class {classReplacement} (or replaced) but it isn't");
-                }
-
-                replacement = GetReplacement(methodBase, analysisStack, classReplacement);
-                if (replacement == null)
-                {
-                    // If the replacement class has a static method named "NotSupportedException", we call this instead (expecting that this will never be called).
-                    // This is used so we can remove all the unsupported implementations for compiler intrinsics.
-                    MethodInfo? dummyMethod = GetNotSupportedExceptionMethod(classReplacement);
-                    if (dummyMethod != null)
+                    if (searchForNanoReplacement)
                     {
-                        return GetOrAddMethodToken(dummyMethod, analysisStack);
+                        var classReplacement2 = GetReplacement(methodBase.DeclaringType);
+                        if (classReplacement2 != null)
+                        {
+                            replacement = GetReplacement(methodBase, analysisStack, classReplacement2);
+                            classReplacement = classReplacement2;
+                        }
+
+                        if (replacement == null)
+                        {
+                            _logger.LogWarning($"Method {methodBase.MethodSignature()} is expected to be part of the built-in class {classReplacement} (or replaced) but it isn't");
+                        }
+
+                        return GetOrAddMethodToken(methodBase, analysisStack);
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Method {methodBase.MethodSignature()} is expected to be part of the replaced class {classReplacement} but it isn't");
+                    }
+                }
+                else
+                {
+                    replacement = GetReplacement(methodBase, analysisStack, classReplacement);
+                    if (replacement == null)
+                    {
+                        // If the replacement class has a static method named "NotSupportedException", we call this instead (expecting that this will never be called).
+                        // This is used so we can remove all the unsupported implementations for compiler intrinsics.
+                        MethodInfo? dummyMethod = GetNotSupportedExceptionMethod(classReplacement);
+                        if (dummyMethod != null)
+                        {
+                            return GetOrAddMethodToken(dummyMethod, analysisStack);
+                        }
+
+                        throw new InvalidOperationException($"Internal error: Expected replacement not found for {methodBase.MemberInfoSignature()}. CallStack {analysisStack}");
                     }
 
-                    throw new InvalidOperationException($"Internal error: Expected replacement not found for {methodBase.MemberInfoSignature()}. CallStack {analysisStack}");
+                    _logger.LogInformation($"Replacing {methodBase.MethodSignature()} with {replacement.MethodSignature()}.");
+                    return GetOrAddMethodToken(replacement, analysisStack);
                 }
-
-                return GetOrAddMethodToken(replacement, analysisStack);
             }
 
             if (methodBase.DeclaringType == typeof(Thread) && methodBase.Name == "StartCallback")

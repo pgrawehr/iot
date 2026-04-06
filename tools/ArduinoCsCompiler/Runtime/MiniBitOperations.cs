@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement("System.Numerics.BitOperations", replaceEntireType: true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
+    [ArduinoReplacement("System.Numerics.BitOperations", replaceEntireType: true, IncludingPrivates = true)]
     internal class MiniBitOperations
     {
         /// <summary>
@@ -253,6 +253,11 @@ namespace ArduinoCsCompiler.Runtime
         }
 
         public static bool IsPow2(int value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static bool IsPow2(UInt64 value)
         {
             throw new NotImplementedException();
         }

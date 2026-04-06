@@ -522,6 +522,11 @@ namespace ArduinoCsCompiler
 
                 References.Add(new ExternalTypeReference(effectiveType!, mscorlib));
             }
+
+            foreach (var r in References)
+            {
+                logger.LogInformation($"Using nanoFramework type {r.Type} instead of the .NET version");
+            }
         }
 
         public static string ReplaceInvalidFieldOrArgumentNames(string input)

@@ -406,7 +406,8 @@ namespace ArduinoCsCompiler
                                 flags |= BindingFlags.NonPublic;
                             }
 
-                            methodToReplace = ia.TypeToReplace!.GetMethods(flags).SingleOrDefault(x => EquatableMethod.MethodsHaveSameSignature(x, m, false) || EquatableMethod.AreSameOperatorMethods(x, m, false));
+                            var listOfMethods = ia.TypeToReplace!.GetMethods(flags);
+                            methodToReplace = listOfMethods.SingleOrDefault(x => EquatableMethod.MethodsHaveSameSignature(x, m, false) || EquatableMethod.AreSameOperatorMethods(x, m, false));
                             if (methodToReplace == null)
                             {
                                 // if the method is not explicitly marked as InternalCall this is an error
@@ -833,8 +834,16 @@ namespace ArduinoCsCompiler
                 if (openType == _arraySortHelper)
                 {
                     var typeArgs = classType.GetGenericArguments();
-                    var alsoRequired = GetSystemPrivateType("System.Collections.Generic.GenericArraySortHelper`1")!.MakeGenericType(typeArgs);
-                    PrepareClassDeclaration(set, alsoRequired, stack);
+                    try
+                    {
+                        var alsoRequired = GetSystemPrivateType("System.Collections.Generic.GenericArraySortHelper`1")!.MakeGenericType(typeArgs);
+                        PrepareClassDeclaration(set, alsoRequired, stack);
+                    }
+                    catch (ArgumentException x)
+                    {
+                        // Ignore if the typeArgs can't be used to construct this helper
+                        _logger.LogWarning($"Can't construct GenericArraySortHelper`1 with {typeArgs[0].FullName} ({x.Message})");
+                    }
                 }
             }
         }

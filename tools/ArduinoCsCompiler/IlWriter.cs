@@ -35,6 +35,7 @@ public class IlWriter
 
         WriteHeader(tw);
         WriteClasses(tw);
+        tw.WriteLine("// End of file"); // To have an indication whether the file was fully written
         tw.Flush();
     }
 
