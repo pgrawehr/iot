@@ -7,7 +7,7 @@ using Iot.Device.Arduino;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement("System.Runtime.CompilerServices.Unsafe", "System.Private.CoreLib.dll", true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
+    [ArduinoReplacement("System.Runtime.CompilerServices.Unsafe", "System.Private.CoreLib.dll", true, IncludingPrivates = true, TargetFramework = TargetFramework.Any)]
     internal unsafe class MiniUnsafe
     {
         /// <summary>
@@ -18,29 +18,30 @@ namespace ArduinoCsCompiler.Runtime
         public static T As<T>(object? value)
             where T : class?
         {
-            throw new PlatformNotSupportedException();
-
-            // ldarg.0
-            // ret
+            throw new DirectIlImplementation(@"
+            // Unsafe: Just assume it's the same
+            ldarg.0
+            ret
+            ");
         }
 
-        [ArduinoImplementation("UnsafeAs2", 0x20, MergeGenericImplementations = true)]
+        // TODO: MergeGenericImplementations must be true for Firmata
+        [ArduinoImplementation("UnsafeAs2", 0x20)]
         public static ref TTo As<TFrom, TTo>(ref TFrom source)
         {
-            throw new PlatformNotSupportedException();
-
-            // ldarg.0
-            // ret
+            throw new DirectIlImplementation(@"
+            ldarg.0
+            ret
+            ");
         }
 
         [ArduinoImplementation("UnsafeAsPointer", 0x21, MergeGenericImplementations = true)]
         public static void* AsPointer<T>(ref T value)
         {
-            throw new PlatformNotSupportedException();
-
-            // ldarg.0
-            // conv.u
-            // ret
+            throw new DirectIlImplementation(@"
+            ldarg.0
+            conv.u
+            ret");
         }
 
         /// <summary>

@@ -87,6 +87,7 @@ namespace ArduinoCsCompiler
             }
 
             ArgumentCount = methodBase.GetParameters().Length;
+            ImplementationAttribute = attribs.FirstOrDefault();
             if (methodBase.CallingConvention.HasFlag(CallingConventions.HasThis))
             {
                 ArgumentCount += 1;
@@ -145,6 +146,8 @@ namespace ArduinoCsCompiler
             Stack = stack;
             Code = new IlCode(methodBase, null);
             ArgumentCount = methodBase.GetParameters().Length;
+            var attribs = methodBase.GetCustomAttributes(typeof(ArduinoImplementationAttribute)).Cast<ArduinoImplementationAttribute>().ToList();
+            ImplementationAttribute = attribs.FirstOrDefault();
             DeclaringType = declaringType ?? throw new InvalidOperationException($"Method {methodBase} is not member of a class");
             if (methodBase.CallingConvention.HasFlag(CallingConventions.HasThis))
             {
@@ -208,6 +211,11 @@ namespace ArduinoCsCompiler
 
         public IlCode Code { get; }
         public Type DeclaringType { get; }
+
+        public ArduinoImplementationAttribute? ImplementationAttribute
+        {
+            get;
+        }
 
         public MethodInfo MethodInfo
         {
@@ -274,6 +282,35 @@ namespace ArduinoCsCompiler
             }
 
             return MethodBase.Name + suffix;
+        }
+
+        // Only valid if this is an open generic method
+        public string GetGenericName()
+        {
+            string genericArgs = string.Empty;
+            var argList = MethodBase.GetGenericArguments();
+            if (argList.Length == 0 || argList.Any(x => x.IsGenericMethodParameter == false))
+            {
+                throw new InvalidOperationException("GetGenericName is only valid for methods with generic arguments");
+            }
+
+            for (var index = 0; index < argList.Length; index++)
+            {
+                var para = argList[index];
+                if (!para.IsGenericMethodParameter)
+                {
+                    throw new InvalidOperationException("Weird generic parameter found");
+                }
+
+                if (index != 0)
+                {
+                    genericArgs += ", ";
+                }
+
+                genericArgs += para.Name;
+            }
+
+            return $"{IlName}<{genericArgs}>";
         }
     }
 }

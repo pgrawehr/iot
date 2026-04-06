@@ -465,16 +465,31 @@ public class IlWriter
             }
             else
             {
+                tw.WriteLine();
                 if (m1.MethodInfo.IsGenericMethodDefinition || m1.MethodInfo.ContainsGenericParameters)
                 {
-                    // TODO: Write _only_ these, not their implementations
-                    continue;
+                    if (m1.ImplementationAttribute != null && m1.ImplementationAttribute.MergeGenericImplementations)
+                    {
+                        // This is one case where we currently know that we can safely write the generic declaration
+                        string isvirtual = m1.Flags.HasFlag(MethodFlags.Virtual) ? "virtual " : string.Empty;
+                        tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
+                        tw.WriteLine($".method public {isvirtual}{isAbstract}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} " +
+                                     $"{m1.GetGenericName()}(");
+                    }
+                    else
+                    {
+                        // TODO: Write _only_ these, not their implementations
+                        tw.WriteLine("// Currently omitting:");
+                        tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
+                        continue;
+                    }
                 }
-
-                tw.WriteLine();
-                string isvirtual = m1.Flags.HasFlag(MethodFlags.Virtual) ? "virtual " : string.Empty;
-                tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
-                tw.WriteLine($".method public {isvirtual}{isAbstract}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} {m1.IlName}(");
+                else
+                {
+                    string isvirtual = m1.Flags.HasFlag(MethodFlags.Virtual) ? "virtual " : string.Empty;
+                    tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
+                    tw.WriteLine($".method public {isvirtual}{isAbstract}{isStatic} {TypeNameForIl(m1.MethodInfo.ReturnType)} {m1.IlName}(");
+                }
             }
 
             ParameterInfo[] args = m1.MethodBase.GetParameters();
