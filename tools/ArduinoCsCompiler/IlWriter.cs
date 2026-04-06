@@ -4,6 +4,7 @@
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -35,8 +36,60 @@ public class IlWriter
 
         WriteHeader(tw);
         WriteClasses(tw);
-        tw.WriteLine("// End of file"); // To have an indication whether the file was fully written
+        tw.WriteLine("// End of file");
         tw.Flush();
+
+        if (_set.CompilerSettings.ValidateOutput)
+        {
+            ValidateGeneratedIl();
+        }
+    }
+
+    private void ValidateGeneratedIl()
+    {
+        string ilFile = _outputFile;
+        string dllFile = Path.ChangeExtension(_outputFile, ".dll");
+
+        // 1. Kompiliere IL zu DLL
+        var ilasmProcess = Process.Start(new ProcessStartInfo
+        {
+            FileName = "ilasm",
+            Arguments = $"/dll /quiet /output=\"{dllFile}\" \"{ilFile}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        });
+        ilasmProcess?.WaitForExit();
+
+        // 2. Verifiziere mit ILVerify
+        if (File.Exists(dllFile))
+        {
+            var verifyProcess = Process.Start(new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = $"ilverify \"{dllFile}\" --tokens --verbose",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            });
+
+            if (verifyProcess != null)
+            {
+                verifyProcess.WaitForExit();
+
+                string output = verifyProcess.StandardOutput.ReadToEnd();
+                string errors = verifyProcess.StandardError.ReadToEnd();
+
+                Console.WriteLine(output);
+
+                if (!string.IsNullOrEmpty(errors))
+                {
+                    throw new InvalidOperationException($"IL verification failed:\n{errors}");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("IlVerify could not be launched");
+            }
+        }
     }
 
     /// <summary>
@@ -326,11 +379,15 @@ public class IlWriter
         }
     }
 
-    private string TypeNameForIl(Type type)
+    private string TypeNameForIl(Type type, int indexOfArg = 0)
     {
         String fieldTypeName;
         string suffix = string.Empty;
-        if (type.IsArray)
+        if (type.IsGenericMethodParameter)
+        {
+            return $"!{indexOfArg}";
+        }
+        else if (type.IsArray)
         {
             Type baseType = type.GetElementType()!;
             int arrayLevel = 1;
@@ -510,7 +567,7 @@ public class IlWriter
                 }
                 else
                 {
-                    typeName = TypeNameForIl(paramType);
+                    typeName = TypeNameForIl(paramType, index);
                 }
 
                 tw.Write($"{byRef}{typeName}{isPointer} {ExternalSystemReferences.ReplaceInvalidFieldOrArgumentNames(arg.Name!)}");

@@ -115,6 +115,7 @@ namespace ArduinoCsCompiler
         public string? ProcessName { get; set; }
 
         public bool SupportGenerics { get; set; }
+        public bool ValidateOutput { get; set; }
 
         object ICloneable.Clone()
         {
