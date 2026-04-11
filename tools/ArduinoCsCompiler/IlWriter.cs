@@ -327,6 +327,11 @@ public class IlWriter
     /// </summary>
     private string PrefixWithClassKeyword(ClassDeclaration ty, string name)
     {
+        if (name == string.Empty)
+        {
+            return $"/* Missing type name */";
+        }
+
         // TODO: That's a bit of a hack to detect a short name (which is not to be prefixed with 'class' or 'valuetype')
         // The second condition is for our own patches, where we create things like '<PrivateImplementationDetails>__sub_XYZ'
         if (!name.Contains(".", StringComparison.Ordinal) && !name.Contains('_', StringComparison.Ordinal))
@@ -475,6 +480,10 @@ public class IlWriter
                         fieldTypeName = $"valuetype {fieldTypeName}";
                     }
                 }
+            }
+            else if (t1.IsGenericMethodParameter)
+            {
+                return $"!!{t1.GenericParameterPosition}/*<{t1.Name}>*/{suffix}";
             }
             else
             {
