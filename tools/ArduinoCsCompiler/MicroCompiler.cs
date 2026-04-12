@@ -2417,8 +2417,12 @@ namespace ArduinoCsCompiler
         /// <exception cref="InvalidOperationException">A method should have been replaced, but is missing</exception>
         internal int PrepareMethod(ExecutionSet set, EquatableMethod methodInfo, AnalysisStack stack)
         {
-            // Ensure the class is known, if it needs replacement
+            // Ensure the class is known if it needs replacement
             var classReplacement = set.GetReplacement(methodInfo.DeclaringType);
+
+            // In the nanoframework case, we check for extra replacement of methods here, not entire classes.
+            // Maybe the class replacement needs to be checked as well, though (even though we do that later)
+            // Probably could prevent scanning classes we don't need.
             EquatableMethod? replacement = set.GetReplacement(methodInfo, stack);
             stack.Push(methodInfo);
             try

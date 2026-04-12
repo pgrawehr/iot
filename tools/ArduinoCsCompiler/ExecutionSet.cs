@@ -677,6 +677,15 @@ namespace ArduinoCsCompiler
             var replacement = GetReplacement(methodBase, analysisStack);
             if (replacement != null)
             {
+                if (_compiler.TargetFramework == TargetFramework.Nano && replacement.IsReplacement)
+                {
+                    // Just take it, no further analysis required
+                    token = _nextToken++;
+                    _patchedMethodTokens.Add(methodBase, token);
+                    _inversePatchedMethodTokens.Add(token, methodBase);
+                    return token;
+                }
+
                 return GetOrAddMethodToken(replacement, analysisStack);
             }
 
@@ -1358,13 +1367,48 @@ namespace ArduinoCsCompiler
 
         internal EquatableMethod? GetReplacement(EquatableMethod original, AnalysisStack analysisStack)
         {
+            // Attempting to replace replacements results in a stack overflow
+            if (original.IsReplacement)
+            {
+                return null;
+            }
+
+            if (_compiler.TargetFramework == TargetFramework.Nano &&
+                // methodsToConsider.Count == 0 &&
+                original.DeclaringType != null &&
+                GetExistingReplacement(original, analysisStack) == null &&
+                ExternalSystemReferences.TryGetValue(original.DeclaringType, true, out var reference))
+            {
+                // Check whether the referenced type has a matching method
+                // (this is for the case where the original method is part of a built-in type)
+                if (reference.TryGetMethod(original, out EquatableMethod? nanoFrameworkMethod))
+                {
+                    if (nanoFrameworkMethod.IsStatic)
+                    {
+                        AddReplacementMethod(original.Method, nanoFrameworkMethod.Method, true);
+                        return nanoFrameworkMethod;
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Method {original.MethodSignature()} is non-static and not part of the built-in class {reference.Name}.");
+                    }
+                }
+            }
+
+            var replacement = GetExistingReplacement(original, analysisStack);
+
+            return replacement;
+        }
+
+        private EquatableMethod? GetExistingReplacement(EquatableMethod original, AnalysisStack stack)
+        {
             // Odd: I'm pretty sure that previously equality on MethodBase instances worked, but for some reason not all instances pointing to the same method are Equal().
             if (!_methodsReplaced.TryGetValue(original.Name, out var methodsToConsider))
             {
                 return null;
             }
 
-            var elem = methodsToConsider.FirstOrDefault(x =>
+            (EquatableMethod Original, EquatableMethod? Replacement) elem = methodsToConsider.FirstOrDefault(x =>
             {
                 if (x.Original.DeclaringType != original.DeclaringType)
                 {
@@ -1376,8 +1420,8 @@ namespace ArduinoCsCompiler
                 {
                     // There are only very few methods with the IgnoreGenericTypes attribute. Therefore a simple test is enough
                     if (x.Original.Name == original.Name && x.Original.GetParameters().Length == original.GetParameters().Length
-                        && MicroCompiler.HasReplacementAttribute(x.Replacement.DeclaringType!, out var replacementAttribute)
-                        && replacementAttribute.TypeToReplace == original.DeclaringType)
+                                                         && MicroCompiler.HasReplacementAttribute(x.Replacement.DeclaringType!, out var replacementAttribute)
+                                                         && replacementAttribute.TypeToReplace == original.DeclaringType)
                     {
                         return true;
                     }
@@ -1422,7 +1466,7 @@ namespace ArduinoCsCompiler
                     return null;
                 }
 
-                ErrorManager.AddError("ACS0007", $"Should have a replacement for {original.MethodSignature()}, but it is missing. CallStack: \r\n{analysisStack} " +
+                ErrorManager.AddError("ACS0007", $"Should have a replacement for {original.MethodSignature()}, but it is missing. CallStack: \r\n{stack} " +
                                                     $"Original implementation is in {original.DeclaringType!.AssemblyQualifiedName}");
                 return null;
             }
@@ -1457,6 +1501,14 @@ namespace ArduinoCsCompiler
                 }
             }
 
+            foreach (var replacementCtor in classToSearch.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                if (EquatableMethod.MethodsHaveSameSignature(replacementCtor, methodInfo))
+                {
+                    return new EquatableMethod(replacementCtor, true);
+                }
+            }
+
             return null; // this is now likely an error
         }
 
@@ -1473,24 +1525,24 @@ namespace ArduinoCsCompiler
                     if (EquatableMethod.HasArduinoImplementationAttribute(replacementMethod, out var attr) && attr.MergeGenericImplementations)
                     {
                         // If we don't care about the types of the generic arguments, return the generic method signature instead
-                        return replacementMethod;
+                        return new EquatableMethod(replacementMethod, true);
                     }
 
-                    return repl;
+                    return new EquatableMethod(repl, true);
                 }
             }
 
             return null;
         }
 
-        internal void AddReplacementMethod(MethodBase? toReplace, MethodBase? replacement)
+        internal void AddReplacementMethod(MethodBase? toReplace, MethodBase? replacement, bool force = false)
         {
             if (toReplace == null)
             {
                 throw new ArgumentNullException(nameof(toReplace));
             }
 
-            if (replacement != null && EquatableMethod.AreMethodsIdentical(toReplace, replacement))
+            if (replacement != null && force == false && EquatableMethod.AreMethodsIdentical(toReplace, replacement))
             {
                 // Replacing a method with itself may happen if virtual resolution points back to the same base class. Should fix itself later.
                 return;
@@ -1499,12 +1551,12 @@ namespace ArduinoCsCompiler
             string name = toReplace.Name;
             if (_methodsReplaced.TryGetValue(name, out var list))
             {
-                list.Add((toReplace, (replacement == null) ? (EquatableMethod?)null : new EquatableMethod(replacement)));
+                list.Add((toReplace, (replacement == null) ? (EquatableMethod?)null : new EquatableMethod(replacement, true)));
             }
             else
             {
                 list = new List<(EquatableMethod, EquatableMethod?)>();
-                list.Add((toReplace, (replacement == null) ? (EquatableMethod?)null : new EquatableMethod(replacement)));
+                list.Add((toReplace, (replacement == null) ? (EquatableMethod?)null : new EquatableMethod(replacement, true)));
                 _methodsReplaced.Add(name, list);
             }
         }

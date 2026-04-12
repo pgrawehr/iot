@@ -18,7 +18,7 @@ namespace ArduinoCsCompiler
     /// </summary>
     public class EquatableMethod : IEquatable<EquatableMethod>
     {
-        public EquatableMethod(MethodBase method)
+        public EquatableMethod(MethodBase method, bool isReplacement = false)
         {
             if (ReferenceEquals(method, null))
             {
@@ -27,9 +27,18 @@ namespace ArduinoCsCompiler
 
             Method = method;
             Name = method.Name; // Evaluate here, so that the name is stored as a string (can't evaluate MethodInfo.Name during debugging)
+            IsReplacement = isReplacement;
         }
 
         public string Name
+        {
+            get;
+        }
+
+        /// <summary>
+        /// True if this is already a replacement (to prevent an infinite recursion)
+        /// </summary>
+        public bool IsReplacement
         {
             get;
         }

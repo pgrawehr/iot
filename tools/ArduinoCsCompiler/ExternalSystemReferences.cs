@@ -514,19 +514,61 @@ namespace ArduinoCsCompiler
                     }
                 }
 
-                if (References.Any(x => x.Type == effectiveType))
+                List<EquatableMethod> methodsInExternalClass = new List<EquatableMethod>();
+                List<MethodBase> methodsInStandardBcl = effectiveType.GetMethods(BindingFlags.Instance | BindingFlags.Static |
+                                                                    BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public)
+                    .Cast<MethodBase>().ToList();
+                methodsInStandardBcl.AddRange(effectiveType.GetConstructors(BindingFlags.Instance |
+                                                                            BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic));
+                foreach (var method in cls.Methods)
                 {
-                    // Exists already in the list above
+                    foreach (var method2 in methodsInStandardBcl)
+                    {
+                        var m2 = new EquatableMethod(method2, true);
+                        if (m2.Name == method.Name && HaveSameParameterTypes(m2, method) &&
+                            m2.IsStatic == method.IsStatic)
+                        {
+                            methodsInExternalClass.Add(m2);
+                            break;
+                        }
+                    }
+                }
+
+                var existing = References.FirstOrDefault(x => x.Type == effectiveType);
+                if (existing != null)
+                {
+                    // Also for System.Object etc we need to add its members, otherwise we won't be able to find them when we need to replace them
+                    existing.Methods.AddRange(methodsInExternalClass);
                     continue;
                 }
 
-                References.Add(new ExternalTypeReference(effectiveType!, mscorlib));
+                References.Add(new ExternalTypeReference(effectiveType, methodsInExternalClass, mscorlib));
             }
 
             foreach (var r in References)
             {
                 logger.LogInformation($"Using nanoFramework type {r.Type} instead of the .NET version");
             }
+        }
+
+        private static bool HaveSameParameterTypes(EquatableMethod m1, MethodDefinition m2)
+        {
+            if (m1.GetParameters().Length != m2.Parameters.Count)
+            {
+                return false;
+            }
+
+            var m1Params = m1.GetParameters();
+
+            for (int i = 0; i < m1Params.Length; i++)
+            {
+                if (m1Params[i].ParameterType.Name != m2.Parameters[i].ParameterType.Name)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static string ReplaceInvalidFieldOrArgumentNames(string input)

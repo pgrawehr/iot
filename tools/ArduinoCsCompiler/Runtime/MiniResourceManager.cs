@@ -3,6 +3,7 @@
 
 using System;
 using System.Globalization;
+using System.Reflection;
 
 namespace ArduinoCsCompiler.Runtime
 {
@@ -11,6 +12,11 @@ namespace ArduinoCsCompiler.Runtime
     internal class MiniResourceManager
     {
         public static readonly int MagicNumber = -1091581234;
+#pragma warning disable SA1306
+        protected Assembly? MainAssembly;    // Need the assembly manifest sometimes.
+        protected string BaseNameField; // The field is protected for .NET Framework compatibility
+#pragma warning restore SA1306
+
         public string GetString(string resourceName)
         {
             return resourceName;
@@ -23,6 +29,7 @@ namespace ArduinoCsCompiler.Runtime
 
         public MiniResourceManager(Type resourceSource)
         {
+            BaseNameField = "MainAssembly";
         }
 
         internal static bool IsDefaultType(string asmTypeName, string typeName)
