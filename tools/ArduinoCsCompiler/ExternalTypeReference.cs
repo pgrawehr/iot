@@ -7,7 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ArduinoCsCompiler
 {
-    internal class ExternalTypeReference
+    public class ExternalTypeReference
     {
         public List<EquatableMethod> Methods { get; }
 

@@ -12,7 +12,7 @@ namespace ArduinoCsCompiler
     /// <summary>
     /// A reference to an external assembly, when generating IL
     /// </summary>
-    internal class ExternalAssemblyReference
+    public class ExternalAssemblyReference
     {
         public ExternalAssemblyReference(string name, string publicKeyToken, string version)
         {

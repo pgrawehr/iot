@@ -442,7 +442,7 @@ namespace ArduinoCsCompiler
                         {
                             var fieldTarget = ResolveMember(m, token)!;
                             FieldInfo mb = (FieldInfo)fieldTarget; // This must work, or the IL is invalid
-                            var replacementClassForField = set.GetReplacement(mb.DeclaringType);
+                            var (replacementClassForField, _) = set.GetReplacement(mb.DeclaringType);
                             if (replacementClassForField != null)
                             {
                                 // The class whose member this is was replaced - replace the member, too.
@@ -502,7 +502,7 @@ namespace ArduinoCsCompiler
                             // If we create an array instance, we also need to provide this special iterator
                             var getEnumeratorCall = typeof(Runtime.MiniArray).GetMethod("GetEnumerator")!.MakeGenericMethod(mb);
                             methodsUsed.Add(getEnumeratorCall);
-                            patchValue = set.GetOrAddClassToken(mb);
+                            patchValue = set.GetOrAddClassToken(mb, false);
                             typesUsed.Add((TypeInfo)set.InverseResolveToken(patchValue)!);
                             set.AddArrayImplementation(mb, getEnumeratorCall);
                             break;
@@ -516,7 +516,7 @@ namespace ArduinoCsCompiler
                             if (resolved is TypeInfo ti)
                             {
                                 bool isEnum = ti.IsEnum;
-                                patchValue = set.GetOrAddClassToken(ti);
+                                patchValue = set.GetOrAddClassToken(ti, false);
                                 typesUsed.Add(ti);
                             }
                             else if (resolved is FieldInfo mi)
@@ -553,7 +553,7 @@ namespace ArduinoCsCompiler
                             // These take a type as argument
                             var typeTarget = ResolveMember(m, token)!;
                             TypeInfo mb = (TypeInfo)typeTarget; // This must work, or the IL is invalid
-                            patchValue = set.GetOrAddClassToken(mb);
+                            patchValue = set.GetOrAddClassToken(mb, false);
                             typesUsed.Add((TypeInfo)set.InverseResolveToken(patchValue)!);
                             if (target == TargetFramework.Firmata)
                             {
@@ -666,7 +666,7 @@ namespace ArduinoCsCompiler
 
                 if (c.Flags == ExceptionHandlingClauseOptions.Clause && c.CatchType != null)
                 {
-                    token = set.GetOrAddClassToken(c.CatchType.GetTypeInfo());
+                    token = set.GetOrAddClassToken(c.CatchType.GetTypeInfo(), false);
                     exceptionTypesUsed.Add((TypeInfo)set.InverseResolveToken(token)!);
                 }
 

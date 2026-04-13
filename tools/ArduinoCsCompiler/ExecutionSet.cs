@@ -39,7 +39,7 @@ namespace ArduinoCsCompiler
         private readonly Dictionary<int, EquatableMethod> _inversePatchedMethodTokens; // Same as the above, but the other way round
         private readonly Dictionary<EquatableField, (int Token, byte[]? InitializerData)> _patchedFieldTokens;
         private readonly Dictionary<int, EquatableField> _inversePatchedFieldTokens;
-        private readonly HashSet<(Type Original, Type Replacement, bool Subclasses)> _classesReplaced;
+        private readonly HashSet<(Type Original, ClassDeclaration Replacement, bool Subclasses)> _classesReplaced;
         private readonly Dictionary<EquatableMethod, IlCode> _codeCache;
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace ArduinoCsCompiler
             _inversePatchedMethodTokens = new Dictionary<int, EquatableMethod>();
             _inversePatchedTypeTokens = new Dictionary<int, TypeInfo>();
             _inversePatchedFieldTokens = new Dictionary<int, EquatableField>();
-            _classesReplaced = new HashSet<(Type Original, Type Replacement, bool Subclasses)>();
+            _classesReplaced = new HashSet<(Type Original, ClassDeclaration Replacement, bool Subclasses)>();
             _methodsReplaced = new();
             _classesToSuppress = new List<Type>();
             _arrayListImpl = new();
@@ -153,7 +153,7 @@ namespace ArduinoCsCompiler
             _inversePatchedMethodTokens = new Dictionary<int, EquatableMethod>(setToClone._inversePatchedMethodTokens);
             _inversePatchedTypeTokens = new Dictionary<int, TypeInfo>(setToClone._inversePatchedTypeTokens);
             _inversePatchedFieldTokens = new Dictionary<int, EquatableField>(setToClone._inversePatchedFieldTokens);
-            _classesReplaced = new HashSet<(Type Original, Type Replacement, bool Subclasses)>(setToClone._classesReplaced);
+            _classesReplaced = new(setToClone._classesReplaced);
             _methodsReplaced = new(setToClone._methodsReplaced);
             _classesToSuppress = new List<Type>(setToClone._classesToSuppress);
             _strings = new(setToClone._strings);
@@ -692,44 +692,44 @@ namespace ArduinoCsCompiler
             // If the class is being replaced, search the replacement class
             var classReplacement = GetReplacement(methodBase.DeclaringType);
 
-            bool searchForNanoReplacement = false;
-            if (replacement == null &&
-                _compiler.TargetFramework == TargetFramework.Nano && methodBase.DeclaringType != null &&
-                ExternalSystemReferences.TryGetValue(methodBase.DeclaringType, out var reference))
-            {
-                classReplacement = reference.Type;
-                EquatableMethod m1 = methodBase;
-                foreach (var needle in classReplacement.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-                {
-                    if (m1.Equals(new EquatableMethod(needle)))
-                    {
-                        replacement = needle;
-                    }
-                }
+            bool searchForNanoReplacement = true;
+            ////if (replacement == null &&
+            ////    _compiler.TargetFramework == TargetFramework.Nano && methodBase.DeclaringType != null &&
+            ////    ExternalSystemReferences.TryGetValue(methodBase.DeclaringType, out var reference))
+            ////{
+            ////    classReplacement = reference.Type;
+            ////    EquatableMethod m1 = methodBase;
+            ////    foreach (var needle in classReplacement.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+            ////    {
+            ////        if (m1.Equals(new EquatableMethod(needle)))
+            ////        {
+            ////            replacement = needle;
+            ////        }
+            ////    }
 
-                foreach (var needle in classReplacement.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-                {
-                    if (m1.Equals(new EquatableMethod(needle)))
-                    {
-                        replacement = needle;
-                    }
-                }
+            ////    foreach (var needle in classReplacement.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            ////    {
+            ////        if (m1.Equals(new EquatableMethod(needle)))
+            ////        {
+            ////            replacement = needle;
+            ////        }
+            ////    }
 
-                // Since "classReplacement" is not actually a replacement class here, we need to remember that, or we'll run into
-                // an infinite recursion in the next step.
-                searchForNanoReplacement = true;
-            }
+            ////    // Since "classReplacement" is not actually a replacement class here, we need to remember that, or we'll run into
+            ////    // an infinite recursion in the next step.
+            ////    searchForNanoReplacement = true;
+            ////}
 
-            if (classReplacement != null && replacement == null)
+            if (classReplacement.TheType != null && replacement == null)
             {
                 if (_compiler.TargetFramework == TargetFramework.Nano)
                 {
                     if (searchForNanoReplacement)
                     {
                         var classReplacement2 = GetReplacement(methodBase.DeclaringType);
-                        if (classReplacement2 != null)
+                        if (classReplacement2.TheType != null)
                         {
-                            replacement = GetReplacement(methodBase, analysisStack, classReplacement2);
+                            replacement = GetReplacement(methodBase, analysisStack, classReplacement2.TheType);
                             classReplacement = classReplacement2;
                         }
 
@@ -749,12 +749,12 @@ namespace ArduinoCsCompiler
                 }
                 else
                 {
-                    replacement = GetReplacement(methodBase, analysisStack, classReplacement);
+                    replacement = GetReplacement(methodBase, analysisStack, classReplacement.TheType);
                     if (replacement == null)
                     {
                         // If the replacement class has a static method named "NotSupportedException", we call this instead (expecting that this will never be called).
                         // This is used so we can remove all the unsupported implementations for compiler intrinsics.
-                        MethodInfo? dummyMethod = GetNotSupportedExceptionMethod(classReplacement);
+                        MethodInfo? dummyMethod = GetNotSupportedExceptionMethod(classReplacement.TheType);
                         if (dummyMethod != null)
                         {
                             return GetOrAddMethodToken(dummyMethod, analysisStack);
@@ -855,8 +855,9 @@ namespace ArduinoCsCompiler
         /// objects with multiple template arguments such as List{List{T}} or Dictionary{TKey, TValue}
         /// </summary>
         /// <param name="typeInfo">Original type to add to list</param>
+        /// <param name="isReplacement">True if the type under test is already a replacement (to prevent a stack overflow)</param>
         /// <returns>A new token for the given type, or the existing token if it is already in the list</returns>
-        internal int GetOrAddClassToken(TypeInfo typeInfo)
+        internal int GetOrAddClassToken(TypeInfo typeInfo, bool isReplacement)
         {
             int token;
             if (_patchedTypeTokens.TryGetValue(typeInfo, out token))
@@ -865,9 +866,9 @@ namespace ArduinoCsCompiler
             }
 
             var replacement = GetReplacement(typeInfo);
-            if (replacement != null)
+            if (replacement.TheType != null && isReplacement == false)
             {
-                return GetOrAddClassToken(replacement.GetTypeInfo());
+                return GetOrAddClassToken(replacement.TheType.GetTypeInfo(), replacement.IsReplacement);
             }
 
             if (KnownTypeTokensMap.TryGetValue(typeInfo, out var knownToken))
@@ -899,7 +900,7 @@ namespace ArduinoCsCompiler
             else if (typeInfo.IsGenericType && typeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 // Nullable<T>, but with a defined T
-                int baseToken = GetOrAddClassToken(typeInfo.GetGenericArguments()[0].GetTypeInfo());
+                int baseToken = GetOrAddClassToken(typeInfo.GetGenericArguments()[0].GetTypeInfo(), false);
                 token = baseToken + NullableToken;
             }
             else if (typeInfo.IsGenericTypeDefinition)
@@ -913,10 +914,10 @@ namespace ArduinoCsCompiler
             {
                 // complete generic type, find whether the base definition has been defined already
                 var definition = typeInfo.GetGenericTypeDefinition();
-                int definitionToken = GetOrAddClassToken(definition.GetTypeInfo());
+                int definitionToken = GetOrAddClassToken(definition.GetTypeInfo(), false);
                 Type[] typeArguments = typeInfo.GetGenericArguments();
                 Type firstArg = typeArguments.First();
-                int firstArgToken = GetOrAddClassToken(firstArg.GetTypeInfo());
+                int firstArgToken = GetOrAddClassToken(firstArg.GetTypeInfo(), false);
                 if (firstArg.IsGenericType || typeArguments.Length > 1)
                 {
                     // If the first argument is itself generic or there is more than one generic argument, we need to create extended metadata
@@ -934,7 +935,7 @@ namespace ArduinoCsCompiler
                     foreach (var t in typeArguments)
                     {
                         var info = t.GetTypeInfo();
-                        int token2 = GetOrAddClassToken(info);
+                        int token2 = GetOrAddClassToken(info, false);
                         entries.Add((token2, info));
                     }
 
@@ -1149,7 +1150,7 @@ namespace ArduinoCsCompiler
             return null;
         }
 
-        internal void AddReplacementType(Type? typeToReplace, Type replacement, bool includingSubclasses, bool includingPrivates)
+        internal void AddReplacementType(Type? typeToReplace, ClassDeclaration replacement, bool includingSubclasses, bool includingPrivates)
         {
             if (typeToReplace == null)
             {
@@ -1171,7 +1172,7 @@ namespace ArduinoCsCompiler
                 methodsNeedingReplacement = methodsNeedingReplacement.Where(x => !x.IsPrivate).ToList();
             }
 
-            foreach (var methoda in replacement.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            foreach (var methoda in replacement.TheType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
             {
                 // Above, we only check the public methods, here we also look at the private ones
                 BindingFlags otherFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic;
@@ -1215,7 +1216,7 @@ namespace ArduinoCsCompiler
             // And do the same as above for all (public) ctors
             var ctorsNeedingReplacement = typeToReplace.GetConstructors(BindingFlags.Public | BindingFlags.Instance).ToList();
 
-            foreach (var methoda in replacement.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            foreach (var methoda in replacement.TheType.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
                 // Above, we only check the public methods, here we also look at the private ones
                 foreach (var methodb in typeToReplace.GetConstructors(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
@@ -1232,7 +1233,7 @@ namespace ArduinoCsCompiler
             }
 
             // If the replacement has a static ctor, also replace it
-            foreach (var methoda in replacement.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+            foreach (var methoda in replacement.TheType.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
             {
                 // Replace these only if explicitly requested (would need testing of impact otherwise)
                 if (!EquatableMethod.HasArduinoImplementationAttribute(methoda, out _))
@@ -1265,11 +1266,11 @@ namespace ArduinoCsCompiler
             }
         }
 
-        internal Type? GetReplacement(Type? original)
+        internal (Type? TheType, bool IsReplacement) GetReplacement(Type? original)
         {
             if (original == null)
             {
-                return null;
+                return (null, false);
             }
 
             foreach (var x in _classesReplaced)
@@ -1277,32 +1278,32 @@ namespace ArduinoCsCompiler
                 // Only exact matches, including assembly (there is a type named Interop.Kernel32 in several assemblies)
                 if (x.Original.AssemblyQualifiedName == original.AssemblyQualifiedName)
                 {
-                    return x.Replacement;
+                    return (x.Replacement.TheType, true);
                 }
                 else if (original.IsConstructedGenericType)
                 {
                     // This is for the case where we do a full-replacement of a generic class
                     var deconstructed = original.GetGenericTypeDefinition();
                     var deconstructedReplacement = GetReplacement(deconstructed);
-                    if (deconstructedReplacement == null)
+                    if (deconstructedReplacement.TheType == null)
                     {
                         continue;
                     }
 
                     var args = original.GetGenericArguments();
-                    var result = deconstructedReplacement.MakeGenericType(args);
-                    return result;
+                    var result = deconstructedReplacement.TheType.MakeGenericType(args);
+                    return (result, true);
                 }
                 else if (x.Subclasses && original.IsSubclassOf(x.Original))
                 {
                     // If we need to replace all subclasses of x as well, we need to add them here to the replacement list, because
                     // we initially didn't know which classes will be in this set.
                     AddReplacementType(original, x.Replacement, true, false);
-                    return x.Replacement;
+                    return (x.Replacement.TheType, true);
                 }
             }
 
-            return null;
+            return (null, false);
         }
 
         private bool MethodsBelongToSameClassOrToReplacementClass(EquatableMethod first, EquatableMethod second)
@@ -1313,13 +1314,13 @@ namespace ArduinoCsCompiler
             }
 
             var r1 = GetReplacement(first.DeclaringType);
-            if (r1 == second.DeclaringType)
+            if (r1.TheType == second.DeclaringType)
             {
                 return true;
             }
 
             var r2 = GetReplacement(second.DeclaringType);
-            if (r2 == first.DeclaringType)
+            if (r2.TheType == first.DeclaringType)
             {
                 return true;
             }
@@ -1373,27 +1374,27 @@ namespace ArduinoCsCompiler
                 return null;
             }
 
-            if (_compiler.TargetFramework == TargetFramework.Nano &&
-                // methodsToConsider.Count == 0 &&
-                original.DeclaringType != null &&
-                GetExistingReplacement(original, analysisStack) == null &&
-                ExternalSystemReferences.TryGetValue(original.DeclaringType, true, out var reference))
-            {
-                // Check whether the referenced type has a matching method
-                // (this is for the case where the original method is part of a built-in type)
-                if (reference.TryGetMethod(original, out EquatableMethod? nanoFrameworkMethod))
-                {
-                    if (nanoFrameworkMethod.IsStatic)
-                    {
-                        AddReplacementMethod(original.Method, nanoFrameworkMethod.Method, true);
-                        return nanoFrameworkMethod;
-                    }
-                    else
-                    {
-                        _logger.LogWarning($"Method {original.MethodSignature()} is non-static and not part of the built-in class {reference.Name}.");
-                    }
-                }
-            }
+            ////if (_compiler.TargetFramework == TargetFramework.Nano &&
+            ////    // methodsToConsider.Count == 0 &&
+            ////    original.DeclaringType != null &&
+            ////    GetExistingReplacement(original, analysisStack) == null &&
+            ////    ExternalSystemReferences.TryGetValue(original.DeclaringType, true, out var reference))
+            ////{
+            ////    // Check whether the referenced type has a matching method
+            ////    // (this is for the case where the original method is part of a built-in type)
+            ////    if (reference.TryGetMethod(original, out EquatableMethod? nanoFrameworkMethod))
+            ////    {
+            ////        if (nanoFrameworkMethod.IsStatic)
+            ////        {
+            ////            AddReplacementMethod(original.Method, nanoFrameworkMethod.Method, true);
+            ////            return nanoFrameworkMethod;
+            ////        }
+            ////        else
+            ////        {
+            ////            _logger.LogWarning($"Method {original.MethodSignature()} is non-static and not part of the built-in class {reference.Name}.");
+            ////        }
+            ////    }
+            ////}
 
             var replacement = GetExistingReplacement(original, analysisStack);
 
@@ -1461,7 +1462,7 @@ namespace ArduinoCsCompiler
                 var classReplacement = GetReplacement(elem.Original.DeclaringType);
                 // If it's about a missing replacement with a generic argument, elem.Original may already be a replacement object, so the
                 // above returns null.
-                if (GetNotSupportedExceptionMethod(classReplacement ?? elem.Original.DeclaringType!) != null)
+                if (GetNotSupportedExceptionMethod(classReplacement.TheType ?? elem.Original.DeclaringType!) != null)
                 {
                     return null;
                 }

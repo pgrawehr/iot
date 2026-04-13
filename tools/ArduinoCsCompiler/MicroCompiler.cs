@@ -72,7 +72,6 @@ namespace ArduinoCsCompiler
         public MicroCompiler(ArduinoBoard? board, bool resetExistingCode, TargetFramework target)
         {
             _logger = this.GetCurrentClassLogger();
-            ExternalSystemReferences.Init(_logger);
 
             _board = board;
             TargetFramework = target;
@@ -371,7 +370,7 @@ namespace ArduinoCsCompiler
                 if (ia.ReplaceEntireType)
                 {
                     PrepareClass(set, replacement, stack);
-                    set.AddReplacementType(ia.TypeToReplace, replacement, ia.IncludingSubclasses, ia.IncludingPrivates);
+                    set.AddReplacementType(ia.TypeToReplace, new ClassDeclaration(replacement, 0, 0, 0, new List<ClassMember>(), new List<Type>()), ia.IncludingSubclasses, ia.IncludingPrivates);
                     if (ia.TypeToReplace.FullName == "Interop+Kernel32")
                     {
                         // The replacement class for Interop+Kernel32 shall replace all instances of this class, which is internal to
@@ -386,7 +385,7 @@ namespace ArduinoCsCompiler
                             }
 
                             var interopType = ass.GetType("Interop+Kernel32", true, false);
-                            set.AddReplacementType(interopType, replacement, false, true);
+                            set.AddReplacementType(interopType, new ClassDeclaration(replacement, 0, 0, 0, new List<ClassMember>(), new List<Type>()), false, true);
                         }
                     }
                 }
@@ -551,7 +550,7 @@ namespace ArduinoCsCompiler
                 return;
             }
 
-            var replacement = set.GetReplacement(classType);
+            var (replacement, _) = set.GetReplacement(classType);
 
             if (replacement != null)
             {
@@ -562,12 +561,12 @@ namespace ArduinoCsCompiler
                 }
             }
 
-            if (TargetFramework == TargetFramework.Nano && ExternalSystemReferences.TryGetValue(classType, out var reference))
-            {
-                // No need to prepare this class, but the token should be reserved anyway
-                set.GetOrAddClassToken(classType.GetTypeInfo());
-                return;
-            }
+            ////if (TargetFramework == TargetFramework.Nano && ExternalSystemReferences.TryGetValue(classType, out var reference))
+            ////{
+            ////    // No need to prepare this class, but the token should be reserved anyway
+            ////    set.GetOrAddClassToken(classType.GetTypeInfo());
+            ////    return;
+            ////}
 
             List<FieldInfo> fields = new List<FieldInfo>();
             List<MemberInfo> methods = new List<MemberInfo>();
@@ -700,7 +699,7 @@ namespace ArduinoCsCompiler
             sizeOfClass.Dynamic = PerformFieldAlignment(classType, sizeOfClass.Dynamic, memberTypes);
 
             // Add this first, so we break the recursion to this class further down
-            var newClass = new ClassDeclaration(classType, sizeOfClass.Dynamic, sizeOfClass.Statics, set.GetOrAddClassToken(classType.GetTypeInfo()), memberTypes, interfaces);
+            var newClass = new ClassDeclaration(classType, sizeOfClass.Dynamic, sizeOfClass.Statics, set.GetOrAddClassToken(classType.GetTypeInfo(), false), memberTypes, interfaces);
             set.AddClass(newClass);
             foreach (var iface in interfaces)
             {
@@ -1226,7 +1225,7 @@ namespace ArduinoCsCompiler
                 if ((idx = _replacementClasses.IndexOf(cls.TheType)) >= 0) // No need to test for the attribute
                 {
                     var replacement = _replacementClasses[idx];
-                    int tokenOfReplacement = set.GetOrAddClassToken(replacement.GetTypeInfo());
+                    int tokenOfReplacement = set.GetOrAddClassToken(replacement.GetTypeInfo(), false);
                     // If there is an element satisfying this condition, it is our original class
                     var orig = set.Classes.SingleOrDefault(x => x.NewToken == tokenOfReplacement && x.TheType != replacement);
                     if (orig == null)
@@ -1471,10 +1470,10 @@ namespace ArduinoCsCompiler
                 Type parent = cls.BaseType!;
                 if (parent != null)
                 {
-                    parentToken = set.GetOrAddClassToken(parent.GetTypeInfo());
+                    parentToken = set.GetOrAddClassToken(parent.GetTypeInfo(), false);
                 }
 
-                int token = set.GetOrAddClassToken(cls.GetTypeInfo());
+                int token = set.GetOrAddClassToken(cls.GetTypeInfo(), false);
 
                 short classFlags = 0;
                 if (cls.IsValueType)
@@ -1493,7 +1492,7 @@ namespace ArduinoCsCompiler
                 }
 
                 _logger.LogDebug($"Sending class {idx + 1} of {classesToLoad.Count}: Declaration for {cls.MemberInfoSignature()} (Token 0x{token:x8}). Number of members: {c.Members.Count}, Dynamic size {c.DynamicSize} Bytes, Static Size {c.StaticSize} Bytes.");
-                _commandHandler.SendClassDeclaration(token, parentToken, (c.DynamicSize, c.StaticSize), classFlags, c.Members, c.RawInterfaces.Select(x => set.GetOrAddClassToken(x.GetTypeInfo())).ToArray());
+                _commandHandler.SendClassDeclaration(token, parentToken, (c.DynamicSize, c.StaticSize), classFlags, c.Members, c.RawInterfaces.Select(x => set.GetOrAddClassToken(x.GetTypeInfo(), false)).ToArray());
 
                 progress.Report((double)idx / classesToLoad.Count);
                 if (markAsReadOnly)
@@ -2138,7 +2137,7 @@ namespace ArduinoCsCompiler
             foreach (var method in code.DependentMethods)
             {
                 // Do we need to replace this method?
-                var replacementType = set.GetReplacement(method.DeclaringType);
+                var (replacementType, isReplacement) = set.GetReplacement(method.DeclaringType);
                 EquatableMethod? finalMethod = null;
                 if (replacementType != null)
                 {
@@ -2255,6 +2254,7 @@ namespace ArduinoCsCompiler
             if (ExecutionSet.CompiledKernel == null || ExecutionSet.CompiledKernel.CompilerSettings != compilerSettings)
             {
                 set = new ExecutionSet(this, compilerSettings);
+                ExternalSystemReferences.Init(_logger, set);
                 if (TargetFramework == TargetFramework.Firmata)
                 {
                     // We never want these types in our execution set - reflection is not supported, except in very specific cases
@@ -2418,7 +2418,7 @@ namespace ArduinoCsCompiler
         internal int PrepareMethod(ExecutionSet set, EquatableMethod methodInfo, AnalysisStack stack)
         {
             // Ensure the class is known if it needs replacement
-            var classReplacement = set.GetReplacement(methodInfo.DeclaringType);
+            var (classReplacement, _) = set.GetReplacement(methodInfo.DeclaringType);
 
             // In the nanoframework case, we check for extra replacement of methods here, not entire classes.
             // Maybe the class replacement needs to be checked as well, though (even though we do that later)
@@ -2637,7 +2637,7 @@ namespace ArduinoCsCompiler
                     {
                         // the only argument is of type string[]. Create an empty array.
                         AddCommand(code, OpCode.CEE_LDC_I4_0);
-                        token = set.GetOrAddClassToken(typeof(string[]).GetTypeInfo());
+                        token = set.GetOrAddClassToken(typeof(string[]).GetTypeInfo(), false);
                         AddCommandWith32BitArgument(code, OpCode.CEE_NEWARR, token);
                     }
 

@@ -17,6 +17,15 @@ namespace ArduinoCsCompiler
         private string? _fullNameSet;
         private bool _fullNameConfigured;
 
+        public ClassDeclaration(Type type, ExternalTypeReference externalReference)
+        : this(type, 0, 0, 0, new List<ClassMember>(), new List<Type>())
+        {
+            ExternalReference = externalReference;
+            UseOriginalType = true;
+            // TODO: Do we need the members here? (AddMethodReplacement is also called later)
+            // _members.AddRange(externalReference.Methods.Select(x => x.Method));
+        }
+
         public ClassDeclaration(Type type, int dynamicSize, int staticSize, int newToken,
             List<ClassMember> members, List<Type> interfaces)
         {
@@ -53,6 +62,8 @@ namespace ArduinoCsCompiler
         {
             get;
         }
+
+        public ExternalTypeReference? ExternalReference { get; }
 
         /// <summary>
         /// Allows overriding the original name of this class
@@ -157,7 +168,7 @@ namespace ArduinoCsCompiler
                 return null;
             }
 
-            int tk = set.GetOrAddClassToken(ofClass.GetTypeInfo());
+            int tk = set.GetOrAddClassToken(ofClass.GetTypeInfo(), false);
             ClassDeclaration? ret = set.Classes.FirstOrDefault(y => y.NewToken == tk);
             if (ret != null)
             {

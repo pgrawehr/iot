@@ -16,7 +16,7 @@ namespace ArduinoCsCompiler
 {
     internal static class ExternalSystemReferences
     {
-        public static List<ExternalTypeReference> References = new List<ExternalTypeReference>();
+        private static List<ExternalTypeReference> _references = new List<ExternalTypeReference>();
         private static List<string> _keywords = new List<string>();
 
         /// <summary>
@@ -24,7 +24,9 @@ namespace ArduinoCsCompiler
         /// (if things fail, the exception ends up in a random place)
         /// </summary>
         /// <param name="logger">A logger</param>
-        public static void Init(ILogger logger)
+        /// <param name="set">The execution set to update</param>
+        /// <remarks>Should probably make this an extension method that does not keep state</remarks>
+        public static void Init(ILogger logger, ExecutionSet set)
         {
             // Keywords can't be used as argument or class names (many of them are valid C# identifiers, though)
             _keywords = new List<string>()
@@ -453,11 +455,11 @@ namespace ArduinoCsCompiler
                 "xor"
             };
 
-            References = new List<ExternalTypeReference>();
+            _references = new List<ExternalTypeReference>();
             var mscorlib = new ExternalAssemblyReference("mscorlib", "(C0 7D 48 1E 97 58 C7 31 )", "1:15:6:0");
             var builtin = new ExternalAssemblyReference(string.Empty, string.Empty, string.Empty); // for built-in types, such as object or int
 
-            References.AddRange(new ExternalTypeReference[]
+            _references.AddRange(new ExternalTypeReference[]
             {
                 new("int64", typeof(System.Int64), builtin, false),
                 new("uint64", typeof(System.UInt64), builtin, false),
@@ -474,7 +476,7 @@ namespace ArduinoCsCompiler
                 new("float32", typeof(System.Single), builtin, false)
             });
 
-            References.AddRange(new ExternalTypeReference[]
+            _references.AddRange(new ExternalTypeReference[]
             {
                 // this one is in mscorlib, but in a separate library on the standard BCL
                 new(typeof(System.Console), mscorlib),
@@ -534,7 +536,7 @@ namespace ArduinoCsCompiler
                     }
                 }
 
-                var existing = References.FirstOrDefault(x => x.Type == effectiveType);
+                var existing = _references.FirstOrDefault(x => x.Type == effectiveType);
                 if (existing != null)
                 {
                     // Also for System.Object etc we need to add its members, otherwise we won't be able to find them when we need to replace them
@@ -542,12 +544,13 @@ namespace ArduinoCsCompiler
                     continue;
                 }
 
-                References.Add(new ExternalTypeReference(effectiveType, methodsInExternalClass, mscorlib));
+                _references.Add(new ExternalTypeReference(effectiveType, mscorlib));
             }
 
-            foreach (var r in References)
+            foreach (var r in _references)
             {
                 logger.LogInformation($"Using nanoFramework type {r.Type} instead of the .NET version");
+                set.AddReplacementType(r.Type, new ClassDeclaration(r.Type, r), false, true);
             }
         }
 
@@ -595,7 +598,7 @@ namespace ArduinoCsCompiler
                 name = name + "1";
             }
 
-            foreach (var e in References)
+            foreach (var e in _references)
             {
                 if (e.Type == theType)
                 {
