@@ -352,7 +352,7 @@ namespace ArduinoCsCompiler
             foreach (var method in lowLevelInterface.GetMethods(BindingFlags.Public | BindingFlags.DeclaredOnly))
             {
                 var attr = (ArduinoImplementationAttribute)method.GetCustomAttributes(typeof(ArduinoImplementationAttribute)).First();
-                AddMethod(new EquatableMethod(method), lowLevelInterface, attr.MethodNumber);
+                AddMethod(new EquatableMethod(method, false), lowLevelInterface, attr.MethodNumber);
             }
 
             MethodInfo? methodToReplace;
@@ -473,7 +473,7 @@ namespace ArduinoCsCompiler
 
             type = typeof(MiniType);
             replacementMethodInfo = type.GetMethod("CreateInstanceForAnotherGenericParameter");
-            set.AddReplacementMethod(methodToReplace, replacementMethodInfo);
+            set.AddReplacementMethod(methodToReplace, new EquatableMethod(replacementMethodInfo!, true));
 
             // Some classes are dynamically created in the runtime - we need them anyway
             HashSet<object> hb = new HashSet<object>();
@@ -550,7 +550,7 @@ namespace ArduinoCsCompiler
                 return;
             }
 
-            var (replacement, _) = set.GetReplacement(classType);
+            var (replacement, isReplacement) = set.GetReplacement(classType);
 
             if (replacement != null)
             {
@@ -685,7 +685,7 @@ namespace ArduinoCsCompiler
                 var m = methods[index] as ConstructorInfo;
                 if (m != null)
                 {
-                    var mbx = new EquatableMethod(m);
+                    var mbx = new EquatableMethod(m, false);
                     stack.Push(mbx);
                     memberTypes.Add(new ClassMember(m, VariableKind.Method, set.GetOrAddMethodToken(mbx, stack), new List<int>()));
                     stack.Pop();
@@ -700,6 +700,7 @@ namespace ArduinoCsCompiler
 
             // Add this first, so we break the recursion to this class further down
             var newClass = new ClassDeclaration(classType, sizeOfClass.Dynamic, sizeOfClass.Statics, set.GetOrAddClassToken(classType.GetTypeInfo(), false), memberTypes, interfaces);
+            newClass.UseOriginalType = isReplacement;
             set.AddClass(newClass);
             foreach (var iface in interfaces)
             {
@@ -1288,7 +1289,7 @@ namespace ArduinoCsCompiler
                     throw new NotSupportedException("The method Thread.StartCallback cannot be found");
                 }
 
-                PrepareMethod(set, new EquatableMethod(methodToInclude), new AnalysisStack(methodToInclude));
+                PrepareMethod(set, new EquatableMethod(methodToInclude, false), new AnalysisStack(methodToInclude));
             }
 
             // Something has changed in .NET 8.0 for these - lets see what's missing
@@ -1427,7 +1428,7 @@ namespace ArduinoCsCompiler
 
                         // If this method is required because base implementations are called, we also need its implementation (obviously)
                         // Unfortunately, this can recursively require further classes and methods
-                        var mbx = new EquatableMethod(mb);
+                        var mbx = new EquatableMethod(mb, false);
                         stack.Push(mbx);
                         PrepareMethod(set, mbx, stack);
 
@@ -1642,7 +1643,7 @@ namespace ArduinoCsCompiler
                     return false;
                 }
 
-                CollectBaseImplementations(set, new EquatableMethod(m), methodsBeingImplemented);
+                CollectBaseImplementations(set, new EquatableMethod(m, false), methodsBeingImplemented);
 
                 // We need the implementation if at least one base implementation is being called and is used
                 return methodsBeingImplemented.Any(x => set.HasMethod(x, stack, out _, out _));
@@ -1658,7 +1659,7 @@ namespace ArduinoCsCompiler
             {
                 foreach (var candidate in cls.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
                 {
-                    EquatableMethod equatableCandidate = new EquatableMethod(candidate);
+                    EquatableMethod equatableCandidate = new EquatableMethod(candidate, false);
                     if (EquatableMethod.IsOverriddenImplementation(equatableCandidate, method, false))
                     {
                         methodsBeingImplemented.Add(equatableCandidate);
@@ -1684,7 +1685,7 @@ namespace ArduinoCsCompiler
 
                 foreach (var candidate in interf.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
                 {
-                    EquatableMethod equatableCandidate = new EquatableMethod(candidate);
+                    EquatableMethod equatableCandidate = new EquatableMethod(candidate, false);
                     if (EquatableMethod.IsOverriddenImplementation(equatableCandidate, method, true))
                     {
                         _logger.LogDebug($"Need to include {method.MethodSignature()} in execution set because it implements {interf}");

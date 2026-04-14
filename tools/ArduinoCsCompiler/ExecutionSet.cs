@@ -989,7 +989,7 @@ namespace ArduinoCsCompiler
                 return false;
             }
 
-            if (_classesReplaced.Any(x => x.Original.AssemblyQualifiedName == type.TheType.AssemblyQualifiedName))
+            if (type.UseOriginalType == false && _classesReplaced.Any(x => x.Original.AssemblyQualifiedName == type.TheType.AssemblyQualifiedName))
             {
                 throw new InvalidOperationException($"Class {type} should have been replaced by its replacement");
             }
@@ -1193,7 +1193,7 @@ namespace ArduinoCsCompiler
                     if (EquatableMethod.MethodsHaveSameSignature(methoda, methodb) || EquatableMethod.AreSameOperatorMethods(methoda, methodb, false))
                     {
                         // Method A shall replace Method B
-                        AddReplacementMethod(methodb, methoda);
+                        AddReplacementMethod(methodb, new EquatableMethod(methoda, true));
                         // Remove from the list - so we see in the end what is missing
                         methodsNeedingReplacement.Remove(methodb);
                         replacementFound = true;
@@ -1224,7 +1224,7 @@ namespace ArduinoCsCompiler
                     if (EquatableMethod.MethodsHaveSameSignature(methoda, methodb))
                     {
                         // Method A shall replace Method B
-                        AddReplacementMethod(methodb, methoda);
+                        AddReplacementMethod(methodb, new EquatableMethod(methoda, true));
                         // Remove from the list - so we see in the end what is missing
                         ctorsNeedingReplacement.Remove(methodb);
                         break;
@@ -1248,7 +1248,7 @@ namespace ArduinoCsCompiler
                     if (EquatableMethod.MethodsHaveSameSignature(methoda, methodb))
                     {
                         // Method A shall replace Method B
-                        AddReplacementMethod(methodb, methoda);
+                        AddReplacementMethod(methodb, new EquatableMethod(methoda, true));
                         found = true;
                         break;
                     }
@@ -1536,14 +1536,14 @@ namespace ArduinoCsCompiler
             return null;
         }
 
-        internal void AddReplacementMethod(MethodBase? toReplace, MethodBase? replacement, bool force = false)
+        internal void AddReplacementMethod(MethodBase? toReplace, EquatableMethod? replacement)
         {
             if (toReplace == null)
             {
                 throw new ArgumentNullException(nameof(toReplace));
             }
 
-            if (replacement != null && force == false && EquatableMethod.AreMethodsIdentical(toReplace, replacement))
+            if (replacement != null && EquatableMethod.AreMethodsIdentical(toReplace, replacement) && !replacement.IsReplacement)
             {
                 // Replacing a method with itself may happen if virtual resolution points back to the same base class. Should fix itself later.
                 return;
@@ -1552,12 +1552,12 @@ namespace ArduinoCsCompiler
             string name = toReplace.Name;
             if (_methodsReplaced.TryGetValue(name, out var list))
             {
-                list.Add((toReplace, (replacement == null) ? (EquatableMethod?)null : new EquatableMethod(replacement, true)));
+                list.Add((toReplace, replacement));
             }
             else
             {
                 list = new List<(EquatableMethod, EquatableMethod?)>();
-                list.Add((toReplace, (replacement == null) ? (EquatableMethod?)null : new EquatableMethod(replacement, true)));
+                list.Add((toReplace, replacement));
                 _methodsReplaced.Add(name, list);
             }
         }

@@ -18,7 +18,7 @@ namespace ArduinoCsCompiler
     /// </summary>
     public class EquatableMethod : IEquatable<EquatableMethod>
     {
-        public EquatableMethod(MethodBase method, bool isReplacement = false)
+        public EquatableMethod(MethodBase method, bool isReplacement)
         {
             if (ReferenceEquals(method, null))
             {
@@ -146,7 +146,7 @@ namespace ArduinoCsCompiler
 
         public static implicit operator EquatableMethod(MethodBase a)
         {
-            return new EquatableMethod(a);
+            return new EquatableMethod(a, false);
         }
 
         /// <summary>
