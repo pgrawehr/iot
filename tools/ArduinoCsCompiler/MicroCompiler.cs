@@ -2466,6 +2466,16 @@ namespace ArduinoCsCompiler
                     return newInfo1.Token;
                 }
 
+                if (TargetFramework == TargetFramework.Nano && methodInfo.IsReplacement)
+                {
+                    // This is an external method, so use a hand-crafted method declaration. This will (hopefully) prevent
+                    // the compiler from attempting to peek into its implementation
+                    int tk2 = set.GetOrAddMethodToken(methodInfo, stack);
+                    var newInfo2 = new ArduinoMethodDeclaration(tk2, methodInfo, stack, MethodFlags.SpecialMethod, -1, classReplacement ?? methodInfo.DeclaringType);
+                    set.AddMethod(newInfo2);
+                    return newInfo2.Token;
+                }
+
                 if (HasIntrinsicAttribute(methodInfo))
                 {
                     // If the method is marked with [Intrinsic] (an internal attribute supporting the JIT compiler), we need to check whether it requires special handling as well.
