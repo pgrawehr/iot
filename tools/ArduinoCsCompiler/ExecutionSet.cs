@@ -737,9 +737,17 @@ namespace ArduinoCsCompiler
                         {
                             _logger.LogWarning($"Method {methodBase.MethodSignature()} is expected to be part of the built-in class {classReplacement} (or replaced) but it isn't");
                         }
+                        else if (_patchedMethodTokens.TryGetValue(replacement, out token))
+                        {
+                            return token;
+                        }
                         else
                         {
-                            return GetOrAddMethodToken(replacement, analysisStack);
+                            // Just take it, no further analysis required
+                            token = _nextToken++;
+                            _patchedMethodTokens.Add(methodBase, token);
+                            _inversePatchedMethodTokens.Add(token, methodBase);
+                            return token;
                         }
                     }
                     else
