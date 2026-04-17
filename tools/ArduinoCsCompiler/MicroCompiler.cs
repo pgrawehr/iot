@@ -685,7 +685,14 @@ namespace ArduinoCsCompiler
                 var m = methods[index] as ConstructorInfo;
                 if (m != null)
                 {
-                    var mbx = new EquatableMethod(m, false);
+                    var mbx = new EquatableMethod(m, isReplacement);
+                    if (isReplacement && mbx.IsPrivate && TargetFramework == TargetFramework.Nano)
+                    {
+                        // Private methods of external classes are obviously not visible,
+                        // so we do not need to include them in the execution set.
+                        continue;
+                    }
+
                     stack.Push(mbx);
                     memberTypes.Add(new ClassMember(m, VariableKind.Method, set.GetOrAddMethodToken(mbx, stack), new List<int>()));
                     stack.Pop();
@@ -1188,7 +1195,7 @@ namespace ArduinoCsCompiler
                         {
                             var cls = set.Classes[j];
                             var cctor = cls.TheType.TypeInitializer;
-                            if (cctor == null || cls.SuppressInit)
+                            if (cctor == null || cls.SuppressInit || cls.UseOriginalType)
                             {
                                 continue;
                             }
