@@ -135,7 +135,7 @@ namespace ArduinoCsCompiler
             Logger.LogInformation("Done processing input. Now writing output file...");
             if (!string.IsNullOrWhiteSpace(CommandLineOptions.IlOutputFile))
             {
-                var ilWriter = new IlWriter(set, CommandLineOptions.IlOutputFile);
+                var ilWriter = new IlWriter(set, _compiler.Logger, CommandLineOptions.IlOutputFile);
                 ilWriter.Write();
             }
 

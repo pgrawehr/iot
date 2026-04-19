@@ -39,7 +39,7 @@ namespace ArduinoCsCompiler
         private readonly Dictionary<int, EquatableMethod> _inversePatchedMethodTokens; // Same as the above, but the other way round
         private readonly Dictionary<EquatableField, (int Token, byte[]? InitializerData)> _patchedFieldTokens;
         private readonly Dictionary<int, EquatableField> _inversePatchedFieldTokens;
-        private readonly HashSet<(Type Original, ClassDeclaration Replacement, bool Subclasses)> _classesReplaced;
+        private readonly HashSet<ClassReplacementDeclaration> _classesReplaced;
         private readonly Dictionary<EquatableMethod, IlCode> _codeCache;
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace ArduinoCsCompiler
             _inversePatchedMethodTokens = new Dictionary<int, EquatableMethod>();
             _inversePatchedTypeTokens = new Dictionary<int, TypeInfo>();
             _inversePatchedFieldTokens = new Dictionary<int, EquatableField>();
-            _classesReplaced = new HashSet<(Type Original, ClassDeclaration Replacement, bool Subclasses)>();
+            _classesReplaced = new HashSet<ClassReplacementDeclaration>();
             _methodsReplaced = new();
             _classesToSuppress = new List<Type>();
             _arrayListImpl = new();
@@ -997,7 +997,7 @@ namespace ArduinoCsCompiler
                 return false;
             }
 
-            if (type.UseOriginalType == false && _classesReplaced.Any(x => x.Original.AssemblyQualifiedName == type.TheType.AssemblyQualifiedName))
+            if (type.UseOriginalType == false && _classesReplaced.Any(x => x.AssemblyQualifiedName == type.TheType.AssemblyQualifiedName))
             {
                 throw new InvalidOperationException($"Class {type} should have been replaced by its replacement");
             }
@@ -1165,7 +1165,7 @@ namespace ArduinoCsCompiler
                 throw new ArgumentNullException(nameof(typeToReplace));
             }
 
-            if (!_classesReplaced.Add((typeToReplace, replacement, includingSubclasses)))
+            if (!_classesReplaced.Add(new ClassReplacementDeclaration(typeToReplace, replacement, includingSubclasses)))
             {
                 return;
             }
@@ -1281,10 +1281,13 @@ namespace ArduinoCsCompiler
                 return (null, false);
             }
 
+            // evaluating this is rather expensive, so cache the value
+            string? originalAssemblyQualifiedName = original.AssemblyQualifiedName;
+
             foreach (var x in _classesReplaced)
             {
                 // Only exact matches, including assembly (there is a type named Interop.Kernel32 in several assemblies)
-                if (x.Original.AssemblyQualifiedName == original.AssemblyQualifiedName)
+                if (x.AssemblyQualifiedName == originalAssemblyQualifiedName)
                 {
                     return (x.Replacement.TheType, true);
                 }
@@ -1492,7 +1495,6 @@ namespace ArduinoCsCompiler
         /// <returns></returns>
         internal EquatableMethod? GetReplacement(EquatableMethod methodInfo, AnalysisStack analysisStack, Type classToSearch)
         {
-            string n1 = classToSearch.FullName ?? string.Empty;
             foreach (var replacementMethod in classToSearch.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic))
             {
                 if (EquatableMethod.MethodsHaveSameSignature(replacementMethod, methodInfo) || EquatableMethod.AreSameOperatorMethods(replacementMethod, methodInfo, false))

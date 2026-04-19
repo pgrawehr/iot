@@ -10,6 +10,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace ArduinoCsCompiler;
 
@@ -20,11 +21,13 @@ public class IlWriter
 {
     private const string StaticMethods = "StaticMethods";
     private readonly ExecutionSet _set;
+    private readonly ILogger _logger;
     private readonly string _outputFile;
 
-    public IlWriter(ExecutionSet set, string outputFile)
+    public IlWriter(ExecutionSet set, ILogger logger, string outputFile)
     {
         _set = new ExecutionSet(set, null!, set.CompilerSettings);
+        _logger = logger;
         _outputFile = outputFile;
     }
 
@@ -112,6 +115,12 @@ public class IlWriter
             if (cls1.FullName == null)
             {
                 continue;
+            }
+
+            if (cls1.TheType.Namespace != null && cls1.TheType.Namespace.StartsWith("System") && cls1.UseOriginalType == false &&
+                !cls1.TheType.IsVisible && !cls1.TheType.IsNested)
+            {
+                _logger.LogInformation($"Class {cls1.FullName} is a private System class in the execution set");
             }
 
             if (cls1.TheType.IsArray)
@@ -230,6 +239,18 @@ public class IlWriter
                 }
 
                 tw.Indent--;
+                tw.WriteLine("}");
+                continue;
+            }
+
+            if (cl.TheType.BaseType == typeof(System.MulticastDelegate))
+            {
+                // The type is a delegate. These are not supported by the compiler,
+                // but we need to write them out for the compiler to be able to resolve them as types
+                // (e.g. for events). So we just write them out as empty classes extending MulticastDelegate,
+                // without their actual method signatures. (copilot commented)
+                tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends [mscorlib]System.MulticastDelegate");
+                tw.WriteLine("{");
                 tw.WriteLine("}");
                 continue;
             }
@@ -488,13 +509,20 @@ public class IlWriter
             else
             {
                 // Not sure when we end here. Maybe on type duplication with Mini-Types?
+                string? n = t1.FullName;
+                if (n == null)
+                {
+                    return $"void* /* TODO: Don't know what to do with a null name here*/";
+                }
+
+                n = n.Replace("+", "_sub_");
                 if (!t1.IsValueType)
                 {
-                    return $"class {t1.FullName}";
+                    return $"class {n}";
                 }
                 else
                 {
-                    return $"valuetype {t1.FullName}";
+                    return $"valuetype {n}";
                 }
             }
         }
@@ -712,8 +740,15 @@ public class IlWriter
             string args = GetArgsList(param);
             if (decl == null)
             {
-                // the method is not part of the execution set, possibly because the class is external.
-                return $"instance void {TypeNameForIl(mi.DeclaringType)}::{mi.Name}({args}) /* TODO Not part of execution set */";
+                var m2 = _set.GetReplacement(mi, new AnalysisStack());
+                decl = m2 != null ? _set.GetMethod(m2) : null;
+                if (decl == null)
+                {
+                    // the method is not part of the execution set, possibly because the class is external.
+                    return $"instance void {TypeNameForIl(mi.DeclaringType)}::{mi.Name}({args}) /* TODO Not part of execution set */";
+                }
+
+                // No need to update args, should be same
             }
 
             string instanceOrStatic = string.Empty;

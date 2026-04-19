@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace ArduinoCsCompiler
 {
@@ -212,7 +213,14 @@ namespace ArduinoCsCompiler
                         int token = DecodeIntegerArgument();
                         string value = set.GetString(token);
                         value = EscapeString(value);
-                        return $"{value} // Token {token}";
+                        int cntSymbols = value.Count(x => x == '\"');
+                        string ret = $"{value} // Token {token}";
+                        if (cntSymbols % 2 == 1)
+                        {
+                            ret += "\" (an odd number of quotes, fix it to avoid problems in the editor)";
+                        }
+
+                        return ret;
                     }
 
                 case OpCodeType.InlineI8:
