@@ -9,17 +9,16 @@ using System.Threading.Tasks;
 
 namespace ArduinoCsCompiler.Runtime
 {
-    [ArduinoReplacement(typeof(System.IO.Ports.SerialPort), TargetFramework = TargetFramework.Firmata)]
-    internal class MiniSerialPort
+    [ArduinoReplacement(typeof(System.IO.Ports.SerialPort), true, TargetFramework = TargetFramework.Nano)]
+    internal class MiniSerialPort2
     {
         [ArduinoImplementation]
         public static string[] GetPortNames()
         {
-            // Todo: This is not yet so clearly defined, because ArduinoNativeBoard.TryFindBoard() ignores the port name list.
-            // However, we should still somehow allow access to the real serial ports, other than through the console.
+            // Todo: Use nanoframework.System.IO.Ports instead
             return new string[]
             {
-                "/dev/tty0"
+                "COM1"
             };
         }
     }

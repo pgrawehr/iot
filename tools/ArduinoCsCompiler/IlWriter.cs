@@ -413,6 +413,10 @@ public class IlWriter
         {
             return $"!{indexOfArg}";
         }
+        else if (type == typeof(void))
+        {
+            return "void";
+        }
         else if (type.IsArray)
         {
             Type baseType = type.GetElementType()!;
