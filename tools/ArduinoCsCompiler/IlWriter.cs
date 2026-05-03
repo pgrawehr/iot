@@ -755,7 +755,14 @@ public class IlWriter
             string targetType;
             if (decl.Flags.HasFlag(MethodFlags.Static))
             {
-                targetType = StaticMethods;
+                if (decl.NativeMethod == -1)
+                {
+                    targetType = TypeNameForIl(mi.DeclaringType);
+                }
+                else
+                {
+                    targetType = StaticMethods;
+                }
             }
             else
             {

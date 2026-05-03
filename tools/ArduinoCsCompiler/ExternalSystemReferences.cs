@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.Intrinsics;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
 using Mono.Cecil;
 
@@ -456,7 +457,6 @@ namespace ArduinoCsCompiler
             };
 
             _references = new List<ExternalTypeReference>();
-            var mscorlib = new ExternalAssemblyReference("mscorlib", "(C0 7D 48 1E 97 58 C7 31 )", "1:15:6:0");
             var builtin = new ExternalAssemblyReference(string.Empty, string.Empty, string.Empty); // for built-in types, such as object or int
 
             _references.AddRange(new ExternalTypeReference[]
@@ -478,18 +478,38 @@ namespace ArduinoCsCompiler
 
             _references.AddRange(new ExternalTypeReference[]
             {
-                // this one is in mscorlib, but in a separate library on the standard BCL
-                new(typeof(System.Console), mscorlib),
                 // TODO: Needs a proper replacement
                 new(typeof(System.Runtime.InteropServices.Marshal), builtin),
             });
 
             var streams = typeof(ExternalSystemReferences).Assembly.GetManifestResourceNames();
+            foreach (var name in streams.Where(x => x.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+            {
+                ParseAndAddFromAssembly(logger, set, name);
+            }
+
+            foreach (var r in _references)
+            {
+                logger.LogInformation($"Using nanoFramework type {r.Type} instead of the .NET version");
+                set.AddReplacementType(r.Type, new ClassDeclaration(r.Type, r), false, true);
+            }
+        }
+
+        private static void ParseAndAddFromAssembly(ILogger logger, ExecutionSet set, string name)
+        {
             // Get all the types the nanoframework base library offers
-            using var data = AssemblyDefinition.ReadAssembly(Assembly.GetExecutingAssembly().GetManifestResourceStream(
-                streams.First(x => x.EndsWith("mscorlib.dll", StringComparison.Ordinal))));
+            using var data = AssemblyDefinition.ReadAssembly(Assembly.GetExecutingAssembly().GetManifestResourceStream(name));
+            ExternalAssemblyReference reference = new ExternalAssemblyReference(data.Name.Name, BitConverter.ToString(data.Name.PublicKeyToken),
+                data.Name.Version.ToString());
+            // This refers to the full framework
             var systemAssembly = typeof(string).Assembly;
             var mod = data.Modules[0];
+            if (reference.Name.EndsWith("mscorlib", StringComparison.OrdinalIgnoreCase))
+            {
+                // this one is in mscorlib, but in a separate library on the standard BCL
+                _references.Add(new(typeof(System.Console), reference));
+            }
+
             foreach (TypeDefinition cls in mod.GetTypes())
             {
                 if (!cls.IsClass && !cls.IsInterface && !cls.IsValueType)
@@ -518,7 +538,7 @@ namespace ArduinoCsCompiler
 
                 List<EquatableMethod> methodsInExternalClass = new List<EquatableMethod>();
                 List<MethodBase> methodsInStandardBcl = effectiveType.GetMethods(BindingFlags.Instance | BindingFlags.Static |
-                                                                    BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public)
+                                                                                 BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public)
                     .Cast<MethodBase>().ToList();
                 methodsInStandardBcl.AddRange(effectiveType.GetConstructors(BindingFlags.Instance |
                                                                             BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic));
@@ -536,7 +556,7 @@ namespace ArduinoCsCompiler
                     }
                 }
 
-                var existing = _references.FirstOrDefault(x => x.Type == effectiveType);
+                ExternalTypeReference? existing = _references.FirstOrDefault(x => x.Type == effectiveType);
                 if (existing != null)
                 {
                     // Also for System.Object etc we need to add its members, otherwise we won't be able to find them when we need to replace them
@@ -544,13 +564,7 @@ namespace ArduinoCsCompiler
                     continue;
                 }
 
-                _references.Add(new ExternalTypeReference(effectiveType, mscorlib));
-            }
-
-            foreach (var r in _references)
-            {
-                logger.LogInformation($"Using nanoFramework type {r.Type} instead of the .NET version");
-                set.AddReplacementType(r.Type, new ClassDeclaration(r.Type, r), false, true);
+                _references.Add(new ExternalTypeReference(effectiveType, methodsInExternalClass, reference));
             }
         }
 

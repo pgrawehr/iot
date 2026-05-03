@@ -2629,6 +2629,7 @@ namespace ArduinoCsCompiler
                     else
                     {
                         ErrorManager.AddWarning("ACS0004", $"{methodInfo.MethodSignature()} has no visible implementation");
+                        _logger.LogInformation($"Stack: {stack}");
                         return 0;
                     }
                 }

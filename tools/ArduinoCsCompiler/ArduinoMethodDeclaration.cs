@@ -268,7 +268,9 @@ namespace ArduinoCsCompiler
 
             // This is to make sure MyMethod<int>() is different from MyMethod<string>()
             string suffix = string.Empty;
-            if (MethodBase.IsConstructedGenericMethod || MethodBase.IsStatic) // Since we're packing all static methods to one class
+            // Since we're packing all static methods to one class, we need to make sure that they get unique names.
+            // The same applies to generic methods, since we don't want to generate the same code for MyMethod<int>() and MyMethod<string>()
+            if ((MethodBase.IsConstructedGenericMethod || MethodBase.IsStatic) && NativeMethod != -1)
             {
                 suffix = $"0x_{Token:X8}";
             }

@@ -43,7 +43,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="mscorlib.dll" />
+    <PackageDownload Include="nanoFramework.CoreLibrary" version="[2.0.0-preview.39]" />
+    <PackageDownload Include="nanoFramework.System.Math" version="[2.0.0-preview.6]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="*.dll" />
   </ItemGroup>
 
 </Project>
