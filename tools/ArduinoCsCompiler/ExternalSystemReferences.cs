@@ -26,8 +26,9 @@ namespace ArduinoCsCompiler
         /// </summary>
         /// <param name="logger">A logger</param>
         /// <param name="set">The execution set to update</param>
+        /// <param name="framework">The target framework (when not set to nano, this class does nothing)</param>
         /// <remarks>Should probably make this an extension method that does not keep state</remarks>
-        public static void Init(ILogger logger, ExecutionSet set)
+        public static void Init(ILogger logger, ExecutionSet set, TargetFramework framework)
         {
             // Keywords can't be used as argument or class names (many of them are valid C# identifiers, though)
             _keywords = new List<string>()
@@ -457,6 +458,12 @@ namespace ArduinoCsCompiler
             };
 
             _references = new List<ExternalTypeReference>();
+
+            if (framework != TargetFramework.Nano)
+            {
+                return;
+            }
+
             var builtin = new ExternalAssemblyReference(string.Empty, string.Empty, string.Empty); // for built-in types, such as object or int
 
             _references.AddRange(new ExternalTypeReference[]

@@ -771,9 +771,9 @@ namespace ArduinoCsCompiler
                         throw new InvalidOperationException($"Internal error: Expected replacement not found for {methodBase.MemberInfoSignature()}. CallStack {analysisStack}");
                     }
 
-                    _logger.LogInformation($"Replacing {methodBase.MethodSignature()} with {replacement.MethodSignature()}.");
                     return GetOrAddMethodToken(replacement, analysisStack);
                 }
+
             }
 
             if (methodBase.DeclaringType == typeof(Thread) && methodBase.Name == "StartCallback")
@@ -1495,7 +1495,8 @@ namespace ArduinoCsCompiler
         /// <returns></returns>
         internal EquatableMethod? GetReplacement(EquatableMethod methodInfo, AnalysisStack analysisStack, Type classToSearch)
         {
-            foreach (var replacementMethod in classToSearch.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic))
+            var methods = classToSearch.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic);
+            foreach (var replacementMethod in methods)
             {
                 if (EquatableMethod.MethodsHaveSameSignature(replacementMethod, methodInfo) || EquatableMethod.AreSameOperatorMethods(replacementMethod, methodInfo, false))
                 {
@@ -1512,7 +1513,7 @@ namespace ArduinoCsCompiler
                 }
             }
 
-            foreach (var replacementCtor in classToSearch.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            foreach (var replacementCtor in classToSearch.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
             {
                 if (EquatableMethod.MethodsHaveSameSignature(replacementCtor, methodInfo))
                 {

@@ -2262,7 +2262,7 @@ namespace ArduinoCsCompiler
             if (ExecutionSet.CompiledKernel == null || ExecutionSet.CompiledKernel.CompilerSettings != compilerSettings)
             {
                 set = new ExecutionSet(this, compilerSettings);
-                ExternalSystemReferences.Init(_logger, set);
+                ExternalSystemReferences.Init(_logger, set, TargetFramework);
                 if (TargetFramework == TargetFramework.Firmata)
                 {
                     // We never want these types in our execution set - reflection is not supported, except in very specific cases
