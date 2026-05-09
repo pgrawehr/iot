@@ -22,6 +22,12 @@ namespace ArduinoCsCompiler.Runtime
         }
 
         [ArduinoImplementation]
+        public static void _ZeroMemory(ref byte b, UIntPtr byteLength)
+        {
+            throw new NotImplementedException();
+        }
+
+        [ArduinoImplementation]
         public static unsafe void Memmove(ref byte dest, ref byte src, uint len)
         {
             fixed (byte* srcPointer = &src)

@@ -18,13 +18,13 @@ using Iot.Device.Board;
 namespace ArduinoCsCompiler
 {
     /// <summary>
-    /// This is the arduino board driver when running on the Arduino/ESP32. It is pretty simple, because
-    /// it represents the board from it's own perspective.
+    /// This is the arduino board driver when running on Nano.
+    /// It is wrapping the nanoframework System.Device.* classes to those of the non-nano part
     /// </summary>
-    [ArduinoReplacement(typeof(ArduinoBoard), true, IncludingPrivates = true, TargetFramework = TargetFramework.Firmata)]
-    public class ArduinoNativeBoard : Board
+    [ArduinoReplacement(typeof(ArduinoBoard), true, IncludingPrivates = true, TargetFramework = TargetFramework.Nano)]
+    public class ArduinoNanoNativeBoard : Board
     {
-        public ArduinoNativeBoard()
+        public ArduinoNanoNativeBoard()
         {
         }
 
@@ -45,15 +45,15 @@ namespace ArduinoCsCompiler
         public static bool TryFindBoard(IEnumerable<string> comPorts, IEnumerable<int> baudRates,
             [NotNullWhen(true)] out ArduinoBoard? board)
         {
-            var nativeboard = new ArduinoNativeBoard();
-            // BEWARE: This only works because of the replacement in the runtime.
+            var nativeboard = new ArduinoNanoNativeBoard();
+            // BEWARE: This only works because of the replacement in the compiler, which will make this a no-op.
             board = MiniUnsafe.As<ArduinoBoard>(nativeboard);
             return true;
         }
 
         protected override I2cBusManager CreateI2cBusCore(int busNumber, int[]? pins)
         {
-            return new I2cBusManager(this, busNumber, pins, new ArduinoNativeI2cBus(this, busNumber));
+            throw new NotImplementedException();
         }
 
         public override int GetDefaultI2cBusNumber()
@@ -63,7 +63,7 @@ namespace ArduinoCsCompiler
 
         public override GpioController CreateGpioController()
         {
-            return new GpioController(new ArduinoNativeGpioDriver());
+            return new GpioController(new ArduinoNanoGpioDriver());
         }
 
         protected override SpiDevice CreateSimpleSpiDevice(SpiConnectionSettings settings, int[] pins)
@@ -93,36 +93,10 @@ namespace ArduinoCsCompiler
                 throw new NotSupportedException("Only bus number 0 is currently supported");
             }
 
-            int pins = GetDefaultPinAssignmentForI2cInternal();
-            return new int[2]
-            {
-                pins >> 8, pins & 0xFF
-            };
+            throw new NotImplementedException();
         }
 
         public override int[] GetDefaultPinAssignmentForSpi(SpiConnectionSettings connectionSettings)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override void ActivatePinMode(int pinNumber, PinUsage usage)
-        {
-            base.ActivatePinMode(pinNumber, usage);
-            ActivatePinModeInternal(pinNumber, usage);
-        }
-
-        [ArduinoImplementation("ArduinoNativeBoardActivatePinModeInternal")]
-        private void ActivatePinModeInternal(int pinNumber, PinUsage usage)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// I2C pins, returned from hardware
-        /// </summary>
-        /// <returns>bits 0-7 Pin1, and 8-15 Pin2</returns>
-        [ArduinoImplementation("ArduinoNativeBoardGetDefaultPinAssignmentForI2cInternal")]
-        private int GetDefaultPinAssignmentForI2cInternal()
         {
             throw new NotImplementedException();
         }

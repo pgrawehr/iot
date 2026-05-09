@@ -60,31 +60,32 @@ namespace ArduinoCsCompiler
             }
         }
 
-        public static void Add(CompilerMessage msg)
+        public static bool Add(CompilerMessage msg)
         {
             // Avoid exact duplicates
             if (_messages.Contains(msg))
             {
-                return;
+                return false;
             }
 
             Logger.Log(msg.Level, $"{msg.ErrorCode}: {msg.Message}");
             _messages.Add(msg);
+            return true;
         }
 
-        public static void Add(LogLevel level, string errorCode, string message)
+        public static bool Add(LogLevel level, string errorCode, string message)
         {
-            Add(new CompilerMessage(level, errorCode, message));
+            return Add(new CompilerMessage(level, errorCode, message));
         }
 
-        public static void AddWarning(string errorCode, string message)
+        public static bool AddWarning(string errorCode, string message)
         {
-            Add(new CompilerMessage(LogLevel.Warning, errorCode, message));
+            return Add(new CompilerMessage(LogLevel.Warning, errorCode, message));
         }
 
-        public static void AddError(string errorCode, string message)
+        public static bool AddError(string errorCode, string message)
         {
-            Add(new CompilerMessage(LogLevel.Error, errorCode, message));
+            return Add(new CompilerMessage(LogLevel.Error, errorCode, message));
         }
 
         public static void PrintImporantMessages()

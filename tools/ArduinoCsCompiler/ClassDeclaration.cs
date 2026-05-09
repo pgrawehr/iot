@@ -339,6 +339,12 @@ namespace ArduinoCsCompiler
             {
                 FullName = changed;
             }
+
+            // Name patching, to avoid a conflict with the nano class of the same name (this will represent the Framework class)
+            if (FullName.StartsWith("System.Device.Gpio", StringComparison.Ordinal))
+            {
+                FullName = "MaxiGpio." + FullName.Substring("System.Device.Gpio.".Length);
+            }
         }
     }
 }

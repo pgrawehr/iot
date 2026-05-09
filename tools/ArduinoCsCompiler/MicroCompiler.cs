@@ -2309,6 +2309,7 @@ namespace ArduinoCsCompiler
                     set.SuppressType(typeof(System.Device.Gpio.Drivers.LibGpiodDriver));
                     set.SuppressType(typeof(System.Device.Gpio.Drivers.RaspberryPi3Driver));
                     set.SuppressType(typeof(System.Device.Gpio.Drivers.UnixDriver));
+                    set.SuppressType(typeof(Iot.Device.Board.KeyboardGpioDriver));
                     PrepareClass(set, typeof(System.Array), stack);
                 }
 
@@ -2628,8 +2629,11 @@ namespace ArduinoCsCompiler
                     }
                     else
                     {
-                        ErrorManager.AddWarning("ACS0004", $"{methodInfo.MethodSignature()} has no visible implementation");
-                        _logger.LogInformation($"Stack: {stack}");
+                        if (ErrorManager.AddWarning("ACS0004", $"{methodInfo.MethodSignature()} has no visible implementation"))
+                        {
+                            _logger.LogInformation($"Stack: {stack}");
+                        }
+
                         return 0;
                     }
                 }
