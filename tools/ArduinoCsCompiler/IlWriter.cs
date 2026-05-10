@@ -540,11 +540,14 @@ public class IlWriter
         // We have previously removed the class enclosure for static methods, so re-add a dummy class around all those without one
         if (cl != null)
         {
-            methodsInClass = _set.Methods().Where(x => x.Key.DeclaringType == cl.TheType);
+            methodsInClass = _set.Methods().Where(x => x.Key.DeclaringType == cl.TheType
+                && (!x.Value.Flags.HasFlag(MethodFlags.Static) || x.Value.IlName == ArduinoMethodDeclaration.CctorName));
         }
         else
         {
-            // cctors (despite being static) are included in the above lists already (luckily)
+            // This is the case for static methods, which we had removed from their class earlier.
+            // We just write all of them here as part of a special class called "StaticMethods", since they all belong to the same dummy class. Note that
+            // cctors (despite being static) are included in the above list, as they need to be part of the source class
             methodsInClass = _set.Methods().Where(x => x.Value.Flags.HasFlag(MethodFlags.Static)
             && x.Value.IlName != ArduinoMethodDeclaration.CctorName);
         }
