@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 
@@ -102,6 +103,78 @@ namespace ArduinoCsCompiler.Runtime
             {
                 *lpCounter = Environment.TickCount64 * 10000;
                 return true;
+            }
+
+            [ArduinoImplementation]
+            internal static bool GetSystemTimes(out long idle, out long kernel, out long user)
+            {
+                idle = 0;
+                kernel = 0;
+                user = 0;
+                return true;
+            }
+
+            [ArduinoImplementation]
+            internal static IntPtr CreateIoCompletionPort(
+                IntPtr FileHandle,
+                IntPtr ExistingCompletionPort,
+                UIntPtr CompletionKey,
+                int NumberOfConcurrentThreads)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation]
+            public static bool GetQueuedCompletionStatus(
+                IntPtr CompletionPort,
+                out uint lpNumberOfBytesTransferred,
+                out UIntPtr CompletionKey,
+                out IntPtr lpOverlapped,
+                int dwMilliseconds)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            internal static unsafe bool GetQueuedCompletionStatusEx(System.IntPtr CompletionPort, void* lpCompletionPortEntries,
+                System.Int32 ulCount, ref System.Int32 ulNumEntriesRemoved, System.Int32 dwMilliseconds, System.Boolean fAlertable)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation]
+            public static int GetCurrentThread()
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static unsafe bool GetThreadIOPendingFlag(System.IntPtr hThread, out bool lpIOIsPending)
+            {
+                lpIOIsPending = false;
+                return true;
+            }
+
+            [ArduinoImplementation]
+            public static bool PostQueuedCompletionStatus(
+                IntPtr CompletionPort,
+                uint dwNumberOfBytesTransferred,
+                UIntPtr CompletionKey,
+                IntPtr lpOverlapped)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation]
+            public static void Sleep(uint ms)
+            {
+                Thread.Sleep((int)ms);
+            }
+
+            [ArduinoImplementation]
+            internal static System.Boolean CloseHandle(System.IntPtr handle)
+            {
+                throw new NotImplementedException();
             }
         }
     }

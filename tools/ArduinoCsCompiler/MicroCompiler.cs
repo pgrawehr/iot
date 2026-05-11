@@ -2310,6 +2310,8 @@ namespace ArduinoCsCompiler
                     set.SuppressType(typeof(System.Device.Gpio.Drivers.RaspberryPi3Driver));
                     set.SuppressType(typeof(System.Device.Gpio.Drivers.UnixDriver));
                     set.SuppressType(typeof(Iot.Device.Board.KeyboardGpioDriver));
+                    // We use the PortableThreadPool instead.
+                    set.SuppressType("System.Threading.WindowsThreadPool");
                     PrepareClass(set, typeof(System.Array), stack);
                 }
 

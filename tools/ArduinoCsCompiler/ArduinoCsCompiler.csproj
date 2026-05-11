@@ -46,7 +46,9 @@
     <PackageDownload Include="nanoFramework.CoreLibrary" version="[2.0.0-preview.39]" />
     <PackageDownload Include="nanoFramework.System.Math" version="[2.0.0-preview.6]" />
     <!-- Why is this not available internally??
-    <PackageDownload Include="nanoFramework.System.Threading" version="[2.0.0-preview.9]" />
+    <PackageDownload Include="nanoFramework.System.Threading" version="[2.0.0-preview.9]"
+    <PackageDownload Include="nanoFramework.Runtime.Native" version=[2.0.0-preview.23]"
+    />
     -->
   </ItemGroup>
 
