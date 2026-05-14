@@ -251,6 +251,7 @@ public class IlWriter
                 // without their actual method signatures. (copilot commented)
                 tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends [mscorlib]System.MulticastDelegate");
                 tw.WriteLine("{");
+                tw.WriteLine("// TODO: Needs delegate signatures");
                 tw.WriteLine("}");
                 continue;
             }
@@ -557,6 +558,23 @@ public class IlWriter
             var m1 = m.Value;
             string isStatic = m1.Flags.HasFlag(MethodFlags.Static) ? "static" : "instance";
             string isAbstract = m1.Flags.HasFlag(MethodFlags.Abstract) ? "abstract " : string.Empty;
+
+            if (m1.Flags.HasFlag(MethodFlags.Abstract) && m1.Flags.HasFlag(MethodFlags.Static))
+            {
+                // Static abstract members (very special) are suppressed here, as we're directly calling the implementation.
+                tw.WriteLine($"// TODO: static abstract method skipped - need to call implementation directly at callsite");
+                tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
+                continue;
+            }
+
+            if (m1.NativeMethod != 0)
+            {
+                // Native methods are skipped here, as they are implemented outside of IL.
+                tw.WriteLine($"// Native method skipped - should be provided by existing implementation");
+                tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
+                continue;
+            }
+
             if (m1.Flags.HasFlag(MethodFlags.Ctor) || m1.IlName == ArduinoMethodDeclaration.CctorName)
             {
                 // Can be ..ctor or ..cctor!

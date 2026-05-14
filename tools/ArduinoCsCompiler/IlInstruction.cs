@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace ArduinoCsCompiler
 {
@@ -33,16 +34,26 @@ namespace ArduinoCsCompiler
             Size = size;
         }
 
+        /// <summary>
+        /// The opcode of the instruction
+        /// </summary>
         public OpCode OpCode
         {
             get;
         }
 
+        /// <summary>
+        ///  The PC where the instruction is (the offset from the beginning of the method body)
+        /// </summary>
         public int Pc
         {
             get;
         }
 
+        /// <summary>
+        /// Size of the instruction in bytes, including opcode and argument. This is used to calculate the PC of the next instruction,
+        /// and for branch instructions to calculate the target address.
+        /// </summary>
         public int Size { get; set; }
 
         /// <summary>
@@ -254,6 +265,26 @@ namespace ArduinoCsCompiler
                         }
 
                         return $"{typeName}";
+                    }
+
+                case OpCodeType.InlineSwitch:
+                    {
+                        // Length is officially an uint, but in practice it is always a small number, so we can decode it as int for simplicity
+                        int count = DecodeIntegerArgument();
+                        if (count <= 0)
+                        {
+                            return $"() // Switch without cases"; // ???
+                        }
+
+                        List<string> cases = new List<string>();
+                        Span<int> addresses = MemoryMarshal.Cast<byte, int>(ArgumentAddress.Slice(4));
+                        foreach (var element in addresses)
+                        {
+                            int targetAddress = element + Pc + 5 + (count * 4);
+                            cases.Add($"IL_{targetAddress:X4}");
+                        }
+
+                        return $"({string.Join(", ", cases)})";
                     }
             }
 
