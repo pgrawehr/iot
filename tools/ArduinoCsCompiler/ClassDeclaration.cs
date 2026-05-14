@@ -318,7 +318,8 @@ namespace ArduinoCsCompiler
                 if (idx != -1)
                 {
                     string f2 = f.Substring(idx + 1);
-                    f = $"'{MicroCompiler.PrivateImplementationDetailsName}_sub_{f2}'";
+                    // This will be (the currently only) nested class, which is used for storing literal arrays.
+                    f = $"{MicroCompiler.PrivateImplementationDetailsName}'{f2}'";
                     FullName = f;
                     return;
                 }

@@ -211,108 +211,31 @@ public class IlWriter
 
     private void WriteClasses(IndentedTextWriter tw)
     {
+        ClassDeclaration? pvi = null;
         foreach (ClassDeclaration cl in _set.Classes)
         {
-            var baseClass = GetClassDeclaration(cl.TheType.BaseType);
-            if (cl.UseOriginalType)
+            if (cl.FullName == MicroCompiler.PrivateImplementationDetailsName)
+            {
+                // This one is written below
+                pvi = cl;
+                continue;
+            }
+
+            if (cl.FullName != null && cl.FullName.StartsWith(MicroCompiler.PrivateImplementationDetailsName, StringComparison.Ordinal))
             {
                 continue;
             }
 
-            if (cl.TheType.IsEnum)
-            {
-                tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends [mscorlib]System.Enum");
-                tw.WriteLine("{");
-                var declared = cl.TheType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-                tw.Indent++;
+            WriteClass(tw, cl);
+        }
 
-                if (!ExternalSystemReferences.TryGetValue(declared[0].FieldType, out var enumTypeName))
-                {
-                    throw new InvalidOperationException($"{declared[0].FieldType} is not a known enum base type");
-                }
-
-                tw.WriteLine($".field public specialname rtspecialname {enumTypeName.Name} {declared[0].Name}");
-                for (int i = 1; i < declared.Length; i++)
-                {
-                    long value = GetFieldValue(cl.TheType, declared[i]);
-                    tw.WriteLine($".field public static literal valuetype {cl.FullName} {declared[i].Name} = {enumTypeName.Name}({value})");
-                }
-
-                tw.Indent--;
-                tw.WriteLine("}");
-                continue;
-            }
-
-            if (cl.TheType.BaseType == typeof(System.MulticastDelegate))
-            {
-                // The type is a delegate. These are not supported by the compiler,
-                // but we need to write them out for the compiler to be able to resolve them as types
-                // (e.g. for events). So we just write them out as empty classes extending MulticastDelegate,
-                // without their actual method signatures. (copilot commented)
-                tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends [mscorlib]System.MulticastDelegate");
-                tw.WriteLine("{");
-                tw.WriteLine("// TODO: Needs delegate signatures");
-                tw.WriteLine("}");
-                continue;
-            }
-
-            // TODO: These should be written, not the concrete types
-            if (cl.TheType.IsGenericType && cl.TheType.ContainsGenericParameters)
-            {
-                // Open generic type
-                continue;
-            }
-
-            string baseName = "object";
-
-            if (baseClass == null && cl.TheType.BaseType != null &&
-                ExternalSystemReferences.TryGetValue(cl.TheType.BaseType, out var knownType))
-            {
-                baseName = knownType.IlName;
-            }
-            else if (baseClass != null)
-            {
-                var cls1 = _set.Classes.First(x => x.FullName == baseClass.FullName);
-                baseName = cls1.FullName ?? string.Empty;
-            }
-
-            string name = cl.FullName!;
-
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(cl.TheType.FullName))
-            {
-                continue; // Things like {T} itself
-            }
-
-            bool isAbstract = cl.TheType.IsAbstract;
-            string extends = "extends";
-            if (string.IsNullOrWhiteSpace(baseName))
-            {
-                extends = string.Empty; // E.g open generic classes end up here
-            }
-
-            tw.WriteLine($"// {cl.TheType.FullName}");
-            if (cl.TheType.IsInterface)
-            {
-                tw.WriteLine($".class interface public abstract auto ansi beforefieldinit {name}"); // No "extends System.Object"
-            }
-            else
-            {
-                tw.WriteLine($".class public {(isAbstract ? "abstract " : string.Empty)}auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} {extends} {baseName}");
-            }
-
-            if (cl.WrappedInterfaces != null && cl.WrappedInterfaces.Any())
-            {
-                tw.Write("implements ");
-                tw.WriteLine(String.Join(", " + Environment.NewLine + "    ", cl.WrappedInterfaces!.Select(x => x.FullName).Where(y => !string.IsNullOrWhiteSpace(y))));
-            }
-
-            tw.WriteLine("{");
-            tw.Indent = 1;
-            WriteClassProperties(tw, cl);
-            WriteFields(tw, cl);
-            WriteMethods(tw, cl);
-            tw.Indent = 0;
-            tw.WriteLine("}");
+        if (pvi != null)
+        {
+            // Any nested types of <PrivateImplementationDetails> also need to be written.
+            var innerPrivateClasses = _set.Classes.Where(x => x.FullName != null &&
+                                                              x.FullName.StartsWith(MicroCompiler.PrivateImplementationDetailsName) &&
+                                                              x.FullName != MicroCompiler.PrivateImplementationDetailsName);
+            WriteClass(tw, pvi, innerPrivateClasses, true);
         }
 
         // Finally don't forget to write all the static methods (they had lost their class relationship earlier, since we don't need it)
@@ -322,6 +245,126 @@ public class IlWriter
         WriteMethods(tw, null);
         tw.Indent -= 1;
         tw.WriteLine("}");
+    }
+
+    private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl)
+    {
+        WriteClass(tw, cl, new List<ClassDeclaration>(), false);
+    }
+
+    private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl, IEnumerable<ClassDeclaration> nestedClasses, bool isNested)
+    {
+        var baseClass = GetClassDeclaration(cl.TheType.BaseType);
+        var genArgs = cl.TheType.GetGenericArguments();
+        if ((cl.UseOriginalType && genArgs.Length == 0) || (cl.TheType.IsArray || cl.TheType.IsPointer))
+        {
+            return;
+        }
+
+        if (cl.TheType.IsEnum)
+        {
+            tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends [mscorlib]System.Enum");
+            tw.WriteLine("{");
+            var declared = cl.TheType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+            tw.Indent++;
+
+            if (!ExternalSystemReferences.TryGetValue(declared[0].FieldType, out var enumTypeName))
+            {
+                throw new InvalidOperationException($"{declared[0].FieldType} is not a known enum base type");
+            }
+
+            tw.WriteLine($".field public specialname rtspecialname {enumTypeName.Name} {declared[0].Name}");
+            for (int i = 1; i < declared.Length; i++)
+            {
+                long value = GetFieldValue(cl.TheType, declared[i]);
+                tw.WriteLine($".field public static literal valuetype {cl.FullName} {declared[i].Name} = {enumTypeName.Name}({value})");
+            }
+
+            tw.Indent--;
+            tw.WriteLine("}");
+            return;
+        }
+
+        if (cl.TheType.BaseType == typeof(System.MulticastDelegate))
+        {
+            // The type is a delegate. These are not supported by the compiler,
+            // but we need to write them out for the compiler to be able to resolve them as types
+            // (e.g. for events). So we just write them out as empty classes extending MulticastDelegate,
+            // without their actual method signatures. (copilot commented)
+            tw.WriteLine($".class public auto ansi sealed {cl.FullName} extends [mscorlib]System.MulticastDelegate");
+            tw.WriteLine("{");
+            tw.WriteLine("// TODO: Needs delegate signatures");
+            tw.WriteLine("}");
+            return;
+        }
+
+        // TODO: These should be written, not the concrete types
+        if (cl.TheType.IsGenericType && cl.TheType.ContainsGenericParameters)
+        {
+            // Open generic type
+            return;
+        }
+
+        string baseName = "object";
+        string nested = isNested ? "nested " : string.Empty;
+
+        if (baseClass == null && cl.TheType.BaseType != null &&
+            ExternalSystemReferences.TryGetValue(cl.TheType.BaseType, out var knownType))
+        {
+            baseName = knownType.IlName;
+        }
+        else if (baseClass != null)
+        {
+            var cls1 = _set.Classes.First(x => x.FullName == baseClass.FullName);
+            baseName = cls1.FullName ?? string.Empty;
+        }
+
+        string name = cl.FullName!;
+
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(cl.TheType.FullName))
+        {
+            return;
+        }
+
+        bool isAbstract = cl.TheType.IsAbstract;
+        string extends = "extends";
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            extends = string.Empty; // E.g open generic classes end up here
+        }
+
+        tw.WriteLine($"// {cl.TheType.FullName}");
+        if (cl.TheType.IsInterface)
+        {
+            tw.WriteLine($".class {nested}interface public abstract auto ansi beforefieldinit {name}"); // No "extends System.Object"
+        }
+        else
+        {
+            tw.WriteLine($".class {nested}public {(isAbstract ? "abstract " : string.Empty)}auto ansi{(cl.TheType.IsSealed ? " sealed" : string.Empty)} beforefieldinit {name} {extends} {baseName}");
+        }
+
+        if (cl.WrappedInterfaces != null && cl.WrappedInterfaces.Any())
+        {
+            tw.Write("implements ");
+            tw.WriteLine(String.Join(", " + Environment.NewLine + "    ", cl.WrappedInterfaces!.Select(x => x.FullName).Where(y => !string.IsNullOrWhiteSpace(y))));
+        }
+
+        tw.WriteLine("{");
+        tw.Indent = 1;
+        WriteClassProperties(tw, cl);
+        WriteFields(tw, cl);
+        WriteMethods(tw, cl);
+        WriteNestedClasses(tw, nestedClasses);
+        tw.Indent = 0;
+        tw.WriteLine("}");
+    }
+
+    private void WriteNestedClasses(IndentedTextWriter tw, IEnumerable<ClassDeclaration> nestedClasses)
+    {
+        foreach (var c in nestedClasses)
+        {
+            WriteClass(tw, c, new List<ClassDeclaration>(), true);
+        }
     }
 
     private void WriteClassProperties(IndentedTextWriter tw, ClassDeclaration cl)
@@ -380,6 +423,11 @@ public class IlWriter
 
             if (cl.FullName != null && cl.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName, StringComparison.Ordinal))
             {
+                if (fieldTypeName.Contains(MicroCompiler.PrivateImplementationDetailsName))
+                {
+                    fieldTypeName = fieldTypeName.Replace(MicroCompiler.PrivateImplementationDetailsName, string.Empty, StringComparison.Ordinal);
+                }
+
                 tw.WriteLine($".field public static initonly {fieldTypeName} {f.FieldName} = bytearray");
                 tw.WriteLine("(");
                 var fieldData = _set.FieldTokens[f.Field];
@@ -486,11 +534,21 @@ public class IlWriter
                     fieldTypeName = underlyingDecl!.FullName!;
                 }
             }
-            else if (t1.FullName != null && t1.FullName!.Contains(MicroCompiler.PrivateImplementationDetailsName))
+            else if (t1.FullName != null && t1.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName))
             {
-                string typeName = t1.FullName!;
-                typeName = typeName.Replace("/", "'/'"); // Slashes must be un-escaped
-                fieldTypeName = $"valuetype '{typeName}'";
+                string typeName = t1.FullName;
+                if (typeName == "'<PrivateImplementationDetails>'/'Int32'")
+                {
+                    fieldTypeName = "int32";
+                }
+                else if (typeName == "'<PrivateImplementationDetails>'/'Int64'")
+                {
+                    fieldTypeName = "int64";
+                }
+                else
+                {
+                    fieldTypeName = $"valuetype '{typeName}'";
+                }
             }
             else if (ExternalSystemReferences.TryGetValue(t1, true, out ExternalTypeReference? externalTypeReference))
             {
@@ -742,7 +800,7 @@ public class IlWriter
             {
                 // These special types define the size of static data.
                 // We just use them exactly as declared.
-                return $"{(instruction.OpCode == OpCode.CEE_LDTOKEN ? "field " : string.Empty)}valuetype '<PrivateImplementationDetails>_sub_{fi.FieldType.Name}' {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
+                return $"{(instruction.OpCode == OpCode.CEE_LDTOKEN ? "field " : string.Empty)}valuetype '<PrivateImplementationDetails>'/'{fi.FieldType.Name}' {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
             }
 
             // Prefixes the member name with the class declaring it and also the type of the field
