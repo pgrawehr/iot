@@ -217,14 +217,14 @@ public class IlWriter
 
     private void WriteClasses(IndentedTextWriter tw)
     {
-        ClassDeclaration? pvi = null;
+        List<ClassDeclaration> pvi = new List<ClassDeclaration>();
         string nameWithQuotes = $"'{MicroCompiler.PrivateImplementationDetailsName}'";
         foreach (ClassDeclaration cl in _set.Classes)
         {
             if (cl.FullName == nameWithQuotes)
             {
-                // This one is written below
-                pvi = cl;
+                // This one is written below (merged across all assemblies with this class)
+                pvi.Add(cl);
                 continue;
             }
 
@@ -236,14 +236,20 @@ public class IlWriter
             WriteClass(tw, cl);
         }
 
-        if (pvi != null)
+        if (pvi.Count > 0)
         {
             // Any nested types of <PrivateImplementationDetails> also need to be written.
             var innerPrivateClasses = _set.Classes.Where(x => x.FullName != null &&
                                                               x.FullName.StartsWith(MicroCompiler.PrivateImplementationDetailsName) &&
                                                               x.FullName != MicroCompiler.PrivateImplementationDetailsName);
             innerPrivateClasses = innerPrivateClasses.DistinctBy(x => x.FullName);
-            WriteClass(tw, pvi, innerPrivateClasses, false);
+            WriteClass(tw, pvi.First(), innerPrivateClasses, false, () =>
+            {
+                foreach (var otherPvi in pvi.Skip(1))
+                {
+                    WriteFields(tw, otherPvi);
+                }
+            });
         }
 
         // Finally don't forget to write all the static methods (they had lost their class relationship earlier, since we don't need it)
@@ -257,10 +263,11 @@ public class IlWriter
 
     private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl)
     {
-        WriteClass(tw, cl, new List<ClassDeclaration>(), false);
+        WriteClass(tw, cl, new List<ClassDeclaration>(), false, () => { });
     }
 
-    private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl, IEnumerable<ClassDeclaration> nestedClasses, bool isNested)
+    private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl, IEnumerable<ClassDeclaration> nestedClasses, bool isNested,
+        Action extraContent)
     {
         var baseClass = GetClassDeclaration(cl.TheType.BaseType);
         var genArgs = cl.TheType.GetGenericArguments();
@@ -367,6 +374,7 @@ public class IlWriter
         WriteClassProperties(tw, cl);
         WriteFields(tw, cl);
         WriteMethods(tw, cl);
+        extraContent();
         WriteNestedClasses(tw, nestedClasses);
         tw.Indent--;
         tw.WriteLine("}");
@@ -376,7 +384,7 @@ public class IlWriter
     {
         foreach (var c in nestedClasses)
         {
-            WriteClass(tw, c, new List<ClassDeclaration>(), true);
+            WriteClass(tw, c, new List<ClassDeclaration>(), true, () => { });
         }
     }
 

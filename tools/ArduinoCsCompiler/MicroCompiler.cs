@@ -545,6 +545,7 @@ namespace ArduinoCsCompiler
 
         private void PrepareClassDeclaration(ExecutionSet set, Type classType, AnalysisStack stack)
         {
+            string n = classType.FullName ?? string.Empty;
             if (set.HasDefinition(classType))
             {
                 return;
@@ -1845,6 +1846,14 @@ namespace ArduinoCsCompiler
                     DetermineBaseAndMembers(allTypesToLoad, t, stack);
                 }
             }
+
+            ////if (classType.IsNested && classType.DeclaringType != null)
+            ////{
+            ////    if (AddClassDependency(allTypesToLoad, classType.DeclaringType))
+            ////    {
+            ////        DetermineBaseAndMembers(allTypesToLoad, classType.DeclaringType, stack);
+            ////    }
+            ////}
 
             // This causes a lot of classes to be added, but we'll probably not need them - unless any of their ctors is in the call chain
             // This is detected separately.
