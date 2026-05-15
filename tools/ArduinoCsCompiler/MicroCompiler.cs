@@ -676,9 +676,9 @@ namespace ArduinoCsCompiler
                 fields = fields.OrderBy(x => x.MetadataToken).ToList();
             }
 
-            List<ClassMember> memberTypes = new List<ClassMember>();
+            List<ClassMember> members = new List<ClassMember>();
 
-            IdentifyFields(set, classType, fields, memberTypes);
+            IdentifyFields(set, classType, fields, members);
 
             for (var index = 0; index < methods.Count; index++)
             {
@@ -694,19 +694,19 @@ namespace ArduinoCsCompiler
                     }
 
                     stack.Push(mbx);
-                    memberTypes.Add(new ClassMember(m, VariableKind.Method, set.GetOrAddMethodToken(mbx, stack), new List<int>()));
+                    members.Add(new ClassMember(m, VariableKind.Method, set.GetOrAddMethodToken(mbx, stack), new List<int>()));
                     stack.Pop();
                 }
             }
 
-            var sizeOfClass = GetClassSize(classType, memberTypes);
+            var sizeOfClass = GetClassSize(classType, members);
 
             var interfaces = classType.GetInterfaces().ToList();
 
-            sizeOfClass.Dynamic = PerformFieldAlignment(classType, sizeOfClass.Dynamic, memberTypes);
+            sizeOfClass.Dynamic = PerformFieldAlignment(classType, sizeOfClass.Dynamic, members);
 
             // Add this first, so we break the recursion to this class further down
-            var newClass = new ClassDeclaration(classType, sizeOfClass.Dynamic, sizeOfClass.Statics, set.GetOrAddClassToken(classType.GetTypeInfo(), false), memberTypes, interfaces);
+            var newClass = new ClassDeclaration(classType, sizeOfClass.Dynamic, sizeOfClass.Statics, set.GetOrAddClassToken(classType.GetTypeInfo(), false), members, interfaces);
             newClass.UseOriginalType = isReplacement;
             set.AddClass(newClass);
             foreach (var iface in interfaces)
@@ -714,7 +714,7 @@ namespace ArduinoCsCompiler
                 PrepareClassDeclaration(set, iface, stack);
             }
 
-            foreach (var dependent in memberTypes.Where(f => f.Field != null))
+            foreach (var dependent in members.Where(f => f.Field != null))
             {
                 Type ft = dependent.Field!.FieldType;
                 if (ft.IsPointer || ft.IsByRef)

@@ -143,6 +143,12 @@ public class IlWriter
         {
             if (previous?.FullName == cls1.FullName)
             {
+                // We can actually later merge these
+                if (cls1.FullName != null && cls1.FullName.Contains("__StaticArrayInitTypeSize"))
+                {
+                    continue;
+                }
+
                 cls1.UpdateFullName($"{cls1.FullName}_{cls1.NewToken:X8}");
                 continue; // Because there can also be three of them
             }
@@ -212,9 +218,10 @@ public class IlWriter
     private void WriteClasses(IndentedTextWriter tw)
     {
         ClassDeclaration? pvi = null;
+        string nameWithQuotes = $"'{MicroCompiler.PrivateImplementationDetailsName}'";
         foreach (ClassDeclaration cl in _set.Classes)
         {
-            if (cl.FullName == MicroCompiler.PrivateImplementationDetailsName)
+            if (cl.FullName == nameWithQuotes)
             {
                 // This one is written below
                 pvi = cl;
@@ -235,7 +242,8 @@ public class IlWriter
             var innerPrivateClasses = _set.Classes.Where(x => x.FullName != null &&
                                                               x.FullName.StartsWith(MicroCompiler.PrivateImplementationDetailsName) &&
                                                               x.FullName != MicroCompiler.PrivateImplementationDetailsName);
-            WriteClass(tw, pvi, innerPrivateClasses, true);
+            innerPrivateClasses = innerPrivateClasses.DistinctBy(x => x.FullName);
+            WriteClass(tw, pvi, innerPrivateClasses, false);
         }
 
         // Finally don't forget to write all the static methods (they had lost their class relationship earlier, since we don't need it)
@@ -326,6 +334,11 @@ public class IlWriter
             return;
         }
 
+        if (name.StartsWith(MicroCompiler.PrivateImplementationDetailsName))
+        {
+            name = name.Substring(MicroCompiler.PrivateImplementationDetailsName.Length);
+        }
+
         bool isAbstract = cl.TheType.IsAbstract;
         string extends = "extends";
         if (string.IsNullOrWhiteSpace(baseName))
@@ -350,12 +363,12 @@ public class IlWriter
         }
 
         tw.WriteLine("{");
-        tw.Indent = 1;
+        tw.Indent++;
         WriteClassProperties(tw, cl);
         WriteFields(tw, cl);
         WriteMethods(tw, cl);
         WriteNestedClasses(tw, nestedClasses);
-        tw.Indent = 0;
+        tw.Indent--;
         tw.WriteLine("}");
     }
 
@@ -425,7 +438,8 @@ public class IlWriter
             {
                 if (fieldTypeName.Contains(MicroCompiler.PrivateImplementationDetailsName))
                 {
-                    fieldTypeName = fieldTypeName.Replace(MicroCompiler.PrivateImplementationDetailsName, string.Empty, StringComparison.Ordinal);
+                    fieldTypeName = fieldTypeName.Replace(MicroCompiler.PrivateImplementationDetailsName,
+                        $"'{MicroCompiler.PrivateImplementationDetailsName}'/", StringComparison.Ordinal);
                 }
 
                 tw.WriteLine($".field public static initonly {fieldTypeName} {f.FieldName} = bytearray");
@@ -537,18 +551,7 @@ public class IlWriter
             else if (t1.FullName != null && t1.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName))
             {
                 string typeName = t1.FullName;
-                if (typeName == "'<PrivateImplementationDetails>'/'Int32'")
-                {
-                    fieldTypeName = "int32";
-                }
-                else if (typeName == "'<PrivateImplementationDetails>'/'Int64'")
-                {
-                    fieldTypeName = "int64";
-                }
-                else
-                {
-                    fieldTypeName = $"valuetype '{typeName}'";
-                }
+                fieldTypeName = $"valuetype '{typeName}'";
             }
             else if (ExternalSystemReferences.TryGetValue(t1, true, out ExternalTypeReference? externalTypeReference))
             {
@@ -800,7 +803,17 @@ public class IlWriter
             {
                 // These special types define the size of static data.
                 // We just use them exactly as declared.
-                return $"{(instruction.OpCode == OpCode.CEE_LDTOKEN ? "field " : string.Empty)}valuetype '<PrivateImplementationDetails>'/'{fi.FieldType.Name}' {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
+                string typeName = $"valuetype '<PrivateImplementationDetails>'/'{fi.FieldType.Name}'";
+                if (fi.FieldType == typeof(Int32))
+                {
+                    typeName = "int32";
+                }
+                else if (fi.FieldType == typeof(Int64))
+                {
+                    typeName = "int64";
+                }
+
+                return $"{(instruction.OpCode == OpCode.CEE_LDTOKEN ? "field " : string.Empty)}{typeName} {TypeNameForIl(fi.DeclaringType)}::{FieldNameForIl(fi)}";
             }
 
             // Prefixes the member name with the class declaring it and also the type of the field

@@ -457,24 +457,7 @@ namespace ArduinoCsCompiler
                                 mb = (FieldInfo)members.Single();
                             }
 
-                            byte[]? data = null;
-
-                            if (opCode == OpCode.CEE_LDSFLDA && mb.DeclaringType != null && mb.DeclaringType.Name.Contains(MicroCompiler.PrivateImplementationDetailsName))
-                            {
-                                data = TryReadInitializerData(mb);
-                            }
-
-                            if (data != null)
-                            {
-                                patchValue = set.GetOrAddFieldToken(mb, data);
-                            }
-                            else
-                            {
-                                // We're currently expecting that we don't need to patch fields, because system functions don't generally allow public access to them
-                                patchValue = set.GetOrAddFieldToken(mb);
-                            }
-
-                            fieldsUsed.Add((FieldInfo)set.InverseResolveToken(patchValue)!);
+                            patchValue = UseField(set, opCode, mb, fieldsUsed);
 
                             if (MicroCompiler.HasReplacementAttribute(mb.DeclaringType!, out var attribute) && attribute.ReplaceEntireType == false)
                             {
@@ -528,6 +511,8 @@ namespace ArduinoCsCompiler
                                 }
 
                                 patchValue = set.GetOrAddFieldToken(mi, array);
+                                typesUsed.Add(mi.FieldType.GetTypeInfo());
+                                UseField(set, opCode, mi, fieldsUsed);
                             }
                             else
                             {
@@ -592,6 +577,30 @@ namespace ArduinoCsCompiler
 
             var exceptions = AnalyzeExceptionClauses(set, m, typesUsed);
             return new IlCode(method, byteCode, methodsUsed, fieldsUsed, typesUsed, exceptions);
+        }
+
+        private static int UseField(ExecutionSet set, OpCode opCode, FieldInfo mb, List<FieldInfo> fieldsUsed)
+        {
+            int patchValue;
+            byte[]? data = null;
+
+            if ((opCode == OpCode.CEE_LDSFLDA || opCode == OpCode.CEE_LDTOKEN) && mb.DeclaringType != null && mb.DeclaringType.Name.Contains(MicroCompiler.PrivateImplementationDetailsName))
+            {
+                data = TryReadInitializerData(mb);
+            }
+
+            if (data != null)
+            {
+                patchValue = set.GetOrAddFieldToken(mb, data);
+            }
+            else
+            {
+                // We're currently expecting that we don't need to patch fields, because system functions don't generally allow public access to them
+                patchValue = set.GetOrAddFieldToken(mb);
+            }
+
+            fieldsUsed.Add((FieldInfo)set.InverseResolveToken(patchValue)!);
+            return patchValue;
         }
 
         private static byte[]? TryReadInitializerData(FieldInfo mi)
