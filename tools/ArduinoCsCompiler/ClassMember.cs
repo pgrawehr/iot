@@ -32,7 +32,7 @@ namespace ArduinoCsCompiler
             FieldName = SanitizeFieldName(Field.Name);
             if (!FieldName.Contains('\'', StringComparison.Ordinal))
             {
-                FieldName = FieldName + $"0x{token:X8}";
+                FieldName = FieldName + $"_0x{token:X8}";
             }
 
             Name = $"Field: {field.MemberInfoSignature()}";

@@ -143,8 +143,9 @@ public class IlWriter
         {
             if (previous?.FullName == cls1.FullName)
             {
-                // We can actually later merge these
-                if (cls1.FullName != null && cls1.FullName.Contains("__StaticArrayInitTypeSize"))
+                // We will later merge these into just one class
+                if (cls1.FullName != null &&
+                    (cls1.FullName.Contains("__StaticArrayInitTypeSize") || cls1.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName)))
                 {
                     continue;
                 }

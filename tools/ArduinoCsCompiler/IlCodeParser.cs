@@ -457,7 +457,7 @@ namespace ArduinoCsCompiler
                                 mb = (FieldInfo)members.Single();
                             }
 
-                            patchValue = UseField(set, opCode, mb, fieldsUsed);
+                            patchValue = UseField(set, opCode, mb, fieldsUsed, typesUsed);
 
                             if (MicroCompiler.HasReplacementAttribute(mb.DeclaringType!, out var attribute) && attribute.ReplaceEntireType == false)
                             {
@@ -512,7 +512,7 @@ namespace ArduinoCsCompiler
 
                                 patchValue = set.GetOrAddFieldToken(mi, array);
                                 typesUsed.Add(mi.FieldType.GetTypeInfo());
-                                UseField(set, opCode, mi, fieldsUsed);
+                                UseField(set, opCode, mi, fieldsUsed, typesUsed);
                             }
                             else
                             {
@@ -579,7 +579,7 @@ namespace ArduinoCsCompiler
             return new IlCode(method, byteCode, methodsUsed, fieldsUsed, typesUsed, exceptions);
         }
 
-        private static int UseField(ExecutionSet set, OpCode opCode, FieldInfo mb, List<FieldInfo> fieldsUsed)
+        private static int UseField(ExecutionSet set, OpCode opCode, FieldInfo mb, List<FieldInfo> fieldsUsed, List<TypeInfo> typesUsed)
         {
             int patchValue;
             byte[]? data = null;
@@ -600,6 +600,15 @@ namespace ArduinoCsCompiler
             }
 
             fieldsUsed.Add((FieldInfo)set.InverseResolveToken(patchValue)!);
+            var fieldType = mb.FieldType;
+            set.GetOrAddClassToken(fieldType.GetTypeInfo(), false);
+            typesUsed.Add(fieldType.GetTypeInfo());
+            if (fieldType.IsNested && fieldType.DeclaringType != null)
+            {
+                set.GetOrAddClassToken(fieldType.DeclaringType.GetTypeInfo(), false);
+                typesUsed.Add(fieldType.DeclaringType.GetTypeInfo());
+            }
+
             return patchValue;
         }
 

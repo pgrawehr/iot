@@ -187,6 +187,12 @@ namespace ArduinoCsCompiler
             internal set => _entryPoint = value;
         }
 
+        public ClassDeclaration? PrivateImplementationDetailsInstance
+        {
+            get;
+            set;
+        }
+
         public MethodInfo? MainEntryPointMethod
         {
             get;
