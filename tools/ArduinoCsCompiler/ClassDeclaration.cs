@@ -36,6 +36,7 @@ namespace ArduinoCsCompiler
             NewToken = newToken;
             _interfaces = interfaces;
             Name = type.ClassSignature(true);
+            CheckValidName();
             ReadOnly = false;
             _fullNameConfigured = false;
             UseOriginalType = false;
@@ -48,6 +49,7 @@ namespace ArduinoCsCompiler
             StaticSize = other.StaticSize;
             NewToken = other.NewToken;
             Name = TheType.ClassSignature(true);
+            CheckValidName();
             ReadOnly = other.ReadOnly;
             UseOriginalType = other.UseOriginalType;
             _interfaces = other._interfaces;
@@ -130,6 +132,14 @@ namespace ArduinoCsCompiler
 
                 // Don't run these init functions, to complicated or depend on native functions
                 return TheType.FullName == "System.SR";
+            }
+        }
+
+        private void CheckValidName()
+        {
+            if (Name.EndsWith('*') || Name.EndsWith('&'))
+            {
+                throw new InvalidOperationException($"{Name} is not a class, but a pointer or reference type");
             }
         }
 

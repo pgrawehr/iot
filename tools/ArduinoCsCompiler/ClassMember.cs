@@ -30,7 +30,8 @@ namespace ArduinoCsCompiler
             Field = field;
             StaticFieldSize = staticFieldSize;
             FieldName = SanitizeFieldName(Field.Name);
-            if (!FieldName.Contains('\'', StringComparison.Ordinal))
+            string declTypeName = Field.DeclaringType?.FullName ?? string.Empty;
+            if (!FieldName.Contains('\'', StringComparison.Ordinal) && !(declTypeName.Contains(MicroCompiler.PrivateImplementationDetailsName, StringComparison.Ordinal)))
             {
                 FieldName = FieldName + $"_0x{token:X8}";
             }

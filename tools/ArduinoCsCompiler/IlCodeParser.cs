@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Microsoft.VisualBasic.FileIO;
 
 namespace ArduinoCsCompiler
 {
@@ -417,12 +418,7 @@ namespace ArduinoCsCompiler
                                 if (mi2.ReturnType != typeof(void))
                                 {
                                     var t = mi2.ReturnType;
-                                    if (t.IsPointer || t.IsByRef)
-                                    {
-                                        t = t.GetElementType()!;
-                                    }
-
-                                    typesUsed.Add(t.GetTypeInfo());
+                                    UseType(t, set, typesUsed);
                                 }
                             }
 
@@ -465,13 +461,14 @@ namespace ArduinoCsCompiler
                                 // both the original and the replacement types in the execution set.
                                 if (attribute.TypeToReplace != null)
                                 {
-                                    typesUsed.Add(attribute.TypeToReplace.GetTypeInfo());
+                                    UseType(attribute.TypeToReplace, set, typesUsed);
                                 }
                             }
                             else
                             {
                                 // Add the fields' class to the list of used classes, or that one will be missing if the class consists of only fields (rare, but happens)
-                                typesUsed.Add(mb.DeclaringType!.GetTypeInfo());
+                                var t = mb.DeclaringType ?? typeof(Type); // Force non-null
+                                UseType(t, set, typesUsed);
                             }
 
                             break;
@@ -511,7 +508,8 @@ namespace ArduinoCsCompiler
                                 }
 
                                 patchValue = set.GetOrAddFieldToken(mi, array);
-                                typesUsed.Add(mi.FieldType.GetTypeInfo());
+                                var t = mi.FieldType ?? typeof(Type);
+                                UseType(t, set, typesUsed);
                                 UseField(set, opCode, mi, fieldsUsed, typesUsed);
                             }
                             else
@@ -602,14 +600,24 @@ namespace ArduinoCsCompiler
             fieldsUsed.Add((FieldInfo)set.InverseResolveToken(patchValue)!);
             var fieldType = mb.FieldType;
             set.GetOrAddClassToken(fieldType.GetTypeInfo(), false);
-            typesUsed.Add(fieldType.GetTypeInfo());
-            if (fieldType.IsNested && fieldType.DeclaringType != null)
-            {
-                set.GetOrAddClassToken(fieldType.DeclaringType.GetTypeInfo(), false);
-                typesUsed.Add(fieldType.DeclaringType.GetTypeInfo());
-            }
+            UseType(fieldType, set, typesUsed);
 
             return patchValue;
+        }
+
+        private static void UseType(Type t, ExecutionSet set, List<TypeInfo> typesUsed)
+        {
+            if (t.IsPointer || t.IsByRef)
+            {
+                t = t.GetElementType()!;
+            }
+
+            typesUsed.Add(t.GetTypeInfo());
+            if (t.IsNested && t.DeclaringType != null)
+            {
+                set.GetOrAddClassToken(t.DeclaringType.GetTypeInfo(), false);
+                typesUsed.Add(t.DeclaringType.GetTypeInfo());
+            }
         }
 
         private static byte[]? TryReadInitializerData(FieldInfo mi)

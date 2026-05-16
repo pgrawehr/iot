@@ -445,11 +445,11 @@ public class IlWriter
 
             if (cl.FullName != null && cl.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName, StringComparison.Ordinal))
             {
-                if (fieldTypeName.Contains(MicroCompiler.PrivateImplementationDetailsName))
-                {
-                    fieldTypeName = fieldTypeName.Replace(MicroCompiler.PrivateImplementationDetailsName,
-                        $"'{MicroCompiler.PrivateImplementationDetailsName}'/", StringComparison.Ordinal);
-                }
+                ////if (fieldTypeName.Contains(MicroCompiler.PrivateImplementationDetailsName))
+                ////{
+                ////    fieldTypeName = fieldTypeName.Replace(MicroCompiler.PrivateImplementationDetailsName,
+                ////        $"'{MicroCompiler.PrivateImplementationDetailsName}'/", StringComparison.Ordinal);
+                ////}
 
                 tw.WriteLine($".field public static initonly {fieldTypeName} {f.FieldName} = bytearray");
                 tw.WriteLine("(");
