@@ -244,11 +244,11 @@ public class IlWriter
                                                               x.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName) &&
                                                               pvi.All(y => y != x));
             innerPrivateClasses = innerPrivateClasses.DistinctBy(x => x.FullName);
-            WriteClass(tw, pvi.First(), innerPrivateClasses, false, () =>
+            WriteClass(tw, pvi.First(), innerPrivateClasses, false, (suppresses) =>
             {
                 foreach (var otherPvi in pvi.Skip(1))
                 {
-                    WriteFields(tw, otherPvi);
+                    WriteFields(tw, otherPvi, suppresses);
                 }
             });
         }
@@ -264,11 +264,11 @@ public class IlWriter
 
     private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl)
     {
-        WriteClass(tw, cl, new List<ClassDeclaration>(), false, () => { });
+        WriteClass(tw, cl, new List<ClassDeclaration>(), false, (x) => { });
     }
 
     private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl, IEnumerable<ClassDeclaration> nestedClasses, bool isNested,
-        Action extraContent)
+        Action<List<ClassMember>> extraContent)
     {
         var baseClass = GetClassDeclaration(cl.TheType.BaseType);
         var genArgs = cl.TheType.GetGenericArguments();
@@ -375,9 +375,10 @@ public class IlWriter
         tw.WriteLine("{");
         tw.Indent++;
         WriteClassProperties(tw, cl);
-        WriteFields(tw, cl);
+        List<ClassMember> suppressClassMembers = new List<ClassMember>();
+        WriteFields(tw, cl, suppressClassMembers);
         WriteMethods(tw, cl);
-        extraContent();
+        extraContent(suppressClassMembers);
         WriteNestedClasses(tw, nestedClasses);
         tw.Indent--;
         tw.WriteLine("}");
@@ -387,7 +388,7 @@ public class IlWriter
     {
         foreach (var c in nestedClasses)
         {
-            WriteClass(tw, c, new List<ClassDeclaration>(), true, () => { });
+            WriteClass(tw, c, new List<ClassDeclaration>(), true, (suppresses) => { });
         }
     }
 
@@ -438,10 +439,17 @@ public class IlWriter
         }
     }
 
-    private void WriteFields(IndentedTextWriter tw, ClassDeclaration cl)
+    private void WriteFields(IndentedTextWriter tw, ClassDeclaration cl, List<ClassMember> suppressThese)
     {
         foreach (ClassMember f in cl.Members.Where(x => x.Field != null))
         {
+            if (suppressThese.Any(x => f.FieldName == x.FieldName))
+            {
+                continue;
+            }
+
+            suppressThese.Add(f);
+
             bool isStatic = f.Field!.IsStatic;
             string fieldTypeName = TypeNameForIl(f.Field.FieldType);
 
@@ -454,6 +462,7 @@ public class IlWriter
                 ////}
 
                 tw.WriteLine($".field public static initonly {fieldTypeName} {f.FieldName} = bytearray");
+                tw.Indent++;
                 tw.WriteLine("(");
                 var fieldData = _set.FieldTokens[f.Field];
                 if (fieldData.InitializerData == null || fieldData.InitializerData.Length == 0)
@@ -463,14 +472,17 @@ public class IlWriter
 
                 for (int i = 0; i < fieldData.InitializerData.Length; i++)
                 {
-                    tw.Write($"{fieldData.InitializerData[i]:X2} ");
                     if (i % 16 == 0 && i != 0)
                     {
                         tw.WriteLine();
                     }
+
+                    tw.Write($"{fieldData.InitializerData[i]:X2} ");
                 }
 
+                tw.WriteLine();
                 tw.WriteLine(")");
+                tw.Indent--;
             }
             else
             {
@@ -558,11 +570,6 @@ public class IlWriter
                     var underlyingDecl = GetClassDeclaration(type.GetEnumUnderlyingType());
                     fieldTypeName = underlyingDecl!.FullName!;
                 }
-            }
-            else if (t1.FullName != null && t1.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName))
-            {
-                string typeName = t1.FullName;
-                fieldTypeName = $"valuetype '{typeName}'";
             }
             else if (ExternalSystemReferences.TryGetValue(t1, true, out ExternalTypeReference? externalTypeReference))
             {

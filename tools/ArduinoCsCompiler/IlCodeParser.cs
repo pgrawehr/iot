@@ -495,7 +495,6 @@ namespace ArduinoCsCompiler
                             var resolved = ResolveMember(m, token);
                             if (resolved is TypeInfo ti)
                             {
-                                bool isEnum = ti.IsEnum;
                                 patchValue = set.GetOrAddClassToken(ti, false);
                                 typesUsed.Add(ti);
                             }

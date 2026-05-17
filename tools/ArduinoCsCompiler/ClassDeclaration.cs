@@ -312,6 +312,7 @@ namespace ArduinoCsCompiler
                     }
 
                     result = $"{result}0x{NewToken:X8}";
+                    result = result.Replace("`", "_", StringComparison.Ordinal);
                 }
 
                 // Remove remaining clauses
