@@ -214,7 +214,7 @@ namespace Iot.Device.Nmea0183
         public TrackEstimationParameters TrackEstimationParameters { get; private set; }
 
         /// <summary>
-        /// Which <see cref="SentenceId"/> generated AIS messages should get. Meaningful values are <see cref="AisParser.VdmId"/> or <see cref="AisParser.VdoId"/>.
+        /// Which <see cref="SentenceId"/> generated AIS messages should get. Meaningful values are <see cref="SentenceId.Vdm"/> or <see cref="SentenceId.Vdo"/>.
         /// Default is "VDO"
         /// </summary>
         public SentenceId GeneratedSentencesId
@@ -434,7 +434,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="sentence">The new sentence</param>
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
-            _cache?.Add(sentence);
+            _cache?.Add(source, sentence);
 
             DoCleanup(sentence.DateTime);
 
@@ -478,6 +478,7 @@ namespace Iot.Device.Nmea0183
                             ship.DimensionToStern = Length.FromMeters(msgPartB.DimensionToStern);
                             ship.DimensionToPort = Length.FromMeters(msgPartB.DimensionToPort);
                             ship.DimensionToStarboard = Length.FromMeters(msgPartB.DimensionToStarboard);
+                            ship.NavigationStatus = NavigationStatus.NotDefined;
                         }
 
                         CheckIsExceptionalTarget(ship, sentence.DateTime);
@@ -570,6 +571,7 @@ namespace Iot.Device.Nmea0183
                         ship.DimensionToStern = Length.FromMeters(msgPos.DimensionToStern);
                         ship.DimensionToPort = Length.FromMeters(msgPos.DimensionToPort);
                         ship.DimensionToStarboard = Length.FromMeters(msgPos.DimensionToStarboard);
+                        ship.NavigationStatus = NavigationStatus.NotDefined;
                         ship.ShipType = msgPos.ShipType;
                         ship.Name = msgPos.Name;
                         CheckIsExceptionalTarget(ship, sentence.DateTime);

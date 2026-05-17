@@ -176,13 +176,7 @@ public class RaspberryPi3Driver : GpioDriver
     /// <inheritdoc/>
     protected internal override void ClosePin(int pinNumber) => InternalDriver.ClosePin(pinNumber);
 
-    /// <inheritdoc/>
-    protected internal override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber)
-    {
-        return InternalDriver.ConvertPinNumberToLogicalNumberingScheme(pinNumber);
-    }
-
-    /// <inheritdoc/>
+    /// <inheritdoc />
     protected internal override PinMode GetPinMode(int pinNumber) => InternalDriver.GetPinMode(pinNumber);
 
     /// <inheritdoc/>
@@ -284,9 +278,7 @@ public class RaspberryPi3Driver : GpioDriver
     {
         var ret = new ComponentInformation(this, "Generic Raspberry Pi Wrapper driver");
         ret.AddSubComponent(_internalDriver.QueryComponentInformation());
-#pragma warning disable SDGPIO0001
         ret.Properties["ChipInfo"] = _internalDriver.GetChipInfo().ToString();
-#pragma warning restore SDGPIO0001
         return ret;
     }
 }

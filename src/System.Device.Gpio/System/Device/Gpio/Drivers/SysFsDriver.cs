@@ -90,7 +90,6 @@ public class SysFsDriver : UnixDriver
     /// </summary>
     /// <param name="chip">The chip to select (use <see cref="GetAvailableChips"/> to query the list of available values)</param>
     /// <exception cref="PlatformNotSupportedException"></exception>
-    [Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
     public SysFsDriver(GpioChipInfo chip)
     {
         if (Environment.OSVersion.Platform != PlatformID.Unix)
@@ -123,7 +122,6 @@ public class SysFsDriver : UnixDriver
     /// This can be used to determine the correct gpio chip for constructor calls to <see cref="LibGpiodDriver"/>
     /// </summary>
     /// <returns>A list of chips detected</returns>
-    [Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
     public static IList<GpioChipInfo> GetAvailableChips()
     {
         string[] fileNames = Directory.GetFileSystemEntries(GpioBasePath, $"{GpioChip}*", SearchOption.TopDirectoryOnly);
@@ -171,7 +169,6 @@ public class SysFsDriver : UnixDriver
         return list;
     }
 
-    [Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
     private static GpioChipInfo GetChipInfoForName(string name)
     {
         int idx = name.IndexOf(GpioChip, StringComparison.Ordinal);
@@ -197,13 +194,6 @@ public class SysFsDriver : UnixDriver
     /// The number of pins provided by the driver.
     /// </summary>
     protected internal override int PinCount => throw new PlatformNotSupportedException("This driver is generic so it can not enumerate how many pins are available.");
-
-    /// <summary>
-    /// Converts a board pin number to the driver's logical numbering scheme.
-    /// </summary>
-    /// <param name="pinNumber">The board pin number to convert.</param>
-    /// <returns>The pin number in the driver's logical numbering scheme.</returns>
-    protected internal override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber) => throw new PlatformNotSupportedException("This driver is generic so it can not perform conversions between pin numbering schemes.");
 
     /// <summary>
     /// Opens a pin in order for it to be ready to use.
@@ -598,7 +588,12 @@ public class SysFsDriver : UnixDriver
                     continue;
                 }
 
-                throw new IOException($"Error while waiting for pin interrupts. (ErrorCode={errorCode})");
+                // Can't use ExceptionHelper.GetLastErrorMessage() here because we need the error code
+                // for the EINTR check. GetLastErrorMessage() would call GetLastWin32Error() internally,
+                // and we can't call GetLastWin32Error() twice as subsequent calls might return different values.
+                string errorMessage = Marshal.GetLastPInvokeErrorMessage();
+                string error = string.IsNullOrWhiteSpace(errorMessage) ? errorCode.ToString() : $"{errorCode} ({errorMessage})";
+                throw new IOException($"Error while waiting for pin interrupts. (ErrorCode={error})");
             }
 
             if (waitResult > 0)
@@ -706,7 +701,6 @@ public class SysFsDriver : UnixDriver
     }
 
     /// <inheritdoc />
-    [Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
     public override GpioChipInfo GetChipInfo()
     {
         return GetAvailableChips().First(x => x.Id == _chipNumber);
@@ -901,9 +895,7 @@ public class SysFsDriver : UnixDriver
     public override ComponentInformation QueryComponentInformation()
     {
         var self = new ComponentInformation(this, nameof(SysFsDriver));
-#pragma warning disable SDGPIO0001
         self.Properties["ChipInfo"] = GetChipInfo().ToString();
-#pragma warning restore SDGPIO0001
         return self;
     }
 }

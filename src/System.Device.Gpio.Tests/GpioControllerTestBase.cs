@@ -249,8 +249,8 @@ public abstract class GpioControllerTestBase
             controller.OpenPin(OutputPin, PinMode.Output);
             controller.Write(OutputPin, PinValue.Low);
             controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Falling, Callback);
-            // Sometimes, we get an extra event just at the beginning - wait for it and then drop it
-            ev.WaitOne(1000);
+            // Sometimes, we get an extra event just at the beginning - therefore wait a bit
+            Thread.Sleep(100);
             wasCalled = false;
             controller.Write(OutputPin, PinValue.High);
             controller.UnregisterCallbackForPinValueChangedEvent(InputPin, Callback);
@@ -320,18 +320,10 @@ public abstract class GpioControllerTestBase
     [Fact]
     public void AddCallbackRemoveAllCallbackTest()
     {
-        using GpioDriver testDriver = GetTestDriver();
-        // Skipping the test for now when using the SysFsDriver or the RaspberryPi3Driver given that this test is flaky for those drivers.
-        // Issue tracking this problem is https://github.com/dotnet/iot/issues/629
-        if (testDriver is SysFsDriver || testDriver is RaspberryPi3Driver)
-        {
-            return;
-        }
-
         RetryHelper.Execute(() =>
         {
             int risingEventOccurredCount = 0, fallingEventOccurredCount = 0;
-            using (GpioController controller = new GpioController(testDriver))
+            using (GpioController controller = new GpioController(GetTestDriver()))
             {
                 controller.OpenPin(InputPin, PinMode.Input);
                 controller.OpenPin(OutputPin, PinMode.Output);
@@ -342,8 +334,14 @@ public abstract class GpioControllerTestBase
                 controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Falling, Callback3);
                 controller.RegisterCallbackForPinValueChangedEvent(InputPin, PinEventTypes.Rising, Callback4);
 
+                Thread.Sleep(100);
+                risingEventOccurredCount = 0;
+                fallingEventOccurredCount = 0;
                 controller.Write(OutputPin, PinValue.High);
                 Thread.Sleep(WaitMilliseconds);
+
+                Assert.Equal(1, risingEventOccurredCount);
+                Assert.Equal(0, fallingEventOccurredCount);
 
                 controller.UnregisterCallbackForPinValueChangedEvent(InputPin, Callback1);
                 controller.UnregisterCallbackForPinValueChangedEvent(InputPin, Callback2);
@@ -454,6 +452,7 @@ public abstract class GpioControllerTestBase
         using (GpioController controller = new GpioController(GetTestDriver()))
         {
             CancellationTokenSource tokenSource = new CancellationTokenSource();
+            tokenSource.CancelAfter(TimeSpan.FromSeconds(20));
             controller.OpenPin(InputPin, PinMode.Input);
             controller.OpenPin(OutputPin, PinMode.Output);
             controller.Write(OutputPin, PinValue.Low);
@@ -479,6 +478,7 @@ public abstract class GpioControllerTestBase
             using (GpioController controller = new GpioController(GetTestDriver()))
             {
                 CancellationTokenSource tokenSource = new CancellationTokenSource();
+                tokenSource.CancelAfter(TimeSpan.FromSeconds(30));
                 controller.OpenPin(InputPin, PinMode.Input);
                 controller.OpenPin(OutputPin, PinMode.Output);
                 controller.Write(OutputPin, PinValue.Low);

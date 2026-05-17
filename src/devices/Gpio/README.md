@@ -32,11 +32,17 @@ When adding an existing GpioPin, by default, the new pin allocation will directl
 | Board | Driver |
 | :-: | :-: |
 | Orange Pi 4 | [OrangePi4Driver](./Drivers/OrangePi4Driver.cs) |
-| Orange Pi Lite | [OrangePiLiteDriver](./Drivers/OrangePiLiteDriver.cs)  |
+| Orange Pi 5 | [OrangePi5Driver](./Drivers/OrangePi5Driver.cs) |
+| Orange Pi 5B | [OrangePi5BDriver](./Drivers/OrangePi5BDriver.cs) |
+| Orange Pi 5 Plus | [OrangePi5PlusDriver](./Drivers/OrangePi5PlusDriver.cs) |
+| Orange Pi 5 Pro | [OrangePi5ProDriver](./Drivers/OrangePi5ProDriver.cs) |
+| Orange Pi 5 Max | [OrangePi5MaxDriver](./Drivers/OrangePi5MaxDriver.cs) |
+| Orange Pi 5 Ultra | [OrangePi5UltraDriver](./Drivers/OrangePi5UltraDriver.cs) |
+| Orange Pi Lite | [OrangePiLiteDriver](./Drivers/OrangePiLiteDriver.cs) |
 | Orange Pi Lite 2 | [OrangePiLite2Driver](./Drivers/OrangePiLite2Driver.cs) |
 | Orange Pi Zero | [OrangePiZeroDriver](./Drivers/OrangePiZeroDriver.cs) |
 | Orange Pi Zero 2 | [OrangePiZero2Driver](./Drivers/OrangePiZero2Driver.cs) |
-| Rock Pi 4B Plus | [RockPi4bPlusDriver](./Drivers/RockPi4bPlusDriver.cs) |
+| Rock Pi 4B Plus | [RockPi4BPlusDriver](./Drivers/RockPi4BPlusDriver.cs) |
 | Orange Pi PC | [OrangePiPCDriver](./Drivers/OrangePiPCDriver.cs) |
 
 ## Benchmarks
@@ -47,7 +53,7 @@ The test uses different GPIO drivers to quickly switch the state of GPIO, and us
 
 Benchmarking with **Orange Pi Zero**, select GPIO 6 (Logical). The operating system is Armbian buster, Linux kernel version is 5.10.16, and .NET version is 5.0.3.
 
-| Drivers| Language | Library Version | Test Date | Average Frequency |  |
+| Drivers | Language | Library Version | Test Date | Average Frequency | |
 | :-: | :-: | :-: | :-: | :-: | :-: |
 | SunxiDriver | C# | - | 2020-02-20 | 185 KHz | ![sunxi](./imgs/SunxiDriver/sunxi.jpg) |
 | SysFsDriver | C# | System.Device.Gpio 1.3.0 | 2020-02-20 | 692 Hz | ![sysfs](./imgs/SunxiDriver/sysfs.jpg) |
@@ -58,7 +64,7 @@ Benchmarking with **Orange Pi Zero**, select GPIO 6 (Logical). The operating sys
 
 Benchmarking with **Orange Pi 4**, select GPIO 150 (Logical). The operating system is Armbian buster, Linux kernel version is 5.10.16, and .NET version is 5.0.3.
 
-| Drivers| Language | Library Version | Test Date | Average Frequency |  |
+| Drivers | Language | Library Version | Test Date | Average Frequency | |
 | :-: | :-: | :-: | :-: | :-: | :-: |
 | RockchipDriver | C# | - | 2020-02-22 | 516 KHz | ![rockchip](./imgs/RockchipDriver/rockchip.jpg) |
 | SysFsDriver | C# | System.Device.Gpio 1.3.0 | 2020-02-22 | 4.27 KHz | ![sysfs](./imgs/RockchipDriver/sysfs.jpg) |
@@ -94,7 +100,7 @@ int pin = 7;
 
 Console.WriteLine($"Let's blink an on-board LED!");
 
-using GpioController controller = new GpioController(PinNumberingScheme.Board, new OrangePiZeroDriver());
+using GpioController controller = new GpioController(new OrangePiZeroDriver());
 using BoardLed led = new BoardLed("orangepi:red:status");
 
 controller.OpenPin(pin, PinMode.InputPullUp);

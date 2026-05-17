@@ -4,19 +4,19 @@
     <!-- Disabling the check for End of live TFMs since we still target netcoreapp 2.1 -->
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <PreReleaseVersionLabel>prerelease</PreReleaseVersionLabel>
-    <MicrosoftDotNetGenAPIPackageVersion>8.0.0-beta.25378.1</MicrosoftDotNetGenAPIPackageVersion>
+    <MicrosoftDotNetGenAPIPackageVersion>9.0.0-beta.26261.1</MicrosoftDotNetGenAPIPackageVersion>
     <!-- dotnet/corefx dependencies -->
-    <SystemDrawingCommonPackageVersion>8.0.8</SystemDrawingCommonPackageVersion>
-    <SystemIOPortsPackageVersion>8.0.0</SystemIOPortsPackageVersion>
+    <SystemDrawingCommonPackageVersion>10.0.7</SystemDrawingCommonPackageVersion>
+    <SystemIOPortsPackageVersion>10.0.8</SystemIOPortsPackageVersion>
     <MicrosoftWin32RegistryPackageVersion>5.0.0</MicrosoftWin32RegistryPackageVersion>
-    <SystemManagementPackageVersion>8.0.0</SystemManagementPackageVersion>
+    <SystemManagementPackageVersion>10.0.8</SystemManagementPackageVersion>
     <SystemThreadingTasksExtensionsPackageVersion>4.6.3</SystemThreadingTasksExtensionsPackageVersion>
     <SystemMemoryPackageVersion>4.6.3</SystemMemoryPackageVersion>
     <SystemRuntimeInteropServicesWindowsRuntimePackageVersion>4.3.0</SystemRuntimeInteropServicesWindowsRuntimePackageVersion>
     <MicrosoftExtensionsLoggingConsolePackageVersion>8.0.1</MicrosoftExtensionsLoggingConsolePackageVersion>
-    <MicrosoftExtensionsLoggingPackageVersion>8.0.1</MicrosoftExtensionsLoggingPackageVersion>
-    <MicrosoftExtensionsLoggingAbstractionsPackageVersion>8.0.3</MicrosoftExtensionsLoggingAbstractionsPackageVersion>
-    <SystemTextJsonPackageVersion>8.0.5</SystemTextJsonPackageVersion>
-    <SystemIOPipelinesVersion>8.0.0</SystemIOPipelinesVersion>
+    <MicrosoftExtensionsLoggingPackageVersion>10.0.8</MicrosoftExtensionsLoggingPackageVersion>
+    <MicrosoftExtensionsLoggingAbstractionsPackageVersion>10.0.7</MicrosoftExtensionsLoggingAbstractionsPackageVersion>
+    <SystemTextJsonPackageVersion>10.0.7</SystemTextJsonPackageVersion>
+    <SystemIOPipelinesVersion>10.0.8</SystemIOPipelinesVersion>
   </PropertyGroup>
 </Project>

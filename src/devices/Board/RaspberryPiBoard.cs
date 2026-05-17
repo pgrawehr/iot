@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Iot.Device.Gpio;
 using UnitsNet;
 
 namespace Iot.Device.Board
@@ -282,11 +283,11 @@ namespace Iot.Device.Board
                     break;
                 case 2:
                     // Available only on the compute module
-                    // GPIO​40 / PWM0 / SPI2 MISO / UART1 TX
-                    // ​GPIO​41 / PWM1 / SPI2 MOSI / UART1 RX
-                    // GPIO​42 / GPCLK1 / SPI2 SCLK / UART1 RTS
-                    // GPIO​43 / GPCLK2 / SPI2 CE0 / UART1 CTS
-                    // GPIO​44 / GPCLK1 / I2C0 SDA / I2C1 SDA / SPI2 CE1
+                    // GPIO40 / PWM0 / SPI2 MISO / UART1 TX
+                    // GPIO41 / PWM1 / SPI2 MOSI / UART1 RX
+                    // GPIO42 / GPCLK1 / SPI2 SCLK / UART1 RTS
+                    // GPIO43 / GPCLK2 / SPI2 CE0 / UART1 CTS
+                    // GPIO44 / GPCLK1 / I2C0 SDA / I2C1 SDA / SPI2 CE1
                     // GPIO45 / PWM1 / I2C0 SCL / I2C1 SCL / SPI2 CE2
                     pins.Add(40);
                     pins.Add(41);
@@ -924,6 +925,70 @@ namespace Iot.Device.Board
 
             ret.Properties["PinCount"] = PinCount.ToString(CultureInfo.InvariantCulture);
             return ret;
+        }
+
+        /// <summary>
+        /// Creates a derived GPIO controller that uses physical pin mapping for the Raspberry Pi.
+        /// </summary>
+        /// <returns>A virtual gpio controller that uses physical pin mapping for this device</returns>
+        public VirtualGpioController CreatePhysicalPinMapping()
+        {
+            Initialize();
+
+            return CreatePhysicalPinMapping(_managedGpioController!);
+        }
+
+        /// <summary>
+        /// Converts a board pin number to the driver's logical numbering scheme.
+        /// </summary>
+        /// <param name="pinNumber">The physical pin number to convert.</param>
+        /// <returns>The pin number in the driver's logical numbering scheme.</returns>
+        private static int ConvertPinNumberFromPhysicalToLogical(int pinNumber)
+        {
+            return pinNumber switch
+            {
+                3 => 2,
+                5 => 3,
+                7 => 4,
+                8 => 14,
+                10 => 15,
+                11 => 17,
+                12 => 18,
+                13 => 27,
+                15 => 22,
+                16 => 23,
+                18 => 24,
+                19 => 10,
+                21 => 9,
+                22 => 25,
+                23 => 11,
+                24 => 8,
+                26 => 7,
+                27 => 0,
+                28 => 1,
+                29 => 5,
+                31 => 6,
+                32 => 12,
+                33 => 13,
+                35 => 19,
+                36 => 16,
+                37 => 26,
+                38 => 20,
+                40 => 21,
+                _ => -1
+            };
+        }
+
+        /// <summary>
+        /// Creates a derived GPIO controller of the provided one which uses physical board numbering.
+        /// Use this if you manually created the controller.
+        /// </summary>
+        /// <param name="defaultController">The controller to use. Must be for a Raspberry Pi.</param>
+        /// <returns>A controller that uses physical board numbering</returns>
+        /// <remarks>If the provided <paramref name="defaultController"/> is not for a Raspberry Pi, the behavior might be undefined.</remarks>
+        public static VirtualGpioController CreatePhysicalPinMapping(GpioController defaultController)
+        {
+            return new MappingGpioController(defaultController, ConvertPinNumberFromPhysicalToLogical);
         }
     }
 }

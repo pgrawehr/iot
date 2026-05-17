@@ -37,58 +37,21 @@ public class GpioController : IDisposable
     /// Initializes a new instance of the <see cref="GpioController"/> class that will use the logical pin numbering scheme as default.
     /// </summary>
     public GpioController()
-#pragma warning disable CS0612 // PinNumberingScheme is obsolete
-        : this(PinNumberingScheme.Logical)
-#pragma warning restore CS0612
+        : this(GetBestDriverForBoard())
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="GpioController"/> class that will use the specified numbering scheme and driver.
+    /// Initializes a new instance of the <see cref="GpioController"/> class that will use the specified driver.
     /// </summary>
     /// <param name="driver">The driver that manages all of the pin operations for the controller.</param>
     public GpioController(GpioDriver driver)
     {
         _driver = driver;
 
-#pragma warning disable CS0612 // PinNumberingScheme is obsolete
-        NumberingScheme = PinNumberingScheme.Logical;
-#pragma warning restore CS0612
-
         _openPins = new ConcurrentDictionary<int, PinValue?>();
         _gpioPins = new ConcurrentDictionary<int, GpioPin>();
     }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="GpioController"/> class that will use the specified numbering scheme and driver.
-    /// </summary>
-    /// <param name="numberingScheme">The numbering scheme used to represent pins provided by the controller.</param>
-    /// <param name="driver">The driver that manages all of the pin operations for the controller.</param>
-    [Obsolete]
-    public GpioController(PinNumberingScheme numberingScheme, GpioDriver driver)
-    {
-        _driver = driver;
-        NumberingScheme = numberingScheme;
-        _openPins = new ConcurrentDictionary<int, PinValue?>();
-        _gpioPins = new ConcurrentDictionary<int, GpioPin>();
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="GpioController"/> class that will use the specified numbering scheme.
-    /// The controller will default to use the driver that best applies given the platform the program is executing on.
-    /// </summary>
-    /// <param name="numberingScheme">The numbering scheme used to represent pins provided by the controller.</param>
-    [Obsolete]
-    public GpioController(PinNumberingScheme numberingScheme)
-        : this(numberingScheme, GetBestDriverForBoard())
-    {
-    }
-
-    /// <summary>
-    /// The numbering scheme used to represent pins provided by the controller.
-    /// </summary>
-    [Obsolete]
-    public PinNumberingScheme NumberingScheme { get; }
 
     /// <summary>
     /// The number of pins provided by the controller.
@@ -111,18 +74,6 @@ public class GpioController : IDisposable
         {
             return _gpioPins.Values;
         }
-    }
-
-    /// <summary>
-    /// Gets the logical pin number in the controller's numbering scheme.
-    /// </summary>
-    /// <param name="pinNumber">The pin number</param>
-    /// <returns>The logical pin number in the controller's numbering scheme.</returns>
-    protected virtual int GetLogicalPinNumber(int pinNumber)
-    {
-#pragma warning disable CS0612 // PinNumberingScheme is obsolete
-        return (NumberingScheme == PinNumberingScheme.Logical) ? pinNumber : _driver.ConvertPinNumberToLogicalNumberingScheme(pinNumber);
-#pragma warning restore CS0612
     }
 
     /// <summary>
@@ -149,8 +100,7 @@ public class GpioController : IDisposable
     /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
     protected virtual void OpenPinCore(int pinNumber)
     {
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        _driver.OpenPin(logicalPinNumber);
+        _driver.OpenPin(pinNumber);
     }
 
     /// <summary>
@@ -204,8 +154,7 @@ public class GpioController : IDisposable
     /// <param name="pinNumber">The pin number in the controller's numbering scheme.</param>
     protected virtual void ClosePinCore(int pinNumber)
     {
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        _driver.ClosePin(logicalPinNumber);
+        _driver.ClosePin(pinNumber);
         _gpioPins.TryRemove(pinNumber, out _);
     }
 
@@ -221,7 +170,6 @@ public class GpioController : IDisposable
             throw new InvalidOperationException($"Can not set a mode to pin {pinNumber} because it is not open.");
         }
 
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
         if (!IsPinModeSupported(pinNumber, mode))
         {
             throw new InvalidOperationException($"Pin {pinNumber} does not support mode {mode}.");
@@ -229,11 +177,11 @@ public class GpioController : IDisposable
 
         if (_openPins.TryGetValue(pinNumber, out var desired) && desired.HasValue)
         {
-            _driver.SetPinMode(logicalPinNumber, mode, desired.Value);
+            _driver.SetPinMode(pinNumber, mode, desired.Value);
         }
         else
         {
-            _driver.SetPinMode(logicalPinNumber, mode);
+            _driver.SetPinMode(pinNumber, mode);
         }
     }
 
@@ -249,8 +197,7 @@ public class GpioController : IDisposable
             throw new InvalidOperationException($"Can not get the mode of pin {pinNumber} because it is not open.");
         }
 
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        return _driver.GetPinMode(logicalPinNumber);
+        return _driver.GetPinMode(pinNumber);
     }
 
     /// <summary>
@@ -281,8 +228,7 @@ public class GpioController : IDisposable
     public virtual bool IsPinModeSupported(int pinNumber, PinMode mode)
     {
         CheckDriverValid();
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        return _driver.IsPinModeSupported(logicalPinNumber, mode);
+        return _driver.IsPinModeSupported(pinNumber, mode);
     }
 
     /// <summary>
@@ -297,8 +243,7 @@ public class GpioController : IDisposable
             throw new InvalidOperationException($"Can not read from pin {pinNumber} because it is not open.");
         }
 
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        return _driver.Read(logicalPinNumber);
+        return _driver.Read(pinNumber);
     }
 
     /// <summary>
@@ -327,16 +272,14 @@ public class GpioController : IDisposable
             throw new InvalidOperationException($"Can not write to pin {pinNumber} because it is not open.");
         }
 
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-
         _openPins[pinNumber] = value;
 
-        if (_driver.GetPinMode(logicalPinNumber) != PinMode.Output)
+        if (_driver.GetPinMode(pinNumber) != PinMode.Output)
         {
             return;
         }
 
-        _driver.Write(logicalPinNumber, value);
+        _driver.Write(pinNumber, value);
     }
 
     /// <summary>
@@ -366,8 +309,7 @@ public class GpioController : IDisposable
             throw new InvalidOperationException($"Can not wait for events from pin {pinNumber} because it is not open.");
         }
 
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        return _driver.WaitForEvent(logicalPinNumber, eventTypes, cancellationToken);
+        return _driver.WaitForEvent(pinNumber, eventTypes, cancellationToken);
     }
 
     /// <summary>
@@ -397,8 +339,7 @@ public class GpioController : IDisposable
             throw new InvalidOperationException($"Can not wait for events from pin {pinNumber} because it is not open.");
         }
 
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        return _driver.WaitForEventAsync(logicalPinNumber, eventTypes, token);
+        return _driver.WaitForEventAsync(pinNumber, eventTypes, token);
     }
 
     /// <summary>
@@ -414,8 +355,7 @@ public class GpioController : IDisposable
             throw new InvalidOperationException($"Can not add callback for pin {pinNumber} because it is not open.");
         }
 
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        _driver.AddCallbackForPinValueChangedEvent(logicalPinNumber, eventTypes, callback);
+        _driver.AddCallbackForPinValueChangedEvent(pinNumber, eventTypes, callback);
     }
 
     /// <summary>
@@ -430,8 +370,7 @@ public class GpioController : IDisposable
             throw new InvalidOperationException($"Can not remove callback for pin {pinNumber} because it is not open.");
         }
 
-        int logicalPinNumber = GetLogicalPinNumber(pinNumber);
-        _driver.RemoveCallbackForPinValueChangedEvent(logicalPinNumber, callback);
+        _driver.RemoveCallbackForPinValueChangedEvent(pinNumber, callback);
     }
 
     /// <summary>
@@ -524,24 +463,43 @@ public class GpioController : IDisposable
 
             case RaspberryBoardInfo.Model.RaspberryPi5:
 
-                // For now, for Raspberry Pi 5, we'll use the LibGpiodDriver.
-                // We need to create a new driver for the Raspberry Pi 5,
-                // because the Raspberry Pi 5 uses an entirely different GPIO controller (RP1)
-#pragma warning disable SDGPIO0001
-                var chips = LibGpiodDriver.GetAvailableChips();
-                // The RP1 chip reports 54 lines
-                GpioChipInfo? selectedChip = chips.FirstOrDefault(x => x.NumLines == 54);
-                if (selectedChip is null)
+                // Raspberry Pi 5 uses an entirely different GPIO controller (RP1) which reports 54 lines.
+                // Try V1 (libgpiod.so.2) first, then V2 (libgpiod.so.3) for compatibility
+                // with different Raspberry Pi OS versions.
+                if (GpioDriver.TryCreate(() => CreatePi5Driver(LibGpiodDriver.GetAvailableChips(), id => new LibGpiodDriver(id)), out GpioDriver? pi5Driver))
                 {
-                    throw new NotSupportedException("Couldn't find the default GPIO chip. You might need to create the LibGpiodDriver explicitly");
+                    return pi5Driver;
                 }
-#pragma warning restore SDGPIO0001
-                return new LibGpiodDriver(selectedChip.Id);
+
+                if (GpioDriver.TryCreate(() => CreatePi5Driver(LibGpiodV2Driver.GetAvailableChips(), id => new LibGpiodV2Driver(id)), out pi5Driver))
+                {
+                    return pi5Driver;
+                }
+
+                throw new NotSupportedException("Couldn't find the default GPIO chip. You might need to create the LibGpiodDriver explicitly");
 
             default:
 
                 return UnixDriver.Create();
         }
+    }
+
+    /// <summary>
+    /// Creates a libgpiod-based driver for the Raspberry Pi 5 RP1 chip (54 lines).
+    /// </summary>
+    /// <param name="chips">Available GPIO chips from a specific libgpiod version.</param>
+    /// <param name="driverFactory">Factory to create the driver for the selected chip.</param>
+    /// <returns>A GPIO driver for the RP1 chip.</returns>
+    /// <exception cref="PlatformNotSupportedException">The RP1 chip was not found.</exception>
+    private static GpioDriver CreatePi5Driver(IList<GpioChipInfo> chips, Func<int, GpioDriver> driverFactory)
+    {
+        var selectedChip = chips.FirstOrDefault(x => x.NumLines == 54);
+        if (selectedChip is null)
+        {
+            throw new PlatformNotSupportedException("Couldn't find the RP1 GPIO chip");
+        }
+
+        return driverFactory(selectedChip.Id);
     }
 
     /// <summary>

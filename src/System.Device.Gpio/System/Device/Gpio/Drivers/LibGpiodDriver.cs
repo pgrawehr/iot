@@ -9,7 +9,7 @@ using System.Device.Gpio.Libgpiod.V1;
 using System.Diagnostics;
 using System.Linq;
 using System.Diagnostics.CodeAnalysis;
-
+using System.Globalization;
 using LibgpiodV1 = Interop.LibgpiodV1;
 
 namespace System.Device.Gpio.Drivers;
@@ -81,7 +81,7 @@ public class LibGpiodDriver : UnixDriver
             _chip = new SafeChipHandle(LibgpiodV1.gpiod_chip_open_by_number(gpioChip));
             if (_chip == null || _chip.IsInvalid || _chip.IsClosed)
             {
-                throw ExceptionHelper.GetIOException(ExceptionResource.NoChipFound, Marshal.GetLastWin32Error());
+                throw ExceptionHelper.GetIOException(ExceptionResource.NoChipFound, ExceptionHelper.GetLastErrorMessage());
             }
 
             _pinCount = LibgpiodV1.gpiod_chip_num_lines(_chip);
@@ -99,7 +99,6 @@ public class LibGpiodDriver : UnixDriver
     /// Construct an instance of this driver with the provided chip.
     /// </summary>
     /// <param name="chip">The chip to use. Should be one of the elements returned by <see cref="GetAvailableChips"/></param>
-    [Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
     public LibGpiodDriver(GpioChipInfo chip)
         : this(chip.Id)
     {
@@ -109,12 +108,10 @@ public class LibGpiodDriver : UnixDriver
     /// Returns the set of available chips for this driver
     /// </summary>
     /// <returns>A list of <see cref="GpioChipInfo"/> instances</returns>
-    [Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
     public static IList<GpioChipInfo> GetAvailableChips()
     {
         List<GpioChipInfo> result = new List<GpioChipInfo>();
         var iterator = new SafeChipIteratorHandle(LibgpiodV1.gpiod_chip_iter_new());
-        int index = 0;
         while (true)
         {
             SafeChipHandle chip = new SafeChipHandle(LibgpiodV1.gpiod_chip_iter_next_noclose(iterator));
@@ -129,8 +126,26 @@ public class LibGpiodDriver : UnixDriver
             if (!result.Any(x => x.Label == label && x.NumLines == numLines))
             {
                 // The iterator may find duplicates, but we skip them here
-                result.Add(new GpioChipInfo(index, name, label, numLines));
-                index++;
+                // Need to find the number at the end of the name (e.g. 15 in gpiochip15)
+                int id = 0;
+                int numberOfDigitsAtEnd = 0;
+                for (var i = name.Length - 1; i >= 0; i--)
+                {
+                    if (!char.IsDigit(name[i]))
+                    {
+                        break;
+                    }
+
+                    numberOfDigitsAtEnd++;
+                }
+
+                string theNumber = name[^numberOfDigitsAtEnd..];
+                if (!Int32.TryParse(theNumber, CultureInfo.InvariantCulture, out id))
+                {
+                    id = 0;
+                }
+
+                result.Add(new GpioChipInfo(id, name, label, numLines));
             }
 
             chip.Dispose();
@@ -200,10 +215,6 @@ public class LibGpiodDriver : UnixDriver
     {
         return _pinNumberToEventHandler.ContainsKey(pinNumber);
     }
-
-    /// <inheritdoc/>
-    protected internal override int ConvertPinNumberToLogicalNumberingScheme(int pinNumber) =>
-        throw ExceptionHelper.GetPlatformNotSupportedException(ExceptionResource.ConvertPinNumberingSchemaError);
 
     /// <inheritdoc/>
     protected internal override PinMode GetPinMode(int pinNumber)
@@ -279,7 +290,7 @@ public class LibGpiodDriver : UnixDriver
             int result = LibgpiodV1.gpiod_line_get_value(pinHandle.Handle);
             if (result == -1)
             {
-                throw ExceptionHelper.GetIOException(ExceptionResource.ReadPinError, Marshal.GetLastWin32Error(), pinNumber);
+                throw ExceptionHelper.GetIOException(ExceptionResource.ReadPinError, ExceptionHelper.GetLastErrorMessage(), pinNumber);
             }
 
             _pinValue[pinNumber] = result;
@@ -341,7 +352,7 @@ public class LibGpiodDriver : UnixDriver
 
             if (requestResult == -1)
             {
-                throw ExceptionHelper.GetIOException(ExceptionResource.SetPinModeError, Marshal.GetLastWin32Error(),
+                throw ExceptionHelper.GetIOException(ExceptionResource.SetPinModeError, ExceptionHelper.GetLastErrorMessage(),
                     pinNumber);
             }
 
@@ -373,7 +384,7 @@ public class LibGpiodDriver : UnixDriver
 
             if (requestResult == -1)
             {
-                throw ExceptionHelper.GetIOException(ExceptionResource.SetPinModeError, Marshal.GetLastWin32Error(),
+                throw ExceptionHelper.GetIOException(ExceptionResource.SetPinModeError, ExceptionHelper.GetLastErrorMessage(),
                     pinNumber);
             }
 
@@ -453,14 +464,11 @@ public class LibGpiodDriver : UnixDriver
         IntPtr libgpiodVersionPtr = LibgpiodV1.gpiod_version_string();
         string libgpiodVersion = Marshal.PtrToStringAnsi(libgpiodVersionPtr) ?? string.Empty;
         self.Properties["LibGpiodVersion"] = libgpiodVersion;
-#pragma warning disable SDGPIO0001
         self.Properties["ChipInfo"] = GetChipInfo().ToString();
-#pragma warning restore SDGPIO0001
         return self;
     }
 
     /// <inheritdoc />
-    [Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
     public override GpioChipInfo GetChipInfo()
     {
         return GetAvailableChips().First(x => x.Id == _chipNumber);

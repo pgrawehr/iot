@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Device.Gpio.Drivers;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,11 +28,27 @@ public abstract class GpioDriver : IDisposable
     protected internal abstract int PinCount { get; }
 
     /// <summary>
-    /// Converts a board pin number to the driver's logical numbering scheme.
+    /// Tries to call the provided functor (typically a constructor call) and checks whether it throws an exception.
     /// </summary>
-    /// <param name="pinNumber">The board pin number to convert.</param>
-    /// <returns>The pin number in the driver's logical numbering scheme.</returns>
-    protected internal abstract int ConvertPinNumberToLogicalNumberingScheme(int pinNumber);
+    /// <typeparam name="T">The type of the return object</typeparam>
+    /// <param name="creationAction">A constructor call</param>
+    /// <param name="driver">The driver object on success</param>
+    /// <returns>True on success, false otherwise</returns>
+    public static bool TryCreate<T>(Func<T> creationAction, [NotNullWhen(true)] out T? driver)
+        where T : class, IDisposable
+    {
+        try
+        {
+            driver = creationAction();
+        }
+        catch (Exception x) when (x is PlatformNotSupportedException || x is DllNotFoundException)
+        {
+            driver = null;
+            return false;
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Opens a pin in order for it to be ready to use.
@@ -206,11 +223,11 @@ public abstract class GpioDriver : IDisposable
     }
 
     /// <summary>
-    /// Gets information about the current chip
+    /// Gets information about the current GPIO chip.
+    /// A GPIO controller may organize pins into various groups or even different hardware modules.
     /// </summary>
     /// <returns>An instance of the <see cref="GpioChipInfo"/> record</returns>
-    /// <exception cref="NotSupportedException">The current driver does not support this data</exception>
-    [Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
+    /// <exception cref="NotSupportedException">The current driver does not support this method</exception>
     public virtual GpioChipInfo GetChipInfo()
     {
         throw new NotSupportedException();

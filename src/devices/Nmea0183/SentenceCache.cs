@@ -18,6 +18,7 @@ namespace Iot.Device.Nmea0183
     /// Caches the last sentence(s) of each type for later retrieval.
     /// This is a helper class for <see cref="AutopilotController"/> and <see cref="PositionProvider"/>. Use <see cref="PositionProvider"/> to query the position from
     /// the most appropriate messages.
+    /// It internally keeps two kinds of lists: The last sentence of each type and the last sentence of each type _by source_.
     /// </summary>
     public sealed class SentenceCache : IDisposable
     {
@@ -322,12 +323,40 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Adds the given sentence to the cache - if manual filling is preferred
+        /// Adds the given sentence explicitly to the cache
         /// </summary>
-        /// <param name="sentence">Sentence to add</param>
-        public void Add(NmeaSentence sentence)
+        /// <param name="source">The source of the sentence</param>
+        /// <param name="sentence">The sentence</param>
+        public void Add(NmeaSinkAndSource source, NmeaSentence sentence)
         {
-            OnNewSequence(null, sentence);
+            OnNewSequence(source, sentence);
+        }
+
+        /// <summary>
+        /// Adds a sentence to the cache, but only to the list of sentences from this particular source,
+        /// so the message will not override the effect of a <see cref="GetLastSentence(Iot.Device.Nmea0183.SentenceId)"/> call.
+        /// </summary>
+        /// <param name="source">The source. Must be non-null</param>
+        /// <param name="sentence">The sentence. Must be non-null</param>
+        public void AddFromSource(NmeaSinkAndSource source, NmeaSentence sentence)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(sentence);
+            string sourceName = source.InterfaceName;
+            lock (_lock)
+            {
+                // We already own the lock to do that a bit more complex update.
+                if (_sentencesBySource.TryGetValue(sourceName, out var dict))
+                {
+                    dict[sentence.SentenceId] = sentence;
+                }
+                else
+                {
+                    var d = new Dictionary<SentenceId, NmeaSentence>();
+                    d[sentence.SentenceId] = sentence;
+                    _sentencesBySource[sourceName] = d;
+                }
+            }
         }
 
         /// <summary>

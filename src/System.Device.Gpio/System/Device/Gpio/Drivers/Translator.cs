@@ -7,17 +7,16 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace System.Device.Gpio.Drivers;
 
-[Experimental(DiagnosticIds.SDGPIO0001, UrlFormat = DiagnosticIds.UrlFormat)]
 internal static class Translator
 {
     public static (GpiodLineDirection? _direction, GpiodLineBias? _bias) Translate(PinMode pinMode)
     {
         return pinMode switch
         {
-            PinMode.Input => (GpiodLineDirection.Input, null),
+            PinMode.Input => (GpiodLineDirection.Input, GpiodLineBias.Disabled),
             PinMode.Output => (GpiodLineDirection.Output, null),
-            PinMode.InputPullDown => (null, GpiodLineBias.PullDown),
-            PinMode.InputPullUp => (null, GpiodLineBias.PullUp),
+            PinMode.InputPullDown => (GpiodLineDirection.Input, GpiodLineBias.PullDown),
+            PinMode.InputPullUp => (GpiodLineDirection.Input, GpiodLineBias.PullUp),
             _ => throw new ArgumentOutOfRangeException(nameof(pinMode), pinMode, null)
         };
     }

@@ -108,6 +108,12 @@ namespace Iot.Device.Arduino
         }
 
         /// <summary>
+        /// The recommended firmware version to use with this library.
+        /// When using an older version, some features might not work properly.
+        /// </summary>
+        public static Version ExpectedFirmwareVersion => new Version(3, 4);
+
+        /// <summary>
         /// The board logger.
         /// </summary>
         protected ILogger Logger => _logger;
@@ -452,7 +458,7 @@ namespace Iot.Device.Arduino
                 _firmataVersion = _firmata.QueryFirmataVersion();
                 if (_firmataVersion < _firmata.QuerySupportedFirmataVersion())
                 {
-                    throw new NotSupportedException($"Firmata version on board is {_firmataVersion}. Expected {_firmata.QuerySupportedFirmataVersion()}. They must be equal.");
+                    throw new NotSupportedException($"Firmata version on board is {_firmataVersion}. Expected at least {_firmata.QuerySupportedFirmataVersion()}.");
                 }
 
                 Logger.LogInformation($"Firmata version on board is {_firmataVersion}.");
@@ -461,6 +467,11 @@ namespace Iot.Device.Arduino
                 _firmwareName = firmwareName;
 
                 Logger.LogInformation($"Firmware version on board is {_firmwareVersion}");
+
+                if (_firmwareVersion < ExpectedFirmwareVersion)
+                {
+                    Logger.LogWarning($"Firmware version on board is {_firmwareVersion}. It is recommended to upgrade to {ExpectedFirmwareVersion}.");
+                }
 
                 _firmata.QueryCapabilities();
 
@@ -853,11 +864,21 @@ namespace Iot.Device.Arduino
         /// Configures the sampling interval for analog input pins (when an event callback is enabled)
         /// </summary>
         /// <param name="timeSpan">Timespan between updates. Default ~20ms</param>
-        public void SetAnalogPinSamplingInterval(TimeSpan timeSpan)
+        public void SetAnalogInputSamplingInterval(TimeSpan timeSpan)
         {
             Initialize();
 
             Firmata.SetAnalogInputSamplingInterval(timeSpan);
+        }
+
+        /// <summary>
+        /// Query the current analog input sampling interval.
+        /// </summary>
+        /// <returns>The timespan between analog reads, if any are configured</returns>
+        public TimeSpan GetAnalogInputSamplingInterval()
+        {
+            Initialize();
+            return Firmata.GetAnalogInputSamplingInterval();
         }
 
         /// <summary>

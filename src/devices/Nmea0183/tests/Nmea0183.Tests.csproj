@@ -3,13 +3,13 @@
   <PropertyGroup>
     <TargetFrameworks>$(DefaultTestTfms)</TargetFrameworks>
     <IsPackable>false</IsPackable>
-    <LangVersion>latest</LangVersion>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <RootNamespace>Iot.Device.Nmea0183.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Calibration_Cirrus.xml" />
+    <None Remove="Calibration_Cirrus_2025.xml" />
     <None Remove="Calibration_Cirrus_v1.xml" />
     <None Remove="Calibration_Cirrus_v3.xml" />
     <None Remove="Calibration_Cirrus_v5.xml" />
@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Calibration_Cirrus.xml" />
+    <EmbeddedResource Include="Calibration_Cirrus_2025.xml" />
     <EmbeddedResource Include="Calibration_Cirrus_v1.xml" />
     <EmbeddedResource Include="Calibration_Cirrus_v3.xml" />
     <EmbeddedResource Include="Calibration_Cirrus_v5.xml" />
