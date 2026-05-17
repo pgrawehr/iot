@@ -229,7 +229,7 @@ public class IlWriter
                 continue;
             }
 
-            if (cl.FullName != null && cl.FullName.StartsWith(MicroCompiler.PrivateImplementationDetailsName, StringComparison.Ordinal))
+            if (cl.FullName != null && cl.FullName.StartsWith(nameWithQuotes, StringComparison.Ordinal))
             {
                 continue;
             }
@@ -241,8 +241,8 @@ public class IlWriter
         {
             // Any nested types of <PrivateImplementationDetails> also need to be written.
             var innerPrivateClasses = _set.Classes.Where(x => x.FullName != null &&
-                                                              x.FullName.StartsWith(MicroCompiler.PrivateImplementationDetailsName) &&
-                                                              x.FullName != MicroCompiler.PrivateImplementationDetailsName);
+                                                              x.FullName.Contains(MicroCompiler.PrivateImplementationDetailsName) &&
+                                                              pvi.All(y => y != x));
             innerPrivateClasses = innerPrivateClasses.DistinctBy(x => x.FullName);
             WriteClass(tw, pvi.First(), innerPrivateClasses, false, () =>
             {
@@ -342,9 +342,11 @@ public class IlWriter
             return;
         }
 
-        if (name.StartsWith(MicroCompiler.PrivateImplementationDetailsName))
+        int idx = name.IndexOf('/');
+        if (isNested && idx >= 0)
         {
-            name = name.Substring(MicroCompiler.PrivateImplementationDetailsName.Length);
+            // Names of nested classes don't declare their outer part in their own declaration
+            name = name.Substring(idx + 1);
         }
 
         bool isAbstract = cl.TheType.IsAbstract;
