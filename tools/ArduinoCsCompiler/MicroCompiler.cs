@@ -479,6 +479,7 @@ namespace ArduinoCsCompiler
             HashSet<object> hb = new HashSet<object>();
             PrepareClass(set, hb.Comparer.GetType(), stack); // The actual instance here is ObjectEqualityComparer<object>
 
+            PrepareClass(set, typeof(IEquatable<>), stack);
             PrepareClass(set, typeof(IEquatable<object>), stack);
 
             // PrepareClass(set, typeof(System.Span<Int32>));
@@ -2801,7 +2802,7 @@ namespace ArduinoCsCompiler
                     throw new MissingMethodException($"{methodInfo.MethodSignature()} has no visible implementation but a body");
                 }
 
-                if (ilBytes != null && ilBytes.Length > Math.Pow(2, 14) - 1)
+                if (TargetFramework == TargetFramework.Firmata && ilBytes != null && ilBytes.Length > Math.Pow(2, 14) - 1)
                 {
                     throw new InvalidProgramException($"Max IL size of real time method is 2^14 Bytes. Actual size is {ilBytes.Length}.");
                 }
