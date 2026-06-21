@@ -220,6 +220,8 @@ public class IlWriter
     {
         List<ClassDeclaration> pvi = new List<ClassDeclaration>();
         string nameWithQuotes = $"'{MicroCompiler.PrivateImplementationDetailsName}'";
+
+        WriteClass(tw, GetClassDeclaration(typeof(System.IEquatable<>))!, true);
         foreach (ClassDeclaration cl in _set.Classes)
         {
             if (cl.FullName == nameWithQuotes)
@@ -250,7 +252,7 @@ public class IlWriter
                 {
                     WriteFields(tw, otherPvi, suppresses);
                 }
-            });
+            }, false);
         }
 
         // Finally don't forget to write all the static methods (they had lost their class relationship earlier, since we don't need it)
@@ -262,13 +264,13 @@ public class IlWriter
         tw.WriteLine("}");
     }
 
-    private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl)
+    private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl, bool allowGenericDeclaration = false)
     {
-        WriteClass(tw, cl, new List<ClassDeclaration>(), false, (x) => { });
+        WriteClass(tw, cl, new List<ClassDeclaration>(), false, (x) => { }, allowGenericDeclaration);
     }
 
     private void WriteClass(IndentedTextWriter tw, ClassDeclaration cl, IEnumerable<ClassDeclaration> nestedClasses, bool isNested,
-        Action<List<ClassMember>> extraContent)
+        Action<List<ClassMember>> extraContent, bool allowGenericDeclaration)
     {
         var baseClass = GetClassDeclaration(cl.TheType.BaseType);
         var genArgs = cl.TheType.GetGenericArguments();
@@ -315,10 +317,16 @@ public class IlWriter
         }
 
         // TODO: These should be written, not the concrete types
+        bool isGenericDeclaration = false;
         if (cl.TheType.IsGenericType && cl.TheType.ContainsGenericParameters)
         {
             // Open generic type
-            return;
+            if (!allowGenericDeclaration)
+            {
+                return;
+            }
+
+            isGenericDeclaration = true;
         }
 
         string baseName = "object";
@@ -347,6 +355,13 @@ public class IlWriter
         {
             // Names of nested classes don't declare their outer part in their own declaration
             name = name.Substring(idx + 1);
+        }
+
+        if (isGenericDeclaration)
+        {
+            var genericParameters = cl.TheType.GetGenericArguments();
+            string genericParams = "<" + string.Join(", ", genericParameters.Select(p => p.Name)) + ">";
+            name += genericParams;
         }
 
         bool isAbstract = cl.TheType.IsAbstract;
@@ -388,7 +403,7 @@ public class IlWriter
     {
         foreach (var c in nestedClasses)
         {
-            WriteClass(tw, c, new List<ClassDeclaration>(), true, (suppresses) => { });
+            WriteClass(tw, c, new List<ClassDeclaration>(), true, (suppresses) => { }, false);
         }
     }
 
