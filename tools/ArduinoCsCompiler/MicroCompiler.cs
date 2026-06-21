@@ -461,7 +461,10 @@ namespace ArduinoCsCompiler
 
             if (TargetFramework == TargetFramework.Nano)
             {
-                // These will be replaced with their true types instead of the complex stuff below
+                // For some reason, the NanoFramework is missing IEquatable<T> for now. This is bad, because the default
+                // equality comparer uses it. Therefore, we need to add it here, so that the EE can use it.
+                PrepareClass(set, typeof(IEquatable<>), stack);
+                // The others will be replaced with their true types instead of the complex stuff below
                 return;
             }
 

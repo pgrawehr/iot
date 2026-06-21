@@ -259,7 +259,7 @@ public class IlWriter
         tw.WriteLine($".class public auto ansi sealed {StaticMethods} extends object");
         tw.WriteLine("{");
         tw.Indent += 1;
-        WriteMethods(tw, null);
+        WriteMethods(tw, null, false);
         tw.Indent -= 1;
         tw.WriteLine("}");
     }
@@ -392,7 +392,7 @@ public class IlWriter
         WriteClassProperties(tw, cl);
         List<ClassMember> suppressClassMembers = new List<ClassMember>();
         WriteFields(tw, cl, suppressClassMembers);
-        WriteMethods(tw, cl);
+        WriteMethods(tw, cl, allowGenericDeclaration);
         extraContent(suppressClassMembers);
         WriteNestedClasses(tw, nestedClasses);
         tw.Indent--;
@@ -629,7 +629,7 @@ public class IlWriter
         return fieldTypeName + suffix;
     }
 
-    private void WriteMethods(IndentedTextWriter tw, ClassDeclaration? cl)
+    private void WriteMethods(IndentedTextWriter tw, ClassDeclaration? cl, bool allowGenericDeclaration)
     {
         IEnumerable<KeyValuePair<EquatableMethod, ArduinoMethodDeclaration>> methodsInClass;
         // We have previously removed the class enclosure for static methods, so re-add a dummy class around all those without one
