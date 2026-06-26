@@ -46,7 +46,7 @@ namespace Iot.Device.Common
         {
             get
             {
-                return new QuantityInfo(_name, typeof(NoUnitEnum), new UnitInfo[] { new UnitInfo(NoUnitEnum.None, _name, BaseUnits.Undefined) }, NoUnitEnum.None,
+                return new QuantityInfo(_name, typeof(NoUnitEnum), new UnitInfo[] { new UnitInfo(NoUnitEnum.None, _name, BaseUnits.Undefined, _name) }, NoUnitEnum.None,
                     Zero, BaseDimensions.Dimensionless);
             }
         }
