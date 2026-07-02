@@ -116,6 +116,7 @@ namespace DisplayControl.ViewModels
             var relPos = _target.RelativePosition;
             if (relPos != null && _target.Position.ContainsValidPosition())
             {
+                sb.AppendLine($"Position: {_target.Position.ToString("M2N M2E", CultureInfo.CurrentCulture)}");
                 sb.AppendLine($"Dist: {FormatLength(relPos.Distance)} ");
                 if (_target is MovingTarget mt)
                 {
@@ -129,7 +130,7 @@ namespace DisplayControl.ViewModels
                     sb.AppendLine($"TCPA: {tcpa:hh:mm:ss} ");
                 }
 
-                sb.Append($"Status: {relPos.SafetyState}");
+                sb.Append($"Status: {relPos.SafetyState}, Type: {_target.IdentifyMmsiType()}");
             }
             else
             {

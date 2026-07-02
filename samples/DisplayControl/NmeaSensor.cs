@@ -113,6 +113,7 @@ namespace DisplayControl
         private readonly CustomData<bool> _auxiliaryOnline;
         private readonly CustomData<bool> _shipOnline;
         private readonly CustomData<bool> _plotterOnline;
+        private readonly CustomData<bool> _autoPilotOnline;
         private readonly CustomData<string> _currentDestinationWaypoint;
         private NmeaSentence m_lastMessageFromHandheld;
 
@@ -159,6 +160,7 @@ namespace DisplayControl
             _auxiliaryOnline = new CustomData<bool>("Auxiliary Online", false, SensorSource.Navigation, 3);
             _shipOnline = new CustomData<bool>("Ship Online", false, SensorSource.Navigation, 4);
             _plotterOnline = new CustomData<bool>("Plotter Online", false, SensorSource.Navigation, 5, TimeSpan.FromSeconds(30));
+            _autoPilotOnline = new CustomData<bool>("Autopilot Online", false, SensorSource.Navigation, 6, TimeSpan.FromSeconds(30));
             _currentDestinationWaypoint =
                 new CustomData<string>("Next Waypoint Name", string.Empty, SensorSource.Navigation, 1,
                     TimeSpan.FromSeconds(10));
@@ -511,7 +513,7 @@ namespace DisplayControl
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position, _positionProviderName,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
                 _hdgFromHandheld, _handheldRxErrors,
-                _handheldOnline, _auxiliaryOnline, _shipOnline, _plotterOnline,
+                _handheldOnline, _auxiliaryOnline, _shipOnline, _plotterOnline, _autoPilotOnline,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.LogTotal,
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint, SensorMeasurement.CrossTrackError,
@@ -979,6 +981,7 @@ namespace DisplayControl
                     _autoPilotStatus.UpdateValue(course.AutopilotStatus.ToString());
                     _autoPilotDesiredHeading.UpdateValue(course.AutoPilotCourse, course.AutopilotStatus is AutopilotStatus.Auto or AutopilotStatus.Wind or AutopilotStatus.Track ? SensorMeasurementStatus.None : SensorMeasurementStatus.NoData, false);
                     _autoPilotHeading.UpdateValue(course.CompassHeading);
+                    _autoPilotOnline.UpdateValue(true);
                     break;
                 }
             }

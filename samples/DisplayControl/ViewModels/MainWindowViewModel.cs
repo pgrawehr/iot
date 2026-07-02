@@ -516,6 +516,12 @@ namespace DisplayControl.ViewModels
             UpdateVisibleModels();
         }
 
+        public void FilterShowStatus()
+        {
+            m_filterFunc = x => x.Source.Name.Contains("Online", StringComparison.CurrentCultureIgnoreCase);
+            UpdateVisibleModels();
+        }
+
         public void ShowAisTargets()
         {
             AisTargetsVisible = true;

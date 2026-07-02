@@ -632,6 +632,7 @@ namespace DisplayControl
                     SensorMeasurement.WindSpeedAbsolute.TryGetAs(out Speed speed))
                 {
                     _nmeaSensor.SendTrueWind(directionTrue, speed);
+                    // WriteLineToConsoleAndDisplay($"Sent true wind message: {directionTrue}");
                 }
             }
 
