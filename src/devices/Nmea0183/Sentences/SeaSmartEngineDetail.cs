@@ -16,7 +16,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// An extended engine data message, using a PCDIN sequence (supported by some NMEA0183 to NMEA2000 bridges)
     /// PCDIN message 01F201 Engine status data (temperatures, oil pressure, operating time)
     /// </summary>
-    public class SeaSmartEngineDetail : ProprietaryMessage
+    public class SeaSmartEngineDetail : Nmea2000PackedMessage
     {
         /// <summary>
         /// Hexadecimal identifier for this message

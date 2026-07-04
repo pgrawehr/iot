@@ -15,7 +15,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// An extended engine data message, using a PCDIN sequence (supported by some NMEA0183 to NMEA2000 bridges)
     /// This message mostly provides the RPM value and can be sent with a high frequency.
     /// </summary>
-    public class SeaSmartEngineFast : ProprietaryMessage
+    public class SeaSmartEngineFast : Nmea2000PackedMessage
     {
         /// <summary>
         /// Hexadecimal identifier for this message

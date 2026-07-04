@@ -53,6 +53,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DisplayControl.Tests", "tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nmea0183.Tests", "..\..\src\devices\Nmea0183\tests\Nmea0183.Tests.csproj", "{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleParser", "..\..\src\devices\Nmea0183\samples\SimpleParser\SimpleParser.csproj", "{5EC2F1F7-1911-AE24-0628-CC7A6F0DF2E4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -155,6 +157,10 @@ Global
 		{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E3485EC-9A16-3977-A3E8-E18EA7523CA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EC2F1F7-1911-AE24-0628-CC7A6F0DF2E4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EC2F1F7-1911-AE24-0628-CC7A6F0DF2E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EC2F1F7-1911-AE24-0628-CC7A6F0DF2E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EC2F1F7-1911-AE24-0628-CC7A6F0DF2E4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

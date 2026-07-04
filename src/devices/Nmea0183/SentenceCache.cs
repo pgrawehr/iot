@@ -296,7 +296,7 @@ namespace Iot.Device.Nmea0183
                         _xdrData[measurement.DataName] = measurement;
                     }
                 }
-                else if (sentence.SentenceId == ProprietaryMessage.Id && (sentence is ProprietaryMessage din))
+                else if (sentence.SentenceId == Nmea2000PackedMessage.Id && (sentence is Nmea2000PackedMessage din))
                 {
                     _dinData[din.Identifier] = din;
                 }
@@ -373,7 +373,7 @@ namespace Iot.Device.Nmea0183
         {
             CleanOutdatedEntries();
             // The second condition should always be true, because this list only contains din messages
-            if (!_dinData.TryGetValue(hexId, out var s) || s.SentenceId != ProprietaryMessage.Id)
+            if (!_dinData.TryGetValue(hexId, out var s) || s.SentenceId != Nmea2000PackedMessage.Id)
             {
                 sentence = null;
                 return false;

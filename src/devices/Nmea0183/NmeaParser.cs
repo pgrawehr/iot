@@ -23,7 +23,7 @@ namespace Iot.Device.Nmea0183
     public delegate void PositionUpdate(GeographicPosition position, Angle? track, Speed? speed);
 
     /// <summary>
-    /// Parses Nmea Sequences
+    /// Parses Nmea 0183 Sequences
     /// </summary>
     public class NmeaParser : NmeaSinkAndSource, IDisposable
     {
@@ -192,7 +192,7 @@ namespace Iot.Device.Nmea0183
                     }
                 }
 
-                TalkerSentence? sentence = TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out var error);
+                TalkerSentence? sentence = ParseSentence(currentLine, out NmeaError error);
                 if (sentence == null)
                 {
                     // If error is none, but the return value is null, we just ignored that message.
@@ -220,6 +220,17 @@ namespace Iot.Device.Nmea0183
                     DispatchSentenceEvents(raw);
                 }
             }
+        }
+
+        /// <summary>
+        /// Reads an input string and packs it into a TalkerSentence instance, which can then be further decoded.
+        /// </summary>
+        /// <param name="currentLine">The current line</param>
+        /// <param name="error">An error message</param>
+        /// <returns>A sentence object or null if the message was ignored or unparseable</returns>
+        protected virtual TalkerSentence? ParseSentence(string currentLine, out NmeaError error)
+        {
+            return TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out error);
         }
 
         private void Sender()

@@ -7,12 +7,12 @@ using System.Globalization;
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
-    /// Proprietary message used to pass NMEA2000 messages over NMEA0183, only supported
-    /// by some converters and for some messages, for instance engine parameters.
+    /// Special NMEA0183 message used to pass NMEA2000 messages over NMEA0183, only supported
+    /// by some converters and for some messages. We also use it if we have a raw NMEA2000 input interface.
     /// The messages are usually not fully documented, but the SeaSmart (v1.6.0) protocol
     /// specification may help (and some trying around)
     /// </summary>
-    public abstract class ProprietaryMessage : NmeaSentence
+    public abstract class Nmea2000PackedMessage : NmeaSentence
     {
         /// <summary>
         /// This sentence's id
@@ -31,7 +31,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Creates a default message of this type
         /// </summary>
-        protected ProprietaryMessage()
+        protected Nmea2000PackedMessage()
             : base(TalkerId.Proprietary, Id, DateTimeOffset.UtcNow)
         {
         }
@@ -39,7 +39,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Used to create a message while decoding, see base class implementation
         /// </summary>
-        protected ProprietaryMessage(TalkerId talker, SentenceId id, DateTimeOffset time)
+        protected Nmea2000PackedMessage(TalkerId talker, SentenceId id, DateTimeOffset time)
             : base(talker, id, time)
         {
         }

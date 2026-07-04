@@ -17,7 +17,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// SeaSmart message for fluid levels of a tank (Wrapped NMEA2000 message)
     /// For format, see also https://github.com/ttlappalainen/NMEA2000
     /// </summary>
-    public class SeaSmartFluidLevel : ProprietaryMessage
+    public class SeaSmartFluidLevel : Nmea2000PackedMessage
     {
         /// <summary>
         /// Hexadecimal identifier for this message

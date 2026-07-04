@@ -56,7 +56,7 @@ namespace Iot.Device.Nmea0183
             knownSentences[EstimatedAccuracy.Id] = (sentence, time) => new EstimatedAccuracy(sentence, time);
             knownSentences[DepthOfWater.Id] = (sentence, time) => new DepthOfWater(sentence, time);
             knownSentences[DistanceTraveledTroughWater.Id] = (sentence, time) => new DistanceTraveledTroughWater(sentence, time);
-            knownSentences[ProprietaryMessage.Id] = (sentence, time) =>
+            knownSentences[Nmea2000PackedMessage.Id] = (sentence, time) =>
             {
                 var specificMessageId = sentence.Fields.FirstOrDefault();
                 if (specificMessageId != null && int.TryParse(specificMessageId, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int msgid))
