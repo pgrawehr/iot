@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Globalization;
@@ -19,11 +22,30 @@ namespace Iot.Device.Nmea0183
         private uint _currentPgn = 0;
         private List<byte> _allData = new List<byte>();
 
+        /// <summary>
+        /// Constructs an instance of this type
+        /// </summary>
+        /// <param name="interfaceName">Friendly name of this interface (used for filtering and eventually logging)</param>
+        /// <param name="dataSource">Data source (may be connected to a serial port, a network interface, or whatever). It is recommended to use a blocking Stream,
+        /// to prevent unnecessary polling</param>
+        /// <param name="dataSink">Optional data sink, to send information. Can be null, and can be identical to the source stream</param>
         public Nmea2000AsciiParser(string interfaceName, Stream dataSource, Stream? dataSink)
             : base(interfaceName, dataSource, dataSink)
         {
         }
 
+        /// <summary>
+        /// Parses a NMEA 2000 Message in Yacht Devices RAW format.
+        /// Data format is as follows:
+        /// <example>
+        /// 17:33:21.107 R 19F51323 01 2F 30 70 00 2F 30 70
+        /// 17:33:21.108 R 19F51323 02 00
+        /// 17:33:21.141 R 09F80115 A0 7D E6 18 C0 05 FB D5
+        /// </example>
+        /// </summary>
+        /// <param name="currentLine">The current line, see example</param>
+        /// <param name="error">Receives a parser error type, if any</param>
+        /// <returns>A sentence in NMEA0183 raw format, or null</returns>
         protected override TalkerSentence? ParseSentence(string currentLine, out NmeaError error)
         {
             string[] splits = currentLine.Split(' ', StringSplitOptions.TrimEntries);
