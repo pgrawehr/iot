@@ -24,12 +24,13 @@ namespace Iot.Device.Nmea0183
     {
         private readonly string _destination;
         private readonly int _port;
+        private readonly INmeaParserFactory _parserFactory;
+        private readonly ILogger _logger;
 
         private TcpClient? _client;
         private NmeaParser? _parser;
         private Thread? _connectionThread;
         private bool _terminated;
-        private ILogger _logger;
         private bool _connectionActive;
 
         /// <summary>
@@ -40,10 +41,24 @@ namespace Iot.Device.Nmea0183
         /// <param name="destination">Remote host to connect to</param>
         /// <param name="port">The network port to use</param>
         public NmeaTcpClient(string name, string destination, int port = 10110)
-        : base(name)
+        : this(name, destination, port, new Nmea0183ParserFactory())
+        {
+        }
+
+        /// <summary>
+        /// Creates a server with the given source name bound to the given local IP and port.
+        /// This will not open the server yet. Use <see cref="StartDecode"/> to open the network port.
+        /// </summary>
+        /// <param name="name">Source name</param>
+        /// <param name="destination">Remote host to connect to</param>
+        /// <param name="port">The network port to use</param>
+        /// <param name="parserFactory">The parser to use for this connection</param>
+        public NmeaTcpClient(string name, string destination, int port, INmeaParserFactory parserFactory)
+            : base(name)
         {
             _destination = destination;
             _port = port;
+            _parserFactory = parserFactory;
             _connectionActive = false;
             RetryInterval = TimeSpan.FromSeconds(5);
             _logger = this.GetCurrentClassLogger();
@@ -89,7 +104,7 @@ namespace Iot.Device.Nmea0183
                     var client = new TcpClient(_destination, _port);
                     _connectionActive = true;
                     _logger.LogInformation($"{InterfaceName}: Connected to {_destination}:{_port}");
-                    var parser = new NmeaParser($"{InterfaceName}: Connected to {_destination}:{_port}", client.GetStream(), client.GetStream());
+                    var parser = _parserFactory.CreateParser($"{InterfaceName}: Connected to {_destination}:{_port}", client.GetStream(), client.GetStream());
                     parser.OnNewSequence += OnSentenceReceivedFromServer;
                     parser.OnParserError += ParserOnParserError;
                     _client = client;

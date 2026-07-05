@@ -20,6 +20,7 @@ namespace Iot.Device.Nmea0183
         {
             s_data = new Dictionary<uint, Nmea2000PgnDeclaration>();
             s_data.Add(0x1F010, new Nmea2000PgnDeclaration(0x1F010, "System Time", 3, 8, false));
+            s_data.Add(0x1F801, new Nmea2000PgnDeclaration(0x1F801, "Position, Rapid Update", 2, 8, false));
         }
 
         /// <summary>
@@ -29,6 +30,7 @@ namespace Iot.Device.Nmea0183
         /// <returns>The data for that PGN, or null if the PGN is unknown</returns>
         public static Nmea2000PgnDeclaration? GetByPgn(uint pgn)
         {
+            pgn = (pgn >> 8) & 0x1FFFF;
             if (s_data.TryGetValue(pgn, out var data))
             {
                 return data;

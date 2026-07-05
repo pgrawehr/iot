@@ -14,10 +14,10 @@ using Iot.Device.Nmea0183.Sentences;
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
-    /// A parser that decodes RAW NMEA2000 messages into PCDIN sequences (so we can handle them as if
-    /// they were NMEA0183 messages)
+    /// A parser that decodes YDWG NMEA2000 messages into PCDIN sequences.
+    /// This message is used by Yacht Device's YDWG-02 Wifi-to-NMEA2000 interface.
     /// </summary>
-    public class Nmea2000AsciiParser : NmeaParser
+    public class Nmea2000YdwgParser : NmeaParser
     {
         private uint _currentPgn = 0;
         private List<byte> _allData = new List<byte>();
@@ -29,9 +29,20 @@ namespace Iot.Device.Nmea0183
         /// <param name="dataSource">Data source (may be connected to a serial port, a network interface, or whatever). It is recommended to use a blocking Stream,
         /// to prevent unnecessary polling</param>
         /// <param name="dataSink">Optional data sink, to send information. Can be null, and can be identical to the source stream</param>
-        public Nmea2000AsciiParser(string interfaceName, Stream dataSource, Stream? dataSink)
+        public Nmea2000YdwgParser(string interfaceName, Stream dataSource, Stream? dataSink)
             : base(interfaceName, dataSource, dataSink)
         {
+            SenderId = 0;
+        }
+
+        /// <summary>
+        /// Our own sender ID. Can be left at 0 usually, which will cause the interface to substitute
+        /// the correct sender ID when transmitting the package
+        /// </summary>
+        public byte SenderId
+        {
+            get;
+            set;
         }
 
         /// <summary>
@@ -46,7 +57,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="currentLine">The current line, see example</param>
         /// <param name="error">Receives a parser error type, if any</param>
         /// <returns>A sentence in NMEA0183 raw format, or null</returns>
-        protected override TalkerSentence? ParseSentence(string currentLine, out NmeaError error)
+        protected internal override TalkerSentence? ParseSentence(string currentLine, out NmeaError error)
         {
             string[] splits = currentLine.Split(' ', StringSplitOptions.TrimEntries);
             if (splits.Length <= 4)
@@ -61,7 +72,7 @@ namespace Iot.Device.Nmea0183
                 return null;
             }
 
-            if (UInt32.TryParse(splits[2], CultureInfo.InvariantCulture, out uint pgn))
+            if (UInt32.TryParse(splits[2], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint pgn))
             {
                 if (pgn != _currentPgn)
                 {
@@ -69,12 +80,22 @@ namespace Iot.Device.Nmea0183
                     _currentPgn = pgn;
                 }
 
-                var bytes = Convert.FromHexString(string.Join('-', splits.Skip(3)));
+                // This value appears to be pretty random and just indicates time since application/converter start
+                TimeSpan timeStamp;
+                if (!TimeSpan.TryParse(splits[0], CultureInfo.InvariantCulture, out timeStamp))
+                {
+                    timeStamp = TimeSpan.Zero;
+                }
+
+                _currentPgn = pgn;
+
+                var s = string.Join(string.Empty, splits.Skip(3));
+                var bytes = Convert.FromHexString(s);
                 _allData.AddRange(bytes);
                 var declaration = Nmea2000Declarations.GetByPgn(pgn);
                 if (declaration != null && declaration.IsComplete(_allData))
                 {
-                    var result = CreateSentence(declaration, _allData);
+                    var result = CreateSentence(declaration, timeStamp, pgn & 0xFF, _allData);
                     if (result != null)
                     {
                         error = NmeaError.None;
@@ -87,7 +108,7 @@ namespace Iot.Device.Nmea0183
             return null;
         }
 
-        private TalkerSentence? CreateSentence(Nmea2000PgnDeclaration declaration, List<byte> allData)
+        private TalkerSentence CreateSentence(Nmea2000PgnDeclaration declaration, TimeSpan? timeStamp, uint sender, List<byte> allData)
         {
             if (declaration.IsComplete(allData) == false)
             {
@@ -97,6 +118,17 @@ namespace Iot.Device.Nmea0183
             var fields = new List<string>();
 
             fields.Add($"{declaration.Pgn:X6}");
+            if (timeStamp.HasValue)
+            {
+                fields.Add($"{((long)timeStamp.Value.TotalSeconds):X8}");
+            }
+            else
+            {
+                fields.Add("00000000");
+            }
+
+            fields.Add($"{sender:X2}");
+            fields.Add(Convert.ToHexString(allData.ToArray()));
 
             var ret = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, fields);
             return ret;

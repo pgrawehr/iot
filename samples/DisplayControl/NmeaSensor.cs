@@ -527,7 +527,7 @@ namespace DisplayControl
             _serialPortShip.ReadBufferSize = 16 * 1024;
             _serialPortShip.Open();
             _streamShip = _serialPortShip.BaseStream;
-            _parserShipInterface = new NmeaParser(ShipSourceName, _streamShip, _streamShip);
+            _parserShipInterface = new Nmea0183Parser(ShipSourceName, _streamShip, _streamShip);
             // Can be helpful for debugging, but generates lots of data
             // _parserShipInterface.LogSend = true;
             _parserShipInterface.OnParserError += OnParserError;
@@ -555,7 +555,7 @@ namespace DisplayControl
 
             _streamHandheld = _serialPortHandheld.BaseStream;
 
-            _parserHandheldInterface = new NmeaParser(HandheldSourceName, _streamHandheld, _streamHandheld);
+            _parserHandheldInterface = new Nmea0183Parser(HandheldSourceName, _streamHandheld, _streamHandheld);
             _parserHandheldInterface.OnParserError += OnParserError;
             _parserHandheldInterface.OnNewSequence += (source, msg) =>
             {
@@ -564,7 +564,7 @@ namespace DisplayControl
             };
 
             _parserForwardInterface =
-                new NmeaParser(AuxiliaryGps, _serialPortForward.BaseStream, _serialPortForward.BaseStream);
+                new Nmea0183Parser(AuxiliaryGps, _serialPortForward.BaseStream, _serialPortForward.BaseStream);
             _parserForwardInterface.OnParserError += OnParserError;
             _parserForwardInterface.OnNewSequence +=
                 (source, msg) =>

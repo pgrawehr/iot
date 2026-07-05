@@ -21,6 +21,7 @@ namespace Iot.Device.Nmea0183
     public class NmeaLogDataReader : NmeaSinkAndSource
     {
         private readonly IEnumerable<(string Name, Stream? Alternate)> _filesToRead;
+        private readonly INmeaParserFactory _parserFactory;
         private DateTimeOffset? _referenceTimeInLog;
         private DateTimeOffset? _referenceTimeNow;
         private DateTimeOffset _sentenceTimeLast = new DateTimeOffset(0, TimeSpan.Zero);
@@ -32,11 +33,13 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="interfaceName">Name of this interface</param>
         /// <param name="filesToRead">Files to read. Either a | delimited log or a plain text file</param>
-        public NmeaLogDataReader(string interfaceName, IEnumerable<string> filesToRead)
+        /// <param name="parserFactory">The parser factory to use (try <see cref="Nmea0183ParserFactory"/> as default)</param>
+        public NmeaLogDataReader(string interfaceName, IEnumerable<string> filesToRead, INmeaParserFactory parserFactory)
             : base(interfaceName)
         {
             _filesToRead = filesToRead.Select<string, (string, Stream?)>(x => (x, null));
             _doneEvent = new ManualResetEvent(false);
+            _parserFactory = parserFactory;
         }
 
         /// <summary>
@@ -44,7 +47,8 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="interfaceName">Name of this interface</param>
         /// <param name="fileToRead">File to read. Either a | delimited log or a plain text file</param>
-        public NmeaLogDataReader(string interfaceName, string fileToRead)
+        /// <param name="parserFactory">The parser factory to use (try <see cref="Nmea0183ParserFactory"/> as default)</param>
+        public NmeaLogDataReader(string interfaceName, string fileToRead, INmeaParserFactory parserFactory)
             : base(interfaceName)
         {
             _filesToRead = new List<(string Name, Stream? Alternate)>()
@@ -53,6 +57,7 @@ namespace Iot.Device.Nmea0183
             };
 
             _doneEvent = new ManualResetEvent(false);
+            _parserFactory = parserFactory;
         }
 
         /// <summary>
@@ -60,7 +65,8 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="interfaceName">Name of this interface</param>
         /// <param name="streamToRead">A file stream to read. Either a | delimited log or a plain text file</param>
-        public NmeaLogDataReader(string interfaceName, Stream streamToRead)
+        /// <param name="parserFactory">The parser factory to use (try <see cref="Nmea0183ParserFactory"/> as default)</param>
+        public NmeaLogDataReader(string interfaceName, Stream streamToRead, INmeaParserFactory parserFactory)
             : base(interfaceName)
         {
             _filesToRead = new List<(string Name, Stream? Alternate)>()
@@ -69,6 +75,7 @@ namespace Iot.Device.Nmea0183
             };
 
             _doneEvent = new ManualResetEvent(false);
+            _parserFactory = parserFactory;
         }
 
         /// <summary>
@@ -76,7 +83,8 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="interfaceName">Name of this interface</param>
         /// <param name="streamsToRead">A file stream to read. Either a | delimited log or a plain text file</param>
-        public NmeaLogDataReader(string interfaceName, IEnumerable<Stream> streamsToRead)
+        /// <param name="parserFactory">The parser factory to use (try <see cref="Nmea0183ParserFactory"/> as default)</param>
+        public NmeaLogDataReader(string interfaceName, IEnumerable<Stream> streamsToRead, INmeaParserFactory parserFactory)
             : base(interfaceName)
         {
             if (streamsToRead.Any(x => x == null))
@@ -87,6 +95,7 @@ namespace Iot.Device.Nmea0183
             _filesToRead = streamsToRead.Select<Stream, (string, Stream?)>(x => (string.Empty, x)).ToList();
 
             _doneEvent = new ManualResetEvent(false);
+            _parserFactory = parserFactory;
         }
 
         /// <summary>
@@ -115,7 +124,7 @@ namespace Iot.Device.Nmea0183
             var ms = new FileSetStream(_filesToRead);
             ms.Loop = Loop;
             _doneEvent = new ManualResetEvent(false);
-            _internalParser = new NmeaParser(InterfaceName, ms, null);
+            _internalParser = _parserFactory.CreateParser(InterfaceName, ms, null);
             _internalParser.SupportLogReading = true;
             _internalParser.SuppressOutdatedMessages = false; // parse all incoming messages, ignoring any timing
             if (DecodeInRealtime)

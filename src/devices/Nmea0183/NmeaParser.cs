@@ -25,7 +25,7 @@ namespace Iot.Device.Nmea0183
     /// <summary>
     /// Parses Nmea 0183 Sequences
     /// </summary>
-    public class NmeaParser : NmeaSinkAndSource, IDisposable
+    public abstract class NmeaParser : NmeaSinkAndSource, IDisposable
     {
         private readonly object _lock;
         private Stream _dataSource;
@@ -46,7 +46,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="dataSource">Data source (may be connected to a serial port, a network interface, or whatever). It is recommended to use a blocking Stream,
         /// to prevent unnecessary polling</param>
         /// <param name="dataSink">Optional data sink, to send information. Can be null, and can be identical to the source stream</param>
-        public NmeaParser(String interfaceName, Stream dataSource, Stream? dataSink)
+        protected NmeaParser(String interfaceName, Stream dataSource, Stream? dataSink)
         : base(interfaceName)
         {
             _encoding = new Raw8BitEncoding();
@@ -228,10 +228,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="currentLine">The current line</param>
         /// <param name="error">An error message</param>
         /// <returns>A sentence object or null if the message was ignored or unparseable</returns>
-        protected virtual TalkerSentence? ParseSentence(string currentLine, out NmeaError error)
-        {
-            return TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out error);
-        }
+        protected internal abstract TalkerSentence? ParseSentence(string currentLine, out NmeaError error);
 
         private void Sender()
         {
