@@ -6,7 +6,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.Nmea0183.Sentences;
+using UnitsNet;
 using Xunit;
 
 namespace Iot.Device.Nmea0183.Tests
@@ -22,6 +25,54 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.NotNull(sentence);
             Assert.IsType<TalkerSentence>(sentence);
             Assert.StartsWith("$PCDIN,01F801,0000F6E1,15,A07DE618C005FBD5*", sentence.ToString());
+        }
+
+        [Fact]
+        public void ParseRawNmea2000SentenceAndDecode()
+        {
+            var m = new MemoryStream();
+            var parser = new Nmea2000YdwgParser("Test", m, null);
+            var sentence = parser.ParseSentence("17:33:21.141 R 01F20002 00 00 3C FF FF 64 FF FF", out NmeaError error);
+            Assert.NotNull(sentence);
+            Assert.IsType<TalkerSentence>(sentence);
+            Assert.Equal("$PCDIN,01F200,0000F6E1,02,00003CFFFF64FFFF*51", sentence.ToString());
+            DateTimeOffset lastMessageTime = DateTimeOffset.MinValue;
+            var typed = (SeaSmartEngineFast?)sentence.TryGetTypedValue(ref lastMessageTime);
+            Assert.NotNull(typed);
+            Assert.Equal(0, typed.EngineNumber);
+            Assert.Equal(3600, typed.RotationalSpeed.RevolutionsPerMinute);
+        }
+
+        [Fact]
+        public void SendToNmea2000()
+        {
+            var m = new MemoryStream();
+            var parser = new Nmea2000YdwgParser("Test", m, m);
+            parser.StartDecode();
+            try
+            {
+                SeaSmartEngineFast fast = new SeaSmartEngineFast(new EngineData(0, EngineStatus.CheckEngine,
+                    0, RotationalSpeed.FromRevolutionsPerMinute(1000), Ratio.Zero, TimeSpan.FromHours(102.1), null));
+
+                Assert.NotNull(fast);
+                parser.SenderId = 2;
+                parser.SendSentence(fast);
+                int iterations = 100;
+                while (m.Length < 30 && iterations-- > 0)
+                {
+                    Thread.Sleep(100);
+                }
+
+                Thread.Sleep(100);
+                m.Position = 0;
+                string output = Encoding.ASCII.GetString(m.ToArray());
+                Assert.NotEmpty(output);
+                Assert.Equal("01F20000 00 00 11 FF FF 00 FF FF \r\n", output);
+            }
+            finally
+            {
+                parser.StopDecode();
+            }
         }
 
         [Fact]

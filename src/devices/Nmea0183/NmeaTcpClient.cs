@@ -25,7 +25,6 @@ namespace Iot.Device.Nmea0183
         private readonly string _destination;
         private readonly int _port;
         private readonly INmeaParserFactory _parserFactory;
-        private readonly ILogger _logger;
 
         private TcpClient? _client;
         private NmeaParser? _parser;
@@ -61,7 +60,6 @@ namespace Iot.Device.Nmea0183
             _parserFactory = parserFactory;
             _connectionActive = false;
             RetryInterval = TimeSpan.FromSeconds(5);
-            _logger = this.GetCurrentClassLogger();
         }
 
         /// <summary>
@@ -103,7 +101,7 @@ namespace Iot.Device.Nmea0183
                 {
                     var client = new TcpClient(_destination, _port);
                     _connectionActive = true;
-                    _logger.LogInformation($"{InterfaceName}: Connected to {_destination}:{_port}");
+                    Logger.LogInformation($"{InterfaceName}: Connected to {_destination}:{_port}");
                     var parser = _parserFactory.CreateParser($"{InterfaceName}: Connected to {_destination}:{_port}", client.GetStream(), client.GetStream());
                     parser.OnNewSequence += OnSentenceReceivedFromServer;
                     parser.OnParserError += ParserOnParserError;
@@ -170,6 +168,7 @@ namespace Iot.Device.Nmea0183
         /// <inheritdoc />
         public override void StopDecode()
         {
+            Logger.LogInformation($"Tcp Client {InterfaceName} is terminating");
             _terminated = true;
             if (_connectionThread != null)
             {

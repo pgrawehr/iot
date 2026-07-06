@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183
 {
@@ -23,7 +24,7 @@ namespace Iot.Device.Nmea0183
         /// to prevent unnecessary polling</param>
         /// <param name="dataSink">Optional data sink, to send information. Can be null, and can be identical to the source stream</param>
         public Nmea0183Parser(string interfaceName, Stream dataSource, Stream? dataSink)
-            : base(interfaceName, dataSource, dataSink)
+            : base(interfaceName, dataSource, dataSink, new Raw8BitEncoding())
         {
         }
 
@@ -31,6 +32,16 @@ namespace Iot.Device.Nmea0183
         protected internal override TalkerSentence? ParseSentence(string currentLine, out NmeaError error)
         {
             return TalkerSentence.FromSentenceString(currentLine, ExclusiveTalkerId, out error);
+        }
+
+        /// <inheritdoc/>
+        protected internal override void FormatAndSendSentence(NmeaSentence sentence)
+        {
+            TalkerSentence ts = new TalkerSentence(sentence);
+            string dataToSend = ts.ToString() + "\r\n";
+            byte[] buffer = StreamEncoding.GetBytes(dataToSend);
+
+            Sink?.Write(buffer, 0, buffer.Length);
         }
     }
 }

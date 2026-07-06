@@ -33,7 +33,7 @@ namespace Iot.Device.Nmea0183
         private Thread? _parserThread;
         private CancellationTokenSource? _cancellationTokenSource;
         private StreamReader _reader;
-        private Raw8BitEncoding _encoding;
+        private Encoding _encoding;
         private Thread? _sendQueueThread;
         private BlockingCollection<NmeaSentence> _outQueue;
         private Exception? _ioExceptionOnSend;
@@ -46,10 +46,11 @@ namespace Iot.Device.Nmea0183
         /// <param name="dataSource">Data source (may be connected to a serial port, a network interface, or whatever). It is recommended to use a blocking Stream,
         /// to prevent unnecessary polling</param>
         /// <param name="dataSink">Optional data sink, to send information. Can be null, and can be identical to the source stream</param>
-        protected NmeaParser(String interfaceName, Stream dataSource, Stream? dataSink)
+        /// <param name="streamEncoding">The encoding of the underlying stream. Use <see cref="Raw8BitEncoding"/> if unsure.</param>
+        protected NmeaParser(String interfaceName, Stream dataSource, Stream? dataSink, Encoding streamEncoding)
         : base(interfaceName)
         {
-            _encoding = new Raw8BitEncoding();
+            _encoding = streamEncoding;
             _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
             _reader = new StreamReader(_dataSource, _encoding); // Nmea sentences are text
             _dataSink = dataSink;
@@ -103,6 +104,25 @@ namespace Iot.Device.Nmea0183
             get;
             set;
         }
+
+        /// <summary>
+        /// Gets the encoding of the underlying stream.
+        /// By default, this uses a <see cref="Raw8BitEncoding"/>, a variant of the ASCII encoding.
+        /// </summary>
+        protected Encoding StreamEncoding
+        {
+            get => _encoding;
+        }
+
+        /// <summary>
+        /// Source stream.
+        /// </summary>
+        protected Stream Source => _dataSource;
+
+        /// <summary>
+        /// Destination Stream. May be null to discard any output.
+        /// </summary>
+        protected Stream? Sink => _dataSink;
 
         /// <inheritdoc />
         public override void StartDecode()
@@ -252,13 +272,9 @@ namespace Iot.Device.Nmea0183
                         continue;
                     }
 
-                    TalkerSentence ts = new TalkerSentence(sentenceToSend);
-                    string dataToSend = ts.ToString() + "\r\n";
-                    byte[] buffer = _encoding.GetBytes(dataToSend);
-
                     try
                     {
-                        _dataSink?.Write(buffer, 0, buffer.Length);
+                        FormatAndSendSentence(sentenceToSend);
                     }
                     catch (IOException x)
                     {
@@ -272,6 +288,12 @@ namespace Iot.Device.Nmea0183
                 }
             }
         }
+
+        /// <summary>
+        /// Formats and sends the sentence according to the underlying transport.
+        /// </summary>
+        /// <param name="sentence">The sentence to send</param>
+        protected internal abstract void FormatAndSendSentence(NmeaSentence sentence);
 
         /// <inheritdoc />
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)

@@ -21,6 +21,8 @@ namespace Iot.Device.Nmea0183
             s_data = new Dictionary<uint, Nmea2000PgnDeclaration>();
             s_data.Add(0x1F010, new Nmea2000PgnDeclaration(0x1F010, "System Time", 3, 8, false));
             s_data.Add(0x1F801, new Nmea2000PgnDeclaration(0x1F801, "Position, Rapid Update", 2, 8, false));
+            s_data.Add(0x1F200, new Nmea2000PgnDeclaration(0x1F200, "Engine Parameters, Rapid update", 2, 8, false));
+            s_data.Add(0x1F201, new Nmea2000PgnDeclaration(0x1F201, "Engine Parameters, dynamic", 2, 26, false));
         }
 
         /// <summary>
