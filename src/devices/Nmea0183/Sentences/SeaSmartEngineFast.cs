@@ -68,21 +68,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
-            string subMessage = ReadString(field);
-            if (!int.TryParse(subMessage, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int result) || result != Identifier)
-            {
-                Valid = false;
-                return;
-            }
-
-            string timeStamp = ReadString(field);
-
-            if (Int32.TryParse(timeStamp, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int time1))
-            {
-                MessageTimeStamp = time1;
-            }
-
-            ReadString(field); // Ignore next field
+            ParseCommonFields(field);
 
             string data = ReadString(field);
 
@@ -108,15 +94,6 @@ namespace Iot.Device.Nmea0183.Sentences
         /// The NMEA2000 Sentence identifier for this message
         /// </summary>
         public override int Identifier => HexId;
-
-        /// <summary>
-        /// The timestamp for the NMEA 2000 message
-        /// </summary>
-        public int MessageTimeStamp
-        {
-            get;
-            private set;
-        }
 
         /// <summary>
         /// Engine revolutions per time, typically RPM (revolutions per minute) is used
@@ -165,9 +142,8 @@ namespace Iot.Device.Nmea0183.Sentences
                 string rpmText = rpm.ToString("X4", CultureInfo.InvariantCulture);
                 int pitchPercent = (int)PropellerPitch.Percent;
                 string pitchText = pitchPercent.ToString("X2", CultureInfo.InvariantCulture);
-                string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
 
-                return "01F200," + timeStampText + ",02," + engineNoText + rpmText + "FFFF" + pitchText + "FFFF";
+                return base.ToNmeaParameterList() + engineNoText + rpmText + "FFFF" + pitchText + "FFFF";
             }
 
             return string.Empty;

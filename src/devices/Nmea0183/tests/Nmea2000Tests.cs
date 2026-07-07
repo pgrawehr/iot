@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 using Xunit;
@@ -44,7 +46,7 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
-        public void SendToNmea2000()
+        public void SendSimpleMessageToNmea2000()
         {
             var m = new MemoryStream();
             var parser = new Nmea2000YdwgParser("Test", m, m);
@@ -82,6 +84,38 @@ namespace Iot.Device.Nmea0183.Tests
             var parser = new Nmea2000YdwgParser("Test", m, null);
             parser.StartDecode();
             parser.StopDecode();
+        }
+
+        [Fact]
+        public void FastPositionUpdate()
+        {
+            var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
+            {
+                "01F801", "000074C5", "57", "46AED12063C85306"
+            });
+
+            var p = new FastPositionUpdate(ts, DateTimeOffset.UnixEpoch);
+            Assert.NotNull(p);
+            Assert.True(p.Latitude > 55 && p.Latitude < 55.1);
+            Assert.True(p.Longitude > 10.5 && p.Longitude < 11);
+            var result = p.ToNmeaParameterList();
+            Assert.Equal("01F801,000074C5,57,46AED12063C85306", result);
+        }
+
+        [Fact]
+        public void FastPositionUpdateWithNegativeLatLong()
+        {
+            // Encode
+            var p = new FastPositionUpdate(new GeographicPosition(-10.21, -20.45, 0));
+            var result = p.ToNmeaParameterList();
+            Assert.Equal("01F801,00000000,00,E013EAF9E093CFF3", result);
+
+            // Decode
+            var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id,
+                result.Split(",", StringSplitOptions.TrimEntries));
+            var p2 = new FastPositionUpdate(ts, DateTimeOffset.UnixEpoch);
+            Assert.Equal(p.Latitude, p2.Latitude, 1E-7);
+            Assert.Equal(p.Longitude, p2.Longitude, 1E-7);
         }
     }
 }

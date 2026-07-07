@@ -103,6 +103,19 @@ namespace Iot.Device.Nmea0183
                         return result;
                     }
                 }
+                else if (declaration == null)
+                {
+                    uint rawpgn = (pgn >> 8) & 0x1FFFF;
+                    Logger.LogInformation($"Unknown PGN: {rawpgn:X6}");
+                    error = NmeaError.None;
+                    return null;
+                }
+                else
+                {
+                    // Message is known, but incomplete
+                    error = NmeaError.None;
+                    return null;
+                }
             }
 
             error = NmeaError.NoSyncByte;

@@ -5,8 +5,10 @@ using System;
 using System.IO.Ports;
 using System.Net.Sockets;
 using System.Threading;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
+using Microsoft.Extensions.Logging;
 
 namespace Iot.Device.Gps.NeoM8Samples
 {
@@ -14,8 +16,10 @@ namespace Iot.Device.Gps.NeoM8Samples
     {
         public static void Main(string[] args)
         {
+            LogDispatcher.LoggerFactory = new SimpleConsoleLoggerFactory(LogLevel.Trace);
             // UsingNeoM8Serial();
-            UsingNetwork();
+            // UsingNetwork();
+            UsingNmea2000RawNetwork();
         }
 
         private static void UsingSerial()
@@ -78,6 +82,41 @@ namespace Iot.Device.Gps.NeoM8Samples
                     var stream = client.GetStream();
                     bool closed = false;
                     using (NmeaParser parser = new Nmea0183Parser("Test", stream, stream))
+                    {
+                        parser.OnParserError += (source, msg, error) =>
+                        {
+                            Console.WriteLine($"Error while parsing message '{msg}': {error}");
+                            if (error == NmeaError.PortClosed)
+                            {
+                                closed = true;
+                            }
+                        };
+                        parser.OnNewSequence += ParserOnNewSequence;
+                        parser.StartDecode();
+                        while (!Console.KeyAvailable && !closed)
+                        {
+                            Thread.Sleep(1000);
+                        }
+                    }
+                }
+            }
+            catch (SocketException x)
+            {
+                Console.WriteLine($"Error connecting to host: {x}");
+            }
+        }
+
+        private static void UsingNmea2000RawNetwork()
+        {
+            try
+            {
+                // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
+                using (TcpClient client = new TcpClient("192.168.233.50", 1457))
+                {
+                    Console.WriteLine("Connected!");
+                    var stream = client.GetStream();
+                    bool closed = false;
+                    using (NmeaParser parser = new Nmea2000YdwgParser("Test", stream, stream))
                     {
                         parser.OnParserError += (source, msg, error) =>
                         {

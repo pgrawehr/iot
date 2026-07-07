@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Iot.Device.Nmea0183.Sentences
@@ -52,18 +53,48 @@ namespace Iot.Device.Nmea0183.Sentences
             get;
         }
 
-        private static UInt32 InverseEndianness(UInt32 value)
+        /// <summary>
+        /// The timestamp for the NMEA 2000 message
+        /// </summary>
+        public int MessageTimeStamp
+        {
+            get;
+            protected set;
+        }
+
+        /// <summary>
+        /// The source identifier of the device which sent this message
+        /// </summary>
+        public uint MessageSource
+        {
+            get;
+            protected set;
+        }
+
+        /// <summary>
+        /// Reverses the endianess of an integer
+        /// </summary>
+        public static UInt32 InverseEndianness(UInt32 value)
         {
             return (value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
                    (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24;
         }
 
         /// <summary>
+        /// Reverses the endianess of an integer
+        /// </summary>
+        public static Int32 InverseEndianness(Int32 value)
+        {
+            return (int)((value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
+                   (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24);
+        }
+
+        /// <summary>
         /// Decodes a value from a longer hex string (PRDIN messages contain one blob of stringly-typed hex numbers)
         /// </summary>
         /// <param name="input">Input string</param>
-        /// <param name="start">Start offset of required number</param>
-        /// <param name="length">Length of required number. Must be 2, 4 or 8</param>
+        /// <param name="start">Start offset of required number, in nibbles(!)</param>
+        /// <param name="length">Length of required number, in nibbles(!). Must be 2, 4 or 8</param>
         /// <param name="inverseEndianness">True to inverse the endianness of the number (reverse the partial string)</param>
         /// <param name="value">The output value</param>
         /// <returns>True on success, false otherwise</returns>
@@ -71,6 +102,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <remarks>
         /// Other erroneous inputs don't throw an exception but return false, e.g. string shorter than expected or
         /// value is not a hex number. This is to prevent an exception in case of a malformed message.
+        /// The offset and length are given in nibbles (half-bytes); as they operate on the input string.
         /// </remarks>
         protected bool ReadFromHexString(string input, int start, int length, bool inverseEndianness, out int value)
         {
@@ -105,6 +137,44 @@ namespace Iot.Device.Nmea0183.Sentences
 
             value = (int)result;
             return true;
+        }
+
+        /// <summary>
+        /// Helper method for parsing the header fields (PGN, timestamp and source address)
+        /// </summary>
+        /// <param name="field">The enumerator over the arguments</param>
+        protected void ParseCommonFields(IEnumerator<string> field)
+        {
+            string subMessage = ReadString(field);
+            if (!int.TryParse(subMessage, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int result) || result != Identifier)
+            {
+                Valid = false;
+                return;
+            }
+
+            string timeStamp = ReadString(field);
+
+            if (Int32.TryParse(timeStamp, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int time1))
+            {
+                MessageTimeStamp = time1;
+            }
+
+            string source = ReadString(field);
+            if (uint.TryParse(source, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint src))
+            {
+                MessageSource = src;
+            }
+        }
+
+        /// <summary>
+        /// This prepares the header part of the NMEA2000 PCDIN message (first 3 fields)
+        /// </summary>
+        public override string ToNmeaParameterList()
+        {
+            string pgn = Identifier.ToString("X6", CultureInfo.InvariantCulture);
+            string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
+            string source = MessageSource.ToString("X2", CultureInfo.InvariantCulture);
+            return $"{pgn},{timeStampText},{source},";
         }
     }
 }
