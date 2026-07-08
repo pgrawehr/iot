@@ -67,6 +67,14 @@ namespace Iot.Device.Nmea0183
                 return null;
             }
 
+            if (splits[1] == "T")
+            {
+                // TODO: Maybe wait for this somewhere?
+                Logger.LogInformation($"Received confirmation that we sent {currentLine}");
+                error = NmeaError.None;
+                return null;
+            }
+
             if (splits[1] != "R")
             {
                 error = NmeaError.NoSyncByte;
@@ -151,7 +159,7 @@ namespace Iot.Device.Nmea0183
         /// <inheritdoc/>
         protected internal override void FormatAndSendSentence(NmeaSentence sentence)
         {
-            if (sentence is Nmea2000PackedMessage nmea2000)
+            if (sentence is Nmea2000PackedMessage)
             {
                 // This is a bit hacky, as we go through the string representation of the object.
                 // But having also a binary representation increases complexity for the individual messages.

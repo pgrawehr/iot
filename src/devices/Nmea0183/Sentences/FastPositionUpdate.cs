@@ -35,6 +35,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             _latitude = position.Latitude;
             _longitude = position.Longitude;
+            Valid = true;
         }
 
         /// <summary>
