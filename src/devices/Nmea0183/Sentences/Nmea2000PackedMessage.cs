@@ -16,6 +16,11 @@ namespace Iot.Device.Nmea0183.Sentences
     public abstract class Nmea2000PackedMessage : NmeaSentence
     {
         /// <summary>
+        /// Industry and manufacturer code for Raymarine
+        /// </summary>
+        public static uint ManufacturerRaymarine => 0x3B9F;
+
+        /// <summary>
         /// This sentence's id
         /// </summary>
         public static SentenceId Id => new SentenceId("DIN");

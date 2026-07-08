@@ -112,7 +112,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (TcpClient client = new TcpClient("192.168.233.50", 1457))
+                using (TcpClient client = new TcpClient("192.168.166.50", 1457))
                 {
                     Console.WriteLine("Connected!");
                     var stream = client.GetStream();
@@ -131,7 +131,14 @@ namespace Iot.Device.Gps.NeoM8Samples
                         parser.StartDecode();
                         while (!Console.KeyAvailable && !closed)
                         {
-                            Thread.Sleep(1000);
+                            Thread.Sleep(500);
+
+                            SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(AutopilotStatus.Standby);
+                            parser.SendSentence(status);
+                            status = new SeatalkNgPilotStatus(AutopilotStatus.Auto);
+                            parser.SendSentence(status);
+                            status = new SeatalkNgPilotStatus(AutopilotStatus.Calibration);
+                            parser.SendSentence(status);
                         }
                     }
                 }
