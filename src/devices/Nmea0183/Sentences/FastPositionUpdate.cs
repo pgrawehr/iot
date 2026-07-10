@@ -25,9 +25,6 @@ namespace Iot.Device.Nmea0183.Sentences
         private readonly double _latitude;
         private readonly double _longitude;
 
-        /// <inheritdoc/>
-        public override bool ReplacesOlderInstance => true;
-
         /// <summary>
         /// Create an instance of this class from a position
         /// </summary>

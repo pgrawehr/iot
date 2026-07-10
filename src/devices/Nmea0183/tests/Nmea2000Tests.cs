@@ -117,5 +117,56 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Equal(p.Latitude, p2.Latitude, 1E-7);
             Assert.Equal(p.Longitude, p2.Longitude, 1E-7);
         }
+
+        [Fact]
+        public void SeatalkNgPilotHeadingMessageDecode()
+        {
+            var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
+            {
+                "00FF4F", "000074C5", "57", "3B9FFFFFFF46EDFF"
+            });
+
+            var p = new SeatalkNgPilotHeading(ts, DateTimeOffset.UnixEpoch);
+            Assert.NotNull(p);
+            Assert.Null(p.HeadingTrue);
+            Assert.True(p.HeadingMagnetic.HasValue);
+            Assert.Equal(348.02, p.HeadingMagnetic.GetValueOrDefault().Degrees, 1E-2);
+            var result = p.ToNmeaParameterList();
+            Assert.Equal("00FF4F,000074C5,57,3B9FFFFFFF46EDFF", result);
+        }
+
+        [Fact]
+        public void SeatalkNgPilotLockedHeadingMessageDecode()
+        {
+            var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
+            {
+                "00FF50", "000074C5", "57", "3B9FFFFFFF46EDFF"
+            });
+
+            var p = new SeatalkNgPilotLockedHeading(ts, DateTimeOffset.UnixEpoch);
+            Assert.NotNull(p);
+            Assert.Null(p.TargetHeadingTrue);
+            Assert.True(p.TargetHeadingMagnetic.HasValue);
+            Assert.Equal(348.02, p.TargetHeadingMagnetic.GetValueOrDefault().Degrees, 1E-2);
+            var result = p.ToNmeaParameterList();
+            Assert.Equal("00FF50,000074C5,57,3B9FFFFFFF46EDFF", result);
+        }
+
+        [Theory]
+        [InlineData("$PCDIN,00FF50,000074C5,57,3B9FFFFFFF46EDFF")]
+        [InlineData($"PCDIN,00FF4F,000074C5,57,3B9FFFFFFF46EDFF")]
+        [InlineData($"$PCDIN,01F801,00000000,00,E013EAF9E093CFF3")]
+        [InlineData("$PCDIN,01F200,0000F6E1,02,00003CFFFF64FFFF")]
+        public void CanParseAllTheseMessages(string input)
+        {
+            DateTimeOffset lastPacketTime = DateTimeOffset.MinValue;
+            var inSentence = TalkerSentence.FromSentenceString(input, out var error);
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(inSentence);
+            var decoded = inSentence!.TryGetTypedValue(ref lastPacketTime);
+            Assert.NotNull(decoded);
+            Assert.False(decoded is RawSentence);
+            Assert.True(decoded is Nmea2000PackedMessage);
+        }
     }
 }

@@ -24,9 +24,6 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public const int HexId = 0x01F20D;
 
-        /// <inheritdoc/>
-        public override bool ReplacesOlderInstance => true;
-
         /// <summary>
         /// The number of switches supported by this message. This is the constant 28.
         /// </summary>

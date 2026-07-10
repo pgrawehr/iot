@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace Iot.Device.Nmea0183.Sentences
 {
@@ -12,6 +13,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// by some converters and for some messages. We also use it if we have a raw NMEA2000 input interface.
     /// The messages are usually not fully documented, but the SeaSmart (v1.6.0) protocol
     /// specification may help (and some trying around)
+    /// Another great source for NMEA2000 commands is https://canboat.github.io/canboat/canboat.html
     /// </summary>
     public abstract class Nmea2000PackedMessage : NmeaSentence
     {
@@ -77,6 +79,12 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// This must be false for this message type, or we'll be dropping all NMEA2000 messages in favor
+        /// of any other NMEA2000 message. Not the expected behavior.
+        /// </summary>
+        public sealed override bool ReplacesOlderInstance => false;
+
+        /// <summary>
         /// Reverses the endianess of an integer
         /// </summary>
         public static UInt32 InverseEndianness(UInt32 value)
@@ -92,6 +100,23 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             return (int)((value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
                    (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24);
+        }
+
+        /// <summary>
+        /// Converts a number to a 16 bit number field
+        /// </summary>
+        /// <param name="v">Input value</param>
+        /// <param name="scaleFactor">Scale Factor</param>
+        /// <returns>An uint, meant to be directly converted to hex for output</returns>
+        protected static uint DoubleTo16BitField(double? v, double scaleFactor)
+        {
+            if (v == null)
+            {
+                return 0xFFFF;
+            }
+
+            int val = (int)(v.Value / scaleFactor);
+            return Unsafe.BitCast<int, uint>(val);
         }
 
         /// <summary>

@@ -10,6 +10,7 @@ using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
+using UnitsNet;
 
 namespace Iot.Device.Gps.NeoM8Samples
 {
@@ -112,7 +113,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (TcpClient client = new TcpClient("192.168.166.50", 1457))
+                using (TcpClient client = new TcpClient("192.168.201.50", 1457))
                 {
                     Console.WriteLine("Connected!");
                     var stream = client.GetStream();
@@ -135,10 +136,11 @@ namespace Iot.Device.Gps.NeoM8Samples
 
                             SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(AutopilotStatus.Standby);
                             parser.SendSentence(status);
-                            status = new SeatalkNgPilotStatus(AutopilotStatus.Auto);
-                            parser.SendSentence(status);
-                            status = new SeatalkNgPilotStatus(AutopilotStatus.Calibration);
-                            parser.SendSentence(status);
+                            var heading = new SeatalkNgPilotHeading(Angle.FromDegrees(100), Angle.FromDegrees(105.2));
+                            parser.SendSentence(heading);
+                            var heading2 =
+                                new SeatalkNgPilotLockedHeading(Angle.FromDegrees(220), Angle.FromDegrees(221));
+                            parser.SendSentence(heading2);
                         }
                     }
                 }

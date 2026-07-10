@@ -3,14 +3,17 @@
 
 using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
+using UnitsNet;
 
 namespace Iot.Device.Nmea0183
 {
@@ -20,8 +23,10 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public class Nmea2000YdwgParser : NmeaParser
     {
+        private const int TransmitConfirmationTimeout = 1000;
         private uint _currentPgn = 0;
         private List<byte> _allData = new List<byte>();
+        private ulong _pgnAwaitingSend = 0;
 
         /// <summary>
         /// Constructs an instance of this type
@@ -37,8 +42,8 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Our own sender ID. Can be left at 0 usually, which will cause the interface to substitute
-        /// the correct sender ID when transmitting the package
+        /// Our own sender ID. Typically ignored during sending, as the interface substitutes its own address automatically.
+        /// When using a low-level CAN-Bus interface, this needs to be set after sending an ISO Address Request Message.
         /// </summary>
         public byte SenderId
         {
@@ -69,8 +74,16 @@ namespace Iot.Device.Nmea0183
 
             if (splits[1] == "T")
             {
-                // TODO: Maybe wait for this somewhere?
-                Logger.LogInformation($"Received confirmation that we sent {currentLine}");
+                if (UInt32.TryParse(splits[2], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint pgnTransmit))
+                {
+                    pgnTransmit >>= 8;
+                    if (pgnTransmit == _pgnAwaitingSend)
+                    {
+                        Logger.LogInformation($"Received confirmation that we sent {currentLine}");
+                        Interlocked.Exchange(ref _pgnAwaitingSend, 0);
+                    }
+                }
+
                 error = NmeaError.None;
                 return null;
             }
@@ -102,9 +115,10 @@ namespace Iot.Device.Nmea0183
                 var bytes = Convert.FromHexString(s);
                 _allData.AddRange(bytes);
                 var declaration = Nmea2000Declarations.GetByPgn(pgn);
-                if (declaration != null && declaration.IsComplete(_allData))
+
+                if (declaration != null)
                 {
-                    var result = CreateSentence(declaration, timeStamp, pgn & 0xFF, _allData);
+                    TalkerSentence? result = CreateSentence(declaration, timeStamp, pgn & 0xFF, _allData);
                     if (result != null)
                     {
                         error = NmeaError.None;
@@ -114,27 +128,25 @@ namespace Iot.Device.Nmea0183
                 else if (declaration == null)
                 {
                     uint rawpgn = (pgn >> 8) & 0x1FFFF;
-                    Logger.LogInformation($"Unknown PGN: {rawpgn:X6}");
+                    // Logger.LogInformation($"Unknown PGN: {rawpgn:X6}");
                     error = NmeaError.None;
                     return null;
                 }
-                else
-                {
-                    // Message is known, but incomplete
-                    error = NmeaError.None;
-                    return null;
-                }
+
+                // Message is known, but incomplete
+                error = NmeaError.None;
+                return null;
             }
 
             error = NmeaError.NoSyncByte;
             return null;
         }
 
-        private TalkerSentence CreateSentence(Nmea2000PgnDeclaration declaration, TimeSpan? timeStamp, uint sender, List<byte> allData)
+        private TalkerSentence? CreateSentence(Nmea2000PgnDeclaration declaration, TimeSpan? timeStamp, uint sender, List<byte> allData)
         {
-            if (declaration.IsComplete(allData) == false)
+            if (allData.Count != declaration.Length)
             {
-                throw new InvalidOperationException("Invalid sequencing: Message was already complete now it's not?");
+                return null;
             }
 
             var fields = new List<string>();
@@ -181,10 +193,25 @@ namespace Iot.Device.Nmea0183
                     idx += 1;
                 }
 
+                int loops = TransmitConfirmationTimeout / 20;
+                while (Interlocked.Read(ref _pgnAwaitingSend) != 0 && loops-- >= 0)
+                {
+                    Thread.Sleep(20);
+                }
+
+                if (loops < 0)
+                {
+                    Logger.LogWarning($"Previous outgoing message with pgn {pgn:X8} was not confirmed");
+                }
+
+                Interlocked.Exchange(ref _pgnAwaitingSend, pgn);
+
+                // Wait until event is set
                 // This does not yet support fast packet data
                 string sendData = $"{pgn << 8:X8} {data}\r\n";
                 byte[] buffer = StreamEncoding.GetBytes(sendData);
 
+                Logger.LogInformation($"Sending {sendData}");
                 Sink?.Write(buffer, 0, buffer.Length);
             }
             else

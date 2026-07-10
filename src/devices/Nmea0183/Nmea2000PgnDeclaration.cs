@@ -19,20 +19,5 @@ namespace Iot.Device.Nmea0183
     /// <param name="FastPacket">True if this PGN typically consists of more than one packet</param>
     public sealed record class Nmea2000PgnDeclaration(uint Pgn, string Name, int Priority, int Length, bool FastPacket)
     {
-        /// <summary>
-        /// Returns true if the given data is a complete message for this PGN
-        /// </summary>
-        /// <param name="allData">The payload of the message</param>
-        /// <returns>True or false</returns>
-        public bool IsComplete(List<byte> allData)
-        {
-            // Todo: This needs to be more complicated for messages with a dynamic length
-            if (allData.Count == Length)
-            {
-                return true;
-            }
-
-            return false;
-        }
     }
 }

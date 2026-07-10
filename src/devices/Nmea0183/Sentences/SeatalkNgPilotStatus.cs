@@ -26,8 +26,6 @@ namespace Iot.Device.Nmea0183.Sentences
             set;
         }
 
-        public override bool ReplacesOlderInstance => true;
-
         public override int Identifier => HexId;
 
         public override string ToReadableContent()
@@ -74,7 +72,18 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (ReadFromHexString(data, 4, 4, false, out int status))
             {
-                PilotStatus = (AutopilotStatus)status; // TODO: Fix this
+                PilotStatus = status switch
+                {
+                    0 => AutopilotStatus.Standby,
+                    64 => AutopilotStatus.Auto,
+                    256 => AutopilotStatus.Wind,
+                    384 => AutopilotStatus.Track,
+                    _ => AutopilotStatus.Undefined,
+                };
+            }
+            else
+            {
+                PilotStatus = AutopilotStatus.Undefined;
             }
 
             Valid = true;
@@ -83,31 +92,18 @@ namespace Iot.Device.Nmea0183.Sentences
         public override string ToNmeaParameterList()
         {
             string manufacturer = _manufacturerAndIndustry.ToString("X4", CultureInfo.InvariantCulture);
-            // Ugly hack to see which messages are required
-            if (PilotStatus == AutopilotStatus.Standby)
+            int statusByte = PilotStatus switch
             {
-                string pgn = Identifier.ToString("X6", CultureInfo.InvariantCulture);
-                string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
-                string source = MessageSource.ToString("X2", CultureInfo.InvariantCulture);
-                string hd = $"{pgn},{timeStampText},{source},";
-                return hd + manufacturer + "0000000007FF";
-            }
-            else if (PilotStatus == AutopilotStatus.Auto)
-            {
-                string pgn = 65359.ToString("X6", CultureInfo.InvariantCulture);
-                string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
-                string source = MessageSource.ToString("X2", CultureInfo.InvariantCulture);
-                string hd = $"{pgn},{timeStampText},{source},";
-                return hd + manufacturer + "FFFFFF44EDFF";
-            }
-            else
-            {
-                string pgn = 65360.ToString("X6", CultureInfo.InvariantCulture);
-                string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
-                string source = MessageSource.ToString("X2", CultureInfo.InvariantCulture);
-                string hd = $"{pgn},{timeStampText},{source},";
-                return hd + manufacturer + "FFFFFF30EEFF";
-            }
+                AutopilotStatus.Standby => 0,
+                AutopilotStatus.Offline => 0,
+                AutopilotStatus.Auto => 64,
+                AutopilotStatus.Wind => 256,
+                AutopilotStatus.Track => 384,
+                _ => 0,
+            };
+
+            // Byte 7 must be 0x07, or a Raymarine Chart plotter won't recognize it
+            return base.ToNmeaParameterList() + manufacturer + statusByte.ToString("X4", CultureInfo.InvariantCulture) + "000007FF";
         }
     }
 }
