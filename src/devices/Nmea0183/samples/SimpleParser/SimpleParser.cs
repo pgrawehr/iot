@@ -113,7 +113,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (TcpClient client = new TcpClient("192.168.201.50", 1457))
+                using (TcpClient client = new TcpClient("192.168.58.50", 1457))
                 {
                     Console.WriteLine("Connected!");
                     var stream = client.GetStream();

@@ -128,7 +128,7 @@ namespace Iot.Device.Nmea0183
                 else if (declaration == null)
                 {
                     uint rawpgn = (pgn >> 8) & 0x1FFFF;
-                    // Logger.LogInformation($"Unknown PGN: {rawpgn:X6}");
+                    Logger.LogInformation($"Unknown PGN: {rawpgn:X6}");
                     error = NmeaError.None;
                     return null;
                 }

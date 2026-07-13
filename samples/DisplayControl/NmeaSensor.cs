@@ -33,6 +33,8 @@ namespace DisplayControl
         private const string Udp = "Udp";
         private const string AuxiliaryGps = "AuxiliaryGps";
         private const string Seatalk1Name = "Seatalk1";
+        // This is a wifi connection that allows sending/receiving NMEA2000 messages as raw
+        private const string Nmea2000 = "Ydwg";
 
         private readonly MeasurementManager _manager;
         private readonly bool _hasPlotter;
@@ -62,6 +64,8 @@ namespace DisplayControl
         /// Secondary (forward) GPS antenna
         /// </summary>
         private NmeaParser _parserForwardInterface;
+
+        private NmeaUdpServer _rawNmea2000;
 
         private SystemClockSynchronizer _clockSynchronizer;
         
@@ -196,6 +200,9 @@ namespace DisplayControl
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false, true));
 
+            // For now, drop all incoming messages directly from NMEA2000
+            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+
             // The XTE sentence from the plotter is always ignored
             rules.Add(new FilterRule(ShipSourceName, yd, CrossTrackError.Id, Array.Empty<string>(), false, false));
 
@@ -328,6 +335,10 @@ namespace DisplayControl
             rules.Add(new FilterRule("*", TalkerId.Ais, new SentenceId("VDO"), new []{ ShipSourceName }, true, true));
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
+
+            // For now, drop all incoming messages directly from NMEA2000
+            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+
             // GGA messages from the ship are normally discarded, but the cache shall decide (may use a fallback)
             rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>() { MessageRouter.LocalMessageSource }, false, false));
             rules.Add(new FilterRule(AuxiliaryGps, TalkerId.Any, new SentenceId("GGA"), new List<string>() { MessageRouter.LocalMessageSource }, false, false));
@@ -597,6 +608,10 @@ namespace DisplayControl
 
             _udpServer = new NmeaUdpServer(Udp, 10101);
             _udpServer.OnParserError += OnParserError;
+
+            _rawNmea2000 = new NmeaUdpServer(Nmea2000, 1458);
+            _rawNmea2000.OnParserError += OnParserError;
+
             _clockSynchronizer = new SystemClockSynchronizer();
             _clockSynchronizer.StartDecode();
 
@@ -612,6 +627,7 @@ namespace DisplayControl
             _udpServer.StartDecode();
             _openCpnServer.StartDecode();
             _seatalkPort.StartDecode();
+            _rawNmea2000.StartDecode();
 
             _parserHandheldInterface.StartDecode();
             _parserForwardInterface.StartDecode();
@@ -635,6 +651,7 @@ namespace DisplayControl
             _router.AddEndPoint(_parserForwardInterface);
             _router.AddEndPoint(_aisManager);
             _router.AddEndPoint(_seatalkPort);
+            _router.AddEndPoint(_rawNmea2000);
 
             _router.OnNewSequence += ParserOnNewSequence;
             var ruleList = _hasPlotter ? ConstructRulesWithPlotter() : ConstructRulesWithoutPlotter();
@@ -1124,6 +1141,9 @@ namespace DisplayControl
 
             _udpServer?.Dispose();
             _udpServer = null;
+
+            _rawNmea2000?.Dispose();
+            _rawNmea2000 = null;
 
             _autopilot?.Dispose();
             _autopilot = null;
