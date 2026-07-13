@@ -113,14 +113,12 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (TcpClient client = new TcpClient("192.168.58.50", 1457))
+                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.58.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
-                    Console.WriteLine("Connected!");
-                    var stream = client.GetStream();
                     bool closed = false;
-                    using (NmeaParser parser = new Nmea2000YdwgParser("Test", stream, stream))
+                    Console.WriteLine("Connected!");
                     {
-                        parser.OnParserError += (source, msg, error) =>
+                        client.OnParserError += (source, msg, error) =>
                         {
                             Console.WriteLine($"Error while parsing message '{msg}': {error}");
                             if (error == NmeaError.PortClosed)
@@ -128,19 +126,19 @@ namespace Iot.Device.Gps.NeoM8Samples
                                 closed = true;
                             }
                         };
-                        parser.OnNewSequence += ParserOnNewSequence;
-                        parser.StartDecode();
+                        client.OnNewSequence += ParserOnNewSequence;
+                        client.StartDecode();
                         while (!Console.KeyAvailable && !closed)
                         {
                             Thread.Sleep(500);
 
                             SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(AutopilotStatus.Standby);
-                            parser.SendSentence(status);
+                            client.SendSentence(status);
                             var heading = new SeatalkNgPilotHeading(Angle.FromDegrees(100), Angle.FromDegrees(105.2));
-                            parser.SendSentence(heading);
+                            client.SendSentence(heading);
                             var heading2 =
                                 new SeatalkNgPilotLockedHeading(Angle.FromDegrees(220), Angle.FromDegrees(221));
-                            parser.SendSentence(heading2);
+                            client.SendSentence(heading2);
                         }
                     }
                 }

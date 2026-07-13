@@ -84,24 +84,6 @@ namespace Iot.Device.Nmea0183
             _parserFactory = parserFactory;
         }
 
-        /// <summary>
-        /// Get the default IP address to bind to
-        /// </summary>
-        /// <returns></returns>
-        public static IPAddress GetLocalIPAddress()
-        {
-            var host = Dns.GetHostEntry(Dns.GetHostName());
-            foreach (var ip in host.AddressList)
-            {
-                if (ip.AddressFamily == AddressFamily.InterNetwork)
-                {
-                    return ip;
-                }
-            }
-
-            return IPAddress.Loopback;
-        }
-
         /// <inheritdoc />
         public override void StartDecode()
         {

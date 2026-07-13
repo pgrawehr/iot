@@ -27,6 +27,7 @@ namespace Iot.Device.Nmea0183
         private uint _currentPgn = 0;
         private List<byte> _allData = new List<byte>();
         private ulong _pgnAwaitingSend = 0;
+        private Dictionary<uint, string> _unknownPgnsSeen = new Dictionary<uint, string>();
 
         /// <summary>
         /// Constructs an instance of this type
@@ -128,7 +129,11 @@ namespace Iot.Device.Nmea0183
                 else if (declaration == null)
                 {
                     uint rawpgn = (pgn >> 8) & 0x1FFFF;
-                    Logger.LogInformation($"Unknown PGN: {rawpgn:X6}");
+                    if (_unknownPgnsSeen.TryAdd(rawpgn, currentLine))
+                    {
+                        Logger.LogInformation($"New Unknown PGN: {rawpgn:X6}");
+                    }
+
                     error = NmeaError.None;
                     return null;
                 }
@@ -140,6 +145,15 @@ namespace Iot.Device.Nmea0183
 
             error = NmeaError.NoSyncByte;
             return null;
+        }
+
+        /// <summary>
+        /// Returns the list of (so-far) seen unknown PGNs together with an example payload.
+        /// </summary>
+        /// <returns>A dictionary</returns>
+        public Dictionary<uint, string> GetListOfUnknownPgns()
+        {
+            return _unknownPgnsSeen;
         }
 
         private TalkerSentence? CreateSentence(Nmea2000PgnDeclaration declaration, TimeSpan? timeStamp, uint sender, List<byte> allData)
@@ -218,6 +232,16 @@ namespace Iot.Device.Nmea0183
             {
                 Logger.LogWarning("Can only send Nmea2000PackedMessage instances with this interface ($PCDIN sequences)");
                 return;
+            }
+        }
+
+        /// <inheritdoc/>
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            foreach (var kp in _unknownPgnsSeen)
+            {
+                Logger.LogInformation($"PGN {kp.Key} is not known but was seen");
             }
         }
     }
