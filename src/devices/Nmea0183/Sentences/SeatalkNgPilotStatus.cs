@@ -102,8 +102,11 @@ namespace Iot.Device.Nmea0183.Sentences
                 _ => 0,
             };
 
+            string statusString = statusByte.ToString("X4", CultureInfo.InvariantCulture);
+            statusString = statusString.Substring(2, 2) + statusString.Substring(0, 2);
+
             // Byte 7 must be 0x07, or a Raymarine Chart plotter won't recognize it
-            return base.ToNmeaParameterList() + manufacturer + statusByte.ToString("X4", CultureInfo.InvariantCulture) + "000007FF";
+            return base.ToNmeaParameterList() + manufacturer + statusString + "000007FF";
         }
     }
 }

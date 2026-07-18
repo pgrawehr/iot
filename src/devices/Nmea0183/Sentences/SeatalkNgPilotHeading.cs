@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Common;
 using UnitsNet;
 
 #pragma warning disable CS1591
@@ -120,11 +121,11 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             string manufacturer = _manufacturerAndIndustry.ToString("X4", CultureInfo.InvariantCulture);
 
-            string trueAngle = DoubleTo16BitField(HeadingTrue.HasValue ? HeadingTrue.Value.Radians : null,
+            string trueAngle = DoubleTo16BitField(HeadingTrue.HasValue ? HeadingTrue.Value.Normalize(true).Radians : null,
                 0.0001).ToString("X4", CultureInfo.InvariantCulture);
             trueAngle = trueAngle.Substring(2, 2) + trueAngle.Substring(0, 2);
 
-            string magAngle = DoubleTo16BitField(HeadingMagnetic.HasValue ? HeadingMagnetic.Value.Radians : null,
+            string magAngle = DoubleTo16BitField(HeadingMagnetic.HasValue ? HeadingMagnetic.Value.Normalize(true).Radians : null,
                 0.0001).ToString("X4", CultureInfo.InvariantCulture);
             magAngle = magAngle.Substring(2, 2) + magAngle.Substring(0, 2);
             return base.ToNmeaParameterList() + manufacturer + Sid.ToString("X2", CultureInfo.InvariantCulture) + trueAngle + magAngle + "FF";

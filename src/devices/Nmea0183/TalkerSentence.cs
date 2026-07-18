@@ -61,21 +61,22 @@ namespace Iot.Device.Nmea0183
                 var specificMessageId = sentence.Fields.FirstOrDefault();
                 if (specificMessageId != null && int.TryParse(specificMessageId, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int msgid))
                 {
-                    if (msgid == SeaSmartEngineFast.HexId)
+                    switch (msgid)
                     {
-                        return new SeaSmartEngineFast(sentence, time);
-                    }
-                    else if (msgid == SeaSmartEngineDetail.HexId)
-                    {
-                        return new SeaSmartEngineDetail(sentence, time);
-                    }
-                    else if (msgid == SeaSmartFluidLevel.HexId)
-                    {
-                        return new SeaSmartFluidLevel(sentence, time);
-                    }
-                    else if (msgid == FastPositionUpdate.HexId)
-                    {
-                        return new FastPositionUpdate(sentence, time);
+                        case SeaSmartEngineFast.HexId:
+                            return new SeaSmartEngineFast(sentence, time);
+                        case SeaSmartEngineDetail.HexId:
+                            return new SeaSmartEngineDetail(sentence, time);
+                        case SeaSmartFluidLevel.HexId:
+                            return new SeaSmartFluidLevel(sentence, time);
+                        case FastPositionUpdate.HexId:
+                            return new FastPositionUpdate(sentence, time);
+                        case SeatalkNgPilotLockedHeading.HexId:
+                            return new SeatalkNgPilotLockedHeading(sentence, time);
+                        case SeatalkNgPilotHeading.HexId:
+                            return new SeatalkNgPilotHeading(sentence, time);
+                        case SeatalkNgPilotStatus.HexId:
+                            return new SeatalkNgPilotStatus(sentence, time);
                     }
                 }
 

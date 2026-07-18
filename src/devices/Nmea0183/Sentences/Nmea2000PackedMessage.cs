@@ -79,10 +79,27 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// True if this packet is addressed, meaning the last byte of the PGN is the destination address
+        /// instead of part of the PGN.
+        /// </summary>
+        public virtual bool IsAddressed => false;
+
+        /// <summary>
         /// This must be false for this message type, or we'll be dropping all NMEA2000 messages in favor
         /// of any other NMEA2000 message. Not the expected behavior.
         /// </summary>
         public sealed override bool ReplacesOlderInstance => false;
+
+        /// <summary>
+        /// The static PGN declaration information for this type
+        /// </summary>
+        public virtual Nmea2000PgnDeclaration? PgnDeclaration
+        {
+            get
+            {
+                return Nmea2000Declarations.GetByPgn((uint)Identifier);
+            }
+        }
 
         /// <summary>
         /// Reverses the endianess of an integer

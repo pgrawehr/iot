@@ -65,7 +65,7 @@ namespace DisplayControl
         /// </summary>
         private NmeaParser _parserForwardInterface;
 
-        private NmeaUdpServer _rawNmea2000;
+        private NmeaTcpServer _rawNmea2000;
 
         private SystemClockSynchronizer _clockSynchronizer;
         
@@ -182,6 +182,12 @@ namespace DisplayControl
 
         public bool HandheldOffline => m_lastMessageFromHandheld == null || m_lastMessageFromHandheld.Age > TimeSpan.FromSeconds(10);
 
+        private void ConstructNmea2000Rules(IList<FilterRule> rules)
+        {
+            // For now, drop all incoming messages directly from NMEA2000
+            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+        }
+
         /// <summary>
         /// If the plotter is connected, we need an entire different set of rules, because now the whole navigation data comes from the ship and
         /// we shouldn't be sending navigation data there as this confuses the displays.
@@ -200,8 +206,7 @@ namespace DisplayControl
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new[] { _clockSynchronizer.InterfaceName }, false, true));
 
-            // For now, drop all incoming messages directly from NMEA2000
-            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+            ConstructNmea2000Rules(rules);
 
             // The XTE sentence from the plotter is always ignored
             rules.Add(new FilterRule(ShipSourceName, yd, CrossTrackError.Id, Array.Empty<string>(), false, false));
@@ -336,8 +341,7 @@ namespace DisplayControl
             // The time message is required by the time component
             rules.Add(new FilterRule("*", TalkerId.Any, new SentenceId("ZDA"), new []{ _clockSynchronizer.InterfaceName }, false, true));
 
-            // For now, drop all incoming messages directly from NMEA2000
-            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+            ConstructNmea2000Rules(rules);
 
             // GGA messages from the ship are normally discarded, but the cache shall decide (may use a fallback)
             rules.Add(new FilterRule("*", yd, new SentenceId("GGA"), new List<string>() { MessageRouter.LocalMessageSource }, false, false));
@@ -609,7 +613,7 @@ namespace DisplayControl
             _udpServer = new NmeaUdpServer(Udp, 10101);
             _udpServer.OnParserError += OnParserError;
 
-            _rawNmea2000 = new NmeaUdpServer(Nmea2000, 1458);
+            _rawNmea2000 = new NmeaTcpServer(Nmea2000, IPAddress.Parse("192.168.58.50"), 1457, new Nmea2000YdwgParserFactory());
             _rawNmea2000.OnParserError += OnParserError;
 
             _clockSynchronizer = new SystemClockSynchronizer();

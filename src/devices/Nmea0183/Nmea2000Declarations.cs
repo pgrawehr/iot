@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183
 {
@@ -22,7 +23,18 @@ namespace Iot.Device.Nmea0183
             s_data.Add(0x1F010, new Nmea2000PgnDeclaration(0x1F010, "System Time", 3, 8, false));
             s_data.Add(0x1F801, new Nmea2000PgnDeclaration(0x1F801, "Position, Rapid Update", 2, 8, false));
             s_data.Add(0x1F200, new Nmea2000PgnDeclaration(0x1F200, "Engine Parameters, Rapid update", 2, 8, false));
-            s_data.Add(0x1F201, new Nmea2000PgnDeclaration(0x1F201, "Engine Parameters, dynamic", 2, 26, false));
+            s_data.Add(0x1F201, new Nmea2000PgnDeclaration(0x1F201, "Engine Parameters, dynamic", 2, 26, true));
+            s_data.Add(SeatalkNgPilotStatus.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotStatus.HexId, "Seatalk: Pilot Mode", 7,
+                8, false,
+                new List<Nmea2000PgnDeclaration.FieldDeclaration>()
+                {
+                    // Note: The length provided here is the number of bytes the field uses in the GroupFunction message
+                    new Nmea2000PgnDeclaration.FieldDeclaration(1, 2, "Manufacturer", 1851, x => (x >> 5) & 0x7FF),
+                    new Nmea2000PgnDeclaration.FieldDeclaration(2, 1, "Reserved", null),
+                    new Nmea2000PgnDeclaration.FieldDeclaration(3, 1, "Industry Code", 4, x => x & 0x7),
+                    new Nmea2000PgnDeclaration.FieldDeclaration(4, 2, "Pilot Mode", null),
+                    new Nmea2000PgnDeclaration.FieldDeclaration(5, 2, "Sub Mode", null)
+                }));
         }
 
         /// <summary>
@@ -32,7 +44,7 @@ namespace Iot.Device.Nmea0183
         /// <returns>The data for that PGN, or null if the PGN is unknown</returns>
         public static Nmea2000PgnDeclaration? GetByPgn(uint pgn)
         {
-            pgn = (pgn >> 8) & 0x1FFFF;
+            pgn = pgn & 0x1FFFF;
             if (s_data.TryGetValue(pgn, out var data))
             {
                 return data;

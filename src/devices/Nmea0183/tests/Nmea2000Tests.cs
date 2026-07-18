@@ -19,7 +19,7 @@ namespace Iot.Device.Nmea0183.Tests
     public class Nmea2000Tests
     {
         [Fact]
-        public void ParseRawNmea2000Sentence()
+        public void ParseRawNmea2000SentenceSingle()
         {
             var m = new MemoryStream();
             var parser = new Nmea2000YdwgParser("Test", m, null);
@@ -27,6 +27,22 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.NotNull(sentence);
             Assert.IsType<TalkerSentence>(sentence);
             Assert.StartsWith("$PCDIN,01F801,0000F6E1,15,A07DE618C005FBD5*", sentence.ToString());
+        }
+
+        [Fact]
+        public void ParseRawNmea2000SentenceFastPacket()
+        {
+            var m = new MemoryStream();
+            NmeaError error = NmeaError.None;
+            var parser = new Nmea2000YdwgParser("Test", m, null);
+            var sentence = parser.ParseSentence("07:07:25.846 R DED6703 80 15 00 00 EF 01 FF FF", out error);
+            Assert.Null(sentence);
+            parser.ParseSentence("07:07:25.847 R DED6703 81 FF FF FF FF 04 01 3B", out error);
+            parser.ParseSentence("07:07:25.848 R DED6703 82 07 03 04 04 6C 05 23", out error);
+            sentence = parser.ParseSentence("07:07:25.848 R DED6703 83 50 FF FF FF FF FF FF", out error);
+            Assert.NotNull(sentence);
+            Assert.IsType<TalkerSentence>(sentence);
+            Assert.StartsWith("$PCDIN,DED67,0000F6E1,03,0000EF01FFFFFF*", sentence.ToString());
         }
 
         [Fact]
@@ -154,8 +170,8 @@ namespace Iot.Device.Nmea0183.Tests
 
         [Theory]
         [InlineData("$PCDIN,00FF50,000074C5,57,3B9FFFFFFF46EDFF")]
-        [InlineData($"PCDIN,00FF4F,000074C5,57,3B9FFFFFFF46EDFF")]
-        [InlineData($"$PCDIN,01F801,00000000,00,E013EAF9E093CFF3")]
+        [InlineData("$PCDIN,00FF4F,000074C5,57,3B9FFFFFFF46EDFF")]
+        [InlineData("$PCDIN,01F801,00000000,00,E013EAF9E093CFF3")]
         [InlineData("$PCDIN,01F200,0000F6E1,02,00003CFFFF64FFFF")]
         public void CanParseAllTheseMessages(string input)
         {

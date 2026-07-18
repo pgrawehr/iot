@@ -6,18 +6,84 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Nmea0183.Sentences;
 
+#pragma warning disable CS9113
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
     /// This class holds static information about a particular NMEA2000 PGN (message type)
     /// </summary>
-    /// <param name="Pgn">The message number (usually given in hex)</param>
-    /// <param name="Name">The name of the message</param>
-    /// <param name="Priority">The typical priority this message uses</param>
-    /// <param name="Length">The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</param>
-    /// <param name="FastPacket">True if this PGN typically consists of more than one packet</param>
-    public sealed record class Nmea2000PgnDeclaration(uint Pgn, string Name, int Priority, int Length, bool FastPacket)
+    public sealed record class Nmea2000PgnDeclaration
     {
+        /// <summary>
+        /// This class holds static information about a particular NMEA2000 PGN (message type)
+        /// </summary>
+        /// <param name="pgn">The message number (usually given in hex)</param>
+        /// <param name="name">The name of the message</param>
+        /// <param name="priority">The typical priority this message uses</param>
+        /// <param name="length">The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</param>
+        /// <param name="fastPacket">True if this PGN typically consists of more than one packet</param>
+        public Nmea2000PgnDeclaration(uint pgn, string name, int priority, int length, bool fastPacket)
+        {
+            Pgn = pgn;
+            Name = name;
+            Priority = priority;
+            Length = length;
+            FastPacket = fastPacket;
+            FieldDeclarations = new List<FieldDeclaration>();
+        }
+
+        /// <summary>
+        /// This class holds static information about a particular NMEA2000 PGN (message type)
+        /// </summary>
+        /// <param name="pgn">The message number (usually given in hex)</param>
+        /// <param name="name">The name of the message</param>
+        /// <param name="priority">The typical priority this message uses</param>
+        /// <param name="length">The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</param>
+        /// <param name="fastPacket">True if this PGN typically consists of more than one packet</param>
+        /// <param name="fieldDeclarations">Field index/length pairs</param>
+        public Nmea2000PgnDeclaration(uint pgn, string name, int priority, int length, bool fastPacket, List<FieldDeclaration> fieldDeclarations)
+        {
+            Pgn = pgn;
+            Name = name;
+            Priority = priority;
+            Length = length;
+            FastPacket = fastPacket;
+            FieldDeclarations = fieldDeclarations;
+        }
+
+        /// <summary>The message number (usually given in hex)</summary>
+        public uint Pgn { get; init; }
+
+        /// <summary>The name of the message</summary>
+        public string Name { get; init; }
+
+        /// <summary>The typical priority this message uses</summary>
+        public int Priority { get; init; }
+
+        /// <summary>The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</summary>
+        public int Length { get; init; }
+
+        /// <summary>True if this PGN typically consists of more than one packet</summary>
+        public bool FastPacket { get; init; }
+
+        /// <summary>
+        /// The list of fields of this message. Required if this message shall take part in an exchange using
+        /// <see cref="GroupFunctionMessage"/> exchange
+        /// </summary>
+        public IReadOnlyList<FieldDeclaration> FieldDeclarations
+        {
+            get;
+            init;
+        }
+
+        /// <summary>
+        /// A field declaration, used when the message is used in a Request/Response exchange using
+        /// PGN 126208
+        /// </summary>
+        public class FieldDeclaration(int FieldNumber, int FieldSize, string Description, int? Constant, Func<int, int>? Getter = null)
+        {
+        }
     }
 }

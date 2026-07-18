@@ -113,7 +113,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.58.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.121.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");
@@ -128,17 +128,48 @@ namespace Iot.Device.Gps.NeoM8Samples
                         };
                         client.OnNewSequence += ParserOnNewSequence;
                         client.StartDecode();
-                        while (!Console.KeyAvailable && !closed)
-                        {
-                            Thread.Sleep(500);
 
-                            SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(AutopilotStatus.Standby);
-                            client.SendSentence(status);
-                            var heading = new SeatalkNgPilotHeading(Angle.FromDegrees(100), Angle.FromDegrees(105.2));
-                            client.SendSentence(heading);
-                            var heading2 =
-                                new SeatalkNgPilotLockedHeading(Angle.FromDegrees(220), Angle.FromDegrees(221));
-                            client.SendSentence(heading2);
+                        AutopilotStatus statusNow = AutopilotStatus.Offline;
+                        bool exit = false;
+                        while (!exit && !closed)
+                        {
+                            Thread.Sleep(100);
+
+                            if (Console.KeyAvailable)
+                            {
+                                var k = Console.ReadKey(true);
+                                switch (k.Key)
+                                {
+                                    case ConsoleKey.Q:
+                                        exit = true;
+                                        break;
+                                    case ConsoleKey.S:
+                                        statusNow = AutopilotStatus.Standby;
+                                        break;
+                                    case ConsoleKey.A:
+                                        statusNow = AutopilotStatus.Auto;
+                                        break;
+                                    case ConsoleKey.W:
+                                        statusNow = AutopilotStatus.Wind;
+                                        break;
+                                    case ConsoleKey.O:
+                                        statusNow = AutopilotStatus.Offline;
+                                        break;
+                                }
+
+                                Console.WriteLine($"New status: {statusNow}!");
+                            }
+
+                            if (statusNow != AutopilotStatus.Offline)
+                            {
+                                SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(statusNow);
+                                client.SendSentence(status);
+                                var heading = new SeatalkNgPilotHeading(null, Angle.FromDegrees(105.2));
+                                client.SendSentence(heading);
+                                var heading2 =
+                                    new SeatalkNgPilotLockedHeading(null, Angle.FromDegrees(221));
+                                client.SendSentence(heading2);
+                            }
                         }
                     }
                 }

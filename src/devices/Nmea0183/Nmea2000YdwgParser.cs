@@ -80,7 +80,7 @@ namespace Iot.Device.Nmea0183
                     pgnTransmit >>= 8;
                     if (pgnTransmit == _pgnAwaitingSend)
                     {
-                        Logger.LogInformation($"Received confirmation that we sent {currentLine}");
+                        Logger.LogInformation($"Received confirmation that we sent {currentLine.Trim()}");
                         Interlocked.Exchange(ref _pgnAwaitingSend, 0);
                     }
                 }
@@ -115,7 +115,7 @@ namespace Iot.Device.Nmea0183
                 var s = string.Join(string.Empty, splits.Skip(3));
                 var bytes = Convert.FromHexString(s);
                 _allData.AddRange(bytes);
-                var declaration = Nmea2000Declarations.GetByPgn(pgn);
+                var declaration = Nmea2000Declarations.GetByPgn(pgn >> 8);
 
                 if (declaration != null)
                 {
@@ -225,7 +225,6 @@ namespace Iot.Device.Nmea0183
                 string sendData = $"{pgn << 8:X8} {data}\r\n";
                 byte[] buffer = StreamEncoding.GetBytes(sendData);
 
-                Logger.LogInformation($"Sending {sendData}");
                 Sink?.Write(buffer, 0, buffer.Length);
             }
             else
