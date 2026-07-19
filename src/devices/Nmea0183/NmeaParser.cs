@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
+using Microsoft.Extensions.Logging;
 using UnitsNet;
 
 namespace Iot.Device.Nmea0183
@@ -254,13 +255,18 @@ namespace Iot.Device.Nmea0183
         {
             while (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
+                if (_outQueue.Count > 30)
+                {
+                    Logger.LogWarning($"Many items in send queue for '{InterfaceName}': {_outQueue.Count}");
+                }
+
                 if (_outQueue.TryTake(out var sentenceToSend, TimeSpan.FromSeconds(10)))
                 {
                     if (sentenceToSend.ReplacesOlderInstance && SuppressOutdatedMessages)
                     {
                         // If there are other instances of the same message in the queue, we drop the current one (as it's not the newest)
                         // and continue processing.
-                        var newerInstance = _outQueue.FirstOrDefault(x => x.SentenceId == sentenceToSend.SentenceId && x.TalkerId == sentenceToSend.TalkerId);
+                        var newerInstance = _outQueue.FirstOrDefault(x => x.IsSameMessageAs(sentenceToSend));
                         if (newerInstance != null)
                         {
                             continue;

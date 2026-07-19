@@ -44,6 +44,9 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public override int Identifier => HexId;
 
+        /// <inheritdoc/>
+        public override bool ReplacesOlderInstance => true;
+
         public override string ToReadableContent()
         {
             return $"SeatalkNg Pilot Heading status: {TargetHeadingMagnetic}° Mag, {TargetHeadingTrue}° True";

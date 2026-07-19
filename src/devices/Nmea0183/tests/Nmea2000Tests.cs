@@ -26,7 +26,7 @@ namespace Iot.Device.Nmea0183.Tests
             var sentence = parser.ParseSentence("17:33:21.141 R 09F80115 A0 7D E6 18 C0 05 FB D5", out NmeaError error);
             Assert.NotNull(sentence);
             Assert.IsType<TalkerSentence>(sentence);
-            Assert.StartsWith("$PCDIN,01F801,0000F6E1,15,A07DE618C005FBD5*", sentence.ToString());
+            Assert.StartsWith("$PCDIN,09F801,0000F6E1,15,A07DE618C005FBD5*", sentence.ToString());
         }
 
         [Fact]
@@ -45,6 +45,32 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.NotNull(sentence);
             Assert.IsType<TalkerSentence>(sentence);
             Assert.Equal("$PCDIN,0DED67,0000642D,03,0000EF01FFFFFFFFFFFF04013B070304046C052350FFFFFFFFFFFF*55", sentence.ToString());
+        }
+
+        [Fact]
+        public void ParseRawNmea2000SentenceFastPacketAndDecode()
+        {
+            var m = new MemoryStream();
+            NmeaError error;
+            var parser = new Nmea2000YdwgParser("Test", m, null);
+            parser.ParseSentence("07:08:25.258 R DED6703 00 11 01 63 FF 00 F8 04", out error);
+            parser.ParseSentence("07:07:25.847 R DED6703 01 01 3B 07 03 04 04 00", out error);
+            var sentence = parser.ParseSentence("07:07:25.848 R DED6703 02 01 05 FF FF FF FF FF", out error);
+            Assert.NotNull(sentence);
+            Assert.IsType<TalkerSentence>(sentence);
+            DateTimeOffset lastMessageTime = DateTimeOffset.MinValue;
+            var typed = (GroupFunctionMessage?)sentence.TryGetTypedValue(ref lastMessageTime);
+            Assert.NotNull(typed);
+            Assert.Equal(65379u, typed.Pgn);
+            Assert.NotEmpty(typed.Parameters);
+            Assert.Equal("Manufacturer", typed.Parameters[0].Description);
+            Assert.Equal(1851, typed.Parameters[0].Value); // Raymarine
+            Assert.Equal("Industry Code", typed.Parameters[2].Description);
+            Assert.Equal(4, typed.Parameters[2].Value); // Marine
+            Assert.Equal("Pilot Mode", typed.Parameters[3].Description);
+            Assert.Equal(256, typed.Parameters[3].Value); // "Wind mode"
+            Assert.Equal("Sub Mode", typed.Parameters[4].Description);
+            Assert.Equal(0xFFFF, typed.Parameters[4].Value); // "Don't care"
         }
 
         [Fact]

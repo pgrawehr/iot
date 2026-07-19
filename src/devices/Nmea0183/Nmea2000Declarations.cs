@@ -26,14 +26,14 @@ namespace Iot.Device.Nmea0183
             s_data.Add(0x1F201, new Nmea2000PgnDeclaration(0x1F201, "Engine Parameters, dynamic", 2, 26, true));
             s_data.Add(SeatalkNgPilotStatus.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotStatus.HexId, "Seatalk: Pilot Mode", 7,
                 8, false,
-                new List<Nmea2000PgnDeclaration.FieldDeclaration>()
+                new List<FieldDeclaration>()
                 {
                     // Note: The length provided here is the number of bytes the field uses in the GroupFunction message
-                    new Nmea2000PgnDeclaration.FieldDeclaration(1, 2, "Manufacturer", 1851, x => (x >> 5) & 0x7FF),
-                    new Nmea2000PgnDeclaration.FieldDeclaration(2, 1, "Reserved", null),
-                    new Nmea2000PgnDeclaration.FieldDeclaration(3, 1, "Industry Code", 4, x => x & 0x7),
-                    new Nmea2000PgnDeclaration.FieldDeclaration(4, 2, "Pilot Mode", null),
-                    new Nmea2000PgnDeclaration.FieldDeclaration(5, 2, "Sub Mode", null)
+                    new FieldDeclaration(1, 2, "Manufacturer", 1851, x => (x >> 5) & 0x7FF),
+                    new FieldDeclaration(2, 1, "Reserved", null),
+                    new FieldDeclaration(3, 1, "Industry Code", 4, x => x & 0x7),
+                    new FieldDeclaration(4, 2, "Pilot Mode", null),
+                    new FieldDeclaration(5, 2, "Sub Mode", null)
                 }));
             s_data.Add(GroupFunctionMessage.HexId, new Nmea2000PgnDeclaration(GroupFunctionMessage.HexId, "Request Group Function", 3, -1, true));
         }

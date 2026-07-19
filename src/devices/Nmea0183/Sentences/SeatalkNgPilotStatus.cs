@@ -23,7 +23,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public AutopilotStatus PilotStatus
         {
             get;
-            set;
+            private set;
         }
 
         public override int Identifier => HexId;
@@ -72,14 +72,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (ReadFromHexString(data, 4, 4, false, out int status))
             {
-                PilotStatus = status switch
-                {
-                    0 => AutopilotStatus.Standby,
-                    64 => AutopilotStatus.Auto,
-                    256 => AutopilotStatus.Wind,
-                    384 => AutopilotStatus.Track,
-                    _ => AutopilotStatus.Undefined,
-                };
+                PilotStatus = AutopilotStatusFromNumber(status);
             }
             else
             {
@@ -87,6 +80,21 @@ namespace Iot.Device.Nmea0183.Sentences
             }
 
             Valid = true;
+        }
+
+        /// <inheritdoc/>
+        public override bool ReplacesOlderInstance => true;
+
+        public static AutopilotStatus AutopilotStatusFromNumber(int status)
+        {
+            return status switch
+            {
+                0 => AutopilotStatus.Standby,
+                64 => AutopilotStatus.Auto,
+                256 => AutopilotStatus.Wind,
+                384 => AutopilotStatus.Track,
+                _ => AutopilotStatus.Undefined,
+            };
         }
 
         public override string ToNmeaParameterList()

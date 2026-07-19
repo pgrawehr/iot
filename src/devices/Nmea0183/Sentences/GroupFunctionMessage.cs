@@ -16,7 +16,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// This is a very versatile message of the Nmea2000 protocol. Depending on the function code
     /// (field 1) it can have many different meanings.
     /// </summary>
-    public class GroupFunctionMessage : Nmea2000PackedMessage
+    public sealed class GroupFunctionMessage : Nmea2000PackedMessage
     {
         // This message is usually addressed, so the last byte of the Id is the destination address (0xFF for
         // broadcast)
@@ -26,6 +26,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             Function = function;
             Valid = true;
+            Parameters = new List<FieldDeclaration>();
         }
 
         /// <summary>
@@ -64,32 +65,108 @@ namespace Iot.Device.Nmea0183.Sentences
                 Pgn = (uint)pgn;
             }
 
-            TransmissionInterval = null;
-            if (ReadFromHexString(data, 8, 8, true, out int interval))
+            int nextByte;
+            if (Function == GroupFunction.Request)
             {
-                // -1 is "Once" and -2 is "Reset to default" (which I have never observed as being in use)
-                if (interval > 0)
+                TransmissionInterval = null;
+                if (ReadFromHexString(data, 8, 8, true, out int interval))
                 {
-                    TransmissionInterval = TimeSpan.FromMilliseconds(interval);
+                    // -1 is "Once" and -2 is "Reset to default" (which I have never observed as being in use)
+                    if (interval > 0)
+                    {
+                        TransmissionInterval = TimeSpan.FromMilliseconds(interval);
+                    }
                 }
-            }
 
-            TransmissionOffset = null;
-            if (ReadFromHexString(data, 16, 4, true, out int offset))
-            {
-                if (interval > 0)
+                TransmissionOffset = null;
+                if (ReadFromHexString(data, 16, 4, true, out int offset))
                 {
-                    TransmissionOffset = TimeSpan.FromMilliseconds(interval);
+                    if (interval > 0)
+                    {
+                        TransmissionOffset = TimeSpan.FromMilliseconds(interval);
+                    }
                 }
+
+                nextByte = 20;
+            }
+            else if (Function == GroupFunction.Command)
+            {
+                // Don't care about priority
+                nextByte = 5;
+            }
+            else
+            {
+                // Unknown type of command message
+                Valid = false;
+                Parameters = new List<FieldDeclaration>();
+                return;
             }
 
             NumberOfArguments = 0;
-            if (ReadFromHexString(data, 20, 2, true, out int argCnt))
+            if (ReadFromHexString(data, nextByte * 2, 2, true, out int argCnt))
             {
                 NumberOfArguments = argCnt;
+                nextByte += 1;
+            }
+
+            // Note: Need to get the declaration for the target PGN, not our own.
+            var fieldDesc = Nmea2000Declarations.GetByPgn(Pgn)?.FieldDeclarations;
+            if (fieldDesc != null)
+            {
+                List<FieldDeclaration> actualValues =
+                    new List<FieldDeclaration>(
+                        fieldDesc);
+
+                for (int i = 0; i < NumberOfArguments; i++)
+                {
+                    if (!ReadFromHexString(data, nextByte * 2, 2, false, out int index))
+                    {
+                        break;
+                    }
+
+                    var thisField = actualValues.FirstOrDefault(x => x.FieldNumber == index);
+                    if (thisField != null)
+                    {
+                        ReadFromHexString(data, (nextByte + 1) * 2, thisField.FieldSize * 2, true, out int v);
+                        thisField.Value = v;
+                        nextByte = nextByte + 1 + thisField.FieldSize;
+                    }
+                }
+
+                Parameters = actualValues;
+            }
+            else
+            {
+                Parameters = new List<FieldDeclaration>();
             }
 
             Valid = true;
+        }
+
+        /// <summary>
+        /// Returns true if the constants (as declared in the FieldDeclarations of the target PGN)
+        /// match with the command.
+        /// </summary>
+        public bool ParameterConstantsMatch()
+        {
+            foreach (var p in Parameters)
+            {
+                if (p.Constant.HasValue)
+                {
+                    if (!p.Value.HasValue)
+                    {
+                        // For constant fields, we expect a value
+                        return false;
+                    }
+
+                    if (!p.Value.Equals(p.Constant))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         public int NumberOfArguments { get; set; }
@@ -100,7 +177,16 @@ namespace Iot.Device.Nmea0183.Sentences
             set;
         }
 
+        /// <inheritdoc/>
+        public override bool ReplacesOlderInstance => false;
+
         public uint Pgn { get; set; }
+
+        public List<FieldDeclaration> Parameters
+        {
+            get;
+            private set;
+        }
 
         public TimeSpan? TransmissionInterval
         {
@@ -124,7 +210,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public override string ToReadableContent()
         {
-            throw new NotImplementedException();
+            return $"Group function {Function} for Pgn {Pgn}";
         }
     }
 }

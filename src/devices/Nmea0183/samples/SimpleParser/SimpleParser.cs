@@ -16,6 +16,8 @@ namespace Iot.Device.Gps.NeoM8Samples
 {
     internal class Program
     {
+        private static AutopilotStatus _currentAutopilotStatus = AutopilotStatus.Offline;
+
         public static void Main(string[] args)
         {
             LogDispatcher.LoggerFactory = new SimpleConsoleLoggerFactory(LogLevel.Trace);
@@ -113,7 +115,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.121.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.31.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");
@@ -126,10 +128,9 @@ namespace Iot.Device.Gps.NeoM8Samples
                                 closed = true;
                             }
                         };
-                        client.OnNewSequence += ParserOnNewSequence;
+                        client.OnNewSequence += ParserOnNewSequenceForAutopilot;
                         client.StartDecode();
 
-                        AutopilotStatus statusNow = AutopilotStatus.Offline;
                         bool exit = false;
                         while (!exit && !closed)
                         {
@@ -144,25 +145,25 @@ namespace Iot.Device.Gps.NeoM8Samples
                                         exit = true;
                                         break;
                                     case ConsoleKey.S:
-                                        statusNow = AutopilotStatus.Standby;
+                                        _currentAutopilotStatus = AutopilotStatus.Standby;
                                         break;
                                     case ConsoleKey.A:
-                                        statusNow = AutopilotStatus.Auto;
+                                        _currentAutopilotStatus = AutopilotStatus.Auto;
                                         break;
                                     case ConsoleKey.W:
-                                        statusNow = AutopilotStatus.Wind;
+                                        _currentAutopilotStatus = AutopilotStatus.Wind;
                                         break;
                                     case ConsoleKey.O:
-                                        statusNow = AutopilotStatus.Offline;
+                                        _currentAutopilotStatus = AutopilotStatus.Offline;
                                         break;
                                 }
 
-                                Console.WriteLine($"New status: {statusNow}!");
+                                Console.WriteLine($"New status: {_currentAutopilotStatus}!");
                             }
 
-                            if (statusNow != AutopilotStatus.Offline)
+                            if (_currentAutopilotStatus != AutopilotStatus.Offline)
                             {
-                                SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(statusNow);
+                                SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(_currentAutopilotStatus);
                                 client.SendSentence(status);
                                 var heading = new SeatalkNgPilotHeading(null, Angle.FromDegrees(105.2));
                                 client.SendSentence(heading);
@@ -183,6 +184,21 @@ namespace Iot.Device.Gps.NeoM8Samples
         private static void ParserOnNewSequence(NmeaSinkAndSource parser, NmeaSentence sentence)
         {
             Console.WriteLine(sentence.ToReadableContent());
+        }
+
+        private static void ParserOnNewSequenceForAutopilot(NmeaSinkAndSource parser, NmeaSentence sentence)
+        {
+            Console.WriteLine(sentence.ToReadableContent());
+            if (sentence is GroupFunctionMessage gf)
+            {
+                if (gf.Pgn == SeatalkNgPilotStatus.HexId && gf.ParameterConstantsMatch() &&
+                    gf.Parameters[0].Constant == 1851 && gf.Function == GroupFunction.Command)
+                {
+                    int newMode = gf.Parameters[3].Value.GetValueOrDefault();
+                    _currentAutopilotStatus = SeatalkNgPilotStatus.AutopilotStatusFromNumber(newMode);
+                    Console.WriteLine($"New status was commanded: {_currentAutopilotStatus}!");
+                }
+            }
         }
     }
 }

@@ -34,6 +34,9 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public int Instance => _instance;
 
+        /// <inheritdoc/>
+        public override bool ReplacesOlderInstance => true;
+
         /// <summary>
         /// Creates an empty instance of this class. Can be updated later.
         /// </summary>

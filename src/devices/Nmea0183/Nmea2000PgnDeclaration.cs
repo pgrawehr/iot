@@ -77,13 +77,5 @@ namespace Iot.Device.Nmea0183
             get;
             init;
         }
-
-        /// <summary>
-        /// A field declaration, used when the message is used in a Request/Response exchange using
-        /// PGN 126208
-        /// </summary>
-        public class FieldDeclaration(int FieldNumber, int FieldSize, string Description, int? Constant, Func<int, int>? Getter = null)
-        {
-        }
     }
 }

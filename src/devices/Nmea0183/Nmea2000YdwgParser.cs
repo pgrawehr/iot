@@ -275,7 +275,7 @@ namespace Iot.Device.Nmea0183
                 int loops = TransmitConfirmationTimeout / 20;
                 while (Interlocked.Read(ref _pgnAwaitingSend) != 0 && loops-- >= 0)
                 {
-                    Thread.Sleep(20);
+                    Thread.Sleep(10);
                 }
 
                 if (loops < 0)

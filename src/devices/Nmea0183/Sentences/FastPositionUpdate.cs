@@ -90,6 +90,9 @@ namespace Iot.Device.Nmea0183.Sentences
         public override int Identifier => HexId;
 
         /// <inheritdoc/>
+        public override bool ReplacesOlderInstance => true;
+
+        /// <inheritdoc/>
         public override string ToNmeaParameterList()
         {
             string lat = InverseEndianness((int)Math.Round(_latitude / 1E-7)).ToString("X8", CultureInfo.InvariantCulture);

@@ -124,6 +124,9 @@ namespace Iot.Device.Nmea0183.Sentences
             private set;
         }
 
+        /// <inheritdoc/>
+        public override bool ReplacesOlderInstance => true;
+
         /// <inheritdoc />
         public override string ToNmeaParameterList()
         {

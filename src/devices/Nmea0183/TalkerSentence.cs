@@ -61,6 +61,12 @@ namespace Iot.Device.Nmea0183
                 var specificMessageId = sentence.Fields.FirstOrDefault();
                 if (specificMessageId != null && int.TryParse(specificMessageId, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int msgid))
                 {
+                    msgid &= 0x1FFFF;
+                    if ((msgid & 0x1FF00) == GroupFunctionMessage.HexId)
+                    {
+                        return new GroupFunctionMessage(sentence, time);
+                    }
+
                     switch (msgid)
                     {
                         case SeaSmartEngineFast.HexId:

@@ -85,12 +85,6 @@ namespace Iot.Device.Nmea0183.Sentences
         public virtual bool IsAddressed => false;
 
         /// <summary>
-        /// This must be false for this message type, or we'll be dropping all NMEA2000 messages in favor
-        /// of any other NMEA2000 message. Not the expected behavior.
-        /// </summary>
-        public sealed override bool ReplacesOlderInstance => false;
-
-        /// <summary>
         /// The static PGN declaration information for this type
         /// </summary>
         public virtual Nmea2000PgnDeclaration? PgnDeclaration
@@ -117,6 +111,19 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             return (int)((value & 0x000000FFU) << 24 | (value & 0x0000FF00U) << 8 |
                    (value & 0x00FF0000U) >> 8 | (value & 0xFF000000U) >> 24);
+        }
+
+        /// <summary>
+        /// Returns true if the PGNs of the two messages match.
+        /// </summary>
+        public override bool IsSameMessageAs(NmeaSentence other)
+        {
+            if (other is Nmea2000PackedMessage other2)
+            {
+                return base.IsSameMessageAs(other2) && Identifier == other2.Identifier;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -153,9 +160,9 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </remarks>
         protected bool ReadFromHexString(string input, int start, int length, bool inverseEndianness, out int value)
         {
-            if (length != 2 && length != 4 && length != 8)
+            if (length % 2 != 0)
             {
-                throw new ArgumentException("Length must be 2, 4, or 8", nameof(length));
+                throw new ArgumentException("Length must be even", nameof(length));
             }
 
             if (input.Length < start + length)
@@ -173,9 +180,13 @@ namespace Iot.Device.Nmea0183.Sentences
                 return false;
             }
 
-            if (length == 8 && inverseEndianness)
+            if (length > 4 && inverseEndianness)
             {
                 result = InverseEndianness(result);
+                if (length == 6)
+                {
+                    result = result >> 8;
+                }
             }
             else if (length == 4 && inverseEndianness)
             {
@@ -193,7 +204,7 @@ namespace Iot.Device.Nmea0183.Sentences
         protected void ParseCommonFields(IEnumerator<string> field)
         {
             string subMessage = ReadString(field);
-            if (!int.TryParse(subMessage, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int result) || result != Identifier)
+            if (!int.TryParse(subMessage, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int result))
             {
                 Valid = false;
                 return;

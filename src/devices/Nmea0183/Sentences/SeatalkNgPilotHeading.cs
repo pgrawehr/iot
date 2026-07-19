@@ -117,6 +117,9 @@ namespace Iot.Device.Nmea0183.Sentences
             Valid = true;
         }
 
+        /// <inheritdoc/>
+        public override bool ReplacesOlderInstance => true;
+
         public override string ToNmeaParameterList()
         {
             string manufacturer = _manufacturerAndIndustry.ToString("X4", CultureInfo.InvariantCulture);
