@@ -119,7 +119,7 @@ namespace Iot.Device.Nmea0183
 
                 if (declaration != null)
                 {
-                    TalkerSentence? result = CreateSentence(declaration, timeStamp, pgn & 0xFF, _allData);
+                    TalkerSentence? result = CreateSentence(declaration, timeStamp, pgn >> 8, pgn & 0xFF, _allData);
                     if (result != null)
                     {
                         error = NmeaError.None;
@@ -156,16 +156,18 @@ namespace Iot.Device.Nmea0183
             return _unknownPgnsSeen;
         }
 
-        private TalkerSentence? CreateSentence(Nmea2000PgnDeclaration declaration, TimeSpan? timeStamp, uint sender, List<byte> allData)
+        private TalkerSentence? CreateSentence(Nmea2000PgnDeclaration declaration, TimeSpan? timeStamp, uint pgn, uint sender, List<byte> allData)
         {
-            if (allData.Count != declaration.Length)
+            if (allData.Count < declaration.Length && declaration.FastPacket == false)
             {
                 return null;
             }
 
             var fields = new List<string>();
 
-            fields.Add($"{declaration.Pgn:X6}");
+            // Should usually be equivalent to declaration.Pgn, but may include a destination address,
+            // which we shouldn't be loosing
+            fields.Add($"{pgn:X6}");
             if (timeStamp.HasValue)
             {
                 fields.Add($"{((long)timeStamp.Value.TotalSeconds):X8}");
@@ -176,7 +178,70 @@ namespace Iot.Device.Nmea0183
             }
 
             fields.Add($"{sender:X2}");
-            fields.Add(Convert.ToHexString(allData.ToArray()));
+            if (declaration.FastPacket)
+            {
+                if (allData.Count < 2)
+                {
+                    Logger.LogWarning("Found a FastPacket message with less than 2 bytes");
+                    return null;
+                }
+
+                int sequenceIdentifier = allData[0] >> 5;
+                int sequenceNo = allData[0] & 0x1F;
+                if (sequenceNo != 0)
+                {
+                    allData.Clear();
+                    return null;
+                }
+
+                int dataLength = allData[1];
+                List<byte> fullSequence = new List<byte>(dataLength);
+                int srcIndex = 2;
+                while (srcIndex < allData.Count)
+                {
+                    fullSequence.Add(allData[srcIndex]);
+
+                    srcIndex++;
+                    if (srcIndex >= allData.Count)
+                    {
+                        break;
+                    }
+
+                    if (srcIndex % 8 == 0)
+                    {
+                        int newSequenceIdentifier = allData[srcIndex] >> 5;
+                        if (newSequenceIdentifier != sequenceIdentifier)
+                        {
+                            allData.Clear();
+                            return null;
+                        }
+
+                        int newSequenceNo = allData[srcIndex] & 0x1F;
+                        if (newSequenceNo != sequenceNo + 1)
+                        {
+                            allData.Clear();
+                            return null;
+                        }
+
+                        sequenceNo++;
+                        // If this indeed is the continuation of the correct message, skip the byte and continue
+                        srcIndex++;
+                    }
+                }
+
+                if (fullSequence.Count >= dataLength)
+                {
+                    fields.Add(Convert.ToHexString(fullSequence.ToArray()));
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                fields.Add(Convert.ToHexString(allData.ToArray()));
+            }
 
             var ret = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, fields);
             return ret;

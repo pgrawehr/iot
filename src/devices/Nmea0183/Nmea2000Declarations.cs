@@ -35,6 +35,7 @@ namespace Iot.Device.Nmea0183
                     new Nmea2000PgnDeclaration.FieldDeclaration(4, 2, "Pilot Mode", null),
                     new Nmea2000PgnDeclaration.FieldDeclaration(5, 2, "Sub Mode", null)
                 }));
+            s_data.Add(GroupFunctionMessage.HexId, new Nmea2000PgnDeclaration(GroupFunctionMessage.HexId, "Request Group Function", 3, -1, true));
         }
 
         /// <summary>
@@ -45,6 +46,12 @@ namespace Iot.Device.Nmea0183
         public static Nmea2000PgnDeclaration? GetByPgn(uint pgn)
         {
             pgn = pgn & 0x1FFFF;
+            // Ignore the lower byte of the PGN for this message (here, that's the target address)
+            if ((pgn & 0x1FF00) == GroupFunctionMessage.HexId)
+            {
+                pgn = GroupFunctionMessage.HexId;
+            }
+
             if (s_data.TryGetValue(pgn, out var data))
             {
                 return data;

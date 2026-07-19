@@ -37,12 +37,14 @@ namespace Iot.Device.Nmea0183.Tests
             var parser = new Nmea2000YdwgParser("Test", m, null);
             var sentence = parser.ParseSentence("07:07:25.846 R DED6703 80 15 00 00 EF 01 FF FF", out error);
             Assert.Null(sentence);
-            parser.ParseSentence("07:07:25.847 R DED6703 81 FF FF FF FF 04 01 3B", out error);
-            parser.ParseSentence("07:07:25.848 R DED6703 82 07 03 04 04 6C 05 23", out error);
+            sentence = parser.ParseSentence("07:07:25.847 R DED6703 81 FF FF FF FF 04 01 3B", out error);
+            Assert.Null(sentence);
+            sentence = parser.ParseSentence("07:07:25.848 R DED6703 82 07 03 04 04 6C 05 23", out error);
+            Assert.Null(sentence);
             sentence = parser.ParseSentence("07:07:25.848 R DED6703 83 50 FF FF FF FF FF FF", out error);
             Assert.NotNull(sentence);
             Assert.IsType<TalkerSentence>(sentence);
-            Assert.StartsWith("$PCDIN,DED67,0000F6E1,03,0000EF01FFFFFF*", sentence.ToString());
+            Assert.Equal("$PCDIN,0DED67,0000642D,03,0000EF01FFFFFFFFFFFF04013B070304046C052350FFFFFFFFFFFF*55", sentence.ToString());
         }
 
         [Fact]
