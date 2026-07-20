@@ -75,7 +75,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public uint MessageSource
         {
             get;
-            protected set;
+            set;
         }
 
         /// <summary>

@@ -198,7 +198,7 @@ namespace Iot.Device.Nmea0183.Sentences
                 string engineTempString = engineTempKelvin.ToString("X4", CultureInfo.InvariantCulture);
                 // Seems to require a little endian conversion as well
                 engineTempString = engineTempString.Substring(2, 2) + engineTempString.Substring(0, 2);
-                return "01F201," + timeStampText + ",02," + engineNoText + "0000FFFF" + engineTempString + "00050000" + swappedString + "FFFF000000" + status1String + status2String + "7F7F";
+                return base.ToNmeaParameterList() + engineNoText + "0000FFFF" + engineTempString + "00050000" + swappedString + "FFFF000000" + status1String + status2String + "7F7F";
 
             }
 

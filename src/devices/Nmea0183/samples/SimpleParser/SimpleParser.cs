@@ -11,22 +11,25 @@ using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
+using UnitsNet.Units;
 
 namespace Iot.Device.Gps.NeoM8Samples
 {
     internal class Program
     {
-        private static AutopilotStatus _currentAutopilotStatus = AutopilotStatus.Offline;
+        private AutopilotStatus _currentAutopilotStatus = AutopilotStatus.Offline;
+        private Angle _currentDesiredHeading = Angle.FromDegrees(110);
 
         public static void Main(string[] args)
         {
             LogDispatcher.LoggerFactory = new SimpleConsoleLoggerFactory(LogLevel.Trace);
-            // UsingNeoM8Serial();
-            // UsingNetwork();
-            UsingNmea2000RawNetwork();
+            var p = new Program();
+            // p.UsingNeoM8Serial();
+            // p.UsingNetwork();
+            p.UsingNmea2000RawNetwork();
         }
 
-        private static void UsingSerial()
+        private void UsingSerial()
         {
             DateTimeOffset lastMessageTime = DateTimeOffset.UtcNow;
             using (var sp = new SerialPort("/dev/ttyS0"))
@@ -75,7 +78,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             }
         }
 
-        private static void UsingNetwork()
+        private void UsingNetwork()
         {
             try
             {
@@ -110,12 +113,12 @@ namespace Iot.Device.Gps.NeoM8Samples
             }
         }
 
-        private static void UsingNmea2000RawNetwork()
+        private void UsingNmea2000RawNetwork()
         {
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.31.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.136.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");
@@ -129,13 +132,15 @@ namespace Iot.Device.Gps.NeoM8Samples
                             }
                         };
                         client.OnNewSequence += ParserOnNewSequenceForAutopilot;
+                        client.OnParserError += Client_OnOnParserError;
                         client.StartDecode();
 
                         bool exit = false;
+                        int loop = 0;
                         while (!exit && !closed)
                         {
                             Thread.Sleep(100);
-
+                            loop++;
                             if (Console.KeyAvailable)
                             {
                                 var k = Console.ReadKey(true);
@@ -161,15 +166,15 @@ namespace Iot.Device.Gps.NeoM8Samples
                                 Console.WriteLine($"New status: {_currentAutopilotStatus}!");
                             }
 
-                            if (_currentAutopilotStatus != AutopilotStatus.Offline)
+                            if (_currentAutopilotStatus != AutopilotStatus.Offline && loop % 3 == 0)
                             {
                                 SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(_currentAutopilotStatus);
                                 client.SendSentence(status);
+                                var heading2 =
+                                    new SeatalkNgPilotLockedHeading(null, _currentDesiredHeading);
+                                client.SendSentence(heading2);
                                 var heading = new SeatalkNgPilotHeading(null, Angle.FromDegrees(105.2));
                                 client.SendSentence(heading);
-                                var heading2 =
-                                    new SeatalkNgPilotLockedHeading(null, Angle.FromDegrees(221));
-                                client.SendSentence(heading2);
                             }
                         }
                     }
@@ -181,14 +186,19 @@ namespace Iot.Device.Gps.NeoM8Samples
             }
         }
 
-        private static void ParserOnNewSequence(NmeaSinkAndSource parser, NmeaSentence sentence)
+        private void Client_OnOnParserError(NmeaSinkAndSource arg1, string arg2, NmeaError arg3)
+        {
+            Console.WriteLine($"Parser error: {arg2} type {arg3}");
+        }
+
+        private void ParserOnNewSequence(NmeaSinkAndSource parser, NmeaSentence sentence)
         {
             Console.WriteLine(sentence.ToReadableContent());
         }
 
-        private static void ParserOnNewSequenceForAutopilot(NmeaSinkAndSource parser, NmeaSentence sentence)
+        private void ParserOnNewSequenceForAutopilot(NmeaSinkAndSource parser, NmeaSentence sentence)
         {
-            Console.WriteLine(sentence.ToReadableContent());
+            // Console.WriteLine(sentence.ToReadableContent());
             if (sentence is GroupFunctionMessage gf)
             {
                 if (gf.Pgn == SeatalkNgPilotStatus.HexId && gf.ParameterConstantsMatch() &&
@@ -197,6 +207,25 @@ namespace Iot.Device.Gps.NeoM8Samples
                     int newMode = gf.Parameters[3].Value.GetValueOrDefault();
                     _currentAutopilotStatus = SeatalkNgPilotStatus.AutopilotStatusFromNumber(newMode);
                     Console.WriteLine($"New status was commanded: {_currentAutopilotStatus}!");
+                    var reply = gf.CreateAck();
+                    parser.SendSentence(reply);
+                }
+                else if (gf.Pgn == SeatalkNgPilotLockedHeading.HexId && gf.ParameterConstantsMatch() &&
+                              gf.Parameters[0].Constant == 1851 && gf.Function == GroupFunction.Command)
+                {
+                    double newDirection = gf.Parameters[5].Value.GetValueOrDefault(); // New magnetic heading
+                    _currentDesiredHeading = Angle.FromRadians(newDirection * 0.0001).ToUnit(AngleUnit.Degree);
+                    Console.WriteLine($"Updated desired heading to {_currentDesiredHeading}");
+                    var reply = gf.CreateAck();
+                    parser.SendSentence(reply);
+                }
+                else if (gf.Pgn == 126720 && gf.ParameterConstantsMatch() && gf.Function == GroupFunction.Request)
+                {
+                    Console.WriteLine($"Someone is requesting the following value: Proprietary ID {gf.Parameters[3].Value} and Command {gf.Parameters[4].Value}");
+                }
+                else
+                {
+                    Console.WriteLine($"Unknown Group function '{gf.Function}' message about {gf.Pgn}: {gf.ToNmeaMessage()}");
                 }
             }
         }

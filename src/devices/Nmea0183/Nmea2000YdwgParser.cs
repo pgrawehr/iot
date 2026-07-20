@@ -28,6 +28,7 @@ namespace Iot.Device.Nmea0183
         private List<byte> _allData = new List<byte>();
         private ulong _pgnAwaitingSend = 0;
         private Dictionary<uint, string> _unknownPgnsSeen = new Dictionary<uint, string>();
+        private uint _fastPacketSequencer = 0;
 
         /// <summary>
         /// Constructs an instance of this type
@@ -66,7 +67,7 @@ namespace Iot.Device.Nmea0183
         /// <returns>A sentence in NMEA0183 raw format, or null</returns>
         protected internal override TalkerSentence? ParseSentence(string currentLine, out NmeaError error)
         {
-            string[] splits = currentLine.Split(' ', StringSplitOptions.TrimEntries);
+            string[] splits = currentLine.Split(new char[] { ' ', ',' }, StringSplitOptions.TrimEntries);
             if (splits.Length <= 4)
             {
                 error = NmeaError.MessageToShort;
@@ -80,7 +81,7 @@ namespace Iot.Device.Nmea0183
                     pgnTransmit >>= 8;
                     if (pgnTransmit == _pgnAwaitingSend)
                     {
-                        Logger.LogInformation($"Received confirmation that we sent {currentLine.Trim()}");
+                        // Logger.LogInformation($"Received confirmation that we sent {currentLine.Trim()}");
                         Interlocked.Exchange(ref _pgnAwaitingSend, 0);
                     }
                 }
@@ -131,7 +132,7 @@ namespace Iot.Device.Nmea0183
                     uint rawpgn = (pgn >> 8) & 0x1FFFF;
                     if (_unknownPgnsSeen.TryAdd(rawpgn, currentLine))
                     {
-                        Logger.LogInformation($"New Unknown PGN: {rawpgn:X6}");
+                        Logger.LogInformation($"New Unknown PGN: {rawpgn:X6} with line {currentLine}");
                     }
 
                     error = NmeaError.None;
@@ -250,26 +251,71 @@ namespace Iot.Device.Nmea0183
         /// <inheritdoc/>
         protected internal override void FormatAndSendSentence(NmeaSentence sentence)
         {
-            if (sentence is Nmea2000PackedMessage)
+            if (sentence is Nmea2000PackedMessage packed)
             {
                 // This is a bit hacky, as we go through the string representation of the object.
                 // But having also a binary representation increases complexity for the individual messages.
                 // Maybe we improve that later.
-                string nmea0183 = sentence.ToNmeaParameterList();
+                string nmea0183 = packed.ToNmeaParameterList();
                 string[] splits = nmea0183.Split(',', StringSplitOptions.TrimEntries);
                 if (!uint.TryParse(splits[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint pgn))
                 {
                     Logger.LogError($"Attempting to send invalid composed message: {nmea0183}");
                 }
 
-                StringBuilder data = new StringBuilder(splits[3]);
-
-                int idx = 0;
-                while (idx < data.Length)
+                StringBuilder data;
+                StringBuilder sendData;
+                if (packed.PgnDeclaration != null && packed.PgnDeclaration.FastPacket)
                 {
-                    idx += 2;
-                    data.Insert(idx, ' ');
-                    idx += 1;
+                    sendData = new StringBuilder();
+                    int totalBytesInMessage = splits[3].Length / 2;
+                    uint messageSequence = Interlocked.Increment(ref _fastPacketSequencer) % 8;
+                    data = new StringBuilder();
+                    int bytesProcessed = 0;
+                    int bytesInMessage = 2;
+                    uint sequenceNo = 0;
+                    uint sequenceAndNumber = (messageSequence & 0x7) << 5 | sequenceNo;
+                    data.Append(sequenceAndNumber.ToString("X2", CultureInfo.InvariantCulture));
+                    data.Append(' ');
+                    data.Append(totalBytesInMessage.ToString("X2", CultureInfo.InvariantCulture));
+                    data.Append(' ');
+                    while (bytesProcessed < totalBytesInMessage)
+                    {
+                        data.Append(splits[3].Substring(bytesProcessed * 2, 2));
+                        data.Append(' ');
+                        bytesInMessage++;
+                        bytesProcessed++;
+                        if (bytesInMessage >= 8)
+                        {
+                            sendData.AppendLine($"{pgn << 8:X8} {data}");
+                            sequenceNo++;
+                            data.Clear();
+                            sequenceAndNumber = (messageSequence & 0x7) << 5 | sequenceNo;
+                            data.Append(sequenceAndNumber.ToString("X2", CultureInfo.InvariantCulture));
+                            data.Append(' ');
+                            bytesInMessage = 1;
+                        }
+                    }
+
+                    // If there's just one header byte here, we don't need to send this sequence
+                    if (bytesInMessage > 1)
+                    {
+                        sendData.AppendLine($"{pgn << 8:X8} {data}");
+                    }
+                }
+                else
+                {
+                    data = new StringBuilder(splits[3]);
+
+                    int idx = 0;
+                    while (idx < data.Length)
+                    {
+                        idx += 2;
+                        data.Insert(idx, ' ');
+                        idx += 1;
+                    }
+
+                    sendData = new StringBuilder($"{pgn << 8:X8} {data}\r\n");
                 }
 
                 int loops = TransmitConfirmationTimeout / 20;
@@ -285,10 +331,7 @@ namespace Iot.Device.Nmea0183
 
                 Interlocked.Exchange(ref _pgnAwaitingSend, pgn);
 
-                // Wait until event is set
-                // This does not yet support fast packet data
-                string sendData = $"{pgn << 8:X8} {data}\r\n";
-                byte[] buffer = StreamEncoding.GetBytes(sendData);
+                byte[] buffer = StreamEncoding.GetBytes(sendData.ToString());
 
                 Sink?.Write(buffer, 0, buffer.Length);
             }

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -149,12 +150,14 @@ namespace Iot.Device.Nmea0183
 
         private void Parser()
         {
+            Stopwatch sw = Stopwatch.StartNew();
             while (_cancellationTokenSource != null && !_cancellationTokenSource.IsCancellationRequested)
             {
                 string? currentLine;
                 try
                 {
                     currentLine = _reader.ReadLine();
+                    sw.Restart();
                 }
                 catch (IOException x)
                 {
@@ -240,6 +243,11 @@ namespace Iot.Device.Nmea0183
                     RawSentence raw = sentence.GetAsRawSentence(ref _lastPacketTime);
                     DispatchSentenceEvents(raw);
                 }
+
+                if (sw.ElapsedMilliseconds > 20)
+                {
+                    Logger.LogWarning("Processing a message took more than 20ms");
+                }
             }
         }
 
@@ -266,6 +274,8 @@ namespace Iot.Device.Nmea0183
                     {
                         // If there are other instances of the same message in the queue, we drop the current one (as it's not the newest)
                         // and continue processing.
+                        // There's a glitch here, however: If we keep adding items quickly to the queue and processing it takes
+                        // time, the newest items are never processed, thus some messages will _never_ be sent.
                         var newerInstance = _outQueue.FirstOrDefault(x => x.IsSameMessageAs(sentenceToSend));
                         if (newerInstance != null)
                         {

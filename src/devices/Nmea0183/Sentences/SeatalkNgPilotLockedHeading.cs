@@ -49,7 +49,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public override string ToReadableContent()
         {
-            return $"SeatalkNg Pilot Heading status: {TargetHeadingMagnetic}° Mag, {TargetHeadingTrue}° True";
+            return $"SeatalkNg Pilot Locked Heading: {TargetHeadingMagnetic} Mag, {TargetHeadingTrue} True";
         }
 
         public SeatalkNgPilotLockedHeading(Angle? headingTrue, Angle? headingMagnetic)

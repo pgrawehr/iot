@@ -3,10 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using UnitsNet;
 
 #pragma warning disable CS1591
@@ -87,7 +89,7 @@ namespace Iot.Device.Nmea0183.Sentences
                     }
                 }
 
-                nextByte = 20;
+                nextByte = 10;
             }
             else if (Function == GroupFunction.Command)
             {
@@ -134,6 +136,7 @@ namespace Iot.Device.Nmea0183.Sentences
                 }
 
                 Parameters = actualValues;
+                Console.WriteLine($"Received GroupFunction message {Function} for {pgn} with {NumberOfArguments} arguments");
             }
             else
             {
@@ -208,9 +211,81 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public override bool IsAddressed => true;
 
+        /// <summary>
+        /// This only applies when the Function code is "Acknowledge"
+        /// </summary>
+        public int PgnErrorCode { get; set; }
+
+        public GroupFunctionMessage CreateAck()
+        {
+            if (Function != GroupFunction.Command)
+            {
+                throw new InvalidOperationException("Can only send an ack to Command requests");
+            }
+
+            var reply = new GroupFunctionMessage(GroupFunction.Acknowledge);
+            reply.NumberOfArguments = NumberOfArguments;
+            reply.Pgn = Pgn;
+            reply.PgnErrorCode = 0;
+            // We're ignoring the transmission interval for now
+            // We also don't really need to set up the parameter list. For now,
+            // We just set ack to all fields.
+            return reply;
+        }
+
         public override string ToReadableContent()
         {
             return $"Group function {Function} for Pgn {Pgn}";
+        }
+
+        public override string ToNmeaParameterList()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append(((int)Function).ToString("X2", CultureInfo.InvariantCulture));
+            var pgnString = Pgn.ToString("X6", CultureInfo.InvariantCulture);
+            pgnString = pgnString.Substring(4, 2) + pgnString.Substring(2, 2) + pgnString.Substring(0, 2);
+            sb.Append(pgnString);
+
+            if (Function == GroupFunction.Acknowledge)
+            {
+                sb.Append(PgnErrorCode.ToString("X1", CultureInfo.InvariantCulture));
+                sb.Append("0");
+                sb.Append(NumberOfArguments.ToString("X2", CultureInfo.InvariantCulture));
+                int noArgNibbles = NumberOfArguments;
+                if (noArgNibbles % 2 == 1)
+                {
+                    // Add an even number of 0's (there are 4 bits per parameter to fill)
+                    noArgNibbles++;
+                }
+
+                sb.Append(new String('0', noArgNibbles));
+                return base.ToNmeaParameterList() + sb.ToString();
+            }
+            else if (Function == GroupFunction.Request)
+            {
+                sb.Append(TransmissionInterval.HasValue
+                    ? TransmissionInterval.Value.Milliseconds.ToString("X8", CultureInfo.InvariantCulture)
+                    : "FFFFFFFF");
+                sb.Append(TransmissionOffset.HasValue
+                    ? TransmissionOffset.Value.Milliseconds.ToString("X4", CultureInfo.InvariantCulture)
+                    : "FFFF");
+                sb.Append(NumberOfArguments.ToString("X2", CultureInfo.InvariantCulture));
+                // Assuming NumberOfArguments matches the number of filled parameters
+                foreach (var p in Parameters)
+                {
+                    if (p.Value.HasValue)
+                    {
+                        sb.Append(p.FieldNumber.ToString("X2", CultureInfo.InvariantCulture));
+                        sb.Append(p.Value.Value.ToString($"X{p.FieldSize * 2}", CultureInfo.InvariantCulture));
+                    }
+                }
+
+                return base.ToNmeaParameterList() + sb.ToString();
+            }
+            else
+            {
+                throw new NotImplementedException($"Cannot encode message of type {Function} yet");
+            }
         }
     }
 }

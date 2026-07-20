@@ -74,6 +74,32 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
+        public void ParseCommandGroupFunction()
+        {
+            var m = new MemoryStream();
+            NmeaError error;
+            var parser = new Nmea2000YdwgParser("Test", m, null);
+            parser.ParseSentence("07:08:25.258 R DED6703,A0,11,01,50,FF,00,F8,04", out error);
+            parser.ParseSentence("07:07:25.847 R DED6703,A1,01,3B,07,03,04,05,A4", out error);
+            var sentence = parser.ParseSentence("07:07:25.848 R DED6703,A2,51,06,51,4E,FF,FF,FF", out error);
+            Assert.NotNull(sentence);
+            Assert.IsType<TalkerSentence>(sentence);
+            DateTimeOffset lastMessageTime = DateTimeOffset.MinValue;
+            var typed = (GroupFunctionMessage?)sentence.TryGetTypedValue(ref lastMessageTime);
+            Assert.NotNull(typed);
+            Assert.Equal(65360u, typed.Pgn);
+            Assert.NotEmpty(typed.Parameters);
+            Assert.Equal("Manufacturer", typed.Parameters[0].Description);
+            Assert.Equal(1851, typed.Parameters[0].Value); // Raymarine
+            Assert.Equal("Industry Code", typed.Parameters[2].Description);
+            Assert.Equal(4, typed.Parameters[2].Value); // Marine
+            Assert.Equal("Target Heading True", typed.Parameters[4].Description);
+            Assert.Equal(20900, typed.Parameters[4].Value);
+            Assert.Equal("Target Heading Magnetic", typed.Parameters[5].Description);
+            Assert.Equal(20049, typed.Parameters[5].Value);
+        }
+
+        [Fact]
         public void ParseRawNmea2000SentenceAndDecode()
         {
             var m = new MemoryStream();
@@ -87,6 +113,26 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.NotNull(typed);
             Assert.Equal(0, typed.EngineNumber);
             Assert.Equal(3600, typed.RotationalSpeed.RevolutionsPerMinute);
+        }
+
+        [Fact]
+        public void EncodeGroupFunctionAcknowledgement()
+        {
+            GroupFunctionMessage msg = new GroupFunctionMessage(GroupFunction.Command);
+            msg.MessageSource = 55;
+            msg.Pgn = 65379u;
+            // Note: Often not equal to the number of declared fields (as e.g. reserved fields are skipped)
+            msg.NumberOfArguments = 4;
+            var decl = Nmea2000Declarations.GetByPgn(65379u);
+            msg.Parameters.Clear();
+            msg.Parameters.AddRange(decl!.FieldDeclarations);
+
+            var reply = msg.CreateAck();
+            Assert.Equal(0, reply.PgnErrorCode);
+            // Note: The PCDIN message is one message only, regardless of the payload length. So fastpacket headers
+            // are not included in the payload.
+            Assert.Equal("$PCDIN,01ED00,00000000,00,0263FF0000040000*53", reply.ToNmeaMessage());
+            Assert.True(reply.PgnDeclaration!.FastPacket);
         }
 
         [Fact]
@@ -114,6 +160,42 @@ namespace Iot.Device.Nmea0183.Tests
                 string output = Encoding.ASCII.GetString(m.ToArray());
                 Assert.NotEmpty(output);
                 Assert.Equal("01F20000 00 00 11 FF FF 00 FF FF \r\n", output);
+            }
+            finally
+            {
+                parser.StopDecode();
+            }
+        }
+
+        [Fact]
+        public void SendFastMessageToNmea2000()
+        {
+            var m = new MemoryStream();
+            var parser = new Nmea2000YdwgParser("Test", m, m);
+            parser.StartDecode();
+            try
+            {
+                SeaSmartEngineDetail fast = new SeaSmartEngineDetail(new EngineData(0, EngineStatus.CheckEngine,
+                    0, RotationalSpeed.FromRevolutionsPerMinute(1000), Ratio.Zero, TimeSpan.FromHours(102.1), Temperature.FromDegreesCelsius(200)));
+
+                Assert.NotNull(fast);
+                parser.SenderId = 2;
+                parser.SendSentence(fast);
+                int iterations = 100;
+                while (m.Length < 30 && iterations-- > 0)
+                {
+                    Thread.Sleep(100);
+                }
+
+                Thread.Sleep(100);
+                m.Position = 0;
+                string output = Encoding.ASCII.GetString(m.ToArray());
+                Assert.NotEmpty(output);
+                Assert.Equal(@"01F20100 20 1A 00 00 00 FF FF D3 
+01F20100 21 B8 00 05 00 00 C8 9B 
+01F20100 22 05 00 FF FF 00 00 00 
+01F20100 23 01 00 00 00 7F 7F 
+", output);
             }
             finally
             {
