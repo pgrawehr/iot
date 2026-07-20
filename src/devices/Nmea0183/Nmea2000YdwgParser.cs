@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 using UnitsNet;
 
 namespace Iot.Device.Nmea0183
@@ -300,7 +301,17 @@ namespace Iot.Device.Nmea0183
                     // If there's just one header byte here, we don't need to send this sequence
                     if (bytesInMessage > 1)
                     {
+                        int fillers = 8 - bytesInMessage;
+                        for (int i = 0; i < fillers; i++)
+                        {
+                            data.Append("FF ");
+                        }
+
                         sendData.AppendLine($"{pgn << 8:X8} {data}");
+                        ////if (sentence is SeatalkNgPilotHeading)
+                        ////{
+                        ////    sendData.AppendLine("1F11200 FF 31 C0 FF 7F 40 02 FD");
+                        ////}
                     }
                 }
                 else
@@ -331,7 +342,9 @@ namespace Iot.Device.Nmea0183
 
                 Interlocked.Exchange(ref _pgnAwaitingSend, pgn);
 
-                byte[] buffer = StreamEncoding.GetBytes(sendData.ToString());
+                var outgoingString = sendData.ToString();
+
+                byte[] buffer = StreamEncoding.GetBytes(outgoingString);
 
                 Sink?.Write(buffer, 0, buffer.Length);
             }

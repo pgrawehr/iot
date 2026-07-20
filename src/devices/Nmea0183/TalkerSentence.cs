@@ -83,6 +83,8 @@ namespace Iot.Device.Nmea0183
                             return new SeatalkNgPilotHeading(sentence, time);
                         case SeatalkNgPilotStatus.HexId:
                             return new SeatalkNgPilotStatus(sentence, time);
+                        case SeatalkNgPilotConfigurationValue.HexId:
+                            return new SeatalkNgPilotConfigurationValue(sentence, time);
                     }
                 }
 

@@ -166,14 +166,18 @@ namespace Iot.Device.Gps.NeoM8Samples
                                 Console.WriteLine($"New status: {_currentAutopilotStatus}!");
                             }
 
-                            if (_currentAutopilotStatus != AutopilotStatus.Offline && loop % 3 == 0)
+                            if (_currentAutopilotStatus != AutopilotStatus.Offline && loop % 4 == 0)
                             {
                                 SeatalkNgPilotStatus status = new SeatalkNgPilotStatus(_currentAutopilotStatus);
                                 client.SendSentence(status);
+                            }
+
+                            if (_currentAutopilotStatus != AutopilotStatus.Offline)
+                            {
                                 var heading2 =
                                     new SeatalkNgPilotLockedHeading(null, _currentDesiredHeading);
                                 client.SendSentence(heading2);
-                                var heading = new SeatalkNgPilotHeading(null, Angle.FromDegrees(105.2));
+                                var heading = new SeatalkNgPilotHeading(null, _currentDesiredHeading + Angle.FromDegrees(12));
                                 client.SendSentence(heading);
                             }
                         }
@@ -217,15 +221,26 @@ namespace Iot.Device.Gps.NeoM8Samples
                     _currentDesiredHeading = Angle.FromRadians(newDirection * 0.0001).ToUnit(AngleUnit.Degree);
                     Console.WriteLine($"Updated desired heading to {_currentDesiredHeading}");
                     var reply = gf.CreateAck();
-                    parser.SendSentence(reply);
+                    // parser.SendSentence(reply);
                 }
                 else if (gf.Pgn == 126720 && gf.ParameterConstantsMatch() && gf.Function == GroupFunction.Request)
                 {
-                    Console.WriteLine($"Someone is requesting the following value: Proprietary ID {gf.Parameters[3].Value} and Command {gf.Parameters[4].Value}");
+                    int prop = gf.Parameters[3].Value.GetValueOrDefault();
+                    int command = gf.Parameters[4].Value.GetValueOrDefault();
+                    Console.WriteLine($"Someone is requesting the following value: Proprietary ID {prop} and Command {command}");
+                    if (prop == 108 && command == 38)
+                    {
+                        SeatalkNgPilotConfigurationValue value = new SeatalkNgPilotConfigurationValue()
+                        {
+                            Command = 38, ProprietaryId = 108, DateTime = DateTimeOffset.UtcNow, Value = false,
+                        };
+
+                        parser.SendSentence(value);
+                    }
                 }
                 else
                 {
-                    Console.WriteLine($"Unknown Group function '{gf.Function}' message about {gf.Pgn}: {gf.ToNmeaMessage()}");
+                    Console.WriteLine($"Unknown Group function '{gf.Function}' message about {gf.Pgn}");
                 }
             }
         }

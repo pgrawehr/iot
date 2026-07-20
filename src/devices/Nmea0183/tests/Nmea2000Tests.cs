@@ -194,7 +194,7 @@ namespace Iot.Device.Nmea0183.Tests
                 Assert.Equal(@"01F20100 20 1A 00 00 00 FF FF D3 
 01F20100 21 B8 00 05 00 00 C8 9B 
 01F20100 22 05 00 FF FF 00 00 00 
-01F20100 23 01 00 00 00 7F 7F 
+01F20100 23 01 00 00 00 7F 7F FF 
 ", output);
             }
             finally
@@ -276,6 +276,20 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Equal(348.02, p.TargetHeadingMagnetic.GetValueOrDefault().Degrees, 1E-2);
             var result = p.ToNmeaParameterList();
             Assert.Equal("00FF50,000074C5,57,3B9FFFFFFF46EDFF", result);
+        }
+
+        [Fact]
+        public void SeatalkNgConfigurationReply()
+        {
+            var msg = new SeatalkNgPilotConfigurationValue()
+            {
+                Command = 38, ProprietaryId = 108, MessageSource = 0,
+                Value = true,
+            };
+
+            Assert.NotEmpty(msg.PgnDeclaration!.FieldDeclarations);
+            Assert.Equal("$PCDIN,01EF00,00000000,00,3B9F6C260001000000*2C", msg.ToNmeaMessage());
+            Assert.True(msg.PgnDeclaration.FastPacket);
         }
 
         [Theory]

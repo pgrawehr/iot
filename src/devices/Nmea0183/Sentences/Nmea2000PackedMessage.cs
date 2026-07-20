@@ -232,7 +232,7 @@ namespace Iot.Device.Nmea0183.Sentences
             string pgn = Identifier.ToString("X6", CultureInfo.InvariantCulture);
             string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
             string source = MessageSource.ToString("X2", CultureInfo.InvariantCulture);
-            return $"{pgn},{timeStampText},{source},";
+            return $"{pgn},{timeStampText},{source},"; // The "D" would be the priority (4 here)
         }
     }
 }
