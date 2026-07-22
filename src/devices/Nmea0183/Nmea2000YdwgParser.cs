@@ -82,7 +82,7 @@ namespace Iot.Device.Nmea0183
                     pgnTransmit >>= 8;
                     if (pgnTransmit == _pgnAwaitingSend)
                     {
-                        // Logger.LogInformation($"Received confirmation that we sent {currentLine.Trim()}");
+                        Logger.LogInformation($"Received confirmation that we sent {currentLine.Trim()}");
                         Interlocked.Exchange(ref _pgnAwaitingSend, 0);
                     }
                 }
@@ -308,10 +308,6 @@ namespace Iot.Device.Nmea0183
                         }
 
                         sendData.AppendLine($"{pgn << 8:X8} {data}");
-                        ////if (sentence is SeatalkNgPilotHeading)
-                        ////{
-                        ////    sendData.AppendLine("1F11200 FF 31 C0 FF 7F 40 02 FD");
-                        ////}
                     }
                 }
                 else
@@ -330,10 +326,10 @@ namespace Iot.Device.Nmea0183
                 }
 
                 int loops = TransmitConfirmationTimeout / 20;
-                while (Interlocked.Read(ref _pgnAwaitingSend) != 0 && loops-- >= 0)
-                {
-                    Thread.Sleep(10);
-                }
+                ////while (Interlocked.Read(ref _pgnAwaitingSend) != 0 && loops-- >= 0)
+                ////{
+                ////    Thread.Sleep(10);
+                ////}
 
                 if (loops < 0)
                 {
@@ -341,6 +337,11 @@ namespace Iot.Device.Nmea0183
                 }
 
                 Interlocked.Exchange(ref _pgnAwaitingSend, pgn);
+
+                if (sentence is SeatalkNgPilotHeading)
+                {
+                    sendData.AppendLine("1F10D00 00 00 00 00 00 00 00 00");
+                }
 
                 var outgoingString = sendData.ToString();
 

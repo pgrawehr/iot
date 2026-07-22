@@ -118,7 +118,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.136.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.98.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");
@@ -174,11 +174,24 @@ namespace Iot.Device.Gps.NeoM8Samples
 
                             if (_currentAutopilotStatus != AutopilotStatus.Offline)
                             {
-                                var heading2 =
-                                    new SeatalkNgPilotLockedHeading(null, _currentDesiredHeading);
-                                client.SendSentence(heading2);
-                                var heading = new SeatalkNgPilotHeading(null, _currentDesiredHeading + Angle.FromDegrees(12));
-                                client.SendSentence(heading);
+                                if (loop % 3 == 1)
+                                {
+                                    var heading2 =
+                                        new SeatalkNgPilotLockedHeading(null, _currentDesiredHeading);
+                                    client.SendSentence(heading2);
+                                }
+
+                                if (loop % 3 == 2)
+                                {
+                                    var heading = new SeatalkNgPilotHeading(null, _currentDesiredHeading);
+                                    client.SendSentence(heading);
+                                }
+
+                                if (loop % 3 == 0)
+                                {
+                                    var vs = new VesselHeading(_currentDesiredHeading, true);
+                                    client.SendSentence(vs);
+                                }
                             }
                         }
                     }
@@ -221,22 +234,22 @@ namespace Iot.Device.Gps.NeoM8Samples
                     _currentDesiredHeading = Angle.FromRadians(newDirection * 0.0001).ToUnit(AngleUnit.Degree);
                     Console.WriteLine($"Updated desired heading to {_currentDesiredHeading}");
                     var reply = gf.CreateAck();
-                    // parser.SendSentence(reply);
+                    parser.SendSentence(reply);
                 }
                 else if (gf.Pgn == 126720 && gf.ParameterConstantsMatch() && gf.Function == GroupFunction.Request)
                 {
                     int prop = gf.Parameters[3].Value.GetValueOrDefault();
                     int command = gf.Parameters[4].Value.GetValueOrDefault();
                     Console.WriteLine($"Someone is requesting the following value: Proprietary ID {prop} and Command {command}");
-                    if (prop == 108 && command == 38)
-                    {
-                        SeatalkNgPilotConfigurationValue value = new SeatalkNgPilotConfigurationValue()
-                        {
-                            Command = 38, ProprietaryId = 108, DateTime = DateTimeOffset.UtcNow, Value = false,
-                        };
+                    ////if (prop == 108 && command == 38)
+                    ////{
+                    ////    SeatalkNgPilotConfigurationValue value = new SeatalkNgPilotConfigurationValue()
+                    ////    {
+                    ////        Command = 38, ProprietaryId = 108, DateTime = DateTimeOffset.UtcNow, Value = false,
+                    ////    };
 
-                        parser.SendSentence(value);
-                    }
+                    ////    parser.SendSentence(value);
+                    ////}
                 }
                 else
                 {

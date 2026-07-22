@@ -213,6 +213,29 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
+        public void VesselHeadingDecode()
+        {
+            ////var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
+            ////{
+            ////    "1F112", "000074C5", "57", "FF42C0FF7F4002FC"
+            ////});
+
+            ////var p = new VesselHeading(ts, DateTimeOffset.UnixEpoch);
+            ////Assert.NotNull(p);
+            ////Assert.True(p.Latitude > 55 && p.Latitude < 55.1);
+            ////Assert.True(p.Longitude > 10.5 && p.Longitude < 11);
+            ////var result = p.ToNmeaParameterList();
+            ////Assert.Equal("01F801,000074C5,57,46AED12063C85306", result);
+        }
+
+        [Fact]
+        public void VesselHeadingEncode()
+        {
+            VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), true);
+            Assert.Equal("01F112,00000000,00,FF5B3DFFFFFFFFFD", vs.ToNmeaParameterList());
+        }
+
+        [Fact]
         public void FastPositionUpdate()
         {
             var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
