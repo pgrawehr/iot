@@ -25,11 +25,12 @@ namespace Iot.Device.Nmea0183
     public class Nmea2000YdwgParser : NmeaParser
     {
         private const int TransmitConfirmationTimeout = 1000;
-        private uint _currentPgn = 0;
-        private List<byte> _allData = new List<byte>();
         private ulong _pgnAwaitingSend = 0;
         private Dictionary<uint, string> _unknownPgnsSeen = new Dictionary<uint, string>();
         private uint _fastPacketSequencer = 0;
+
+        private Dictionary<uint, List<byte>> _incompleteFastPackets =
+            new Dictionary<uint, List<byte>>();
 
         /// <summary>
         /// Constructs an instance of this type
@@ -99,12 +100,6 @@ namespace Iot.Device.Nmea0183
 
             if (UInt32.TryParse(splits[2], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint pgn))
             {
-                if (pgn != _currentPgn)
-                {
-                    _allData.Clear();
-                    _currentPgn = pgn;
-                }
-
                 // This value appears to be pretty random and just indicates time since application/converter start
                 TimeSpan timeStamp;
                 if (!TimeSpan.TryParse(splits[0], CultureInfo.InvariantCulture, out timeStamp))
@@ -112,16 +107,51 @@ namespace Iot.Device.Nmea0183
                     timeStamp = TimeSpan.Zero;
                 }
 
-                _currentPgn = pgn;
-
                 var s = string.Join(string.Empty, splits.Skip(3));
                 var bytes = Convert.FromHexString(s);
-                _allData.AddRange(bytes);
                 var declaration = Nmea2000Declarations.GetByPgn(pgn >> 8);
 
                 if (declaration != null)
                 {
-                    TalkerSentence? result = CreateSentence(declaration, timeStamp, pgn >> 8, pgn & 0xFF, _allData);
+                    TalkerSentence? result = null;
+                    if (declaration.FastPacket && bytes.Length > 0)
+                    {
+                        // If this is the first part of a multipart sequence, start the merger
+                        if ((bytes[0] & 0xF) == 0)
+                        {
+                            // In this dictionary, the key is deliberately including the source, since
+                            // there could be two fast packet messages with the same pgn from two different sources
+                            if (_incompleteFastPackets.ContainsKey(pgn))
+                            {
+                                _incompleteFastPackets[pgn]!.Clear();
+                            }
+                            else
+                            {
+                                _incompleteFastPackets[pgn] = new List<byte>();
+                            }
+                        }
+
+                        if (_incompleteFastPackets.TryGetValue(pgn, out var toUse))
+                        {
+                            toUse.AddRange(bytes);
+                        }
+
+                        if (toUse != null && toUse.Count > 2)
+                        {
+                            result = CreateSentence(declaration, timeStamp, pgn >> 8, pgn & 0xFF, toUse);
+                            if (result != null)
+                            {
+                                _incompleteFastPackets[pgn]!.Clear();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        List<byte> activeData = new List<byte>(50);
+                        activeData.AddRange(bytes);
+                        result = CreateSentence(declaration, timeStamp, pgn >> 8, pgn & 0xFF, activeData);
+                    }
+
                     if (result != null)
                     {
                         error = NmeaError.None;
@@ -255,14 +285,14 @@ namespace Iot.Device.Nmea0183
             if (sentence is Nmea2000PackedMessage packed)
             {
                 uint priority = 7;
-                ////if (packed.Priority.HasValue)
-                ////{
-                ////    priority = packed.Priority.Value;
-                ////}
-                ////else if (packed.PgnDeclaration != null)
-                ////{
-                ////    priority = packed.PgnDeclaration.Priority;
-                ////}
+                if (packed.Priority.HasValue)
+                {
+                    priority = packed.Priority.Value;
+                }
+                else if (packed.PgnDeclaration != null)
+                {
+                    priority = packed.PgnDeclaration.Priority;
+                }
 
                 // This is a bit hacky, as we go through the string representation of the object.
                 // But having also a binary representation increases complexity for the individual messages.

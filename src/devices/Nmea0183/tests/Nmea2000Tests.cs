@@ -128,6 +128,18 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
+        public void ParseCommandGroupFunctionWithMissingFirstPart()
+        {
+            var m = new MemoryStream();
+            NmeaError error;
+            var parser = new Nmea2000YdwgParser("Test", m, null);
+            var otherSentence = parser.ParseSentence("08:33:14.874 R 1CFF6300,3B,9F,00,00,00,00,00,00", out error);
+            Assert.NotNull(otherSentence);
+            var sentence = parser.ParseSentence("07:07:25.848 R DED6703,A2,51,06,51,4E,FF,FF,FF", out error);
+            Assert.Null(sentence);
+        }
+
+        [Fact]
         public void ParseRawNmea2000SentenceAndDecode()
         {
             var m = new MemoryStream();
@@ -187,7 +199,7 @@ namespace Iot.Device.Nmea0183.Tests
                 m.Position = 0;
                 string output = Encoding.ASCII.GetString(m.ToArray());
                 Assert.NotEmpty(output);
-                Assert.Equal("01F20000 00 00 11 FF FF 00 FF FF \r\n", output);
+                Assert.Equal("09F20000 00 00 11 FF FF 00 FF FF \r\n", output);
             }
             finally
             {
@@ -219,10 +231,10 @@ namespace Iot.Device.Nmea0183.Tests
                 m.Position = 0;
                 string output = Encoding.ASCII.GetString(m.ToArray());
                 Assert.NotEmpty(output);
-                Assert.Equal(@"01F20100 20 1A 00 00 00 FF FF D3 
-01F20100 21 B8 00 05 00 00 C8 9B 
-01F20100 22 05 00 FF FF 00 00 00 
-01F20100 23 01 00 00 00 7F 7F FF 
+                Assert.Equal(@"09F20100 20 1A 00 00 00 FF FF D3 
+09F20100 21 B8 00 05 00 00 C8 9B 
+09F20100 22 05 00 FF FF 00 00 00 
+09F20100 23 01 00 00 00 7F 7F FF 
 ", output);
             }
             finally
