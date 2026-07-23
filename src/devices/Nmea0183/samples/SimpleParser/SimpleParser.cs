@@ -118,7 +118,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.98.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.62.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");

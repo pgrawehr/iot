@@ -79,7 +79,7 @@ namespace Iot.Device.Nmea0183
             {
                 if (UInt32.TryParse(splits[2], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint pgnTransmit))
                 {
-                    pgnTransmit >>= 8;
+                    pgnTransmit = (pgnTransmit >> 8) & 0x1FFFF;
                     if (pgnTransmit == _pgnAwaitingSend)
                     {
                         Logger.LogInformation($"Received confirmation that we sent {currentLine.Trim()}");
@@ -254,6 +254,16 @@ namespace Iot.Device.Nmea0183
         {
             if (sentence is Nmea2000PackedMessage packed)
             {
+                uint priority = 7;
+                ////if (packed.Priority.HasValue)
+                ////{
+                ////    priority = packed.Priority.Value;
+                ////}
+                ////else if (packed.PgnDeclaration != null)
+                ////{
+                ////    priority = packed.PgnDeclaration.Priority;
+                ////}
+
                 // This is a bit hacky, as we go through the string representation of the object.
                 // But having also a binary representation increases complexity for the individual messages.
                 // Maybe we improve that later.
@@ -263,6 +273,8 @@ namespace Iot.Device.Nmea0183
                 {
                     Logger.LogError($"Attempting to send invalid composed message: {nmea0183}");
                 }
+
+                uint pgnToSend = pgn | ((priority & 0x7) << 18);
 
                 StringBuilder data;
                 StringBuilder sendData;
@@ -288,7 +300,7 @@ namespace Iot.Device.Nmea0183
                         bytesProcessed++;
                         if (bytesInMessage >= 8)
                         {
-                            sendData.AppendLine($"{pgn << 8:X8} {data}");
+                            sendData.AppendLine($"{pgnToSend << 8:X8} {data}");
                             sequenceNo++;
                             data.Clear();
                             sequenceAndNumber = (messageSequence & 0x7) << 5 | sequenceNo;
@@ -307,7 +319,7 @@ namespace Iot.Device.Nmea0183
                             data.Append("FF ");
                         }
 
-                        sendData.AppendLine($"{pgn << 8:X8} {data}");
+                        sendData.AppendLine($"{pgnToSend << 8:X8} {data}");
                     }
                 }
                 else
@@ -322,7 +334,8 @@ namespace Iot.Device.Nmea0183
                         idx += 1;
                     }
 
-                    sendData = new StringBuilder($"{pgn << 8:X8} {data}\r\n");
+                    // The PGN (including priority and destination address) is 29 bits long.
+                    sendData = new StringBuilder($"{pgnToSend << 8:X8} {data}\r\n");
                 }
 
                 int loops = TransmitConfirmationTimeout / 20;

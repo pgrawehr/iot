@@ -19,7 +19,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public const int HexId = 0x1F112;
 
-        public override int Identifier => HexId;
+        public override uint Identifier => HexId;
 
         public Angle Heading
         {

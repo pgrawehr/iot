@@ -100,6 +100,34 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
+        public void ParseCommandGroupFunctionWithIntermediateOtherMessage()
+        {
+            var m = new MemoryStream();
+            NmeaError error;
+            var parser = new Nmea2000YdwgParser("Test", m, null);
+            parser.ParseSentence("07:08:25.258 R DED6703,A0,11,01,50,FF,00,F8,04", out error);
+            parser.ParseSentence("07:07:25.847 R DED6703,A1,01,3B,07,03,04,05,A4", out error);
+            var otherSentence = parser.ParseSentence("08:33:14.874 R 1CFF6300,3B,9F,00,00,00,00,00,00", out error);
+            Assert.NotNull(otherSentence);
+            var sentence = parser.ParseSentence("07:07:25.848 R DED6703,A2,51,06,51,4E,FF,FF,FF", out error);
+            Assert.NotNull(sentence);
+            Assert.IsType<TalkerSentence>(sentence);
+            DateTimeOffset lastMessageTime = DateTimeOffset.MinValue;
+            var typed = (GroupFunctionMessage?)sentence.TryGetTypedValue(ref lastMessageTime);
+            Assert.NotNull(typed);
+            Assert.Equal(65360u, typed.Pgn);
+            Assert.NotEmpty(typed.Parameters);
+            Assert.Equal("Manufacturer", typed.Parameters[0].Description);
+            Assert.Equal(1851, typed.Parameters[0].Value); // Raymarine
+            Assert.Equal("Industry Code", typed.Parameters[2].Description);
+            Assert.Equal(4, typed.Parameters[2].Value); // Marine
+            Assert.Equal("Target Heading True", typed.Parameters[4].Description);
+            Assert.Equal(20900, typed.Parameters[4].Value);
+            Assert.Equal("Target Heading Magnetic", typed.Parameters[5].Description);
+            Assert.Equal(20049, typed.Parameters[5].Value);
+        }
+
+        [Fact]
         public void ParseRawNmea2000SentenceAndDecode()
         {
             var m = new MemoryStream();

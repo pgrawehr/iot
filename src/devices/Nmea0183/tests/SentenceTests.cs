@@ -562,7 +562,7 @@ namespace Iot.Device.Nmea0183.Tests
             var param1 = msg.ToNmeaParameterList();
             var param2 = msg2.ToNmeaParameterList();
             Assert.Equal(param1, param2);
-            Assert.Equal(SeaSmartFluidLevel.HexId, msg2.Identifier);
+            Assert.Equal((uint)SeaSmartFluidLevel.HexId, msg2.Identifier);
         }
 
         [Fact]

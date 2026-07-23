@@ -37,6 +37,17 @@ namespace Iot.Device.Nmea0183
                     new FieldDeclaration(5, 2, "Sub Mode", null)
                 }));
             s_data.Add(GroupFunctionMessage.HexId, new Nmea2000PgnDeclaration(GroupFunctionMessage.HexId, "Request Group Function", 3, -1, true));
+            s_data.Add(SeatalkNgPilotHeading.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotHeading.HexId, "Seatalk: Pilot Heading", 7,
+                8, false,
+                new List<FieldDeclaration>()
+                {
+                    new FieldDeclaration(1, 2, "Manufacturer", 1851, x => (x >> 5) & 0x7FF),
+                    new FieldDeclaration(2, 1, "Reserved", null),
+                    new FieldDeclaration(3, 1, "Industry Code", 4, x => x & 0x7),
+                    new FieldDeclaration(4, 1, "SID", null),
+                    new FieldDeclaration(5, 2, "Heading True", null),
+                    new FieldDeclaration(6, 2, "Heading Magnetic", null),
+                }));
             s_data.Add(SeatalkNgPilotLockedHeading.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotLockedHeading.HexId, "Seatalk: Pilot Locked Heading", 7,
                 8, false,
                 // this message is addressed in a Group Function Message with Function=Command to update the desired heading

@@ -90,7 +90,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// The NMEA2000 Sentence identifier for this message
         /// </summary>
-        public override int Identifier => HexId;
+        public override uint Identifier => HexId;
 
         /// <summary>
         /// Tank level in percent (100% = Full, 0% = empty)

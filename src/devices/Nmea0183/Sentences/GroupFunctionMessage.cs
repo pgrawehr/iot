@@ -204,7 +204,7 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <inheritdoc/>
-        public override int Identifier => HexId;
+        public override uint Identifier => HexId;
 
         /// <summary>
         /// This is true for this message.

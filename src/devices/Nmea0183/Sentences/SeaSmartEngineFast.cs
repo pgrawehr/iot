@@ -93,7 +93,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// The NMEA2000 Sentence identifier for this message
         /// </summary>
-        public override int Identifier => HexId;
+        public override uint Identifier => HexId;
 
         /// <summary>
         /// Engine revolutions per time, typically RPM (revolutions per minute) is used

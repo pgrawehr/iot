@@ -26,7 +26,7 @@ namespace Iot.Device.Nmea0183.Sentences
             private set;
         }
 
-        public override int Identifier => HexId;
+        public override uint Identifier => HexId;
 
         public override string ToReadableContent()
         {

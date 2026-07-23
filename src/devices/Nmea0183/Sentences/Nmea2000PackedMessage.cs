@@ -55,7 +55,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// The hex identifier of this message type (first field of a PCDIN message)
         /// </summary>
-        public abstract int Identifier
+        public abstract uint Identifier
         {
             get;
         }
@@ -73,6 +73,17 @@ namespace Iot.Device.Nmea0183.Sentences
         /// The source identifier of the device which sent this message
         /// </summary>
         public uint MessageSource
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// The message priority as it was received or shall be sent.
+        /// Null to use the default. Note that the $PCDIN messages do not include the priority bits
+        /// in the PGN.
+        /// </summary>
+        public uint? Priority
         {
             get;
             set;
@@ -204,10 +215,16 @@ namespace Iot.Device.Nmea0183.Sentences
         protected void ParseCommonFields(IEnumerator<string> field)
         {
             string subMessage = ReadString(field);
-            if (!int.TryParse(subMessage, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int result))
+            if (!uint.TryParse(subMessage, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint result))
             {
                 Valid = false;
                 return;
+            }
+
+            // Only if not set yet
+            if (Priority == null)
+            {
+                Priority = (result >> 18) & 0x7;
             }
 
             string timeStamp = ReadString(field);
@@ -232,7 +249,7 @@ namespace Iot.Device.Nmea0183.Sentences
             string pgn = Identifier.ToString("X6", CultureInfo.InvariantCulture);
             string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
             string source = MessageSource.ToString("X2", CultureInfo.InvariantCulture);
-            return $"{pgn},{timeStampText},{source},"; // The "D" would be the priority (4 here)
+            return $"{pgn},{timeStampText},{source},";
         }
     }
 }

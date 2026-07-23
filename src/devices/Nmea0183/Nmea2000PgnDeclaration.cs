@@ -24,7 +24,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="priority">The typical priority this message uses</param>
         /// <param name="length">The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</param>
         /// <param name="fastPacket">True if this PGN typically consists of more than one packet</param>
-        public Nmea2000PgnDeclaration(uint pgn, string name, int priority, int length, bool fastPacket)
+        public Nmea2000PgnDeclaration(uint pgn, string name, uint priority, int length, bool fastPacket)
         {
             Pgn = pgn;
             Name = name;
@@ -43,7 +43,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="length">The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</param>
         /// <param name="fastPacket">True if this PGN typically consists of more than one packet</param>
         /// <param name="fieldDeclarations">Field index/length pairs</param>
-        public Nmea2000PgnDeclaration(uint pgn, string name, int priority, int length, bool fastPacket, List<FieldDeclaration> fieldDeclarations)
+        public Nmea2000PgnDeclaration(uint pgn, string name, uint priority, int length, bool fastPacket, List<FieldDeclaration> fieldDeclarations)
         {
             Pgn = pgn;
             Name = name;
@@ -60,7 +60,7 @@ namespace Iot.Device.Nmea0183
         public string Name { get; init; }
 
         /// <summary>The typical priority this message uses</summary>
-        public int Priority { get; init; }
+        public uint Priority { get; init; }
 
         /// <summary>The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</summary>
         public int Length { get; init; }

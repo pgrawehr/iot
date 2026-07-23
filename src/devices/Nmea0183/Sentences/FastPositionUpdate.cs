@@ -87,7 +87,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public double Longitude => _longitude;
 
         /// <inheritdoc/>
-        public override int Identifier => HexId;
+        public override uint Identifier => HexId;
 
         /// <inheritdoc/>
         public override bool ReplacesOlderInstance => true;

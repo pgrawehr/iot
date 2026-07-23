@@ -25,7 +25,7 @@ namespace Iot.Device.Nmea0183
         private readonly NmeaSinkAndSource _source;
         private readonly object _lock;
 
-        private readonly Dictionary<int, NmeaSentence> _dinData;
+        private readonly Dictionary<uint, NmeaSentence> _dinData;
         private readonly Dictionary<SentenceId, NmeaSentence> _sentences;
         private readonly Dictionary<String, Dictionary<SentenceId, NmeaSentence>> _sentencesBySource;
         private readonly ILogger _logger;
@@ -60,7 +60,7 @@ namespace Iot.Device.Nmea0183
             _lastSatelliteInfos = new Queue<SatellitesInView>();
             _wayPoints = new Dictionary<string, Waypoint>();
             _xdrData = new Dictionary<string, TransducerDataSet>();
-            _dinData = new Dictionary<int, NmeaSentence>();
+            _dinData = new Dictionary<uint, NmeaSentence>();
             StoreRawSentences = false;
             _logger = this.GetCurrentClassLogger();
             _source.OnNewSequence += OnNewSequence;
@@ -298,7 +298,7 @@ namespace Iot.Device.Nmea0183
                 }
                 else if (sentence.SentenceId == Nmea2000PackedMessage.Id && (sentence is Nmea2000PackedMessage din))
                 {
-                    _dinData[din.Identifier] = din;
+                    _dinData[(din.Identifier & 0x1FFFF)] = din;
                 }
                 else if (sentence.SentenceId == RecommendedMinimumNavigationInformation.Id && (sentence is RecommendedMinimumNavigationInformation rmc))
                 {
@@ -366,14 +366,14 @@ namespace Iot.Device.Nmea0183
         /// <param name="hexId">The hexadecimal identifier for this sub-message</param>
         /// <param name="sentence">Receives the sentence, if any was found</param>
         /// <returns>True on success, false if no such message was received</returns>
-        public bool TryGetLastDinSentence<T>(int hexId,
+        public bool TryGetLastDinSentence<T>(uint hexId,
             [NotNullWhen(true)]
             out T? sentence)
             where T : NmeaSentence
         {
             CleanOutdatedEntries();
             // The second condition should always be true, because this list only contains din messages
-            if (!_dinData.TryGetValue(hexId, out var s) || s.SentenceId != Nmea2000PackedMessage.Id)
+            if (!_dinData.TryGetValue((hexId & 0x1FFFF), out var s) || s.SentenceId != Nmea2000PackedMessage.Id)
             {
                 sentence = null;
                 return false;
