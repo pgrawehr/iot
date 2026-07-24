@@ -29,7 +29,7 @@ namespace Iot.Device.Nmea0183
         private TcpClient? _client;
         private NmeaParser? _parser;
         private Thread? _connectionThread;
-        private bool _terminated;
+        private CancellationTokenSource _cancellationTokenSource;
         private bool _connectionActive;
 
         /// <summary>
@@ -59,6 +59,7 @@ namespace Iot.Device.Nmea0183
             _port = port;
             _parserFactory = parserFactory;
             _connectionActive = false;
+            _cancellationTokenSource = new CancellationTokenSource();
             RetryInterval = TimeSpan.FromSeconds(5);
         }
 
@@ -88,14 +89,13 @@ namespace Iot.Device.Nmea0183
                 throw new InvalidOperationException("Server already started");
             }
 
-            _terminated = false;
             _connectionThread = new Thread(ConnectionWatcher);
             _connectionThread.Start();
         }
 
         private void ConnectionWatcher()
         {
-            while (!_terminated && _connectionThread != null)
+            while (!_cancellationTokenSource.IsCancellationRequested && _connectionThread != null)
             {
                 try
                 {
@@ -109,9 +109,9 @@ namespace Iot.Device.Nmea0183
                     _parser = parser;
                     parser.StartDecode();
 
-                    while (Connected && !_terminated)
+                    while (Connected && !_cancellationTokenSource.IsCancellationRequested)
                     {
-                        Thread.Sleep(RetryInterval);
+                        _cancellationTokenSource.Token.WaitHandle.WaitOne(RetryInterval);
                     }
 
                     if (_parser != null)
@@ -125,7 +125,7 @@ namespace Iot.Device.Nmea0183
                 catch (SocketException)
                 {
                     // Retry
-                    Thread.Sleep(RetryInterval);
+                    _cancellationTokenSource.Token.WaitHandle.WaitOne(RetryInterval);
                     _connectionActive = false;
                 }
             }
@@ -169,7 +169,7 @@ namespace Iot.Device.Nmea0183
         public override void StopDecode()
         {
             Logger.LogInformation($"Tcp Client {InterfaceName} is terminating");
-            _terminated = true;
+            _cancellationTokenSource.Cancel();
             if (_connectionThread != null)
             {
                 _connectionThread.Join();
