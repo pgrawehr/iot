@@ -176,6 +176,26 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
+        public void EncodeGroupFunctionNoAcknowledgement()
+        {
+            GroupFunctionMessage msg = new GroupFunctionMessage(GroupFunction.Command);
+            msg.MessageSource = 55;
+            msg.Pgn = 65379u;
+            // Note: Often not equal to the number of declared fields (as e.g. reserved fields are skipped)
+            msg.NumberOfArguments = 4;
+            var decl = Nmea2000Declarations.GetByPgn(65379u);
+            msg.Parameters.Clear();
+            msg.Parameters.AddRange(decl!.FieldDeclarations);
+
+            var reply = msg.CreateNoAck(x => x.FieldNumber == 4 ? 4 : null);
+            Assert.Equal(4, reply.PgnErrorCode);
+            // Note: The PCDIN message is one message only, regardless of the payload length. So fastpacket headers
+            // are not included in the payload.
+            Assert.Equal("$PCDIN,01ED00,00000000,00,0263FF0040040004*53", reply.ToNmeaMessage());
+            Assert.True(reply.PgnDeclaration!.FastPacket);
+        }
+
+        [Fact]
         public void SendSimpleMessageToNmea2000()
         {
             var m = new MemoryStream();

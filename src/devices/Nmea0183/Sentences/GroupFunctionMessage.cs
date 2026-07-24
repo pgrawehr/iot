@@ -146,6 +146,17 @@ namespace Iot.Device.Nmea0183.Sentences
             Valid = true;
         }
 
+        public static List<FieldDeclaration> CloneParameters(List<FieldDeclaration> parameters)
+        {
+            var ret = new List<FieldDeclaration>(parameters.Count);
+            foreach (var p in parameters)
+            {
+                ret.Add(p with { });
+            }
+
+            return ret;
+        }
+
         /// <summary>
         /// Returns true if the constants (as declared in the FieldDeclarations of the target PGN)
         /// match with the command.
@@ -227,6 +238,30 @@ namespace Iot.Device.Nmea0183.Sentences
             reply.NumberOfArguments = NumberOfArguments;
             reply.Pgn = Pgn;
             reply.PgnErrorCode = 0;
+            reply.Parameters = CloneParameters(Parameters);
+            // We're ignoring the transmission interval for now
+            // We also don't really need to set up the parameter list. For now,
+            // We just set ack to all fields.
+            return reply;
+        }
+
+        public GroupFunctionMessage CreateNoAck(Func<FieldDeclaration, int?> parameterError)
+        {
+            if (Function != GroupFunction.Command)
+            {
+                throw new InvalidOperationException("Can only send an ack to Command requests");
+            }
+
+            var reply = new GroupFunctionMessage(GroupFunction.Acknowledge);
+            reply.NumberOfArguments = NumberOfArguments;
+            reply.Pgn = Pgn;
+            reply.PgnErrorCode = 0x4; // Not supported
+            reply.Parameters = CloneParameters(Parameters);
+            foreach (var p in reply.Parameters)
+            {
+                p.ParameterError = parameterError(p);
+            }
+
             // We're ignoring the transmission interval for now
             // We also don't really need to set up the parameter list. For now,
             // We just set ack to all fields.
@@ -251,14 +286,23 @@ namespace Iot.Device.Nmea0183.Sentences
                 sb.Append(PgnErrorCode.ToString("X1", CultureInfo.InvariantCulture));
                 sb.Append("0");
                 sb.Append(NumberOfArguments.ToString("X2", CultureInfo.InvariantCulture));
-                int noArgNibbles = NumberOfArguments;
-                if (noArgNibbles % 2 == 1)
+                if (NumberOfArguments != Parameters.Count(x => x.Value.HasValue))
                 {
-                    // Add an even number of 0's (there are 4 bits per parameter to fill)
-                    noArgNibbles++;
+                    Console.WriteLine("Problem: Ack message has a different number of arguments than values");
                 }
 
-                sb.Append(new String('0', noArgNibbles));
+                foreach (var p in Parameters.Where(x => x.Value != null))
+                {
+                    if (p.ParameterError.HasValue)
+                    {
+                        sb.Append(p.ParameterError!.Value.ToString("X1", CultureInfo.InvariantCulture));
+                    }
+                    else
+                    {
+                        sb.Append('0');
+                    }
+                }
+
                 return base.ToNmeaParameterList() + sb.ToString();
             }
             else if (Function == GroupFunction.Request)

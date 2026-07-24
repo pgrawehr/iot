@@ -241,15 +241,23 @@ namespace Iot.Device.Gps.NeoM8Samples
                     int prop = gf.Parameters[3].Value.GetValueOrDefault();
                     int command = gf.Parameters[4].Value.GetValueOrDefault();
                     Console.WriteLine($"Someone is requesting the following value: Proprietary ID {prop} and Command {command}");
-                    ////if (prop == 108 && command == 38)
-                    ////{
-                    ////    SeatalkNgPilotConfigurationValue value = new SeatalkNgPilotConfigurationValue()
-                    ////    {
-                    ////        Command = 38, ProprietaryId = 108, DateTime = DateTimeOffset.UtcNow, Value = false,
-                    ////    };
+                    if (prop == 108 && command == 38)
+                    {
+                        SeatalkNgPilotConfigurationValue value = new SeatalkNgPilotConfigurationValue()
+                        {
+                            Command = 38,
+                            ProprietaryId = 108,
+                            DateTime = DateTimeOffset.UtcNow,
+                            Value = false,
+                        };
 
-                    ////    parser.SendSentence(value);
-                    ////}
+                        parser.SendSentence(value);
+                    }
+                    else
+                    {
+                        var reply = gf.CreateNoAck(x => x.Description == "Command" ? 5 : null);
+                        parser.SendSentence(reply);
+                    }
                 }
                 else
                 {

@@ -23,5 +23,15 @@ namespace Iot.Device.Nmea0183.Sentences
             get;
             set;
         }
+
+        /// <summary>
+        /// This field is only used on an Acknowledge-Reply. It is not 0 to indicate a parameter error
+        /// on a specific parameter.
+        /// </summary>
+        public int? ParameterError
+        {
+            get;
+            set;
+        }
     }
 }

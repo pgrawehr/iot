@@ -229,6 +229,13 @@ namespace Iot.Device.Nmea0183
                 int dataLength = allData[1];
                 List<byte> fullSequence = new List<byte>(dataLength);
                 int srcIndex = 2;
+
+                // TEST CODE
+                if (allData[2] == 1 && allData[3] == 0x50 && allData[4] == 0xFF)
+                {
+                    Logger.LogWarning("Seen something that is probably going to be a heading change");
+                }
+
                 while (srcIndex < allData.Count)
                 {
                     fullSequence.Add(allData[srcIndex]);
