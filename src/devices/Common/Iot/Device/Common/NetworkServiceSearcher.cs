@@ -73,7 +73,13 @@ namespace Iot.Device.Common
             {
                 UInt32 thisAddress = rawaddress + offset;
                 byte[] addrBytes = BitConverter.GetBytes(thisAddress).Reverse().ToArray();
-                reply.Add(new IPAddress(addrBytes));
+                IPAddress addressToUse = new IPAddress(addrBytes);
+                if (!addressToUse.Equals(addressInSubnet))
+                {
+                    // Don't add our own
+                    reply.Add(addressToUse);
+                }
+
                 offset++;
                 // Abort when our offset is equal to the subnet mask (since address x.x.x.255 is also not available)
                 if (offset >= rawsubnetMaskInversed)

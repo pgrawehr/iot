@@ -185,6 +185,8 @@ namespace Iot.Device.Gps.NeoM8Samples
                                 {
                                     var heading = new SeatalkNgPilotHeading(null, _currentDesiredHeading);
                                     client.SendSentence(heading);
+                                    var rudder = new Rudder(Angle.FromDegrees(0), Angle.FromDegrees(0), 0, 0);
+                                    client.SendSentence(rudder);
                                 }
 
                                 if (loop % 3 == 0)

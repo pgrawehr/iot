@@ -159,7 +159,7 @@ namespace Iot.Device.Nmea0183.Tests
         public void EncodeGroupFunctionAcknowledgement()
         {
             GroupFunctionMessage msg = new GroupFunctionMessage(GroupFunction.Command);
-            msg.MessageSource = 55;
+            msg.MessageSource = 0x55;
             msg.Pgn = 65379u;
             // Note: Often not equal to the number of declared fields (as e.g. reserved fields are skipped)
             msg.NumberOfArguments = 4;
@@ -171,7 +171,7 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Equal(0, reply.PgnErrorCode);
             // Note: The PCDIN message is one message only, regardless of the payload length. So fastpacket headers
             // are not included in the payload.
-            Assert.Equal("$PCDIN,01ED00,00000000,00,0263FF0000040000*53", reply.ToNmeaMessage());
+            Assert.Equal("$PCDIN,01ED55,00000000,00,0263FF0000040000*53", reply.ToNmeaMessage());
             Assert.True(reply.PgnDeclaration!.FastPacket);
         }
 
@@ -275,21 +275,64 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void VesselHeadingDecode()
         {
-            ////var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
-            ////{
-            ////    "1F112", "000074C5", "57", "FF42C0FF7F4002FC"
-            ////});
+            var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
+            {
+                "1F112", "000074C5", "57", "FF42C0FF7F4002FC"
+            });
 
-            ////var p = new VesselHeading(ts, DateTimeOffset.UnixEpoch);
-            ////Assert.NotNull(p);
-            ////Assert.True(p.Latitude > 55 && p.Latitude < 55.1);
-            ////Assert.True(p.Longitude > 10.5 && p.Longitude < 11);
-            ////var result = p.ToNmeaParameterList();
-            ////Assert.Equal("01F801,000074C5,57,46AED12063C85306", result);
+            var p = new VesselHeading(ts, DateTimeOffset.UnixEpoch);
+            Assert.NotNull(p);
+            Assert.Equal(47.0, p.Heading.Degrees);
+            Assert.True(p.Variation.HasValue);
+            var result = p.ToNmeaParameterList();
+            Assert.Equal("01F801,000074C5,57,46AED12063C85306", result);
         }
 
         [Fact]
         public void VesselHeadingEncode()
+        {
+            VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), true);
+            Assert.Equal("01F112,00000000,00,FF5B3DFFFFFFFFFD", vs.ToNmeaParameterList());
+        }
+
+        [Fact]
+        public void RudderAngleDecode1()
+        {
+            var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
+            {
+                "1F10D", "000074C5", "57", "00FF2A0AFF09FFFF"
+            });
+
+            var p = new Rudder(ts, DateTimeOffset.UnixEpoch);
+            Assert.NotNull(p);
+            Assert.Equal(14.9, p.DesiredAngle.GetValueOrDefault().Degrees);
+            Assert.Equal(14.7, p.ActualAngle.GetValueOrDefault().Degrees);
+            Assert.Equal(0, p.DirectionOrder);
+            var result = p.ToNmeaParameterList();
+            DateTimeOffset t = DateTimeOffset.MinValue;
+            Assert.Equal(ts.GetAsRawSentence(ref t).ToNmeaMessage(), result);
+        }
+
+        [Fact]
+        public void RudderAngleDecode2()
+        {
+            var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
+            {
+                "1F10D", "000074C5", "57", "FCF82A0AFF7FFFFF"
+            });
+
+            var p = new Rudder(ts, DateTimeOffset.UnixEpoch);
+            Assert.NotNull(p);
+            Assert.Equal(14.9, p.DesiredAngle.GetValueOrDefault().Degrees);
+            Assert.False(p.ActualAngle.HasValue);
+            Assert.Equal(0, p.DirectionOrder);
+            var result = p.ToNmeaParameterList();
+            DateTimeOffset t = DateTimeOffset.MinValue;
+            Assert.Equal(ts.GetAsRawSentence(ref t).ToNmeaMessage(), result);
+        }
+
+        [Fact]
+        public void RudderAngleEncode()
         {
             VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), true);
             Assert.Equal("01F112,00000000,00,FF5B3DFFFFFFFFFD", vs.ToNmeaParameterList());

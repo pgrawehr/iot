@@ -89,6 +89,11 @@ namespace Iot.Device.Nmea0183
                 throw new InvalidOperationException("Server already started");
             }
 
+            if (_cancellationTokenSource.IsCancellationRequested)
+            {
+                throw new InvalidOperationException("This client is already terminated");
+            }
+
             _connectionThread = new Thread(ConnectionWatcher);
             _connectionThread.Start();
         }

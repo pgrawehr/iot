@@ -388,11 +388,6 @@ namespace Iot.Device.Nmea0183
 
                 Interlocked.Exchange(ref _pgnAwaitingSend, pgn);
 
-                if (sentence is SeatalkNgPilotHeading)
-                {
-                    sendData.AppendLine("1F10D00 00 00 00 00 00 00 00 00");
-                }
-
                 var outgoingString = sendData.ToString();
 
                 byte[] buffer = StreamEncoding.GetBytes(outgoingString);

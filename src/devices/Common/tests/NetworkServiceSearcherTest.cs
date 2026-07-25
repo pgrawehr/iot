@@ -35,33 +35,51 @@ namespace Common.Tests
             Assert.Equal(IPAddress.Parse("192.168.1.1"), list[0]);
         }
 
+        private async Task<bool> IsYdwg03(HttpClient client, IPAddress candidate)
+        {
+            try
+            {
+                using CancellationTokenSource ts = new CancellationTokenSource(500);
+                var uri = new Uri($"http://{candidate.ToString()}/", UriKind.Absolute);
+                var reply = await client.GetAsync(uri, ts.Token);
+                // The header contains a single entry with the declaration "YDWG", which should
+                // be enough to identify the device
+                if (reply.IsSuccessStatusCode && reply.Headers.Any(x => x.Value.Any(y => y.Equals("YDWG", StringComparison.OrdinalIgnoreCase))))
+                {
+                    return true;
+                }
+            }
+            catch (Exception x) when (x is UnauthorizedAccessException or SocketException or OperationCanceledException)
+            {
+                return false;
+            }
+
+            return false;
+        }
+
         [Fact]
-        public async Task FindYdng03()
+        public async Task IsYdwg03_Sample()
+        {
+            Assert.True(await IsYdwg03(new HttpClient(), IPAddress.Parse("192.168.245.50")));
+        }
+
+        [Fact]
+        public async Task FindYdwg03()
         {
             var interf = NetworkServiceSearcher.GetPrimaryNetworkInterface();
             var list = NetworkServiceSearcher.GetAllValidAddressesInSubnet(interf.Address, interf.Mask);
-            foreach (var candiate in list)
+            using (var client = new HttpClient())
             {
-                try
+                foreach (var candidate in list)
                 {
-                    using (var client = new TcpClient())
+                    if (await IsYdwg03(client, candidate))
                     {
-                        using CancellationTokenSource ts = new CancellationTokenSource(100);
-                        await client.ConnectAsync(candiate.ToString(), 80, ts.Token);
-                        var stream = client.GetStream();
-                        TextWriter tw = new StreamWriter(stream, Encoding.UTF8);
-                        TextReader tr = new StreamReader(stream, Encoding.UTF8);
-                        tw.WriteLine("GET / HTTP/1.1");
-                        var data = tr.ReadToEnd();
-                        tw.Close();
-                        Assert.NotEmpty(data);
+                        return;
                     }
                 }
-                catch (Exception x) when (x is UnauthorizedAccessException or SocketException or OperationCanceledException)
-                {
-                    // Ignore
-                }
             }
+
+            Assert.Fail("No device found");
         }
     }
 }
