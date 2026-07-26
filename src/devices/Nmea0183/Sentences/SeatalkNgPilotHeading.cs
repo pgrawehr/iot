@@ -20,7 +20,17 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public const int HexId = 0x0FF4F;
 
-        private uint _manufacturerAndIndustry;
+        public ManufacturerCode Manufacturer
+        {
+            get;
+            set;
+        }
+
+        public IndustryCode Industry
+        {
+            get;
+            set;
+        }
 
         public Angle? HeadingTrue
         {
@@ -52,7 +62,8 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public SeatalkNgPilotHeading(Angle? headingTrue, Angle? headingMagnetic)
         {
-            _manufacturerAndIndustry = ManufacturerRaymarine;
+            Manufacturer = ManufacturerCode.Raymarine;
+            Industry = IndustryCode.Marine;
             HeadingTrue = headingTrue;
             HeadingMagnetic = headingMagnetic;
             Sid = 0xFF;
@@ -84,34 +95,34 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 4, false, out int manf))
+            if (ReadManufacturerAndIndustryFromHexString(data, 0, out var manufacturer, out var industry))
             {
-                _manufacturerAndIndustry = (uint)manf;
+                Manufacturer = manufacturer;
+                Industry = industry;
             }
 
-            if (ReadFromHexString(data, 4, 2, false, out int status))
+            if (ReadByteFromHexString(data, 4, out byte sid))
             {
-                Sid = status;
+                Sid = sid;
+            }
+            else
+            {
+                // Here this value can be translated literally
+                Sid = 0xFF;
             }
 
             HeadingTrue = null;
             HeadingMagnetic = null;
 
-            int v = 0;
-            if (ReadFromHexString(data, 6, 4, true, out v))
+            ushort v = 0;
+            if (ReadUshortFromHexString(data, 6, out v))
             {
-                if (v != 0xFFFF)
-                {
-                    HeadingTrue = Angle.FromRadians((double)v / 0.0001);
-                }
+                HeadingTrue = Angle.FromRadians(v * 0.0001);
             }
 
-            if (ReadFromHexString(data, 10, 4, true, out v))
+            if (ReadUshortFromHexString(data, 10, out v))
             {
-                if (v != 0xFFFF)
-                {
-                    HeadingMagnetic = Angle.FromRadians((double)v * 0.0001);
-                }
+                HeadingMagnetic = Angle.FromRadians(v * 0.0001);
             }
 
             Valid = true;
@@ -122,7 +133,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public override string ToNmeaParameterList()
         {
-            string manufacturer = _manufacturerAndIndustry.ToString("X4", CultureInfo.InvariantCulture);
+            string manufacturer = WriteManufacturerAndIndustryToHex(Manufacturer, Industry);
 
             string trueAngle = DoubleTo16BitField(HeadingTrue.HasValue ? HeadingTrue.Value.Normalize(true).Radians : null,
                 0.0001).ToString("X4", CultureInfo.InvariantCulture);

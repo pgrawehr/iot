@@ -57,12 +57,12 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 2, false, out int f))
+            if (ReadByteFromHexString(data, 0, out byte f))
             {
                 Function = (GroupFunction)f;
             }
 
-            if (ReadFromHexString(data, 2, 6, true, out int pgn))
+            if (ReadUnsignedFromHexString(data, 2, 6, true, out uint pgn))
             {
                 Pgn = (uint)pgn;
             }
@@ -71,7 +71,7 @@ namespace Iot.Device.Nmea0183.Sentences
             if (Function == GroupFunction.Request)
             {
                 TransmissionInterval = null;
-                if (ReadFromHexString(data, 8, 8, true, out int interval))
+                if (ReadUintFromHexString(data, 8, out uint interval))
                 {
                     // -1 is "Once" and -2 is "Reset to default" (which I have never observed as being in use)
                     if (interval > 0)
@@ -81,11 +81,11 @@ namespace Iot.Device.Nmea0183.Sentences
                 }
 
                 TransmissionOffset = null;
-                if (ReadFromHexString(data, 16, 4, true, out int offset))
+                if (ReadUshortFromHexString(data, 16, out ushort offset))
                 {
-                    if (interval > 0)
+                    if (offset > 0)
                     {
-                        TransmissionOffset = TimeSpan.FromMilliseconds(interval);
+                        TransmissionOffset = TimeSpan.FromMilliseconds(offset);
                     }
                 }
 
@@ -105,7 +105,7 @@ namespace Iot.Device.Nmea0183.Sentences
             }
 
             NumberOfArguments = 0;
-            if (ReadFromHexString(data, nextByte * 2, 2, true, out int argCnt))
+            if (ReadByteFromHexString(data, nextByte * 2, out byte argCnt))
             {
                 NumberOfArguments = argCnt;
                 nextByte += 1;
@@ -121,7 +121,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
                 for (int i = 0; i < NumberOfArguments; i++)
                 {
-                    if (!ReadFromHexString(data, nextByte * 2, 2, false, out int index))
+                    if (!ReadByteFromHexString(data, nextByte * 2, out byte index))
                     {
                         break;
                     }
@@ -129,7 +129,7 @@ namespace Iot.Device.Nmea0183.Sentences
                     var thisField = actualValues.FirstOrDefault(x => x.FieldNumber == index);
                     if (thisField != null)
                     {
-                        ReadFromHexString(data, (nextByte + 1) * 2, thisField.FieldSize * 2, true, out int v);
+                        ReadSignedFromHexString(data, (nextByte + 1) * 2, thisField.FieldSize * 2, true, out int v);
                         thisField.Value = v;
                         nextByte = nextByte + 1 + thisField.FieldSize;
                     }

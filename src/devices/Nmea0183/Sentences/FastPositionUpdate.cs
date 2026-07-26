@@ -60,12 +60,12 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 8, true, out int latitude))
+            if (ReadSignedFromHexString(data, 0, 8, true, out int latitude))
             {
                 _latitude = latitude * 1E-7;
             }
 
-            if (ReadFromHexString(data, 8, 8, true, out int longitude))
+            if (ReadSignedFromHexString(data, 8, 8, true, out int longitude))
             {
                 _longitude = longitude * 1E-7;
             }

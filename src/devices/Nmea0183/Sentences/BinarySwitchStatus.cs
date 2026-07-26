@@ -92,16 +92,16 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 2, false, out int inst))
+            if (ReadByteFromHexString(data, 0, out byte inst))
             {
                 _instance = inst;
             }
 
             for (int i = 0; i < 7; i++)
             {
-                ReadFromHexString(data, i + 2, 2, false, out int v);
+                ReadUnsignedFromHexString(data, i + 2, 2, false, out uint v);
                 // v now contains the bits for 4 switches
-                int bits = (v >> 6) & 0x3;
+                uint bits = (v >> 6) & 0x3;
                 _switches[i * 4] = (SwitchStatus)bits;
                 bits = (v >> 4) & 0x3;
                 _switches[(i * 4) + 1] = (SwitchStatus)bits;

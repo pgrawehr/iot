@@ -291,7 +291,7 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void VesselHeadingEncode()
         {
-            VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), true);
+            VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), Angle.FromDegrees(-5), Angle.FromDegrees(10), true);
             Assert.Equal("01F112,00000000,00,FF5B3DFFFFFFFFFD", vs.ToNmeaParameterList());
         }
 
@@ -334,7 +334,7 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void RudderAngleEncode()
         {
-            VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), true);
+            VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), null, null, true);
             Assert.Equal("01F112,00000000,00,FF5B3DFFFFFFFFFD", vs.ToNmeaParameterList());
         }
 
@@ -382,6 +382,8 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.NotNull(p);
             Assert.Null(p.HeadingTrue);
             Assert.True(p.HeadingMagnetic.HasValue);
+            Assert.Equal(IndustryCode.Marine, p.Industry);
+            Assert.Equal(ManufacturerCode.Raymarine, p.Manufacturer);
             Assert.Equal(348.02, p.HeadingMagnetic.GetValueOrDefault().Degrees, 1E-2);
             var result = p.ToNmeaParameterList();
             Assert.Equal("00FF4F,000074C5,57,3B9FFFFFFF46EDFF", result);

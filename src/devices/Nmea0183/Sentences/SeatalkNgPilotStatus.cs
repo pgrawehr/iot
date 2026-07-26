@@ -65,12 +65,12 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 4, false, out int manf))
+            if (ReadUshortFromHexString(data, 0, out ushort manf))
             {
-                _manufacturerAndIndustry = (uint)manf;
+                _manufacturerAndIndustry = manf;
             }
 
-            if (ReadFromHexString(data, 4, 4, false, out int status))
+            if (ReadUshortFromHexString(data, 4, out ushort status))
             {
                 PilotStatus = AutopilotStatusFromNumber(status);
             }

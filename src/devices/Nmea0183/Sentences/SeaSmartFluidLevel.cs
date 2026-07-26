@@ -61,26 +61,19 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 2, false, out int combined))
+            if (ReadByteFromHexString(data, 0, out byte combined))
             {
                 TankNumber = combined & 0x0f;
                 Type = (FluidType)((combined >> 4) & 0x0f);
             }
 
-            if (ReadFromHexString(data, 2, 4, false, out int level))
+            if (ReadShortFromHexString(data, 2, out short s))
             {
-                Level = Ratio.FromPercent(level);
+                Level = Ratio.FromPercent(s);
             }
 
-            if (ReadFromHexString(data, 6, 8, false, out int volume))
+            if (ReadUintFromHexString(data, 6, out uint volume))
             {
-                volume = BinaryPrimitives.ReadInt32BigEndian(new byte[]
-                {
-                    (byte)(volume & 0xff),
-                    (byte)(volume >> 8),
-                    (byte)(volume >> 16),
-                    (byte)(volume >> 24),
-                });
                 TankVolume = Volume.FromLiters(volume / 10.0d);
             }
 

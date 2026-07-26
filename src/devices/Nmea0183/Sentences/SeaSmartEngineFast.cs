@@ -72,17 +72,17 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 2, false, out int engineNo))
+            if (ReadByteFromHexString(data, 0, out byte engineNo))
             {
                 EngineNumber = engineNo;
             }
 
-            if (ReadFromHexString(data, 2, 4, false, out int rpm))
+            if (ReadUnsignedFromHexString(data, 2, 4, false, out uint rpm))
             {
                 RotationalSpeed = RotationalSpeed.FromRevolutionsPerSecond(rpm);
             }
 
-            if (ReadFromHexString(data, 10, 2, false, out int pitch))
+            if (ReadSbyteFromHexString(data, 10, out sbyte pitch))
             {
                 PropellerPitch = Ratio.FromPercent(pitch);
             }

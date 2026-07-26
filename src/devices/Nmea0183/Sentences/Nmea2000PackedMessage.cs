@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
+#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
@@ -169,7 +171,75 @@ namespace Iot.Device.Nmea0183.Sentences
         /// value is not a hex number. This is to prevent an exception in case of a malformed message.
         /// The offset and length are given in nibbles (half-bytes); as they operate on the input string.
         /// </remarks>
-        protected bool ReadFromHexString(string input, int start, int length, bool inverseEndianness, out int value)
+        protected bool ReadSignedFromHexString(string input, int start, int length, bool inverseEndianness, out int value)
+        {
+            if (length % 2 != 0)
+            {
+                throw new ArgumentException("Length must be even", nameof(length));
+            }
+
+            if (input.Length < start + length)
+            {
+                value = 0;
+                return false;
+            }
+
+            // length is given in characters here, not in bytes
+            string part = input.Substring(start, length);
+
+            if (!UInt32.TryParse(part, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out UInt32 result))
+            {
+                value = 0;
+                return false;
+            }
+
+            bool isUnknown = false;
+
+            if (length > 4 && inverseEndianness)
+            {
+                result = InverseEndianness(result);
+                if (length == 6)
+                {
+                    result = result >> 8;
+                    if (result == 0x7FFFFF)
+                    {
+                        isUnknown = true;
+                    }
+                }
+                else if (result == int.MaxValue)
+                {
+                    isUnknown = true;
+                }
+            }
+            else if (length == 4 && inverseEndianness)
+            {
+                result = result >> 8 | ((result & 0xFF) << 8);
+                if (result == short.MaxValue)
+                {
+                    isUnknown = true;
+                }
+            }
+
+            value = (int)result;
+            return !isUnknown;
+        }
+
+        /// <summary>
+        /// Decodes a value from a longer hex string (PRDIN messages contain one blob of stringly-typed hex numbers)
+        /// </summary>
+        /// <param name="input">Input string</param>
+        /// <param name="start">Start offset of required number, in nibbles(!)</param>
+        /// <param name="length">Length of required number, in nibbles(!). Must be 2, 4 or 8</param>
+        /// <param name="inverseEndianness">True to inverse the endianness of the number (reverse the partial string)</param>
+        /// <param name="value">The output value</param>
+        /// <returns>True on success, false otherwise</returns>
+        /// <exception cref="ArgumentException">Length is not 2, 4 or 8</exception>
+        /// <remarks>
+        /// Other erroneous inputs don't throw an exception but return false, e.g. string shorter than expected or
+        /// value is not a hex number. This is to prevent an exception in case of a malformed message.
+        /// The offset and length are given in nibbles (half-bytes); as they operate on the input string.
+        /// </remarks>
+        protected bool ReadUnsignedFromHexString(string input, int start, int length, bool inverseEndianness, out uint value)
         {
             if (length % 2 != 0)
             {
@@ -204,8 +274,98 @@ namespace Iot.Device.Nmea0183.Sentences
                 result = result >> 8 | ((result & 0xFF) << 8);
             }
 
-            value = (int)result;
+            value = result;
             return true;
+        }
+
+        protected bool ReadByteFromHexString(string input, int offset, out byte b)
+        {
+            if (ReadUnsignedFromHexString(input, offset, 2, false, out uint value))
+            {
+                if (value != 0xFF)
+                {
+                    b = (byte)value;
+                    return true;
+                }
+            }
+
+            b = 0xFF;
+            return false;
+        }
+
+        protected bool ReadSbyteFromHexString(string input, int offset, out sbyte b)
+        {
+            if (ReadSignedFromHexString(input, offset, 2, false, out int value))
+            {
+                if (value != 0x7F)
+                {
+                    b = (sbyte)value;
+                    return true;
+                }
+            }
+
+            b = 0x7F;
+            return false;
+        }
+
+        protected bool ReadUshortFromHexString(string input, int offset, out ushort v)
+        {
+            if (ReadUnsignedFromHexString(input, offset, 4, true, out uint value))
+            {
+                if (value != 0xFFFF)
+                {
+                    v = (ushort)value;
+                    return true;
+                }
+            }
+
+            v = 0xFFFF;
+            return false;
+        }
+
+        protected bool ReadManufacturerAndIndustryFromHexString(string input, int offset, out ManufacturerCode manufacturer, out IndustryCode industry)
+        {
+            if (ReadUnsignedFromHexString(input, offset, 4, true, out uint value))
+            {
+                manufacturer = (ManufacturerCode)(value & 0x7FF); // Uses the 11 lower bits
+                // 2 bits here are reserved
+                industry = (IndustryCode)(value >> 13); // Uses the three upper bits
+                return true;
+            }
+
+            manufacturer = ManufacturerCode.Unknown;
+            industry = IndustryCode.Global;
+            return false;
+        }
+
+        protected bool ReadUintFromHexString(string input, int offset, out uint v)
+        {
+            if (ReadUnsignedFromHexString(input, offset, 8, true, out uint value))
+            {
+                if (value != uint.MaxValue)
+                {
+                    v = value;
+                    return true;
+                }
+            }
+
+            v = uint.MaxValue;
+            return false;
+        }
+
+        protected bool ReadShortFromHexString(string input, int offset, out short s)
+        {
+            if (ReadSignedFromHexString(input, offset, 4, true, out int value))
+            {
+                if (value != 0x7FFF)
+                {
+                    s = (short)value;
+                    return true;
+                }
+            }
+
+            s = 0x7FFF;
+            return false;
         }
 
         /// <summary>
@@ -239,6 +399,19 @@ namespace Iot.Device.Nmea0183.Sentences
             {
                 MessageSource = src;
             }
+        }
+
+        protected string WriteManufacturerAndIndustryToHex(ManufacturerCode manufacturer, IndustryCode industry)
+        {
+            uint manufacturerAndIndustry = ((uint)manufacturer) | ((uint)industry << 13) | 0x1800;
+            return WriteUshortToHex((ushort)manufacturerAndIndustry);
+        }
+
+        protected string WriteUshortToHex(ushort value)
+        {
+            string data = value.ToString("X4", CultureInfo.InvariantCulture);
+            // There's no rotation for shorts available, so we do it the ugly way here
+            return data.Substring(2, 2) + data.Substring(0, 2);
         }
 
         /// <summary>

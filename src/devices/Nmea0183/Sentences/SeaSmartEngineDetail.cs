@@ -75,12 +75,12 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 2, false, out int engineNo))
+            if (ReadByteFromHexString(data, 0, out byte engineNo))
             {
                 EngineNumber = engineNo;
             }
 
-            if (ReadFromHexString(data, 10, 4, true, out int temp))
+            if (ReadUshortFromHexString(data, 10, out ushort temp))
             {
                 if (temp > 0 && temp < 0xFFFF)
                 {
@@ -92,14 +92,15 @@ namespace Iot.Device.Nmea0183.Sentences
                 }
             }
 
-            if (ReadFromHexString(data, 22, 8, true, out int operatingTime))
+            if (ReadUintFromHexString(data, 22, out uint operatingTime))
             {
                 OperatingTime = TimeSpan.FromSeconds(operatingTime);
             }
 
-            if (ReadFromHexString(data, 40, 4, false, out int status))
+            Status = 0;
+            if (ReadUnsignedFromHexString(data, 40, 4, false, out uint status1))
             {
-                Status = (EngineStatus)status;
+                Status = (EngineStatus)status1;
             }
 
             Valid = true;

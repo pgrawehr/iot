@@ -84,27 +84,27 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 4, false, out int manf))
+            if (ReadUshortFromHexString(data, 0, out ushort manf))
             {
-                _manufacturerAndIndustry = (uint)manf;
+                _manufacturerAndIndustry = manf;
             }
 
-            if (ReadFromHexString(data, 4, 2, false, out int proprietaryId))
+            if (ReadByteFromHexString(data, 4, out byte proprietaryId))
             {
-                ProprietaryId = (uint)proprietaryId;
+                ProprietaryId = proprietaryId;
             }
             else
             {
                 ProprietaryId = 0;
             }
 
-            if (ReadFromHexString(data, 6, 2, false, out int command))
+            if (ReadByteFromHexString(data, 6, out byte command))
             {
-                Command = (uint)command;
+                Command = command;
             }
             else
             {
-                ProprietaryId = 0;
+                Command = 0;
             }
 
             // Can't currently read the value

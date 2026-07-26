@@ -191,7 +191,7 @@ namespace Iot.Device.Gps.NeoM8Samples
 
                                 if (loop % 3 == 0)
                                 {
-                                    var vs = new VesselHeading(_currentDesiredHeading, true);
+                                    var vs = new VesselHeading(_currentDesiredHeading, null, null, true);
                                     client.SendSentence(vs);
                                 }
                             }

@@ -77,22 +77,22 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadFromHexString(data, 0, 2, false, out int v))
+            if (ReadByteFromHexString(data, 0, out byte b))
             {
-                Instance = (byte)v;
+                Instance = b;
             }
 
-            if (ReadFromHexString(data, 2, 2, false, out v))
+            if (ReadByteFromHexString(data, 2, out b))
             {
-                DirectionOrder = (byte)(v >> 5);
+                DirectionOrder = (byte)(b >> 5);
             }
 
-            if (ReadFromHexString(data, 4, 4, true, out v) && v != 0x7FFF)
+            if (ReadShortFromHexString(data, 4, out short v))
             {
                 DesiredAngle = Angle.FromRadians(0.0001 * v);
             }
 
-            if (ReadFromHexString(data, 8, 4, true, out v) && v != 0x7FFF)
+            if (ReadShortFromHexString(data, 8, out v))
             {
                 ActualAngle = Angle.FromRadians(0.0001 * v);
             }

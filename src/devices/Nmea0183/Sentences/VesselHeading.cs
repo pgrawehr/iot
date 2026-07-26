@@ -45,14 +45,22 @@ namespace Iot.Device.Nmea0183.Sentences
             set;
         }
 
+        public int Sid
+        {
+            get;
+            set;
+        }
+
         public override string ToReadableContent()
         {
             return $"Vessel {(IsMagnetic ? "Magnetic" : "True")} Heading: {Heading} Variation: {Variation}";
         }
 
-        public VesselHeading(Angle heading, bool magnetic)
+        public VesselHeading(Angle heading, Angle? deviation, Angle? variation, bool magnetic)
         {
             Heading = heading;
+            Deviation = deviation;
+            Variation = variation;
             IsMagnetic = magnetic;
             Valid = true;
         }
@@ -76,14 +84,38 @@ namespace Iot.Device.Nmea0183.Sentences
         public VesselHeading(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
-            IEnumerator<string> field = fields.GetEnumerator();
+            using IEnumerator<string> field = fields.GetEnumerator();
 
             ParseCommonFields(field);
 
             string data = ReadString(field);
 
+            if (ReadByteFromHexString(data, 0, out byte sid))
+            {
+                Sid = sid;
+            }
+
+            if (ReadUshortFromHexString(data, 2, out ushort heading))
+            {
+                Heading = Angle.FromRadians(heading * 0.0001);
+            }
+
+            if (ReadShortFromHexString(data, 6, out short dev))
+            {
+                Deviation = Angle.FromRadians(dev * 0.0001);
+            }
+
+            if (ReadShortFromHexString(data, 10, out short variation))
+            {
+                Variation = Angle.FromRadians(variation * 0.0001);
+            }
+
+            if (ReadByteFromHexString(data, 14, out byte kind))
+            {
+                IsMagnetic = kind == 0xFD;
+            }
+
             Valid = true;
-            throw new NotImplementedException();
         }
 
         /// <inheritdoc/>
