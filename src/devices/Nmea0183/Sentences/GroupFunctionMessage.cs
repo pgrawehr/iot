@@ -243,7 +243,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public GroupFunctionMessage CreateNoAck(Func<FieldDeclaration, int?> parameterError)
         {
-            if (Function != GroupFunction.Command)
+            if (Function != GroupFunction.Command && Function != GroupFunction.Request)
             {
                 throw new InvalidOperationException("Can only send an ack to Command requests");
             }
