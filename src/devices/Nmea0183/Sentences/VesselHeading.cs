@@ -124,10 +124,24 @@ namespace Iot.Device.Nmea0183.Sentences
         public override string ToNmeaParameterList()
         {
             string data = "FF"; // SID
-            int a = (int)(Heading.Radians * 10000);
-            string angle = a.ToString("X4", CultureInfo.InvariantCulture);
-            angle = angle.Substring(2, 2) + angle.Substring(0, 2);
-            return base.ToNmeaParameterList() + data + angle + "FFFFFFFF" + (IsMagnetic ? "FD" : "FC");
+            short a = (short)(Heading.Radians * 10000);
+            string angle = WriteShortToHex(a);
+            short? v = null;
+            if (Variation.HasValue)
+            {
+                v = (short)(Variation.Value.Radians * 10000);
+            }
+
+            string variation = WriteShortToHex(v);
+
+            v = null;
+            if (Deviation.HasValue)
+            {
+                v = (short)(Deviation.Value.Radians * 10000);
+            }
+
+            string deviation = WriteShortToHex(v);
+            return base.ToNmeaParameterList() + data + angle + deviation + variation + (IsMagnetic ? "FD" : "FC");
         }
     }
 }

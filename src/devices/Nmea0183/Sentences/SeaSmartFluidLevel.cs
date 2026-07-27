@@ -69,7 +69,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (ReadShortFromHexString(data, 2, out short s))
             {
-                Level = Ratio.FromPercent(s);
+                Level = Ratio.FromPercent(s * 0.004);
             }
 
             if (ReadUintFromHexString(data, 6, out uint volume))
@@ -138,8 +138,8 @@ namespace Iot.Device.Nmea0183.Sentences
                 // 4) Reserved
                 int combination = (((int)Type << 4) & 0xF0) | ((int)TankNumber & 0x0F);
                 string ftypeString = combination.ToString("X2", CultureInfo.InvariantCulture);
-                int l = (int)Math.Round(Level.HasValue ? Level.Value.Percent : 0);
-                string level = l.ToString("X4", CultureInfo.InvariantCulture);
+                short l = (short)Math.Round(Level.HasValue ? Level.Value.Percent / 0.004 : 0);
+                string level = WriteShortToHex(l);
                 int vol = (int)Math.Round(TankVolume.HasValue ? TankVolume.Value.Liters * 10 : 0);
                 string capacity = vol.ToString("X8", CultureInfo.InvariantCulture);
                 string capacitySwapped = capacity.Substring(6, 2) + capacity.Substring(4, 2) +
@@ -160,6 +160,15 @@ namespace Iot.Device.Nmea0183.Sentences
             }
 
             return "No valid data";
+        }
+
+        /// <summary>
+        /// Returns this message as a <see cref="FluidData"/> instance
+        /// </summary>
+        public FluidData AsFluidData()
+        {
+            return new FluidData(Type, Level.GetValueOrDefault(), TankVolume.GetValueOrDefault(), TankNumber,
+                Type is FluidType.Fuel or FluidType.FuelGasoline or FluidType.Oil or FluidType.Water);
         }
     }
 }

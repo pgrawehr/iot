@@ -35,7 +35,7 @@ namespace Common.Tests
             Assert.Equal(IPAddress.Parse("192.168.1.1"), list[0]);
         }
 
-        private async Task<bool> IsYdwg03(HttpClient client, IPAddress candidate)
+        private async Task<bool> IsYachtDevicesInterface(HttpClient client, IPAddress candidate, string expectedIdentifier)
         {
             try
             {
@@ -44,7 +44,7 @@ namespace Common.Tests
                 var reply = await client.GetAsync(uri, ts.Token);
                 // The header contains a single entry with the declaration "YDWG", which should
                 // be enough to identify the device
-                if (reply.IsSuccessStatusCode && reply.Headers.Any(x => x.Value.Any(y => y.Equals("YDWG", StringComparison.OrdinalIgnoreCase))))
+                if (reply.IsSuccessStatusCode && reply.Headers.Any(x => x.Value.Any(y => y.Equals(expectedIdentifier, StringComparison.OrdinalIgnoreCase))))
                 {
                     return true;
                 }
@@ -58,13 +58,7 @@ namespace Common.Tests
         }
 
         [Fact]
-        public async Task IsYdwg03_Sample()
-        {
-            Assert.True(await IsYdwg03(new HttpClient(), IPAddress.Parse("192.168.245.50")));
-        }
-
-        [Fact]
-        public async Task FindYdwg03()
+        public async Task FindDevice()
         {
             var interf = NetworkServiceSearcher.GetPrimaryNetworkInterface();
             var list = NetworkServiceSearcher.GetAllValidAddressesInSubnet(interf.Address, interf.Mask);
@@ -72,7 +66,7 @@ namespace Common.Tests
             {
                 foreach (var candidate in list)
                 {
-                    if (await IsYdwg03(client, candidate))
+                    if (await IsYachtDevicesInterface(client, candidate, "YDWG"))
                     {
                         return;
                     }

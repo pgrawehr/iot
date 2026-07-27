@@ -87,6 +87,7 @@ namespace Iot.Device.Nmea0183.Tests
             DateTimeOffset lastMessageTime = DateTimeOffset.MinValue;
             var typed = (GroupFunctionMessage?)sentence.TryGetTypedValue(ref lastMessageTime);
             Assert.NotNull(typed);
+            Assert.Equal(GroupFunctionMessage.HexId, (int)typed.Identifier);
             Assert.Equal(65360u, typed.Pgn);
             Assert.NotEmpty(typed.Parameters);
             Assert.Equal("Manufacturer", typed.Parameters[0].Description);
@@ -158,6 +159,7 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void EncodeGroupFunctionAcknowledgement()
         {
+            // The message we received: "Seatalk: Pilot Mode" change to auto
             GroupFunctionMessage msg = new GroupFunctionMessage(GroupFunction.Command);
             msg.MessageSource = 0x55;
             msg.Pgn = 65379u;
@@ -166,6 +168,10 @@ namespace Iot.Device.Nmea0183.Tests
             var decl = Nmea2000Declarations.GetByPgn(65379u);
             msg.Parameters.Clear();
             msg.Parameters.AddRange(decl!.FieldDeclarations);
+            msg.Parameters[0].Value = (int)ManufacturerCode.Raymarine;
+            msg.Parameters[2].Value = (int)IndustryCode.Marine;
+            msg.Parameters[3].Value = (int)64; // Set to auto
+            msg.Parameters[4].Value = (int)0;
 
             var reply = msg.CreateAck();
             Assert.Equal(0, reply.PgnErrorCode);
@@ -191,7 +197,7 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Equal(4, reply.PgnErrorCode);
             // Note: The PCDIN message is one message only, regardless of the payload length. So fastpacket headers
             // are not included in the payload.
-            Assert.Equal("$PCDIN,01ED00,00000000,00,0263FF0040040004*53", reply.ToNmeaMessage());
+            Assert.Equal("$PCDIN,01ED37,00000000,00,0263FF0004FF*57", reply.ToNmeaMessage());
             Assert.True(reply.PgnDeclaration!.FastPacket);
         }
 
@@ -273,26 +279,43 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
-        public void VesselHeadingDecode()
+        public void VesselHeadingDecode1()
         {
             var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
             {
-                "1F112", "000074C5", "57", "FF42C0FF7F4002FC"
+                "1F112", "000074C5", "57", "FFDB59FF7F0C02FC"
             });
 
             var p = new VesselHeading(ts, DateTimeOffset.UnixEpoch);
             Assert.NotNull(p);
-            Assert.Equal(47.0, p.Heading.Degrees);
+            Assert.Equal(131.8, p.Heading.Degrees, 0.1);
             Assert.True(p.Variation.HasValue);
+            Assert.Equal(3.0, p.Variation.Value.Degrees, 0.1);
             var result = p.ToNmeaParameterList();
-            Assert.Equal("01F801,000074C5,57,46AED12063C85306", result);
+            Assert.Equal("01F112,000074C5,57,FFDB59FF7F0C02FC", result);
+        }
+
+        [Fact]
+        public void VesselHeadingDecode2()
+        {
+            var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
+            {
+                "1F112", "000074C5", "57", "FF5B3D98FCD106FD"
+            });
+
+            var p = new VesselHeading(ts, DateTimeOffset.UnixEpoch);
+            Assert.NotNull(p);
+            Assert.Equal(90, p.Heading.Degrees, 0.1);
+            Assert.True(p.Variation.HasValue);
+            Assert.Equal(10.0, p.Variation.Value.Degrees, 0.1);
+            Assert.Equal(-5, p.Deviation.GetValueOrDefault().Degrees, 0.1);
         }
 
         [Fact]
         public void VesselHeadingEncode()
         {
             VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), Angle.FromDegrees(-5), Angle.FromDegrees(10), true);
-            Assert.Equal("01F112,00000000,00,FF5B3DFFFFFFFFFD", vs.ToNmeaParameterList());
+            Assert.Equal("01F112,00000000,00,FF5B3D98FCD106FD", vs.ToNmeaParameterList());
         }
 
         [Fact]
@@ -300,15 +323,15 @@ namespace Iot.Device.Nmea0183.Tests
         {
             var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
             {
-                "1F10D", "000074C5", "57", "00FF2A0AFF09FFFF"
+                "01F10D", "000074C5", "57", "00FF2A0AFF09FFFF"
             });
 
             var p = new Rudder(ts, DateTimeOffset.UnixEpoch);
             Assert.NotNull(p);
-            Assert.Equal(14.9, p.DesiredAngle.GetValueOrDefault().Degrees);
-            Assert.Equal(14.7, p.ActualAngle.GetValueOrDefault().Degrees);
-            Assert.Equal(0, p.DirectionOrder);
-            var result = p.ToNmeaParameterList();
+            Assert.Equal(14.9, p.DesiredAngle.GetValueOrDefault().Degrees, 0.1);
+            Assert.Equal(14.7, p.ActualAngle.GetValueOrDefault().Degrees, 0.1);
+            Assert.Equal(7, p.DirectionOrder);
+            var result = p.ToNmeaMessage();
             DateTimeOffset t = DateTimeOffset.MinValue;
             Assert.Equal(ts.GetAsRawSentence(ref t).ToNmeaMessage(), result);
         }
@@ -318,15 +341,15 @@ namespace Iot.Device.Nmea0183.Tests
         {
             var ts = new TalkerSentence(TalkerId.Proprietary, Nmea2000PackedMessage.Id, new List<string>()
             {
-                "1F10D", "000074C5", "57", "FCF82A0AFF7FFFFF"
+                "01F10D", "000074C5", "57", "FCF82A0AFF7FFFFF"
             });
 
             var p = new Rudder(ts, DateTimeOffset.UnixEpoch);
             Assert.NotNull(p);
-            Assert.Equal(14.9, p.DesiredAngle.GetValueOrDefault().Degrees);
+            Assert.Equal(14.9, p.DesiredAngle.GetValueOrDefault().Degrees, 0.1);
             Assert.False(p.ActualAngle.HasValue);
             Assert.Equal(0, p.DirectionOrder);
-            var result = p.ToNmeaParameterList();
+            var result = p.ToNmeaMessage();
             DateTimeOffset t = DateTimeOffset.MinValue;
             Assert.Equal(ts.GetAsRawSentence(ref t).ToNmeaMessage(), result);
         }
@@ -335,7 +358,7 @@ namespace Iot.Device.Nmea0183.Tests
         public void RudderAngleEncode()
         {
             VesselHeading vs = new VesselHeading(Angle.FromDegrees(90), null, null, true);
-            Assert.Equal("01F112,00000000,00,FF5B3DFFFFFFFFFD", vs.ToNmeaParameterList());
+            Assert.Equal("01F112,00000000,00,FF5B3DFF7FFF7FFD", vs.ToNmeaParameterList());
         }
 
         [Fact]

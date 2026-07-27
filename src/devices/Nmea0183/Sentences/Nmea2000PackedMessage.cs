@@ -44,6 +44,7 @@ namespace Iot.Device.Nmea0183.Sentences
         protected Nmea2000PackedMessage()
             : base(TalkerId.Proprietary, Id, DateTimeOffset.UtcNow)
         {
+            DestinationAddress = 0xff;
         }
 
         /// <summary>
@@ -52,10 +53,14 @@ namespace Iot.Device.Nmea0183.Sentences
         protected Nmea2000PackedMessage(TalkerId talker, SentenceId id, DateTimeOffset time)
             : base(talker, id, time)
         {
+            DestinationAddress = 0xff;
         }
 
         /// <summary>
-        /// The hex identifier of this message type (first field of a PCDIN message)
+        /// The hex identifier of this message type (first field of a PCDIN message).
+        /// Note that this member returns a constant, as declared in the message type,
+        /// not the actual PGN used to send this message. So this does not include the destination
+        /// address for addressed messages nor the priority.
         /// </summary>
         public abstract uint Identifier
         {
@@ -74,7 +79,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// The source identifier of the device which sent this message
         /// </summary>
-        public uint MessageSource
+        public byte MessageSource
         {
             get;
             set;
@@ -92,10 +97,13 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// True if this packet is addressed, meaning the last byte of the PGN is the destination address
-        /// instead of part of the PGN.
+        /// Destination address, if explicitly specified, otherwise 0xFF for broadcast.
         /// </summary>
-        public virtual bool IsAddressed => false;
+        public byte DestinationAddress
+        {
+            get;
+            set;
+        }
 
         /// <summary>
         /// The static PGN declaration information for this type
@@ -372,7 +380,9 @@ namespace Iot.Device.Nmea0183.Sentences
         /// Helper method for parsing the header fields (PGN, timestamp and source address)
         /// </summary>
         /// <param name="field">The enumerator over the arguments</param>
-        protected void ParseCommonFields(IEnumerator<string> field)
+        /// <param name="isAddressedMessage">True if this message is addressed (i.e. the lower byte of the
+        /// pgn denote the destination address)</param>
+        protected void ParseCommonFields(IEnumerator<string> field, bool isAddressedMessage = false)
         {
             string subMessage = ReadString(field);
             if (!uint.TryParse(subMessage, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint result))
@@ -387,6 +397,15 @@ namespace Iot.Device.Nmea0183.Sentences
                 Priority = (result >> 18) & 0x7;
             }
 
+            if (isAddressedMessage)
+            {
+                DestinationAddress = (byte)(result & 0xFF);
+            }
+            else
+            {
+                DestinationAddress = 0xff;
+            }
+
             string timeStamp = ReadString(field);
 
             if (Int32.TryParse(timeStamp, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int time1))
@@ -397,7 +416,7 @@ namespace Iot.Device.Nmea0183.Sentences
             string source = ReadString(field);
             if (uint.TryParse(source, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint src))
             {
-                MessageSource = src;
+                MessageSource = (byte)src;
             }
         }
 
@@ -407,11 +426,38 @@ namespace Iot.Device.Nmea0183.Sentences
             return WriteUshortToHex((ushort)manufacturerAndIndustry);
         }
 
-        protected string WriteUshortToHex(ushort value)
+        protected string WriteUshortToHex(ushort? value)
         {
-            string data = value.ToString("X4", CultureInfo.InvariantCulture);
+            if (!value.HasValue)
+            {
+                return "FFFF";
+            }
+
+            string data = value.Value.ToString("X4", CultureInfo.InvariantCulture);
             // There's no rotation for shorts available, so we do it the ugly way here
             return data.Substring(2, 2) + data.Substring(0, 2);
+        }
+
+        protected string WriteShortToHex(short? value)
+        {
+            if (!value.HasValue)
+            {
+                return "FF7F";
+            }
+
+            string data = value.Value.ToString("X4", CultureInfo.InvariantCulture);
+            // There's no rotation for shorts available, so we do it the ugly way here
+            return data.Substring(2, 2) + data.Substring(0, 2);
+        }
+
+        protected string WriteByteToHex(byte? value)
+        {
+            if (!value.HasValue)
+            {
+                return "FF";
+            }
+
+            return value.Value.ToString("X2", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
@@ -419,7 +465,13 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public override string ToNmeaParameterList()
         {
-            string pgn = Identifier.ToString("X6", CultureInfo.InvariantCulture);
+            uint id = Identifier;
+            if (DestinationAddress != 0xFF && PgnDeclaration != null && PgnDeclaration.IsAddressed)
+            {
+                id = id | DestinationAddress;
+            }
+
+            string pgn = id.ToString("X6", CultureInfo.InvariantCulture);
             string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
             string source = MessageSource.ToString("X2", CultureInfo.InvariantCulture);
             return $"{pgn},{timeStampText},{source},";

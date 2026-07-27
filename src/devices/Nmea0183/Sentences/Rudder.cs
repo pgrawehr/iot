@@ -37,6 +37,13 @@ namespace Iot.Device.Nmea0183.Sentences
             set;
         }
 
+        /// <summary>
+        /// Current direction the rudder shall move
+        /// 0 = No order
+        /// 1 = To starboard
+        /// 2 = To port
+        /// 7 = Unknown/Not set
+        /// </summary>
         public byte DirectionOrder
         {
             get;
@@ -84,7 +91,11 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (ReadByteFromHexString(data, 2, out b))
             {
-                DirectionOrder = (byte)(b >> 5);
+                DirectionOrder = (byte)(b & 0x7);
+            }
+            else
+            {
+                DirectionOrder = 7;
             }
 
             if (ReadShortFromHexString(data, 4, out short v))
@@ -102,7 +113,27 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public override string ToNmeaParameterList()
         {
-            throw new NotImplementedException();
+            StringBuilder sb = new StringBuilder();
+            sb.Append(WriteByteToHex(Instance));
+            sb.Append(WriteByteToHex((byte)(DirectionOrder | 0xF8)));
+            short? angle = null;
+            if (DesiredAngle.HasValue)
+            {
+                angle = (short)Math.Round(DesiredAngle.Value.Radians / 0.0001);
+            }
+
+            sb.Append(WriteShortToHex(angle));
+
+            angle = null;
+            if (ActualAngle.HasValue)
+            {
+                angle = (short)Math.Round(ActualAngle.Value.Radians / 0.0001);
+            }
+
+            sb.Append(WriteShortToHex(angle));
+            sb.Append(WriteUshortToHex(null)); // Reserved
+
+            return base.ToNmeaParameterList() + sb.ToString();
         }
 
         public override string ToReadableContent()

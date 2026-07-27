@@ -19,8 +19,6 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public const int HexId = 0x0FF50;
 
-        private uint _manufacturerAndIndustry;
-
         public Angle? TargetHeadingTrue
         {
             get;
@@ -42,6 +40,18 @@ namespace Iot.Device.Nmea0183.Sentences
             set;
         }
 
+        public ManufacturerCode Manufacturer
+        {
+            get;
+            set;
+        }
+
+        public IndustryCode Industry
+        {
+            get;
+            set;
+        }
+
         public override uint Identifier => HexId;
 
         /// <inheritdoc/>
@@ -54,7 +64,8 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public SeatalkNgPilotLockedHeading(Angle? headingTrue, Angle? headingMagnetic)
         {
-            _manufacturerAndIndustry = ManufacturerRaymarine;
+            Manufacturer = ManufacturerCode.Raymarine;
+            Industry = IndustryCode.Marine;
             TargetHeadingTrue = headingTrue;
             TargetHeadingMagnetic = headingMagnetic;
             Sid = 0xFF;
@@ -86,14 +97,19 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadUshortFromHexString(data, 0, out ushort manf))
+            if (ReadManufacturerAndIndustryFromHexString(data, 0, out var manufacturer, out var industry))
             {
-                _manufacturerAndIndustry = (uint)manf;
+                Manufacturer = manufacturer;
+                Industry = industry;
             }
 
             if (ReadByteFromHexString(data, 4, out byte sid))
             {
                 Sid = sid;
+            }
+            else
+            {
+                Sid = 0xFF;
             }
 
             TargetHeadingTrue = null;
@@ -115,7 +131,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public override string ToNmeaParameterList()
         {
-            string manufacturer = _manufacturerAndIndustry.ToString("X4", CultureInfo.InvariantCulture);
+            string manufacturer = WriteManufacturerAndIndustryToHex(Manufacturer, Industry);
 
             string trueAngle = DoubleTo16BitField(TargetHeadingTrue.HasValue ? TargetHeadingTrue.Value.Radians : null,
                 0.0001).ToString("X4", CultureInfo.InvariantCulture);

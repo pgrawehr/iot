@@ -24,7 +24,8 @@ namespace Iot.Device.Nmea0183
         /// <param name="priority">The typical priority this message uses</param>
         /// <param name="length">The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</param>
         /// <param name="fastPacket">True if this PGN typically consists of more than one packet</param>
-        public Nmea2000PgnDeclaration(uint pgn, string name, uint priority, int length, bool fastPacket)
+        /// <param name="isAddressed">True if this is an addressed message</param>
+        public Nmea2000PgnDeclaration(uint pgn, string name, uint priority, int length, bool fastPacket, bool isAddressed)
         {
             Pgn = pgn;
             Name = name;
@@ -32,6 +33,7 @@ namespace Iot.Device.Nmea0183
             Length = length;
             FastPacket = fastPacket;
             FieldDeclarations = new List<FieldDeclaration>();
+            IsAddressed = isAddressed;
         }
 
         /// <summary>
@@ -43,7 +45,8 @@ namespace Iot.Device.Nmea0183
         /// <param name="length">The length of the data part of this message, in bytes. Negative to indicate "at least x bytes"</param>
         /// <param name="fastPacket">True if this PGN typically consists of more than one packet</param>
         /// <param name="fieldDeclarations">Field index/length pairs</param>
-        public Nmea2000PgnDeclaration(uint pgn, string name, uint priority, int length, bool fastPacket, List<FieldDeclaration> fieldDeclarations)
+        /// <param name="isAddressed">True if this message is addressed</param>
+        public Nmea2000PgnDeclaration(uint pgn, string name, uint priority, int length, bool fastPacket, bool isAddressed, List<FieldDeclaration> fieldDeclarations)
         {
             Pgn = pgn;
             Name = name;
@@ -51,6 +54,7 @@ namespace Iot.Device.Nmea0183
             Length = length;
             FastPacket = fastPacket;
             FieldDeclarations = fieldDeclarations;
+            IsAddressed = isAddressed;
         }
 
         /// <summary>The message number (usually given in hex)</summary>
@@ -67,6 +71,11 @@ namespace Iot.Device.Nmea0183
 
         /// <summary>True if this PGN typically consists of more than one packet</summary>
         public bool FastPacket { get; init; }
+
+        /// <summary>
+        /// True if this message is to be addressed to a particular device
+        /// </summary>
+        public bool IsAddressed { get; init; }
 
         /// <summary>
         /// The list of fields of this message. Required if this message shall take part in an exchange using

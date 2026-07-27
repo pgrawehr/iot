@@ -53,7 +53,7 @@ namespace Iot.Device.Nmea0183.Sentences
             // We expect the fast-packet message to be decoded into a single frame here already
             IEnumerator<string> field = fields.GetEnumerator();
 
-            ParseCommonFields(field);
+            ParseCommonFields(field, true);
 
             string data = ReadString(field);
 
@@ -218,11 +218,6 @@ namespace Iot.Device.Nmea0183.Sentences
         public override uint Identifier => HexId;
 
         /// <summary>
-        /// This is true for this message.
-        /// </summary>
-        public override bool IsAddressed => true;
-
-        /// <summary>
         /// This only applies when the Function code is "Acknowledge"
         /// </summary>
         public int PgnErrorCode { get; set; }
@@ -238,6 +233,7 @@ namespace Iot.Device.Nmea0183.Sentences
             reply.NumberOfArguments = NumberOfArguments;
             reply.Pgn = Pgn;
             reply.PgnErrorCode = 0;
+            reply.DestinationAddress = MessageSource;
             reply.Parameters = CloneParameters(Parameters);
             // We're ignoring the transmission interval for now
             // We also don't really need to set up the parameter list. For now,
@@ -256,6 +252,7 @@ namespace Iot.Device.Nmea0183.Sentences
             reply.NumberOfArguments = NumberOfArguments;
             reply.Pgn = Pgn;
             reply.PgnErrorCode = 0x4; // Not supported
+            reply.DestinationAddress = MessageSource;
             reply.Parameters = CloneParameters(Parameters);
             foreach (var p in reply.Parameters)
             {
@@ -283,23 +280,32 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (Function == GroupFunction.Acknowledge)
             {
-                sb.Append(PgnErrorCode.ToString("X1", CultureInfo.InvariantCulture));
                 sb.Append("0");
-                sb.Append(NumberOfArguments.ToString("X2", CultureInfo.InvariantCulture));
-                if (NumberOfArguments != Parameters.Count(x => x.Value.HasValue))
+                sb.Append(PgnErrorCode.ToString("X1", CultureInfo.InvariantCulture));
+                if (PgnErrorCode == 4)
                 {
-                    Console.WriteLine("Problem: Ack message has a different number of arguments than values");
+                    // See corrigendum note. In this case we don't need to continue here
+                    sb.Append("FF");
                 }
-
-                foreach (var p in Parameters.Where(x => x.Value != null))
+                else
                 {
-                    if (p.ParameterError.HasValue)
+                    sb.Append(NumberOfArguments.ToString("X2", CultureInfo.InvariantCulture));
+                    if (NumberOfArguments != Parameters.Count(x => x.Value.HasValue))
                     {
-                        sb.Append(p.ParameterError!.Value.ToString("X1", CultureInfo.InvariantCulture));
+                        throw new ArgumentException(
+                            "Problem: Ack message has a different number of arguments than values");
                     }
-                    else
+
+                    foreach (var p in Parameters.Where(x => x.Value != null))
                     {
-                        sb.Append('0');
+                        if (p.ParameterError.HasValue)
+                        {
+                            sb.Append(p.ParameterError!.Value.ToString("X1", CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            sb.Append('0');
+                        }
                     }
                 }
 

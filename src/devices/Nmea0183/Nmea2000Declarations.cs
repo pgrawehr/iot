@@ -20,12 +20,12 @@ namespace Iot.Device.Nmea0183
         static Nmea2000Declarations()
         {
             s_data = new Dictionary<uint, Nmea2000PgnDeclaration>();
-            s_data.Add(0x1F010, new Nmea2000PgnDeclaration(0x1F010, "System Time", 3, 8, false));
-            s_data.Add(0x1F801, new Nmea2000PgnDeclaration(0x1F801, "Position, Rapid Update", 2, 8, false));
-            s_data.Add(0x1F200, new Nmea2000PgnDeclaration(0x1F200, "Engine Parameters, Rapid update", 2, 8, false));
-            s_data.Add(0x1F201, new Nmea2000PgnDeclaration(0x1F201, "Engine Parameters, dynamic", 2, 26, true));
+            s_data.Add(0x1F010, new Nmea2000PgnDeclaration(0x1F010, "System Time", 3, 8, false, false));
+            s_data.Add(0x1F801, new Nmea2000PgnDeclaration(0x1F801, "Position, Rapid Update", 2, 8, false, false));
+            s_data.Add(0x1F200, new Nmea2000PgnDeclaration(0x1F200, "Engine Parameters, Rapid update", 2, 8, false, false));
+            s_data.Add(0x1F201, new Nmea2000PgnDeclaration(0x1F201, "Engine Parameters, dynamic", 2, 26, true, false));
             s_data.Add(SeatalkNgPilotStatus.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotStatus.HexId, "Seatalk: Pilot Mode", 7,
-                8, false,
+                8, false, false,
                 // This message is addressed in a Group Function Message with Function=Command to change the pilot mode.
                 new List<FieldDeclaration>()
                 {
@@ -36,9 +36,9 @@ namespace Iot.Device.Nmea0183
                     new FieldDeclaration(4, 2, "Pilot Mode", null),
                     new FieldDeclaration(5, 2, "Sub Mode", null)
                 }));
-            s_data.Add(GroupFunctionMessage.HexId, new Nmea2000PgnDeclaration(GroupFunctionMessage.HexId, "Request Group Function", 3, -1, true));
+            s_data.Add(GroupFunctionMessage.HexId, new Nmea2000PgnDeclaration(GroupFunctionMessage.HexId, "Request Group Function", 3, -1, true, true));
             s_data.Add(SeatalkNgPilotHeading.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotHeading.HexId, "Seatalk: Pilot Heading", 7,
-                8, false,
+                8, false, false,
                 new List<FieldDeclaration>()
                 {
                     new FieldDeclaration(1, 2, "Manufacturer", 1851, x => (x >> 5) & 0x7FF),
@@ -49,7 +49,7 @@ namespace Iot.Device.Nmea0183
                     new FieldDeclaration(6, 2, "Heading Magnetic", null),
                 }));
             s_data.Add(SeatalkNgPilotLockedHeading.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotLockedHeading.HexId, "Seatalk: Pilot Locked Heading", 7,
-                8, false,
+                8, false, false,
                 // this message is addressed in a Group Function Message with Function=Command to update the desired heading
                 // when the user presses the +1/-1/+10/-10 buttons
                 new List<FieldDeclaration>()
@@ -61,7 +61,7 @@ namespace Iot.Device.Nmea0183
                     new FieldDeclaration(5, 2, "Target Heading True", null),
                     new FieldDeclaration(6, 2, "Target Heading Magnetic", null),
                 }));
-            s_data.Add(126720, new Nmea2000PgnDeclaration(126720u, "Pilot Configuration", 7, 9, true,
+            s_data.Add(126720, new Nmea2000PgnDeclaration(126720u, "Pilot Configuration", 7, 9, true, true,
                 new List<FieldDeclaration>()
                 {
                     new FieldDeclaration(1, 2, "Manufacturer", 1851, x => (x >> 5) & 0x7FF),
