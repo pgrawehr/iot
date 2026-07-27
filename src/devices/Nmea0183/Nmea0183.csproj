@@ -14,6 +14,7 @@
     <Compile Include="AisSentences/*.cs" />
     <None Include="DeviationTable.xsd" />
     <None Include="README.md" />
+    <None Include="Seatalk1\README-Seatalk.md" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,5 +26,34 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>$(AssemblyName).Tests</_Parameter1>
     </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Seatalk1\AutoPilotRemoteController.cs" />
+    <Compile Include="Seatalk1\Seatalk1Parser.cs" />
+    <Compile Include="Seatalk1\SeatalkInterface.cs" />
+    <Compile Include="Seatalk1\SeatalkToNmeaConverter.cs" />
+    <Compile Include="Sentences\Seatalk1\ApparentWindAngle.cs" />
+    <Compile Include="Sentences\Seatalk1\ApparentWindSpeed.cs" />
+    <Compile Include="Sentences\Seatalk1\AutopilotAlarms.cs" />
+    <Compile Include="Sentences\Seatalk1\AutopilotButtons.cs" />
+    <Compile Include="Sentences\Seatalk1\AutopilotCalibrationParameter.cs" />
+    <Compile Include="Sentences\Seatalk1\AutopilotCalibrationParameterMessage.cs" />
+    <Compile Include="Sentences\Seatalk1\AutopilotWindStatus.cs" />
+    <Compile Include="Sentences\Seatalk1\CompassHeadingAndRudderPosition.cs" />
+    <Compile Include="Sentences\Seatalk1\CompassHeadingAutopilotCourse.cs" />
+    <Compile Include="Sentences\Seatalk1\CompassHeadingAutopilotCourseAlt.cs" />
+    <Compile Include="Sentences\Seatalk1\CourseComputerStatus.cs" />
+    <Compile Include="Sentences\Seatalk1\CourseComputerWarnings.cs" />
+    <Compile Include="Sentences\Seatalk1\DeadbandMode.cs" />
+    <Compile Include="Sentences\Seatalk1\DeadbandSetting.cs" />
+    <Compile Include="Sentences\Seatalk1\DeviceIdentification.cs" />
+    <Compile Include="Sentences\Seatalk1\DisplayBacklightLevel.cs" />
+    <Compile Include="Sentences\Seatalk1\Keystroke.cs" />
+    <Compile Include="Sentences\Seatalk1\NavigationToWaypoint.cs" />
+    <Compile Include="Sentences\Seatalk1\SeatalkMessage.cs" />
+    <Compile Include="Sentences\Seatalk1\SetLampIntensity.cs" />
+    <Compile Include="Sentences\Seatalk1\SpeedTroughWater.cs" />
+    <Compile Include="Sentences\Seatalk1\TargetWaypointName.cs" />
+    <Compile Include="Sentences\Seatalk1\TurnDirection.cs" />
   </ItemGroup>
 </Project>

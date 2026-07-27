@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Seatalk1.Messages;
 using UnitsNet;
 
 namespace Iot.Device.Nmea0183.Sentences
@@ -18,6 +19,8 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public class SeatalkNmeaMessage : NmeaSentence
     {
+        private readonly SeatalkMessage? _rawMessage;
+
         /// <summary>
         /// This sentence ID "ALK"
         /// </summary>
@@ -78,9 +81,26 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
+        /// Constructs a new instance of this message
+        /// </summary>
+        /// <param name="datagram">The binary datagram of the seatalk message</param>
+        /// <param name="rawMessage">The decoded raw seatalk message</param>
+        /// <param name="time">The event time</param>
+        public SeatalkNmeaMessage(byte[] datagram, SeatalkMessage rawMessage, DateTimeOffset time)
+            : this(datagram, time)
+        {
+            _rawMessage = rawMessage ?? throw new ArgumentNullException(nameof(rawMessage));
+        }
+
+        /// <summary>
         /// This message type can embed various messages, some of them are not repeating (e.g. Keypresses)
         /// </summary>
         public override bool ReplacesOlderInstance => false;
+
+        /// <summary>
+        /// Returns the decoded Seatalk message
+        /// </summary>
+        public SeatalkMessage? SourceMessage => _rawMessage;
 
         /// <inheritdoc />
         public override string ToNmeaParameterList()
