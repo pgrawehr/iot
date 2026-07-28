@@ -8,9 +8,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -409,6 +412,35 @@ namespace Iot.Device.Nmea0183
             {
                 Logger.LogInformation($"PGN {kp.Key} is not known but was seen");
             }
+        }
+
+        /// <summary>
+        /// Finds a Device from "yacht devices" on the local network.
+        /// </summary>
+        /// <param name="identifier">The name of the device.
+        /// For YDWG-03, the string is "YDWG", other devices like the YDEN-02 and YDNR-02
+        /// should work as well, but have not been tested and their identification string is uncertain</param>
+        /// <returns>The IP address of the first device or null if none was found</returns>
+        /// <remarks>
+        /// This only tests for the presence of the device, it does not check which ports are available
+        /// and how it is configured.
+        /// </remarks>
+        public static async Task<IPAddress?> FindCompatibleDevice(string identifier)
+        {
+            var interf = NetworkServiceSearcher.GetPrimaryNetworkInterface();
+            var list = NetworkServiceSearcher.GetAllValidAddressesInSubnet(interf.Address, interf.Mask);
+            using (var client = new HttpClient())
+            {
+                foreach (var candidate in list)
+                {
+                    if (await NetworkServiceSearcher.IsYachtDevicesInterface(client, candidate, identifier))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            return null;
         }
     }
 }

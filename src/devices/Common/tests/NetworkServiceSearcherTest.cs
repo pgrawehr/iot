@@ -34,46 +34,5 @@ namespace Common.Tests
             Assert.Equal(254, list.Count);
             Assert.Equal(IPAddress.Parse("192.168.1.1"), list[0]);
         }
-
-        private async Task<bool> IsYachtDevicesInterface(HttpClient client, IPAddress candidate, string expectedIdentifier)
-        {
-            try
-            {
-                using CancellationTokenSource ts = new CancellationTokenSource(500);
-                var uri = new Uri($"http://{candidate.ToString()}/", UriKind.Absolute);
-                var reply = await client.GetAsync(uri, ts.Token);
-                // The header contains a single entry with the declaration "YDWG", which should
-                // be enough to identify the device
-                if (reply.IsSuccessStatusCode && reply.Headers.Any(x => x.Value.Any(y => y.Equals(expectedIdentifier, StringComparison.OrdinalIgnoreCase))))
-                {
-                    return true;
-                }
-            }
-            catch (Exception x) when (x is UnauthorizedAccessException or SocketException or OperationCanceledException)
-            {
-                return false;
-            }
-
-            return false;
-        }
-
-        [Fact]
-        public async Task FindDevice()
-        {
-            var interf = NetworkServiceSearcher.GetPrimaryNetworkInterface();
-            var list = NetworkServiceSearcher.GetAllValidAddressesInSubnet(interf.Address, interf.Mask);
-            using (var client = new HttpClient())
-            {
-                foreach (var candidate in list)
-                {
-                    if (await IsYachtDevicesInterface(client, candidate, "YDWG"))
-                    {
-                        return;
-                    }
-                }
-            }
-
-            Assert.Fail("No device found");
-        }
     }
 }

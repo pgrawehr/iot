@@ -135,6 +135,25 @@ namespace Iot.Device.Nmea0183.Sentences
         public string Status { get; private set; }
 
         /// <summary>
+        /// Interpreted value of <see cref="Status"/>
+        /// </summary>
+        public AutopilotStatus PilotStatus
+        {
+            get
+            {
+                return Status switch
+                {
+                    "M" => AutopilotStatus.Standby,
+                    "S" => AutopilotStatus.Auto,
+                    "H" => AutopilotStatus.Auto,
+                    "T" => AutopilotStatus.Track,
+                    "W" => AutopilotStatus.Wind,
+                    _ => AutopilotStatus.Undefined
+                };
+            }
+        }
+
+        /// <summary>
         /// Heading to steer.
         /// </summary>
         public Angle? DesiredHeading { get; private set; }

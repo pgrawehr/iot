@@ -18,6 +18,13 @@ namespace Iot.Device.Nmea0183.Tests
 {
     public class Nmea2000Tests
     {
+        [Fact(Skip = "Only passes if hardware is present")]
+        public async Task SearchForDevice()
+        {
+            var result = await Nmea2000YdwgParser.FindCompatibleDevice("YDWG");
+            Assert.NotNull(result);
+        }
+
         [Fact]
         public void ParseRawNmea2000SentenceSingle()
         {

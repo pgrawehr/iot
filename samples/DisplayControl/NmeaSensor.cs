@@ -35,6 +35,7 @@ namespace DisplayControl
         private const string Seatalk1Name = "Seatalk1";
         // This is a wifi connection that allows sending/receiving NMEA2000 messages as raw
         private const string Nmea2000 = "Ydwg";
+        private const string AutopilotEmulator = "ApEmulator";
 
         private readonly MeasurementManager _manager;
         private readonly bool _hasPlotter;
@@ -68,6 +69,8 @@ namespace DisplayControl
         private NmeaTcpClient _rawNmea2000;
 
         private SystemClockSynchronizer _clockSynchronizer;
+
+        private Nmea2000AutopilotEmulator _autopilotEmulator;
         
         private MessageRouter _router;
 
@@ -184,8 +187,10 @@ namespace DisplayControl
 
         private void ConstructNmea2000Rules(IList<FilterRule> rules)
         {
-            // For now, drop all incoming messages directly from NMEA2000
-            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>(), false, false));
+            // For now, only the autopilot emulator shall see these
+            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>() { AutopilotEmulator }, false, false));
+            // Commands from the emulator go only to NMEA2000
+            rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, SentenceId.Any, new List<string>() { Nmea2000 }, false, false));
         }
 
         /// <summary>
@@ -629,10 +634,13 @@ namespace DisplayControl
             _autopilot = new AutopilotController(_router, _router, _cache);
             _autopilot.NmeaSourceName = HandheldSourceName;
 
+            _autopilotEmulator = new Nmea2000AutopilotEmulator(AutopilotEmulator, _rawNmea2000.InterfaceName);
+
             _udpServer.StartDecode();
             _openCpnServer.StartDecode();
             _seatalkPort.StartDecode();
             _rawNmea2000.StartDecode();
+            _autopilotEmulator.StartDecode();
 
             _parserHandheldInterface.StartDecode();
             _parserForwardInterface.StartDecode();
@@ -657,6 +665,7 @@ namespace DisplayControl
             _router.AddEndPoint(_aisManager);
             _router.AddEndPoint(_seatalkPort);
             _router.AddEndPoint(_rawNmea2000);
+            _router.AddEndPoint(_autopilotEmulator);
 
             _router.OnNewSequence += ParserOnNewSequence;
             var ruleList = _hasPlotter ? ConstructRulesWithPlotter() : ConstructRulesWithoutPlotter();
@@ -1147,8 +1156,12 @@ namespace DisplayControl
             _udpServer?.Dispose();
             _udpServer = null;
 
+            _rawNmea2000?.StopDecode();
             _rawNmea2000?.Dispose();
             _rawNmea2000 = null;
+
+            _autopilotEmulator?.StopDecode();
+            _autopilotEmulator?.Dispose();
 
             _autopilot?.Dispose();
             _autopilot = null;

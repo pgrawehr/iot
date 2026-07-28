@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 #pragma warning disable CS1591
@@ -17,19 +18,6 @@ namespace Iot.Device.Common
 {
     public class NetworkServiceSearcher
     {
-        /// <summary>
-        /// Searches the subnet we're currently in for a service on the given port, using a test function to
-        /// obtain data.
-        /// </summary>
-        /// <param name="expectedPort">The port where the service is expected to be</param>
-        /// <param name="tester">A function to check whether it's the service we want. This will only
-        /// be called if the port is open</param>
-        /// <returns>The IP Address of the first server offering the expected service</returns>
-        public static IPAddress SearchSubnetForService(int expectedPort, Func<TcpClient, bool> tester)
-        {
-            return IPAddress.Loopback;
-        }
-
         /// <summary>
         /// Get the default IP address to bind to
         /// </summary>
@@ -117,6 +105,28 @@ namespace Iot.Device.Common
             }
 
             return (IPAddress.Loopback, IPAddress.Parse("255.255.255.0"));
+        }
+
+        public static async Task<bool> IsYachtDevicesInterface(HttpClient client, IPAddress candidate, string expectedIdentifier)
+        {
+            try
+            {
+                using CancellationTokenSource ts = new CancellationTokenSource(500);
+                var uri = new Uri($"http://{candidate.ToString()}/", UriKind.Absolute);
+                var reply = await client.GetAsync(uri, ts.Token);
+                // The header contains a single entry with the declaration "YDWG", which should
+                // be enough to identify the device
+                if (reply.IsSuccessStatusCode && reply.Headers.Any(x => x.Value.Any(y => y.Equals(expectedIdentifier, StringComparison.OrdinalIgnoreCase))))
+                {
+                    return true;
+                }
+            }
+            catch (Exception x) when (x is UnauthorizedAccessException or SocketException or OperationCanceledException)
+            {
+                return false;
+            }
+
+            return false;
         }
     }
 }
