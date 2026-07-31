@@ -618,7 +618,21 @@ namespace DisplayControl
             _udpServer = new NmeaUdpServer(Udp, 10101);
             _udpServer.OnParserError += OnParserError;
 
-            _rawNmea2000 = new NmeaTcpClient(Nmea2000, "192.168.58.50", 1457, new Nmea2000YdwgParserFactory());
+            _logger.LogInformation("Trying to find YDNG-03...");
+            IPAddress found = null; 
+            // Deadlocks.
+            // found = Nmea2000YdwgParser.FindCompatibleDevice("YDWG", _logger).ConfigureAwait(false).GetAwaiter()
+            //.GetResult();
+            if (found != null)
+            {
+                _rawNmea2000 = new NmeaTcpClient(Nmea2000, found.ToString(), 1457, new Nmea2000YdwgParserFactory());
+            }
+            else
+            {
+                // Should use some dummy client here, instead of just a random IP
+                _rawNmea2000 = new NmeaTcpClient(Nmea2000, "192.168.58.50", 1457, new Nmea2000YdwgParserFactory());
+            }
+
             _rawNmea2000.RetryInterval = TimeSpan.FromSeconds(30);
             _rawNmea2000.OnParserError += OnParserError;
 

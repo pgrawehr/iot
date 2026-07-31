@@ -175,8 +175,8 @@ namespace Iot.Device.Seatalk1
         {
             _autopilotController.UpdateStatus();
             // For testing purposes
-            var test = new DeviceIdentification();
-            SendMessage(test);
+            ////var test = new DeviceIdentification();
+            ////SendMessage(test);
         }
 
         internal void OnNewMessage(SeatalkMessage obj)

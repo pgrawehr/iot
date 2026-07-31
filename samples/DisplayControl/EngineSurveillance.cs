@@ -326,17 +326,6 @@ namespace DisplayControl
                 eventsToObserve = _lastEvents.OrderBy(x => x.TickCount).ToList();
             }
 
-            if (eventsToObserve.Count == 0)
-            {
-                _engineOn = false;
-            }
-            else
-            {
-                _engineOn = true;
-                long elapsedSinceLastUpdate = now - _lastTickForUpdate;
-                _engineOperatingTime.Value += TimeSpan.FromMilliseconds(elapsedSinceLastUpdate);
-            }
-
             double umin = 0;
             long oldestToInspect = now - (long)AveragingTime.TotalMilliseconds;
             var firstEventInTimeFrame = eventsToObserve.FirstOrDefault(x => x.TickCount >= oldestToInspect);
@@ -358,12 +347,6 @@ namespace DisplayControl
             }
 
             _rpm = umin;
-            _lastTickForUpdate = now;
-            
-            if (_engineOn)
-            {
-                _logger.LogInformation($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
-            }
             
             Temperature engineTemp;
 
@@ -387,6 +370,9 @@ namespace DisplayControl
             if (rs > RotationalSpeed.Zero)
             {
                 status = EngineStatus.None;
+                _engineOn = true;
+                long elapsedSinceLastUpdate = now - _lastTickForUpdate;
+                _engineOperatingTime.Value += TimeSpan.FromMilliseconds(elapsedSinceLastUpdate);
             }
             else if (_engineLastOn.Output)
             {
@@ -398,7 +384,15 @@ namespace DisplayControl
             {
                 // After some time, forget about the error.
                 status = EngineStatus.None;
+                _engineOn = false;
             }
+
+            if (_engineOn)
+            {
+                _logger.LogInformation($"Engine status: On. {umin} U/Min, recent event count: {eventsToObserve.Count}. Tick delta: {deltaTime}, Rev delta: {revolutions}");
+            }
+
+            _lastTickForUpdate = now;
 
             // Final step: Send values to UI and NMEA clients
             if (!_inSelfTest)

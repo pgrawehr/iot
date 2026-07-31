@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -267,6 +268,24 @@ namespace Iot.Device.Nmea0183
             }
 
             base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// Gets all the log files below the configured logfiles folder.
+        /// </summary>
+        /// <param name="config">The logging configuration used to write them</param>
+        /// <returns>A (potentially large) list of file names</returns>
+        public static List<string> GetAllLogFilesInFolder(LoggingConfiguration config)
+        {
+            string path = config.Path;
+            if (!Directory.Exists(path))
+            {
+                return new List<string>();
+            }
+
+            var allFiles = Directory.EnumerateFiles(path, "Nmea-*.txt", SearchOption.AllDirectories);
+            List<string> ret = allFiles.OrderBy(x => x).ToList();
+            return ret;
         }
     }
 }

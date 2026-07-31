@@ -4,8 +4,10 @@
 #pragma warning disable CS1591
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 
 namespace Iot.Device.Common
 {
@@ -34,14 +36,25 @@ namespace Iot.Device.Common
 
         internal T GetLastValue<T>(string name, Deserializer<T> deserializer, T initialValue)
         {
+            var allValues = GetAllValues(name, deserializer);
+            if (allValues.Count == 0)
+            {
+                return initialValue;
+            }
+
+            return allValues.Last().Element;
+        }
+
+        public List<(DateTime TimeStamp, T Element)> GetAllValues<T>(string name, Deserializer<T> deserializer)
+        {
+            List<(DateTime, T)> ret = new List<(DateTime, T)>();
             lock (_fileLock)
             {
                 if (!File.Exists(_fileName))
                 {
-                    return initialValue;
+                    return ret;
                 }
 
-                T lastValue = initialValue;
                 using (StreamReader r = new StreamReader(_fileName, true))
                 {
                     string? line = r.ReadLine();
@@ -50,13 +63,20 @@ namespace Iot.Device.Common
                         string[] splits = line.Split(new char[] { '|' }, StringSplitOptions.None);
                         if (splits.Length == 4 && line.IndexOf('$') > 0)
                         {
+                            string time = splits[0];
+                            DateTime? timeStamp = null;
+                            if (DateTime.TryParse(time, CultureInfo.InvariantCulture, out var t))
+                            {
+                                timeStamp = t;
+                            }
+
                             string valueName = splits[1];
-                            if (valueName == name)
+                            if (valueName == name && timeStamp.HasValue)
                             {
                                 string toDeserialze = splits[2];
                                 if (deserializer(toDeserialze, out T v))
                                 {
-                                    lastValue = v;
+                                    ret.Add((timeStamp.Value, v));
                                 }
                             }
                         }
@@ -65,7 +85,7 @@ namespace Iot.Device.Common
                     }
                 }
 
-                return lastValue;
+                return ret;
             }
         }
     }

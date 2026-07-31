@@ -151,9 +151,11 @@ namespace Iot.Device.Seatalk1
             {
                 _reader.Close();
                 _inputStream.Close();
+                _buffer.Clear();
             }
 
             _parserThread?.Join();
+            _buffer.Clear(); // Because clients could wait for an empty buffer
         }
 
         private void Parser()

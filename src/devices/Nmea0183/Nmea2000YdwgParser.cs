@@ -420,12 +420,13 @@ namespace Iot.Device.Nmea0183
         /// <param name="identifier">The name of the device.
         /// For YDWG-03, the string is "YDWG", other devices like the YDEN-02 and YDNR-02
         /// should work as well, but have not been tested and their identification string is uncertain</param>
+        /// <param name="logger">Optional logger</param>
         /// <returns>The IP address of the first device or null if none was found</returns>
         /// <remarks>
         /// This only tests for the presence of the device, it does not check which ports are available
         /// and how it is configured.
         /// </remarks>
-        public static async Task<IPAddress?> FindCompatibleDevice(string identifier)
+        public static async Task<IPAddress?> FindCompatibleDevice(string identifier, ILogger? logger = null)
         {
             var interf = NetworkServiceSearcher.GetPrimaryNetworkInterface();
             var list = NetworkServiceSearcher.GetAllValidAddressesInSubnet(interf.Address, interf.Mask);
@@ -433,6 +434,11 @@ namespace Iot.Device.Nmea0183
             {
                 foreach (var candidate in list)
                 {
+                    if (logger != null)
+                    {
+                        logger.LogInformation($"Trying {candidate}...");
+                    }
+
                     if (await NetworkServiceSearcher.IsYachtDevicesInterface(client, candidate, identifier))
                     {
                         return candidate;

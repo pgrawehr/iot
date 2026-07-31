@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 #pragma warning disable CS1591
@@ -110,6 +111,16 @@ namespace Iot.Device.Common
             }
 
             _file = null!;
+        }
+
+        public List<(DateTime TimeStamp, T Element)> GetAllValues()
+        {
+            if (_file == null)
+            {
+                return new List<(DateTime TimeStamp, T Element)>();
+            }
+
+            return _file.GetAllValues(Name, _deserializer);
         }
 
         public void Dispose()
