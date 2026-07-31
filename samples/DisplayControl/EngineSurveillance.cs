@@ -77,7 +77,7 @@ namespace DisplayControl
         /// <param name="manager">Measurement manager</param>
         /// <param name="maxCounterValue">The maximum value of the counter. 9 for a BCD type counter, 15 for a binary counter</param>
         public EngineSurveillance(MeasurementManager manager, int maxCounterValue)
-            : base(manager, TimeSpan.FromSeconds(1))
+            : base(manager, TimeSpan.FromMilliseconds(500))
         {
             _counterLock = new object();
             _maxCounterValue = maxCounterValue;

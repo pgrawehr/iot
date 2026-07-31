@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Iot.Device.Nmea0183.Sentences;
+using Microsoft.Extensions.Logging;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183
@@ -16,12 +17,15 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public sealed class Nmea2000AutopilotEmulator : NmeaSinkAndSource
     {
+        private int _messageCounter;
+
         public string Nmea2000Source { get; }
 
         public Nmea2000AutopilotEmulator(string interfaceName, string nmea2000Source)
             : base(interfaceName)
         {
             Nmea2000Source = nmea2000Source;
+            _messageCounter = 0;
         }
 
         public override void StartDecode()
@@ -39,20 +43,33 @@ namespace Iot.Device.Nmea0183
             {
                 // We received something from the NMEA2000 interface.
                 // Todo...
+                // Logger.LogInformation($"Received {sentence.ToNmeaMessage()} from NMEA2000");
                 return;
             }
 
             if (sentence is HeadingAndTrackControlStatus st)
             {
+                Logger.LogInformation($"Received autopilot status message from Seatalk. Status {st.PilotStatus}");
                 // NMEA0183 autopilot status received.
                 // Send out an NMEA2000 autopilot status
-                SeatalkNgPilotStatus pilotStatus = new SeatalkNgPilotStatus(st.PilotStatus);
-                DispatchSentenceEvents(pilotStatus);
+                if (_messageCounter % 3 == 0)
+                {
+                    SeatalkNgPilotStatus pilotStatus = new SeatalkNgPilotStatus(st.PilotStatus);
+                    DispatchSentenceEvents(pilotStatus);
+                }
+                else if (_messageCounter % 3 == 1)
+                {
+                    SeatalkNgPilotHeading pilotHeading = new SeatalkNgPilotHeading(null, st.ActualHeading);
+                    DispatchSentenceEvents(pilotHeading);
+                }
+                else
+                {
+                    SeatalkNgPilotLockedHeading
+                        lockedHeading = new SeatalkNgPilotLockedHeading(null, st.DesiredHeading);
+                    DispatchSentenceEvents(lockedHeading);
+                }
 
-                SeatalkNgPilotHeading pilotHeading = new SeatalkNgPilotHeading(null, st.ActualHeading);
-                DispatchSentenceEvents(pilotHeading);
-                SeatalkNgPilotLockedHeading lockedHeading = new SeatalkNgPilotLockedHeading(null, st.DesiredHeading);
-                DispatchSentenceEvents(lockedHeading);
+                _messageCounter++;
             }
         }
     }

@@ -395,6 +395,7 @@ namespace Iot.Device.Nmea0183
 
                 byte[] buffer = StreamEncoding.GetBytes(outgoingString);
 
+                Logger.LogInformation($"Attempting to send PGN {pgn}");
                 Sink?.Write(buffer, 0, buffer.Length);
             }
             else

@@ -11,6 +11,7 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Ais;
@@ -40,6 +41,7 @@ namespace DisplayControl
         private readonly MeasurementManager _manager;
         private readonly bool _hasPlotter;
         private readonly double _logCorrectionFactor;
+        private int _engineDataIterations = 0;
 
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -121,6 +123,7 @@ namespace DisplayControl
         private readonly CustomData<bool> _shipOnline;
         private readonly CustomData<bool> _plotterOnline;
         private readonly CustomData<bool> _autoPilotOnline;
+        private readonly CustomData<bool> _ydwgOnline;
         private readonly CustomData<string> _currentDestinationWaypoint;
         private NmeaSentence m_lastMessageFromHandheld;
 
@@ -168,6 +171,8 @@ namespace DisplayControl
             _shipOnline = new CustomData<bool>("Ship Online", false, SensorSource.Navigation, 4);
             _plotterOnline = new CustomData<bool>("Plotter Online", false, SensorSource.Navigation, 5, TimeSpan.FromSeconds(30));
             _autoPilotOnline = new CustomData<bool>("Autopilot Online", false, SensorSource.Navigation, 6, TimeSpan.FromSeconds(30));
+            _ydwgOnline = new CustomData<bool>("YDWG Online", false, SensorSource.MainPower, 10,
+                TimeSpan.FromSeconds(10));
             _currentDestinationWaypoint =
                 new CustomData<string>("Next Waypoint Name", string.Empty, SensorSource.Navigation, 1,
                     TimeSpan.FromSeconds(10));
@@ -191,6 +196,8 @@ namespace DisplayControl
             rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>() { AutopilotEmulator }, false, false));
             // Commands from the emulator go only to NMEA2000
             rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, SentenceId.Any, new List<string>() { Nmea2000 }, false, false));
+            rules.Add(new FilterRule("*", TalkerId.Any, HeadingAndTrackControlStatus.Id,
+                new List<string>() { AutopilotEmulator }, false, true));
         }
 
         /// <summary>
@@ -533,7 +540,7 @@ namespace DisplayControl
                 SensorMeasurement.SpeedOverGround, SensorMeasurement.Track, _position, _positionProviderName,
                 SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid,
                 _hdgFromHandheld, _handheldRxErrors,
-                _handheldOnline, _auxiliaryOnline, _shipOnline, _plotterOnline, _autoPilotOnline,
+                _handheldOnline, _auxiliaryOnline, _shipOnline, _plotterOnline, _autoPilotOnline, _ydwgOnline,
                 SensorMeasurement.WaterDepth, SensorMeasurement.WaterTemperature, SensorMeasurement.SpeedTroughWater, 
                 SensorMeasurement.LogTotal,
                 SensorMeasurement.DistanceToNextWaypoint, SensorMeasurement.TimeToNextWaypoint, SensorMeasurement.CrossTrackError,
@@ -623,6 +630,7 @@ namespace DisplayControl
             // Deadlocks.
             // found = Nmea2000YdwgParser.FindCompatibleDevice("YDWG", _logger).ConfigureAwait(false).GetAwaiter()
             //.GetResult();
+            found = Task.Run(() => Nmea2000YdwgParser.FindCompatibleDevice("YDWG", _logger)).Result;
             if (found != null)
             {
                 _rawNmea2000 = new NmeaTcpClient(Nmea2000, found.ToString(), 1457, new Nmea2000YdwgParserFactory());
@@ -635,6 +643,10 @@ namespace DisplayControl
 
             _rawNmea2000.RetryInterval = TimeSpan.FromSeconds(30);
             _rawNmea2000.OnParserError += OnParserError;
+            _rawNmea2000.OnNewSequence += (source, sentence) =>
+            {
+                _ydwgOnline.UpdateValue(true, SensorMeasurementStatus.None);
+            };
 
             _clockSynchronizer = new SystemClockSynchronizer();
             _clockSynchronizer.StartDecode();
@@ -1264,40 +1276,46 @@ namespace DisplayControl
                 SendWarningMessage("ENGINEREV", "Engine revolution sensor error");
             }
 
-            // This is the old-stlye RPM message. Can carry only a limited set of information and is often no longer
-            // recognized by NMEA-2000 displays or converters.
-            ////EngineRevolutions rv = new EngineRevolutions(RotationSource.Engine, engineData.Revolutions, engineData.EngineNo + 1, engineData.Pitch);
-            ////_router.SendSentence(rv);
-
-            // We're sending both with the same frequency here - doesn't really matter.
+            // The default for this message would be 100ms, but our current update rate is 0.5s (see EngineSurveillance ctor)
             var fast = new SeaSmartEngineFast(engineData);
             _router.SendSentence(fast);
-            var slow = new SeaSmartEngineDetail(engineData);
-            _router.SendSentence(slow);
 
-            Ratio level = Ratio.Zero;
-            if (!SensorMeasurement.FuelTank0Level.TryGetAs(out level))
+            // We send the details every second iteration (Once per second)
+            if (_engineDataIterations % 2 == 0)
             {
-                level = Ratio.Zero;
+                var slow = new SeaSmartEngineDetail(engineData);
+                _router.SendSentence(slow);
             }
-            FluidData fuel = new FluidData(FluidType.Fuel, level, Volume.FromLiters(55), 0, true);
-            var tankLevel = new SeaSmartFluidLevel(fuel);
-            _router.SendSentence(tankLevel);
-
-            if (!SensorMeasurement.BilgeWaterLevel.TryGetAs(out level))
+            else
             {
-                level = Ratio.Zero;
+                // Otherwise, send this. These are sent with a priority of 6 only, therefore they seemingly get lost
+                // quite often after the long Prio 2 detail message above, if sent in the same sequence.
+                Ratio level = Ratio.Zero;
+                if (!SensorMeasurement.FuelTank0Level.TryGetAs(out level))
+                {
+                    level = Ratio.Zero;
+                }
+
+                FluidData fuel = new FluidData(FluidType.Fuel, level, Volume.FromLiters(55), 0, true);
+                var tankLevel = new SeaSmartFluidLevel(fuel);
+                _router.SendSentence(tankLevel);
+
+                if (!SensorMeasurement.BilgeWaterLevel.TryGetAs(out level))
+                {
+                    level = Ratio.Zero;
+                }
+
+                FluidData bilge = new FluidData(FluidType.BlackWater, level, Volume.FromLiters(30), 0,
+                    highLevelIsGood: false);
+                var bilgeLevel = new SeaSmartFluidLevel(bilge);
+                _router.SendSentence(bilgeLevel);
+                if (bilge.Level > Ratio.FromPercent(50))
+                {
+                    SendWarningMessage("BILGE", "Bilge Water Level High");
+                }
             }
 
-            FluidData bilge = new FluidData(FluidType.BlackWater, level, Volume.FromLiters(30), 0,
-                highLevelIsGood: false);
-            var bilgeLevel = new SeaSmartFluidLevel(bilge);
-            _router.SendSentence(bilgeLevel);
-
-            if (bilge.Level > Ratio.FromPercent(50))
-            {
-                SendWarningMessage("BILGE", "Bilge Water Level High");
-            }
+            _engineDataIterations++;
         }
     }
 }

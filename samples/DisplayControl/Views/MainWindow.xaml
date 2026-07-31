@@ -49,7 +49,7 @@
                            Height ="{Binding HeaderHeight}"/>
                 <Button Name="ShowAll" Content="No Filter" Width="100" Command="{Binding FilterShowAll}" IsVisible="{Binding SensorsVisible}">
                 </Button>
-                <Button Name="ShowStatus" Content="Status" Width="100" Command="{Binding FilterShowStatus}">
+                <Button Name="ShowStatus" Content="Status" Width="100" Command="{Binding FilterShowStatus}" IsVisible="{Binding SensorsVisible}">
                 </Button>
                 <Button Name="Navigation" Content="Navigation" Width="150" Command="{Binding FilterNavigation}" IsVisible="{Binding SensorsVisible}">
                 </Button>
