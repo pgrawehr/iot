@@ -292,7 +292,7 @@ namespace Iot.Device.Seatalk1
                     if ((CourseComputerStatus & CourseComputerWarnings.DriveFailure) != 0)
                     {
                         TurnDirection directionRequired =
-                            (CourseComputerStatus & CourseComputerWarnings.CourseChangeToPort) == CourseComputerWarnings.CourseChangeToPort ? TurnDirection.Port : TurnDirection.Starboard;
+                            (CourseComputerStatus & CourseComputerWarnings.CourseChangeToPort) == CourseComputerWarnings.CourseChangeToPort ? TurnDirection.TurnToPort : TurnDirection.TurnToStarboard;
                         if (directionConfirmation == null)
                         {
                             directionConfirmation = directionRequired;
@@ -377,7 +377,7 @@ namespace Iot.Device.Seatalk1
         }
 
         /// <summary>
-        /// Same as <see cref="TurnTo(UnitsNet.Angle,System.Nullable{Iot.Device.Seatalk1.Messages.TurnDirection})"/>, except in async mode
+        /// Same as <see cref="TurnTo(UnitsNet.Angle,System.Nullable{Nmea0183.Sentences.TurnDirection})"/>, except in async mode
         /// </summary>
         /// <param name="degrees">New desired heading</param>
         /// <param name="direction">Desired turn direction</param>
@@ -425,11 +425,11 @@ namespace Iot.Device.Seatalk1
                 Angle diff = AngleExtensions.Difference(currentDesiredHeading, degrees);
                 if (diff < Angle.Zero)
                 {
-                    direction = TurnDirection.Starboard;
+                    direction = TurnDirection.TurnToStarboard;
                 }
                 else
                 {
-                    direction = TurnDirection.Port;
+                    direction = TurnDirection.TurnToPort;
                 }
             }
 
@@ -441,11 +441,11 @@ namespace Iot.Device.Seatalk1
                 Angle diff = AngleExtensions.Difference(currentDesiredHeading, degrees);
                 if (diff.Abs() > Angle.FromDegrees(10))
                 {
-                    SendMessage(new Keystroke(direction == TurnDirection.Starboard ? AutopilotButtons.PlusTen : AutopilotButtons.MinusTen));
+                    SendMessage(new Keystroke(direction == TurnDirection.TurnToStarboard ? AutopilotButtons.PlusTen : AutopilotButtons.MinusTen));
                 }
                 else
                 {
-                    SendMessage(new Keystroke(direction == TurnDirection.Starboard ? AutopilotButtons.PlusOne : AutopilotButtons.MinusOne));
+                    SendMessage(new Keystroke(direction == TurnDirection.TurnToStarboard ? AutopilotButtons.PlusOne : AutopilotButtons.MinusOne));
                 }
 
                 token.WaitHandle.WaitOne(TimeSpan.FromSeconds(2));
@@ -514,7 +514,7 @@ namespace Iot.Device.Seatalk1
                 return false;
             }
 
-            Angle target = direction == TurnDirection.Starboard ? currentHeading1.Value + degrees : currentHeading1.Value - degrees;
+            Angle target = direction == TurnDirection.TurnToStarboard ? currentHeading1.Value + degrees : currentHeading1.Value - degrees;
             target = target.Normalize(true);
             return TurnTo(target, direction, token);
         }

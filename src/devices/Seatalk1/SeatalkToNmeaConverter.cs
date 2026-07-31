@@ -193,7 +193,7 @@ namespace Iot.Device.Seatalk1
                     "S" => AutopilotStatus.Auto,
                     "W" => AutopilotStatus.Wind,
                     "T" => AutopilotStatus.Track,
-
+                    "" => AutopilotStatus.Undefined,
                     _ => AutopilotStatus.Undefined,
                 };
 
@@ -208,14 +208,15 @@ namespace Iot.Device.Seatalk1
                             ap.SetStatus(desiredStatus, ref confirm);
                         }
                     }
-                    else
+                    else if (desiredStatus != AutopilotStatus.Undefined)
                     {
+                        // Don't touch the status if the command has the status parameter unset, meaning "don't touch"
                         ap.SetStatus(desiredStatus, ref confirm);
                     }
 
                     if (ap.IsOperating && htc.DesiredHeading.HasValue)
                     {
-                        ap.TurnTo(htc.DesiredHeading.Value, null);
+                        ap.TurnTo(htc.DesiredHeading.Value, htc.CommandedTurnDirection);
                     }
                 });
 

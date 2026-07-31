@@ -195,9 +195,10 @@ namespace DisplayControl
             // For now, only the autopilot emulator shall see these
             rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>() { AutopilotEmulator }, false, false));
             // Commands from the emulator go only to NMEA2000
-            rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, SentenceId.Any, new List<string>() { Nmea2000 }, false, false));
+            rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, Nmea2000PackedMessage.Id, new List<string>() { Nmea2000 }, false, false));
             rules.Add(new FilterRule("*", TalkerId.Any, HeadingAndTrackControlStatus.Id,
                 new List<string>() { AutopilotEmulator }, false, true));
+            rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, HeadingAndTrackControl.Id, new List<string>() { Seatalk1Name }, false, true));
         }
 
         /// <summary>

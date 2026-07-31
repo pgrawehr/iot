@@ -141,15 +141,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             get
             {
-                return Status switch
-                {
-                    "M" => AutopilotStatus.Standby,
-                    "S" => AutopilotStatus.Auto,
-                    "H" => AutopilotStatus.Auto,
-                    "T" => AutopilotStatus.Track,
-                    "W" => AutopilotStatus.Wind,
-                    _ => AutopilotStatus.Undefined
-                };
+                return AutopilotStatusFromString(Status);
             }
         }
 
@@ -235,6 +227,41 @@ namespace Iot.Device.Nmea0183.Sentences
         /// The actual heading, from the Autopilot's own heading sensor
         /// </summary>
         public Angle? ActualHeading { get; }
+
+        /// <summary>
+        /// Convert the given status from string to enum form.
+        /// </summary>
+        /// <param name="input">The string (actually letter) that is in the message</param>
+        /// <returns>An enum member</returns>
+        public static AutopilotStatus AutopilotStatusFromString(string input)
+        {
+            return input switch
+            {
+                "M" => AutopilotStatus.Standby,
+                "S" => AutopilotStatus.Auto,
+                "H" => AutopilotStatus.Auto,
+                "T" => AutopilotStatus.Track,
+                "W" => AutopilotStatus.Wind,
+                _ => AutopilotStatus.Undefined
+            };
+        }
+
+        /// <summary>
+        /// Converts the status to a string representation as used by this message
+        /// </summary>
+        /// <param name="status">Autopilot status</param>
+        /// <returns>A letter</returns>
+        public static string FromAutopilotStatus(AutopilotStatus status)
+        {
+            return status switch
+            {
+                AutopilotStatus.Track => "T",
+                AutopilotStatus.Standby => "M",
+                AutopilotStatus.Wind => "W",
+                AutopilotStatus.Auto => "S",
+                _ => "M",
+            };
+        }
 
         /// <inheritdoc />
         public override string ToNmeaParameterList()
