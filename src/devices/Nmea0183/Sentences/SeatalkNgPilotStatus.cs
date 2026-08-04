@@ -93,6 +93,7 @@ namespace Iot.Device.Nmea0183.Sentences
                 64 => AutopilotStatus.Auto,
                 256 => AutopilotStatus.Wind,
                 384 => AutopilotStatus.Track,
+                385 => AutopilotStatus.Track,
                 _ => AutopilotStatus.Undefined,
             };
         }

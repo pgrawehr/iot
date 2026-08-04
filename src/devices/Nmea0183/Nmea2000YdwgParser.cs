@@ -110,8 +110,19 @@ namespace Iot.Device.Nmea0183
                     timeStamp = TimeSpan.Zero;
                 }
 
-                var s = string.Join(string.Empty, splits.Skip(3));
-                var bytes = Convert.FromHexString(s);
+                byte[] bytes;
+                try
+                {
+                    var s = string.Join(string.Empty, splits.Skip(3));
+                    bytes = Convert.FromHexString(s);
+                }
+                catch (FormatException x)
+                {
+                    Logger.LogError($"Exception {x.Message} when parsing msg {currentLine}");
+                    error = NmeaError.InvalidChecksum;
+                    return null;
+                }
+
                 var declaration = Nmea2000Declarations.GetByPgn(pgn >> 8);
 
                 if (declaration != null)

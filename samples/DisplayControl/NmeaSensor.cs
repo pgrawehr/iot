@@ -1285,7 +1285,7 @@ namespace DisplayControl
             if (_engineDataIterations % 2 == 0)
             {
                 var slow = new SeaSmartEngineDetail(engineData);
-                _router.SendSentence(slow);
+                _router?.SendSentence(slow);
             }
             else
             {
@@ -1317,6 +1317,11 @@ namespace DisplayControl
             }
 
             _engineDataIterations++;
+        }
+
+        public void ResetAutopilotOrigin()
+        {
+            _autopilot?.ResetOrigin();
         }
     }
 }

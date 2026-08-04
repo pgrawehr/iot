@@ -1081,5 +1081,10 @@ namespace DisplayControl
                 _nmeaSensor.AisManger.TrackEstimationParameters.SuppressAllVesselWarnings = suppress;
             }
         }
+
+        public void ResetAutopilot()
+        {
+            _nmeaSensor.ResetAutopilotOrigin();
+        }
     }
 }

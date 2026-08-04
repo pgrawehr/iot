@@ -278,6 +278,11 @@ namespace Iot.Device.Nmea0183
                 if (_activeRoute != null)
                 {
                     currentRoute = _activeRoute.Points;
+                    _logger.LogInformation($"Autopilot: Route present. Prev WP: {currentLeg?.PreviousWayPointName}, next WP: {currentLeg?.NextWayPointName}");
+                }
+                else
+                {
+                    _logger.LogInformation($"Autopilot: No route present. Prev WP: {currentLeg?.PreviousWayPointName}, next WP: {currentLeg?.NextWayPointName}");
                 }
 
                 RoutePoint? next;
@@ -421,6 +426,12 @@ namespace Iot.Device.Nmea0183
                     }
                 }
 
+                if (previous != null)
+                {
+                    _logger.LogInformation(
+                        $"Autopilot: Navigation is from {previous.WaypointName} at {previous.Position} to {next.WaypointName} at {next.Position}");
+                }
+
                 NextWaypoint = next;
                 PreviousWaypoint = previous;
                 List<NmeaSentence> sentencesToSend = new List<NmeaSentence>();
@@ -489,6 +500,15 @@ namespace Iot.Device.Nmea0183
 
                 _output.SendSentences(sentencesToSend);
             }
+        }
+
+        /// <summary>
+        /// Resets the origin of a go-to-route. This should normally cause XTE to reset to zero
+        /// if the autopilot had a wrong segment picked up
+        /// </summary>
+        public void ResetOrigin()
+        {
+            _currentOrigin = null;
         }
 
         private bool HasPassedWaypoint(GeographicPosition position, Angle courseOverGround, ref RoutePoint? nextWaypoint, List<RoutePoint> currentRoute)

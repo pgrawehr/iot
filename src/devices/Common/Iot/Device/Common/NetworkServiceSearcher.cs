@@ -116,13 +116,20 @@ namespace Iot.Device.Common
                 var reply = await client.GetAsync(uri, ts.Token);
                 // The header contains a single entry with the declaration "YDWG", which should
                 // be enough to identify the device
-                if (reply.IsSuccessStatusCode && reply.Headers.Any(x => x.Value.Any(y => y.Equals(expectedIdentifier, StringComparison.OrdinalIgnoreCase))))
+                if (reply.IsSuccessStatusCode && reply.Headers.Any(x =>
+                        x.Value.Any(y => y.Equals(expectedIdentifier, StringComparison.OrdinalIgnoreCase))))
                 {
                     return true;
                 }
             }
-            catch (Exception x) when (x is UnauthorizedAccessException or SocketException or OperationCanceledException)
+            catch (Exception x) when (x is UnauthorizedAccessException or SocketException or OperationCanceledException
+                                          or AggregateException or HttpRequestException)
             {
+                return false;
+            }
+            catch (Exception y)
+            {
+                Console.WriteLine($"Saw unexpected exception type {y.GetType()}");
                 return false;
             }
 

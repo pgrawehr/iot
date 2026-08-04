@@ -244,9 +244,9 @@ namespace Iot.Device.Nmea0183
                     DispatchSentenceEvents(raw);
                 }
 
-                if (sw.ElapsedMilliseconds > 20)
+                if (sw.ElapsedMilliseconds > 30)
                 {
-                    Logger.LogWarning("Processing a message took more than 20ms");
+                    Logger.LogWarning($"Processing a message took {sw.ElapsedMilliseconds}ms");
                 }
             }
         }

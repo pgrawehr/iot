@@ -465,6 +465,11 @@ namespace DisplayControl.ViewModels
             DataContainer.SendAisTestMessage();
         }
 
+        public void ResetAutopilot()
+        {
+            DataContainer.ResetAutopilot();
+        }
+
         private void UpdateVisibleModels()
         {
             m_sensorValueViewModels.Clear();

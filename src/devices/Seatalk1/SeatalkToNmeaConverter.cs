@@ -186,6 +186,7 @@ namespace Iot.Device.Seatalk1
                 }
 
                 var ap = _seatalkInterface.GetAutopilotRemoteController();
+                Logger.LogInformation($"Received HTC message from {source.InterfaceName}: {htc.ToNmeaMessage()}");
 
                 AutopilotStatus desiredStatus = htc.Status switch
                 {
