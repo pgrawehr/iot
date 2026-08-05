@@ -22,10 +22,11 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public class NmeaTcpClient : NmeaSinkAndSource
     {
-        private readonly string _destination;
-        private readonly int _port;
+        private readonly Func<(string Destination, int Port)>? _discoveryFunc;
         private readonly INmeaParserFactory _parserFactory;
 
+        private string? _destination;
+        private int _port;
         private TcpClient? _client;
         private NmeaParser? _parser;
         private Thread? _connectionThread;
@@ -33,8 +34,9 @@ namespace Iot.Device.Nmea0183
         private bool _connectionActive;
 
         /// <summary>
-        /// Creates a server with the given source name bound to the given local IP and port.
-        /// This will not open the server yet. Use <see cref="StartDecode"/> to open the network port.
+        /// Creates a client that connects to the given destination and port. If the connection is not
+        /// possible or is lost intermittently, it will be retried repeatedly.
+        /// You need to call <see cref="StartDecode"/> to actually start receiving data.
         /// </summary>
         /// <param name="name">Source name</param>
         /// <param name="destination">Remote host to connect to</param>
@@ -45,8 +47,9 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
-        /// Creates a server with the given source name bound to the given local IP and port.
-        /// This will not open the server yet. Use <see cref="StartDecode"/> to open the network port.
+        /// Creates a client that connects to the given destination and port. If the connection is not
+        /// possible or is lost intermittently, it will be retried repeatedly.
+        /// You need to call <see cref="StartDecode"/> to actually start receiving data.
         /// </summary>
         /// <param name="name">Source name</param>
         /// <param name="destination">Remote host to connect to</param>
@@ -57,6 +60,29 @@ namespace Iot.Device.Nmea0183
         {
             _destination = destination;
             _port = port;
+            _parserFactory = parserFactory;
+            _connectionActive = false;
+            _cancellationTokenSource = new CancellationTokenSource();
+            RetryInterval = TimeSpan.FromSeconds(5);
+        }
+
+        /// <summary>
+        /// Creates a client that connects to a destination and port. This constructor
+        /// allows specifying a discovery function that will be called to obtain the destination address/port before
+        /// an attempt to connect.
+        /// If the connection is not
+        /// possible or is lost intermittently, it will be retried repeatedly.
+        /// You need to call <see cref="StartDecode"/> to actually start receiving data.
+        /// </summary>
+        /// <param name="name">Source name</param>
+        /// <param name="discoveryFunc">Function that should deliver the address of the destination.
+        /// Returning an empty string will just cause another try later.</param>
+        /// <param name="parserFactory">The parser to use</param>
+        public NmeaTcpClient(string name, Func<(string Destination, int Port)> discoveryFunc,
+            INmeaParserFactory parserFactory)
+            : base(name)
+        {
+            _discoveryFunc = discoveryFunc;
             _parserFactory = parserFactory;
             _connectionActive = false;
             _cancellationTokenSource = new CancellationTokenSource();
@@ -102,8 +128,19 @@ namespace Iot.Device.Nmea0183
         {
             while (!_cancellationTokenSource.IsCancellationRequested && _connectionThread != null)
             {
+                if (_discoveryFunc != null)
+                {
+                    (_destination, _port) = _discoveryFunc();
+                }
+
                 try
                 {
+                    if (string.IsNullOrEmpty(_destination))
+                    {
+                        _cancellationTokenSource.Token.WaitHandle.WaitOne(RetryInterval);
+                        continue;
+                    }
+
                     var client = new TcpClient(_destination, _port);
                     _connectionActive = true;
                     Logger.LogInformation($"{InterfaceName}: Connected to {_destination}:{_port}");
