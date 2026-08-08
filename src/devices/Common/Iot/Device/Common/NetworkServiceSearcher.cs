@@ -12,6 +12,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Common
@@ -107,11 +108,11 @@ namespace Iot.Device.Common
             return (IPAddress.Loopback, IPAddress.Parse("255.255.255.0"));
         }
 
-        public static async Task<bool> IsYachtDevicesInterface(HttpClient client, IPAddress candidate, string expectedIdentifier)
+        public static async Task<bool> IsYachtDevicesInterface(HttpClient client, IPAddress candidate, ILogger? logger, string expectedIdentifier)
         {
             try
             {
-                using CancellationTokenSource ts = new CancellationTokenSource(500);
+                using CancellationTokenSource ts = new CancellationTokenSource(700);
                 var uri = new Uri($"http://{candidate.ToString()}/", UriKind.Absolute);
                 var reply = await client.GetAsync(uri, ts.Token);
                 // The header contains a single entry with the declaration "YDWG", which should
@@ -125,11 +126,12 @@ namespace Iot.Device.Common
             catch (Exception x) when (x is UnauthorizedAccessException or SocketException or OperationCanceledException
                                           or AggregateException or HttpRequestException)
             {
+                logger?.LogInformation($"Doesn't work: {x.Message}");
                 return false;
             }
             catch (Exception y)
             {
-                Console.WriteLine($"Saw unexpected exception type {y.GetType()}");
+                logger?.LogInformation($"Unexpected error trying: {y.Message}");
                 return false;
             }
 

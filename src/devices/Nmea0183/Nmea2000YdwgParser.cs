@@ -86,7 +86,7 @@ namespace Iot.Device.Nmea0183
                     pgnTransmit = (pgnTransmit >> 8) & 0x1FFFF;
                     if (pgnTransmit == _pgnAwaitingSend)
                     {
-                        Logger.LogInformation($"Received confirmation that we sent {currentLine.Trim()}");
+                        Logger.LogDebug($"Received confirmation that we sent {currentLine.Trim()}");
                         Interlocked.Exchange(ref _pgnAwaitingSend, 0);
                     }
                 }
@@ -406,7 +406,7 @@ namespace Iot.Device.Nmea0183
 
                 byte[] buffer = StreamEncoding.GetBytes(outgoingString);
 
-                Logger.LogInformation($"Attempting to send PGN {pgn}");
+                // Logger.LogInformation($"Attempting to send PGN {pgn}");
                 Sink?.Write(buffer, 0, buffer.Length);
             }
             else
@@ -451,7 +451,7 @@ namespace Iot.Device.Nmea0183
                         logger.LogInformation($"Trying {candidate}...");
                     }
 
-                    if (await NetworkServiceSearcher.IsYachtDevicesInterface(client, candidate, identifier))
+                    if (await NetworkServiceSearcher.IsYachtDevicesInterface(client, candidate, logger, identifier))
                     {
                         return candidate;
                     }

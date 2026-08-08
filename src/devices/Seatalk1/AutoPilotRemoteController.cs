@@ -458,13 +458,13 @@ namespace Iot.Device.Seatalk1
         {
             while (_cancellationTokenSource is { IsCancellationRequested: false })
             {
-                Angle degrees;
+                Angle newDesiredHeading;
                 TurnDirection direction;
                 lock (_lock)
                 {
                     if (_ourDesiredAngle.HasValue)
                     {
-                        degrees = _ourDesiredAngle.Value;
+                        newDesiredHeading = _ourDesiredAngle.Value;
                         direction = _ourDesiredDirection;
                     }
                     else
@@ -474,7 +474,7 @@ namespace Iot.Device.Seatalk1
                     }
                 }
 
-                degrees = degrees.Normalize(true);
+                newDesiredHeading = newDesiredHeading.Normalize(true);
 
                 var currentHeading1 = AutopilotDesiredHeading;
                 if (!IsOperating || !currentHeading1.HasValue)
@@ -486,13 +486,13 @@ namespace Iot.Device.Seatalk1
 
                 var currentDesiredHeading = currentHeading1.Value;
 
-                _logger.LogInformation($"New desired heading: {degrees}");
+                _logger.LogInformation($"New desired heading: {newDesiredHeading}");
 
                 int maxNo = 5; // Update the desired value every few ticks
-                while (!AnglesAreClose(currentDesiredHeading, degrees) && maxNo-- > 0)
+                while (!AnglesAreClose(currentDesiredHeading, newDesiredHeading) && maxNo-- > 0)
                 {
                     // Should also work if diff is small, but we intend to go the other way (make a full 360)
-                    Angle diff = AngleExtensions.Difference(currentDesiredHeading, degrees);
+                    Angle diff = AngleExtensions.Difference(currentDesiredHeading, newDesiredHeading);
                     if (diff.Abs() > Angle.FromDegrees(10))
                     {
                         SendMessage(new Keystroke(direction == TurnDirection.TurnToStarboard
@@ -528,17 +528,12 @@ namespace Iot.Device.Seatalk1
                 bool ret;
                 lock (_lock)
                 {
-                    _ourDesiredAngle = null; // Done
-                    ret = _ourDesiredAngle.HasValue && AnglesAreClose(_ourDesiredAngle.Value, degrees);
-                }
-
-                if (ret)
-                {
-                    _logger.LogInformation($"Reached new desired course {currentHeading1.GetValueOrDefault()}");
-                }
-                else
-                {
-                    _logger.LogWarning($"TurnTo terminated prematurely, desired new heading not reached");
+                    ret = _ourDesiredAngle.HasValue && AnglesAreClose(_ourDesiredAngle.Value, currentDesiredHeading);
+                    if (ret)
+                    {
+                        _logger.LogInformation($"Reached new desired course {_ourDesiredAngle.GetValueOrDefault()}");
+                        _ourDesiredAngle = null; // Done
+                    }
                 }
 
                 _cancellationTokenSource.Token.WaitHandle.WaitOne(1000);
@@ -547,12 +542,7 @@ namespace Iot.Device.Seatalk1
 
         internal bool AnglesAreClose(Angle angle1, Angle angle2)
         {
-            if (angle1.Equals(angle2, Angle.FromDegrees(AngleEpsilon)))
-            {
-                return true;
-            }
-
-            return UnitMath.Abs(AngleExtensions.Difference(angle1, angle2)) < Angle.FromDegrees(1.5);
+            return UnitMath.Abs(AngleExtensions.Difference(angle1, angle2)) < Angle.FromDegrees(1.0);
         }
 
         /// <summary>

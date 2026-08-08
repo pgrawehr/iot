@@ -220,6 +220,14 @@ namespace Iot.Device.Nmea0183
             }
         }
 
+        private void LogSometimes(int loops, string msg)
+        {
+            if (loops % LogSkip == 0)
+            {
+                _logger.LogWarning(msg);
+            }
+        }
+
         /// <summary>
         /// Navigation loop.
         /// </summary>
@@ -258,11 +266,7 @@ namespace Iot.Device.Nmea0183
                     var variation = _cache.MagneticVariation;
                     if (!variation.HasValue)
                     {
-                        if (loops % LogSkip == 0)
-                        {
-                            _logger.LogWarning("Autopilot: No magnetic variance");
-                        }
-
+                        LogSometimes(loops, "Autopilot: No magnetic variance");
                         return;
                     }
 
@@ -278,11 +282,12 @@ namespace Iot.Device.Nmea0183
                 if (_activeRoute != null)
                 {
                     currentRoute = _activeRoute.Points;
-                    _logger.LogInformation($"Autopilot: Route present. Prev WP: {currentLeg?.PreviousWayPointName}, next WP: {currentLeg?.NextWayPointName}");
+                    LogSometimes(loops, $"Autopilot: Route present. Prev WP: {currentLeg?.PreviousWayPointName}, next WP: {currentLeg?.NextWayPointName}");
                 }
                 else
                 {
-                    _logger.LogInformation($"Autopilot: No route present. Prev WP: {currentLeg?.PreviousWayPointName}, next WP: {currentLeg?.NextWayPointName}");
+                    LogSometimes(loops,
+                        $"Autopilot: No route present. Prev WP: {currentLeg?.PreviousWayPointName}, next WP: {currentLeg?.NextWayPointName}");
                 }
 
                 RoutePoint? next;
@@ -428,7 +433,7 @@ namespace Iot.Device.Nmea0183
 
                 if (previous != null)
                 {
-                    _logger.LogInformation(
+                   LogSometimes(loops,
                         $"Autopilot: Navigation is from {previous.WaypointName} at {previous.Position} to {next.WaypointName} at {next.Position}");
                 }
 

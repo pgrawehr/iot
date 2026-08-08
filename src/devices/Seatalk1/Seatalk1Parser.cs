@@ -151,7 +151,6 @@ namespace Iot.Device.Seatalk1
             {
                 _reader.Close();
                 _inputStream.Close();
-                _buffer.Clear();
             }
 
             _parserThread?.Join();
@@ -187,9 +186,14 @@ namespace Iot.Device.Seatalk1
                                 msg = GetTypeOfNextMessage(_buffer.GetRange(0, len), out messageLength);
                                 if (msg != null)
                                 {
+                                    _buffer.RemoveRange(0, len);
                                     break;
                                 }
                             }
+                        }
+                        else if (msg != null)
+                        {
+                            _buffer.RemoveRange(0, messageLength);
                         }
 
                         if (msg == null)
@@ -215,7 +219,6 @@ namespace Iot.Device.Seatalk1
                         }
 
                         NewMessageDecoded?.Invoke(msg);
-                        _buffer.RemoveRange(0, messageLength);
                         if (_buffer.Count == 0)
                         {
                             isInSync = true;

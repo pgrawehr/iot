@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Threading;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
@@ -20,7 +21,10 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public sealed class Nmea2000AutopilotEmulator : NmeaSinkAndSource
     {
+        private readonly SentenceCache _sentencesCache;
         private int _messageCounter;
+        private Thread? _updateThread;
+        private CancellationTokenSource _cancellationTokenSource;
 
         public string Nmea2000Source { get; }
 
@@ -29,14 +33,21 @@ namespace Iot.Device.Nmea0183
         {
             Nmea2000Source = nmea2000Source;
             _messageCounter = 0;
+            _sentencesCache = new SentenceCache(null);
+            _cancellationTokenSource = new CancellationTokenSource();
         }
 
         public override void StartDecode()
         {
+            _updateThread = new Thread(Updater);
+            _updateThread.Start();
         }
 
         public override void StopDecode()
         {
+            _cancellationTokenSource.Cancel();
+            _updateThread?.Join();
+            _updateThread = null;
         }
 
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
@@ -105,27 +116,40 @@ namespace Iot.Device.Nmea0183
 
             if (sentence is HeadingAndTrackControlStatus st)
             {
-                Logger.LogInformation($"Received autopilot status message from Seatalk. Status {st.PilotStatus}");
-                // NMEA0183 autopilot status received.
-                // Send out an NMEA2000 autopilot status
-                if (_messageCounter % 3 == 0)
+                _sentencesCache.Add(source, st);
+            }
+        }
+
+        private void Updater()
+        {
+            while (!_cancellationTokenSource.IsCancellationRequested)
+            {
+                if (_sentencesCache.TryGetLastSentence(HeadingAndTrackControlStatus.Id,
+                        out HeadingAndTrackControlStatus? st) && st.Age < TimeSpan.FromSeconds(5))
                 {
-                    SeatalkNgPilotStatus pilotStatus = new SeatalkNgPilotStatus(st.PilotStatus);
-                    DispatchSentenceEvents(pilotStatus);
-                }
-                else if (_messageCounter % 3 == 1)
-                {
-                    SeatalkNgPilotHeading pilotHeading = new SeatalkNgPilotHeading(null, st.ActualHeading);
-                    DispatchSentenceEvents(pilotHeading);
-                }
-                else
-                {
-                    SeatalkNgPilotLockedHeading
-                        lockedHeading = new SeatalkNgPilotLockedHeading(null, st.DesiredHeading);
-                    DispatchSentenceEvents(lockedHeading);
+                    // NMEA0183 autopilot status received.
+                    // Send out an NMEA2000 autopilot status
+                    if (_messageCounter % 3 == 0)
+                    {
+                        SeatalkNgPilotStatus pilotStatus = new SeatalkNgPilotStatus(st.PilotStatus);
+                        DispatchSentenceEvents(pilotStatus);
+                    }
+                    else if (_messageCounter % 3 == 1)
+                    {
+                        SeatalkNgPilotHeading pilotHeading = new SeatalkNgPilotHeading(null, st.ActualHeading);
+                        DispatchSentenceEvents(pilotHeading);
+                    }
+                    else
+                    {
+                        SeatalkNgPilotLockedHeading
+                            lockedHeading = new SeatalkNgPilotLockedHeading(null, st.DesiredHeading);
+                        DispatchSentenceEvents(lockedHeading);
+                    }
+
+                    _messageCounter++;
                 }
 
-                _messageCounter++;
+                _cancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(200));
             }
         }
     }

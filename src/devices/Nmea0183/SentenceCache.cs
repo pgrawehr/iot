@@ -22,7 +22,7 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public sealed class SentenceCache : IDisposable
     {
-        private readonly NmeaSinkAndSource _source;
+        private readonly NmeaSinkAndSource? _source;
         private readonly object _lock;
 
         private readonly Dictionary<uint, NmeaSentence> _dinData;
@@ -49,8 +49,8 @@ namespace Iot.Device.Nmea0183
         /// <summary>
         /// Creates an new cache using the given source
         /// </summary>
-        /// <param name="source">The source to monitor</param>
-        public SentenceCache(NmeaSinkAndSource source)
+        /// <param name="source">The source to monitor. Can be null if the cache is filled explicitly</param>
+        public SentenceCache(NmeaSinkAndSource? source)
         {
             _source = source;
             _lock = new object();
@@ -63,7 +63,11 @@ namespace Iot.Device.Nmea0183
             _dinData = new Dictionary<uint, NmeaSentence>();
             StoreRawSentences = false;
             _logger = this.GetCurrentClassLogger();
-            _source.OnNewSequence += OnNewSequence;
+            if (_source != null)
+            {
+                _source.OnNewSequence += OnNewSequence;
+            }
+
             MaxDataAge = TimeSpan.FromSeconds(30);
         }
 
@@ -318,7 +322,11 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         public void Dispose()
         {
-            _source.OnNewSequence -= OnNewSequence;
+            if (_source != null)
+            {
+                _source.OnNewSequence -= OnNewSequence;
+            }
+
             _sentences.Clear();
         }
 
