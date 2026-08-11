@@ -74,6 +74,18 @@ namespace Iot.Device.Nmea0183
                     new FieldDeclaration(8, 1, "Unknown 2", null),
                     new FieldDeclaration(9, 1, "Unknown 3", null),
                 }));
+            s_data.Add(SeatalkNgPilotWindStatus.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotWindStatus.HexId, "Seatalk: Pilot Wind Status", 7,
+                8, false, false,
+                // this message is addressed in a Group Function Message with Function=Command to update the desired AWA (apparent wind angle)
+                // when the user presses the +1/-1/+10/-10 buttons in wind mode
+                new List<FieldDeclaration>()
+                {
+                    new FieldDeclaration(1, 2, "Manufacturer", 1851, x => (x >> 5) & 0x7FF),
+                    new FieldDeclaration(2, 1, "Reserved", null),
+                    new FieldDeclaration(3, 1, "Industry Code", 4, x => x & 0x7),
+                    new FieldDeclaration(4, 2, "Target Wind Angle", null),
+                    new FieldDeclaration(5, 2, "Actual Wind Angle", null),
+                }));
         }
 
         /// <summary>

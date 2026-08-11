@@ -19,6 +19,7 @@ namespace Iot.Device.Gps.NeoM8Samples
     {
         private AutopilotStatus _currentAutopilotStatus = AutopilotStatus.Offline;
         private Angle _currentDesiredHeading = Angle.FromDegrees(110);
+        private Angle _currentDesiredWindAngle = Angle.FromDegrees(350);
 
         public static void Main(string[] args)
         {
@@ -118,7 +119,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             try
             {
                 // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.235.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.121.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");
@@ -179,6 +180,13 @@ namespace Iot.Device.Gps.NeoM8Samples
                                     var heading2 =
                                         new SeatalkNgPilotLockedHeading(null, _currentDesiredHeading);
                                     client.SendSentence(heading2);
+
+                                    if (_currentAutopilotStatus == AutopilotStatus.Wind)
+                                    {
+                                        var wind = new SeatalkNgPilotWindStatus(_currentDesiredWindAngle,
+                                            null);
+                                        client.SendSentence(wind);
+                                    }
                                 }
 
                                 if (loop % 3 == 2)
@@ -224,10 +232,32 @@ namespace Iot.Device.Gps.NeoM8Samples
                     gf.Parameters[0].Constant == 1851 && gf.Function == GroupFunction.Command)
                 {
                     int newMode = gf.Parameters[3].Value.GetValueOrDefault();
-                    _currentAutopilotStatus = SeatalkNgPilotStatus.AutopilotStatusFromNumber(newMode);
-                    Console.WriteLine($"New status was commanded: {_currentAutopilotStatus}!");
-                    var reply = gf.CreateAck();
-                    parser.SendSentence(reply);
+                    if (newMode == 0xFFFF && _currentAutopilotStatus == AutopilotStatus.Wind)
+                    {
+                        // Seen this when a tack is requested. However, the plotter offers the wrong tack
+                        // direction right now.
+                        // Submode is 4 for tack to starboard and 3 for tack to port. We can use this to determine the correct tack direction.
+                        int subMode = gf.Parameters[4].Value.GetValueOrDefault();
+                        if (subMode == 4 || subMode == 3)
+                        {
+                            if (_currentDesiredWindAngle.Abs().Degrees < 90) // tack
+                            {
+                                _currentDesiredWindAngle = (-_currentDesiredWindAngle).Normalize(true);
+                            }
+                            else
+                            {
+                                // gybe
+                                _currentDesiredWindAngle = (Angle.FromDegrees(360) - _currentDesiredWindAngle).Normalize(true);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _currentAutopilotStatus = SeatalkNgPilotStatus.AutopilotStatusFromNumber(newMode);
+                        Console.WriteLine($"New status was commanded: {_currentAutopilotStatus}!");
+                        var reply = gf.CreateAck();
+                        parser.SendSentence(reply);
+                    }
                 }
                 else if (gf.Pgn == SeatalkNgPilotLockedHeading.HexId && gf.ParameterConstantsMatch() &&
                               gf.Parameters[0].Constant == 1851 && gf.Function == GroupFunction.Command)
@@ -235,6 +265,15 @@ namespace Iot.Device.Gps.NeoM8Samples
                     double newDirection = gf.Parameters[5].Value.GetValueOrDefault(); // New magnetic heading
                     _currentDesiredHeading = Angle.FromRadians(newDirection * 0.0001).ToUnit(AngleUnit.Degree);
                     Console.WriteLine($"Updated desired heading to {_currentDesiredHeading}");
+                    var reply = gf.CreateAck();
+                    parser.SendSentence(reply);
+                }
+                else if (gf.Pgn == SeatalkNgPilotWindStatus.HexId && gf.ParameterConstantsMatch() &&
+                              gf.Parameters[0].Constant == 1851 && gf.Function == GroupFunction.Command)
+                {
+                    double newWindAngle = gf.Parameters[3].Value.GetValueOrDefault(); // New wind angle
+                    _currentDesiredWindAngle = Angle.FromRadians(newWindAngle * 0.0001).ToUnit(AngleUnit.Degree);
+                    Console.WriteLine($"Updated desired wind angle to {_currentDesiredWindAngle}");
                     var reply = gf.CreateAck();
                     parser.SendSentence(reply);
                 }
