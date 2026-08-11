@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Device.Gpio;
 using System.Device.I2c;
 using System.Device.Spi;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -218,7 +219,13 @@ namespace Iot.Device.Seatalk1
                             }
                         }
 
+                        Stopwatch sw = Stopwatch.StartNew();
                         NewMessageDecoded?.Invoke(msg);
+                        if (sw.ElapsedMilliseconds > 20)
+                        {
+                            _logger.LogWarning($"Seatalk parser: decode took {sw.ElapsedMilliseconds} ms to complete on '{msg.GetType()}'");
+                        }
+
                         if (_buffer.Count == 0)
                         {
                             isInSync = true;

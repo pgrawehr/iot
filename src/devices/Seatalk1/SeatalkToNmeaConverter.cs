@@ -180,7 +180,7 @@ namespace Iot.Device.Seatalk1
             if (DoTranslate(sentence, out HeadingAndTrackControl? htc) && htc != null)
             {
                 // Empty the queue when this (rare) message arrives, so we can directly issue its commands
-                while (_sendQueue.TryTake(out var dispose, TimeSpan.FromSeconds(0.5)))
+                while (_sendQueue.TryTake(out var dispose))
                 {
                     // Wait
                 }

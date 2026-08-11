@@ -469,8 +469,7 @@ namespace Iot.Device.Seatalk1
                     }
                     else
                     {
-                        Thread.Sleep(500);
-                        continue;
+                        goto wait;
                     }
                 }
 
@@ -536,6 +535,7 @@ namespace Iot.Device.Seatalk1
                     }
                 }
 
+                wait:
                 _cancellationTokenSource.Token.WaitHandle.WaitOne(1000);
             }
         }
