@@ -48,7 +48,12 @@ namespace Iot.Device.Nmea0183.Sentences
 
         public override string ToReadableContent()
         {
-            return $"SeatalkNg Pilot Wind Settings: {DesiredWindAngle} Desired, {AverageWindAngle} Actual";
+            if (DesiredWindAngle.HasValue)
+            {
+                return $"SeatalkNg Pilot Wind Settings: {DesiredWindAngle.Value.Normalize(false)} Desired, {AverageWindAngle} Actual";
+            }
+
+            return $"SeatalkNg Pilot Wind Settings: No Desired Value, {AverageWindAngle} Actual";
         }
 
         public SeatalkNgPilotWindStatus(Angle? desiredWindAngle, Angle? averageWindAngle)

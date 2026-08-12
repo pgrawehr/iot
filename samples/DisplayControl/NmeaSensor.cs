@@ -198,6 +198,10 @@ namespace DisplayControl
             rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, Nmea2000PackedMessage.Id, new List<string>() { Nmea2000 }, false, false));
             rules.Add(new FilterRule("*", TalkerId.Any, HeadingAndTrackControlStatus.Id,
                 new List<string>() { AutopilotEmulator }, false, true));
+            rules.Add(new FilterRule("*", TalkerId.Any, WindSpeedAndAngle.Id,
+                new List<string>() { AutopilotEmulator }, false, true));
+            rules.Add(new FilterRule("*", TalkerId.Any, HeadingMagnetic.Id,
+                new List<string>() { AutopilotEmulator }, false, true));
             rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, HeadingAndTrackControl.Id, new List<string>() { Seatalk1Name }, false, true));
         }
 

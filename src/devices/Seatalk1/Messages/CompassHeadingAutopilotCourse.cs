@@ -75,15 +75,6 @@ namespace Iot.Device.Seatalk1.Messages
 
             AutopilotStatus status = GetAutopilotStatus(data[4]);
 
-            if (status == AutopilotStatus.Undefined)
-            {
-                Logger.LogWarning($"Unknown autopilot status byte {data[4]}");
-            }
-            else
-            {
-                Logger.LogInformation($"Current autopilot status: {status}");
-            }
-
             sbyte rudder = (sbyte)data[6];
 
             AutopilotAlarms alarms = AutopilotAlarms.None;
@@ -98,7 +89,7 @@ namespace Iot.Device.Seatalk1.Messages
                 alarms |= AutopilotAlarms.WindShift;
             }
 
-            return this with
+            var ret = this with
             {
                 CompassHeading = headingA,
                 AutoPilotType = data[8],
@@ -108,6 +99,17 @@ namespace Iot.Device.Seatalk1.Messages
                 Alarms = alarms,
                 TurnDirection = td,
             };
+
+            if (status == AutopilotStatus.Undefined)
+            {
+                Logger.LogWarning($"Unknown autopilot status byte {data[4]}");
+            }
+            else
+            {
+                Logger.LogInformation($"Current autopilot status: {status}. Measured current heading: {headingA}. Desired heading: {ret.AutoPilotCourse}");
+            }
+
+            return ret;
         }
 
         /// <inheritdoc />

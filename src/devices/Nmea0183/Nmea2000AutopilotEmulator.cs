@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Reflection.Metadata;
 using System.Threading;
+using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
@@ -25,6 +27,10 @@ namespace Iot.Device.Nmea0183
         private int _messageCounter;
         private Thread? _updateThread;
         private CancellationTokenSource _cancellationTokenSource;
+        private AutopilotStatus _currentAutopilotStatus;
+        private Angle _currentAwa;
+        private Angle? _currentDesiredAwa;
+        private Angle _currentHeading;
 
         public string Nmea2000Source { get; }
 
@@ -33,6 +39,7 @@ namespace Iot.Device.Nmea0183
         {
             Nmea2000Source = nmea2000Source;
             _messageCounter = 0;
+            _currentAutopilotStatus = AutopilotStatus.Offline;
             _sentencesCache = new SentenceCache(null);
             _cancellationTokenSource = new CancellationTokenSource();
         }
@@ -63,13 +70,52 @@ namespace Iot.Device.Nmea0183
                     {
                         int newMode = gf.Parameters[3].Value.GetValueOrDefault();
                         AutopilotStatus desiredStatus = SeatalkNgPilotStatus.AutopilotStatusFromNumber(newMode);
-                        Logger.LogInformation($"New status was commanded: {desiredStatus}!");
-                        var reply = gf.CreateAck();
-                        DispatchSentenceEvents(reply);
-                        HeadingAndTrackControl control = new HeadingAndTrackControl(
-                            HeadingAndTrackControlStatus.FromAutopilotStatus(desiredStatus),
-                            null, string.Empty, string.Empty, null, null, null, null, null, null, null, false);
-                        DispatchSentenceEvents(control);
+                        Angle? desiredNewHeading = null;
+                        if (newMode == 0xFFFF && _currentAutopilotStatus == AutopilotStatus.Wind)
+                        {
+                            _sentencesCache.TryGetLastSentence(HeadingAndTrackControlStatus.Id,
+                                out HeadingAndTrackControlStatus? st1);
+                            // Seen this when a tack is requested. However, the plotter offers the wrong tack
+                            // direction right now.
+                            // Submode is 4 for tack to starboard and 3 for tack to port. We can use this to determine the correct tack direction.
+                            int subMode = gf.Parameters[4].Value.GetValueOrDefault();
+                            if (st1 != null && (subMode == 4 || subMode == 3))
+                            {
+                                var currentAwa = _currentAwa;
+                                Angle newAwa;
+                                if (currentAwa.Abs().Degrees < 90) // tack
+                                {
+                                    newAwa = (-currentAwa).Normalize(true);
+                                }
+                                else
+                                {
+                                    // gybe
+                                    newAwa = (Angle.FromDegrees(360) - currentAwa).Normalize(true);
+                                }
+
+                                desiredNewHeading = NewWindAngle(newAwa, _currentDesiredAwa.GetValueOrDefault());
+                                _currentDesiredAwa = newAwa;
+                            }
+
+                            desiredStatus = AutopilotStatus.Wind;
+                        }
+
+                        if (desiredStatus != AutopilotStatus.Undefined)
+                        {
+                            Logger.LogInformation($"New status was commanded: {desiredStatus}!");
+                            var reply = gf.CreateAck();
+                            DispatchSentenceEvents(reply);
+                            HeadingAndTrackControl control = new HeadingAndTrackControl(
+                                HeadingAndTrackControlStatus.FromAutopilotStatus(desiredStatus),
+                                null, string.Empty, string.Empty,
+                                null, null, null, null,
+                                desiredNewHeading, null, null, false);
+                            DispatchSentenceEvents(control);
+                        }
+                        else
+                        {
+                            Logger.LogWarning($"Unknown Autopilot status value {newMode}");
+                        }
                     }
                     else if (gf.Pgn == SeatalkNgPilotLockedHeading.HexId && gf.ParameterConstantsMatch() &&
                                   gf.Parameters[0].Constant == 1851 && gf.Function == GroupFunction.Command)
@@ -81,6 +127,21 @@ namespace Iot.Device.Nmea0183
                         DispatchSentenceEvents(reply);
                         HeadingAndTrackControl control = new HeadingAndTrackControl(string.Empty,
                             null, string.Empty, string.Empty, null, null, null, null, currentDesiredHeading, null, null, false);
+                        DispatchSentenceEvents(control);
+                    }
+                    else if (gf.Pgn == SeatalkNgPilotWindStatus.HexId && gf.ParameterConstantsMatch() &&
+                             gf.Parameters[0].Constant == 1851 && gf.Function == GroupFunction.Command)
+                    {
+                        double newWindAngle = gf.Parameters[3].Value.GetValueOrDefault(); // New wind angle
+                        Angle newAwa = Angle.FromRadians(newWindAngle * 0.0001).ToUnit(AngleUnit.Degree).Normalize(true);
+                        Angle desiredNewHeading = NewWindAngle(newAwa, _currentDesiredAwa.GetValueOrDefault());
+                        _currentDesiredAwa = newAwa;
+                        Logger.LogInformation($"Updated desired wind angle to {newAwa} (absolute {desiredNewHeading})");
+                        var reply = gf.CreateAck();
+                        DispatchSentenceEvents(reply);
+                        HeadingAndTrackControl control = new HeadingAndTrackControl(HeadingAndTrackControlStatus.FromAutopilotStatus(AutopilotStatus.Wind),
+                            null, string.Empty, string.Empty, null, null, null, null,
+                            desiredNewHeading, null, null, false);
                         DispatchSentenceEvents(control);
                     }
                     else if (gf.Pgn == 126720 && gf.ParameterConstantsMatch() && gf.Function == GroupFunction.Request)
@@ -116,8 +177,39 @@ namespace Iot.Device.Nmea0183
 
             if (sentence is HeadingAndTrackControlStatus st)
             {
+                _currentAutopilotStatus = st.PilotStatus;
+                if (_currentAutopilotStatus == AutopilotStatus.Wind)
+                {
+                    if (!_currentDesiredAwa.HasValue)
+                    {
+                        _currentDesiredAwa = _currentAwa;
+                    }
+                }
+                else
+                {
+                    _currentDesiredAwa = null;
+                }
+
+                if (st.ActualHeading.HasValue)
+                {
+                    _currentHeading = st.ActualHeading.Value;
+                }
+
                 _sentencesCache.Add(source, st);
             }
+            else if (sentence is WindSpeedAndAngle wsa)
+            {
+                if (wsa.Relative)
+                {
+                    _currentAwa = wsa.Angle;
+                }
+            }
+        }
+
+        private Angle NewWindAngle(Angle newAwa, Angle oldAwa)
+        {
+            var diff = (newAwa - oldAwa);
+            return (_currentHeading + diff).Normalize(true);
         }
 
         private void Updater()
@@ -127,7 +219,7 @@ namespace Iot.Device.Nmea0183
                 if (_sentencesCache.TryGetLastSentence(HeadingAndTrackControlStatus.Id,
                         out HeadingAndTrackControlStatus? st) && st.Age < TimeSpan.FromSeconds(5))
                 {
-                    // NMEA0183 autopilot status received.
+                    // NMEA0183 autopilot status available (and not outdated).
                     // Send out an NMEA2000 autopilot status
                     if (_messageCounter % 3 == 0)
                     {
@@ -136,6 +228,13 @@ namespace Iot.Device.Nmea0183
                     }
                     else if (_messageCounter % 3 == 1)
                     {
+                        if (_currentAutopilotStatus == AutopilotStatus.Wind)
+                        {
+                            SeatalkNgPilotWindStatus windStatus = new SeatalkNgPilotWindStatus(_currentDesiredAwa, _currentAwa);
+                            Logger.LogInformation($"Wind status: {windStatus.ToReadableContent()}");
+                            DispatchSentenceEvents(windStatus);
+                        }
+
                         SeatalkNgPilotHeading pilotHeading = new SeatalkNgPilotHeading(null, st.ActualHeading);
                         DispatchSentenceEvents(pilotHeading);
                     }

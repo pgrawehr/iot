@@ -485,7 +485,7 @@ namespace Iot.Device.Seatalk1
 
                 var currentDesiredHeading = currentHeading1.Value;
 
-                _logger.LogInformation($"New desired heading: {newDesiredHeading}");
+                _logger.LogInformation($"New desired heading: {newDesiredHeading}. Current desired heading {currentDesiredHeading}");
 
                 int maxNo = 5; // Update the desired value every few ticks
                 while (!AnglesAreClose(currentDesiredHeading, newDesiredHeading) && maxNo-- > 0)
@@ -591,6 +591,7 @@ namespace Iot.Device.Seatalk1
 
         private bool SendMessage(SeatalkMessage message)
         {
+            _logger.LogInformation($"Remote controller: Sending {message.GetType().Name}: {message}");
             return _parentInterface.SendMessage(message);
         }
 
@@ -616,7 +617,7 @@ namespace Iot.Device.Seatalk1
                     return true;
                 }
 
-                _parentInterface.SendMessage(message);
+                SendMessage(message);
                 Thread.Sleep(137); // Some random number
             }
 
