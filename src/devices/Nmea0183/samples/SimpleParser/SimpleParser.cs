@@ -27,7 +27,7 @@ namespace Iot.Device.Gps.NeoM8Samples
             var p = new Program();
             // p.UsingNeoM8Serial();
             // p.UsingNetwork();
-            p.UsingNmea2000RawNetwork();
+            p.SimulateDigitalSwitch();
         }
 
         private void UsingSerial()
@@ -114,12 +114,15 @@ namespace Iot.Device.Gps.NeoM8Samples
             }
         }
 
-        private void UsingNmea2000RawNetwork()
+        /// <summary>
+        /// This sample uses an NMEA 2000 parser to simulate a Raymarine EV-type autopilot. It will connect to a TCP server and send messages that are expected by the autopilot.
+        /// It will also listen for messages from the autopilot and update the current status accordingly.
+        /// </summary>
+        private void SimulateAutopilot()
         {
             try
             {
-                // using (TcpClient client = new TcpClient("192.168.1.43", 10110))
-                using (NmeaTcpClient client = new NmeaTcpClient("Test", "192.168.121.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Autopilot", "192.168.121.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");
@@ -211,6 +214,71 @@ namespace Iot.Device.Gps.NeoM8Samples
             {
                 Console.WriteLine($"Error connecting to host: {x}");
             }
+        }
+
+        /// <summary>
+        /// This sample uses an NMEA 2000 parser to simulate a Raymarine EV-type autopilot. It will connect to a TCP server and send messages that are expected by the autopilot.
+        /// It will also listen for messages from the autopilot and update the current status accordingly.
+        /// </summary>
+        private void SimulateDigitalSwitch()
+        {
+            try
+            {
+                using (NmeaTcpClient client = new NmeaTcpClient("Switch", "192.168.116.50", 1457, new Nmea2000YdwgParserFactory()))
+                {
+                    bool closed = false;
+                    Console.WriteLine("Connected!");
+                    client.OnParserError += (source, msg, error) =>
+                    {
+                        Console.WriteLine($"Error while parsing message '{msg}': {error}");
+                        if (error == NmeaError.PortClosed)
+                        {
+                            closed = true;
+                        }
+                    };
+                    client.OnNewSequence += ParserOnNewSequenceForSwitch;
+                    client.OnParserError += Client_OnOnParserError;
+                    client.StartDecode();
+
+                    bool exit = false;
+                    int loop = 0;
+                    while (!exit && !closed)
+                    {
+                        Thread.Sleep(500);
+                        loop++;
+                        if (Console.KeyAvailable)
+                        {
+                            var k = Console.ReadKey(true);
+                            switch (k.Key)
+                            {
+                                case ConsoleKey.Q:
+                                    exit = true;
+                                    break;
+                            }
+                        }
+
+                        var switchStatus = new BinarySwitchStatus(0x80);
+                        client.SendSentence(switchStatus);
+                        Thread.Sleep(100);
+                        var switchStatus2 = new CzoneChannelState(0x80);
+                        client.SendSentence(switchStatus2);
+                        Thread.Sleep(100);
+                        var switchStatus3 = new CzoneCircuitStatus(0x80);
+                        client.SendSentence(switchStatus3);
+                        ////Thread.Sleep(100);
+                        ////var switchStatus4 = new CzoneModuleAnnounce(0x80);
+                        ////client.SendSentence(switchStatus4);
+                    }
+                }
+            }
+            catch (SocketException x)
+            {
+                Console.WriteLine($"Error connecting to host: {x}");
+            }
+        }
+
+        private void ParserOnNewSequenceForSwitch(NmeaSinkAndSource arg1, NmeaSentence arg2)
+        {
         }
 
         private void Client_OnOnParserError(NmeaSinkAndSource arg1, string arg2, NmeaError arg3)

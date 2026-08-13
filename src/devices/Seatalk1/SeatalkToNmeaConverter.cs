@@ -46,6 +46,7 @@ namespace Iot.Device.Seatalk1
             _seatalkInterface = new SeatalkInterface(portName);
             _seatalkInterface.MessageReceived += SeatalkMessageReceived;
             _isDisposed = false;
+            UseRudderAngle = true;
         }
 
         /// <summary>
@@ -60,6 +61,16 @@ namespace Iot.Device.Seatalk1
         /// HTC (Nmea->Seatalk, translated into commands)
         /// </remarks>
         public List<SentenceId> SentencesToTranslate => _sentencesToTranslate;
+
+        /// <summary>
+        /// True if the rudder angle should be sent as a NMEA sentence (RudderSensorAngle) when a Seatalk autopilot status message is received.
+        /// Default is true. This should be set to false if another source is already providing the rudder angle, to avoid duplicates.
+        /// </summary>
+        public bool UseRudderAngle
+        {
+            get;
+            set;
+        }
 
         private void SeatalkMessageReceived(SeatalkMessage stalk)
         {
@@ -88,8 +99,11 @@ namespace Iot.Device.Seatalk1
                 if (SentencesToTranslate.Contains(RudderSensorAngle.Id) || SentencesToTranslate.Contains(SentenceId.Any))
                 {
                     var angle = apStatus.RudderPosition;
-                    var rsa = new RudderSensorAngle(angle, null);
-                    DispatchSentenceEvents(rsa);
+                    if (UseRudderAngle)
+                    {
+                        var rsa = new RudderSensorAngle(angle, null);
+                        DispatchSentenceEvents(rsa);
+                    }
                 }
             }
         }

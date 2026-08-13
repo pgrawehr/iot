@@ -24,6 +24,7 @@ namespace Iot.Device.Nmea0183.Sentences
         VolvoPenta = 174,
         HondaMarine = 175,
         Garmin = 229,
+        BepMarine2 = 295,
         Icom = 315,
         BandG = 381,
         FusionElectronics = 419,
