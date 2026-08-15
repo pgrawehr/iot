@@ -105,7 +105,38 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             string manufacturer = WriteManufacturerAndIndustryToHex(ManufacturerCode.BepMarine2, IndustryCode.Marine);
             string instance = WriteByteToHex(_dipSwitch);
-            return base.ToNmeaParameterList() + manufacturer + instance + "00000000E0";
+            string channelStates = WriteChannelStates();
+            return base.ToNmeaParameterList() + manufacturer + instance + channelStates + "000000E0";
+        }
+
+        private string WriteChannelStates()
+        {
+            // Generates one byte for the state of channels 0-3 (the YDCC-04 which I was able to simulate has only 4 channels)
+            byte result = 0;
+            if (_switches[0] == SwitchStatus.On)
+            {
+                // There are 2 bits per channel for the state, but I don't know what the other values mean.
+                // Probably this is actually an OFF_ON enumeration (in which case the values 2 and 3 have no
+                // known meaning)
+                result = 1;
+            }
+
+            if (_switches[1] == SwitchStatus.On)
+            {
+                result |= 4;
+            }
+
+            if (_switches[2] == SwitchStatus.On)
+            {
+                result |= 0x10;
+            }
+
+            if (_switches[3] == SwitchStatus.On)
+            {
+                result |= 0x40;
+            }
+
+            return WriteByteToHex(result);
         }
 
         /// <summary>

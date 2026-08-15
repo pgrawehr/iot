@@ -13,13 +13,14 @@ using Microsoft.Extensions.Logging;
 using UnitsNet;
 using UnitsNet.Units;
 
-namespace Iot.Device.Gps.NeoM8Samples
+namespace Iot.Device.Nmea0183.Samples
 {
     internal class Program
     {
         private AutopilotStatus _currentAutopilotStatus = AutopilotStatus.Offline;
         private Angle _currentDesiredHeading = Angle.FromDegrees(110);
         private Angle _currentDesiredWindAngle = Angle.FromDegrees(350);
+        private Dictionary<int, SwitchStatus> _switches = new Dictionary<int, SwitchStatus>();
 
         public static void Main(string[] args)
         {
@@ -242,6 +243,10 @@ namespace Iot.Device.Gps.NeoM8Samples
 
                     bool exit = false;
                     int loop = 0;
+                    _switches[0] = SwitchStatus.Off;
+                    _switches[1] = SwitchStatus.On;
+                    _switches[2] = SwitchStatus.Off;
+                    _switches[3] = SwitchStatus.Off;
                     while (!exit && !closed)
                     {
                         Thread.Sleep(500);
@@ -258,13 +263,13 @@ namespace Iot.Device.Gps.NeoM8Samples
                         }
 
                         byte dipswitch = 0x2;
-                        var switchStatus = new BinarySwitchStatus(dipswitch);
+                        var switchStatus = new BinarySwitchStatus(dipswitch, _switches);
                         client.SendSentence(switchStatus);
                         Thread.Sleep(100);
-                        var switchStatus2 = new CzoneChannelState(dipswitch);
+                        var switchStatus2 = new CzoneChannelState(dipswitch, _switches);
                         client.SendSentence(switchStatus2);
                         Thread.Sleep(100);
-                        var switchStatus3 = new CzoneCircuitStatus(dipswitch);
+                        var switchStatus3 = new CzoneCircuitStatus(dipswitch, _switches);
                         client.SendSentence(switchStatus3);
                         ////Thread.Sleep(100);
                         ////var switchStatus4 = new CzoneModuleAnnounce(0x40);

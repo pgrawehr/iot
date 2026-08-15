@@ -100,7 +100,31 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             string manufacturer = WriteManufacturerAndIndustryToHex(ManufacturerCode.BepMarine2, IndustryCode.Marine);
             string instance = WriteByteToHex(_dipSwitch);
-            return base.ToNmeaParameterList() + manufacturer + instance + "0F00000000";
+            string circuitStatusType = WriteByteToHex(0x0F);
+            byte stateBitmap = 0; // This is a 32-bit value with one bit per channel.
+            // This information seems redundant to CzoneChannelState. I don't know yet what the difference is.
+            if (_switches[0] == SwitchStatus.On)
+            {
+                stateBitmap = 1;
+            }
+
+            if (_switches[1] == SwitchStatus.On)
+            {
+                stateBitmap |= 2;
+            }
+
+            if (_switches[2] == SwitchStatus.On)
+            {
+                stateBitmap |= 4;
+            }
+
+            if (_switches[3] == SwitchStatus.On)
+            {
+                stateBitmap |= 8;
+            }
+
+            string stateBitmapString = WriteByteToHex(stateBitmap);
+            return base.ToNmeaParameterList() + manufacturer + instance + circuitStatusType + stateBitmapString + "000000";
         }
 
         /// <summary>
