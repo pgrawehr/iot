@@ -86,6 +86,8 @@ namespace Iot.Device.Nmea0183
                     new FieldDeclaration(4, 2, "Target Wind Angle", null),
                     new FieldDeclaration(5, 2, "Actual Wind Angle", null),
                 }));
+            s_data.Add(CzoneCircuitControl.HexId, new Nmea2000PgnDeclaration(CzoneCircuitControl.HexId, "CZone Circuit Control",
+                3, 8, false, false));
         }
 
         /// <summary>

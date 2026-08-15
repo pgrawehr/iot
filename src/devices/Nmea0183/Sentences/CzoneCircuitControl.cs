@@ -12,16 +12,17 @@ using Iot.Device.Common;
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
-    /// Represents the state of an array of on/off switches.
+    /// Sent by the plotter to toggle the state of a switch on a CZone board.
     /// </summary>
-    public sealed class CzoneModuleAnnounce : Nmea2000PackedMessage
+    public sealed class CzoneCircuitControl : Nmea2000PackedMessage
     {
         private readonly byte _dipSwitch;
+        private string _payload; // Temporarily store the payload for later use
 
         /// <summary>
         /// Hexadecimal identifier for this message
         /// </summary>
-        public const int HexId = 0xFF0A;
+        public const int HexId = 0xFF00;
 
         /// <summary>
         /// The Dip switch value for this board. Default for the first board is 0x80.
@@ -35,10 +36,10 @@ namespace Iot.Device.Nmea0183.Sentences
         /// Creates an empty instance of this class. Can be updated later.
         /// </summary>
         /// <param name="dipSwitch">Dip switch value for this board (0-252)</param>
-        public CzoneModuleAnnounce(byte dipSwitch)
+        public CzoneCircuitControl(byte dipSwitch)
         {
             _dipSwitch = dipSwitch;
-            Valid = true;
+            _payload = string.Empty;
         }
 
         /// <summary>
@@ -46,7 +47,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         /// <param name="sentence">The sentence</param>
         /// <param name="time">The current time</param>
-        public CzoneModuleAnnounce(TalkerSentence sentence, DateTimeOffset time)
+        public CzoneCircuitControl(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
@@ -57,7 +58,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <param name="talkerId">The source talker id</param>
         /// <param name="fields">The parameters</param>
         /// <param name="time">The current time</param>
-        public CzoneModuleAnnounce(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+        public CzoneCircuitControl(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
@@ -66,11 +67,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
-            if (ReadByteFromHexString(data, 14, out byte b))
-            {
-                _dipSwitch = b;
-            }
-
+            _payload = data;
             Valid = true;
         }
 
@@ -79,13 +76,13 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             string manufacturer = WriteManufacturerAndIndustryToHex(ManufacturerCode.BepMarine2, IndustryCode.Marine);
             string instance = WriteByteToHex(_dipSwitch);
-            return base.ToNmeaParameterList() + manufacturer + "A1F7030000" + instance;
+            return base.ToNmeaParameterList() + _payload;
         }
 
         /// <inheritdoc/>
         public override string ToReadableContent()
         {
-            return "Switch status";
+            return $"Switch control message: {_payload}";
         }
 
         /// <inheritdoc/>

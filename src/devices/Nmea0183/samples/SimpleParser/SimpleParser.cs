@@ -224,7 +224,7 @@ namespace Iot.Device.Gps.NeoM8Samples
         {
             try
             {
-                using (NmeaTcpClient client = new NmeaTcpClient("Switch", "192.168.116.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Switch", "192.168.231.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");
@@ -257,16 +257,17 @@ namespace Iot.Device.Gps.NeoM8Samples
                             }
                         }
 
-                        var switchStatus = new BinarySwitchStatus(0x80);
+                        byte dipswitch = 0x2;
+                        var switchStatus = new BinarySwitchStatus(dipswitch);
                         client.SendSentence(switchStatus);
                         Thread.Sleep(100);
-                        var switchStatus2 = new CzoneChannelState(0x80);
+                        var switchStatus2 = new CzoneChannelState(dipswitch);
                         client.SendSentence(switchStatus2);
                         Thread.Sleep(100);
-                        var switchStatus3 = new CzoneCircuitStatus(0x80);
+                        var switchStatus3 = new CzoneCircuitStatus(dipswitch);
                         client.SendSentence(switchStatus3);
                         ////Thread.Sleep(100);
-                        ////var switchStatus4 = new CzoneModuleAnnounce(0x80);
+                        ////var switchStatus4 = new CzoneModuleAnnounce(0x40);
                         ////client.SendSentence(switchStatus4);
                     }
                 }
@@ -277,8 +278,17 @@ namespace Iot.Device.Gps.NeoM8Samples
             }
         }
 
-        private void ParserOnNewSequenceForSwitch(NmeaSinkAndSource arg1, NmeaSentence arg2)
+        private void ParserOnNewSequenceForSwitch(NmeaSinkAndSource source, NmeaSentence sentence)
         {
+            if (sentence is GroupFunctionMessage gf)
+            {
+                Console.WriteLine($"Found a GroupFunctionMessage: {gf.ToReadableContent()}");
+            }
+
+            if (sentence is CzoneCircuitControl cc)
+            {
+                Console.WriteLine($"Found a CzoneCircuitControl: {cc.ToReadableContent()}");
+            }
         }
 
         private void Client_OnOnParserError(NmeaSinkAndSource arg1, string arg2, NmeaError arg3)

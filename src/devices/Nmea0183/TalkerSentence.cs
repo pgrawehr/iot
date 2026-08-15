@@ -67,6 +67,7 @@ namespace Iot.Device.Nmea0183
                         return new GroupFunctionMessage(sentence, time);
                     }
 
+                    // Todo: For proprietary messages, we need to also check the manufacturer/industry bytes
                     switch (msgid)
                     {
                         case SeaSmartEngineFast.HexId:
@@ -87,6 +88,8 @@ namespace Iot.Device.Nmea0183
                             return new SeatalkNgPilotConfigurationValue(sentence, time);
                         case Rudder.HexId:
                             return new Rudder(sentence, time);
+                        case CzoneCircuitControl.HexId:
+                            return new CzoneCircuitControl(sentence, time);
                     }
                 }
 
