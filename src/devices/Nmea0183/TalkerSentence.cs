@@ -90,6 +90,12 @@ namespace Iot.Device.Nmea0183
                             return new Rudder(sentence, time);
                         case CzoneCircuitControl.HexId:
                             return new CzoneCircuitControl(sentence, time);
+                        case CzoneModuleAnnounce.HexId:
+                            return new CzoneModuleAnnounce(sentence, time);
+                        case CzoneChannelState.HexId:
+                            return new CzoneChannelState(sentence, time);
+                        case CzoneCircuitStatus.HexId:
+                            return new CzoneCircuitStatus(sentence, time);
                     }
                 }
 

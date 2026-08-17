@@ -466,5 +466,35 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.False(decoded is RawSentence);
             Assert.True(decoded is Nmea2000PackedMessage);
         }
+
+        [Theory]
+        [InlineData(260001)]
+        [InlineData(260002)]
+        public void CzoneModuleAnnounceMessageRoundtrip(uint serialNumber)
+        {
+            var original = new CzoneModuleAnnounce(serialNumber, 0x40);
+            Assert.Equal(serialNumber, original.SerialNumber);
+
+            string sentenceText = original.ToNmeaMessage();
+            if (serialNumber == 260001)
+            {
+                // Verify exactly the expected output for this known serial number
+                Assert.Equal("$PCDIN,00FF0A,00000000,00,2799A1F703000040*22", sentenceText);
+            }
+
+            var sentence = TalkerSentence.FromSentenceString(sentenceText, out var error);
+
+            Assert.Equal(NmeaError.None, error);
+            Assert.NotNull(sentence);
+
+            DateTimeOffset lastPacketTime = DateTimeOffset.MinValue;
+            var decoded = sentence!.TryGetTypedValue(ref lastPacketTime);
+            var roundtrip = Assert.IsType<CzoneModuleAnnounce>(decoded);
+
+            Assert.Equal(original.Identifier, roundtrip.Identifier);
+            Assert.Equal(original.DipSwitch, roundtrip.DipSwitch);
+            Assert.Equal(original.ToNmeaParameterList(), roundtrip.ToNmeaParameterList());
+            Assert.Equal(original.SerialNumber, roundtrip.SerialNumber);
+        }
     }
 }

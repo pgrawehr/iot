@@ -32,9 +32,9 @@ namespace Iot.Device.Nmea0183
         private Angle? _currentDesiredAwa;
         private Angle _currentHeading;
 
-        public string Nmea2000Source { get; }
+        public string? Nmea2000Source { get; }
 
-        public Nmea2000AutopilotEmulator(string interfaceName, string nmea2000Source)
+        public Nmea2000AutopilotEmulator(string interfaceName, string? nmea2000Source)
             : base(interfaceName)
         {
             Nmea2000Source = nmea2000Source;
@@ -60,7 +60,7 @@ namespace Iot.Device.Nmea0183
         public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             // We received a sentence, check if we can handle it
-            if (source.InterfaceName == Nmea2000Source)
+            if (Nmea2000Source == null || source.InterfaceName == Nmea2000Source)
             {
                 // We received something from the NMEA2000 interface.
                 if (sentence is GroupFunctionMessage gf)

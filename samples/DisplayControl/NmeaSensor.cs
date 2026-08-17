@@ -37,11 +37,13 @@ namespace DisplayControl
         // This is a wifi connection that allows sending/receiving NMEA2000 messages as raw
         private const string Nmea2000 = "Ydwg";
         private const string AutopilotEmulator = "ApEmulator";
+        private const string VirtualButtons = "VirtualButtons";
 
         private readonly MeasurementManager _manager;
         private readonly bool _hasPlotter;
         private readonly double _logCorrectionFactor;
         private int _engineDataIterations = 0;
+        private IPAddress _lastWorkingNmea2000Ip = null;
 
         /// <summary>
         /// This connects to the ship network (via UART-to-NMEA2000 bridge)
@@ -126,6 +128,7 @@ namespace DisplayControl
         private readonly CustomData<bool> _ydwgOnline;
         private readonly CustomData<string> _currentDestinationWaypoint;
         private NmeaSentence m_lastMessageFromHandheld;
+        private Nmea2000VirtualButtons _virtualButtons;
 
         public NmeaSensor(MeasurementManager manager, bool hasPlotter, double logCorrectionFactor)
         {
@@ -188,14 +191,17 @@ namespace DisplayControl
 
         public SensorMeasurement AisDataUpdateTrigger => _aisTrigger;
 
+        public event Action<int, SwitchStatus> VirtualButtonPressed;
+
         public bool HandheldOffline => m_lastMessageFromHandheld == null || m_lastMessageFromHandheld.Age > TimeSpan.FromSeconds(10);
 
         private void ConstructNmea2000Rules(IList<FilterRule> rules)
         {
-            // For now, only the autopilot emulator shall see these
-            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>() { AutopilotEmulator }, false, false));
+            // For now, only the specific NMEA2000 components shall see these
+            rules.Add(new FilterRule(Nmea2000, TalkerId.Any, SentenceId.Any, new List<string>() { AutopilotEmulator, VirtualButtons }, false, false));
             // Commands from the emulator go only to NMEA2000
             rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, Nmea2000PackedMessage.Id, new List<string>() { Nmea2000 }, false, false));
+            rules.Add(new FilterRule(VirtualButtons, TalkerId.Any, Nmea2000PackedMessage.Id, new List<string>() { Nmea2000 }, false, false));
             rules.Add(new FilterRule("*", TalkerId.Any, HeadingAndTrackControlStatus.Id,
                 new List<string>() { AutopilotEmulator }, false, true));
             rules.Add(new FilterRule("*", TalkerId.Any, WindSpeedAndAngle.Id,
@@ -203,6 +209,7 @@ namespace DisplayControl
             rules.Add(new FilterRule("*", TalkerId.Any, HeadingMagnetic.Id,
                 new List<string>() { AutopilotEmulator }, false, true));
             rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, HeadingAndTrackControl.Id, new List<string>() { Seatalk1Name }, false, true));
+            rules.Add(new FilterRule(VirtualButtons, TalkerId.Any, SentenceId.Any, new List<string>() { Nmea2000 }, false, true));
         }
 
         /// <summary>
@@ -632,12 +639,14 @@ namespace DisplayControl
 
             _rawNmea2000 = new NmeaTcpClient(Nmea2000, () =>
             {
-                IPAddress found = Task.Run(() => Nmea2000YdwgParser.FindCompatibleDevice("YDWG", _logger)).Result;
+                IPAddress found = Task.Run(() => Nmea2000YdwgParser.FindCompatibleDevice("YDWG", _lastWorkingNmea2000Ip, _logger)).Result;
                 if (found == null)
                 {
+                    _lastWorkingNmea2000Ip = null;
                     return (string.Empty, 1457);
                 }
 
+                _lastWorkingNmea2000Ip = found;
                 return (found.ToString(), 1457);
             }, new Nmea2000YdwgParserFactory());
             _rawNmea2000.RetryInterval = TimeSpan.FromSeconds(30);
@@ -661,11 +670,15 @@ namespace DisplayControl
 
             _autopilotEmulator = new Nmea2000AutopilotEmulator(AutopilotEmulator, _rawNmea2000.InterfaceName);
 
+            _virtualButtons = new Nmea2000VirtualButtons(VirtualButtons, Nmea2000, 2, 5);
+            _virtualButtons.SwitchStatusChanged += (idx, status) => VirtualButtonPressed?.Invoke(idx, status);
+
             _udpServer.StartDecode();
             _openCpnServer.StartDecode();
             _seatalkPort.StartDecode();
             _rawNmea2000.StartDecode();
             _autopilotEmulator.StartDecode();
+            _virtualButtons.StartDecode();
 
             _parserHandheldInterface.StartDecode();
             _parserForwardInterface.StartDecode();
@@ -691,6 +704,7 @@ namespace DisplayControl
             _router.AddEndPoint(_seatalkPort);
             _router.AddEndPoint(_rawNmea2000);
             _router.AddEndPoint(_autopilotEmulator);
+            _router.AddEndPoint(_virtualButtons);
 
             _router.OnNewSequence += ParserOnNewSequence;
             var ruleList = _hasPlotter ? ConstructRulesWithPlotter() : ConstructRulesWithoutPlotter();
@@ -1187,6 +1201,9 @@ namespace DisplayControl
 
             _autopilotEmulator?.StopDecode();
             _autopilotEmulator?.Dispose();
+
+            _virtualButtons?.StopDecode();
+            _virtualButtons?.Dispose();
 
             _autopilot?.Dispose();
             _autopilot = null;

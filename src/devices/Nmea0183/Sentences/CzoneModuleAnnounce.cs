@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -16,6 +17,11 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public sealed class CzoneModuleAnnounce : Nmea2000PackedMessage
     {
+        /// <summary>
+        /// The serial number to announce.
+        /// </summary>
+        public uint SerialNumber { get; }
+
         private readonly byte _dipSwitch;
 
         /// <summary>
@@ -34,9 +40,11 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Creates an empty instance of this class. Can be updated later.
         /// </summary>
+        /// <param name="serialNumber">Serial number, see comments on <see cref="Nmea2000VirtualButtons.Init"/></param>
         /// <param name="dipSwitch">Dip switch value for this board (0-252)</param>
-        public CzoneModuleAnnounce(byte dipSwitch)
+        public CzoneModuleAnnounce(uint serialNumber, byte dipSwitch)
         {
+            SerialNumber = serialNumber;
             _dipSwitch = dipSwitch;
             Valid = true;
         }
@@ -71,6 +79,11 @@ namespace Iot.Device.Nmea0183.Sentences
                 _dipSwitch = b;
             }
 
+            if (ReadUintFromHexString(data, 4, out uint v))
+            {
+                SerialNumber = v & 0xFFFFF; // 20 bits
+            }
+
             Valid = true;
         }
 
@@ -79,13 +92,18 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             string manufacturer = WriteManufacturerAndIndustryToHex(ManufacturerCode.BepMarine2, IndustryCode.Marine);
             string instance = WriteByteToHex(_dipSwitch);
-            return base.ToNmeaParameterList() + manufacturer + "A1F7030000" + instance;
+            // The serial number is a 20-bit value, but we need to format it as a 6-character hex string, then rearrange the bytes for the NMEA sentence.
+            // for now, we don't need the last 4 bits, so it stays 0
+            var serial = SerialNumber.ToString("X6", CultureInfo.InvariantCulture);
+            serial = serial.Substring(4, 2) + serial.Substring(2, 2) + serial.Substring(0, 2);
+
+            return base.ToNmeaParameterList() + manufacturer + serial + "0000" + instance;
         }
 
         /// <inheritdoc/>
         public override string ToReadableContent()
         {
-            return "Switch status";
+            return $"CZone Module Announce: {Identifier} for Dip {_dipSwitch}";
         }
 
         /// <inheritdoc/>

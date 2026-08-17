@@ -94,6 +94,8 @@ namespace DisplayControl
 
         public event Action<int> AisTargetsUpdated;
 
+        public event Action<int, SwitchStatus> VirtualButtonPressed;
+
         public GpioController Controller { get; }
 
         public List<SensorMeasurement> SensorValueSources => _sensorManager.Measurements();
@@ -265,6 +267,7 @@ namespace DisplayControl
             var logSensorCorrectionFactor = new PersistentDouble(_configFile, "LogCorrectionFactor", 0.862, TimeSpan.Zero);
             _nmeaSensor = new NmeaSensor(_sensorManager, hasPlotter.Value, logSensorCorrectionFactor.Value);
             _nmeaSensor.Initialize(_fusionEngine, _imuSensor);
+            _nmeaSensor.VirtualButtonPressed += (x, y) => VirtualButtonPressed?.Invoke(x, y);
 
             WriteLineToConsoleAndDisplay("Motor...");
             _engine = new EngineSurveillance(_sensorManager, 9);

@@ -17,7 +17,6 @@ namespace Iot.Device.Nmea0183.Sentences
     public sealed class CzoneCircuitControl : Nmea2000PackedMessage
     {
         private ushort _rawChannel;
-        private string _payload; // Temporarily store the payload for later use
 
         /// <summary>
         /// Hexadecimal identifier for this message
@@ -25,7 +24,7 @@ namespace Iot.Device.Nmea0183.Sentences
         public const int HexId = 0xFF00;
 
         /// <inheritdoc/>
-        public override bool ReplacesOlderInstance => true;
+        public override bool ReplacesOlderInstance => false;
 
         /// <summary>
         /// Manufacturer code. For this message, this should be Bep Marine 2 (295)
@@ -69,6 +68,13 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             get
             {
+                // Can't be negative. Should preferably throw here, but since this
+                // can also happen due to corrupted data, we handle it gracefully.
+                if (_rawChannel < ButtonOffset)
+                {
+                    return 0;
+                }
+
                 return _rawChannel - ButtonOffset;
             }
         }
@@ -83,7 +89,8 @@ namespace Iot.Device.Nmea0183.Sentences
             _rawChannel = rawchannel;
             ButtonOffset = offset;
             NewStatus = newStatus;
-            _payload = string.Empty;
+            Manufacturer = ManufacturerCode.BepMarine2;
+            Industry = IndustryCode.Marine;
         }
 
         /// <summary>
@@ -138,14 +145,13 @@ namespace Iot.Device.Nmea0183.Sentences
                 }
             }
 
-            _payload = data;
             Valid = true;
         }
 
         /// <inheritdoc/>
         public override string ToNmeaParameterList()
         {
-            string manufacturer = WriteManufacturerAndIndustryToHex(ManufacturerCode.BepMarine2, IndustryCode.Marine);
+            string manufacturer = WriteManufacturerAndIndustryToHex(Manufacturer, Industry);
             string channel = WriteUshortToHex(_rawChannel);
             string status = NewStatus switch
             {
@@ -160,7 +166,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <inheritdoc/>
         public override string ToReadableContent()
         {
-            return $"Switch control message: {_payload}";
+            return $"Switch control message: Button {Channel} set to {NewStatus}";
         }
 
         /// <inheritdoc/>

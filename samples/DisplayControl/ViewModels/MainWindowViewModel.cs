@@ -10,6 +10,7 @@ using Avalonia.Media;
 using DynamicData;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Ais;
+using Iot.Device.Nmea0183.Sentences;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using ReactiveUI;
@@ -67,6 +68,7 @@ namespace DisplayControl.ViewModels
 
             UpdateVisibleModels();
             DataContainer.AisTargetsUpdated += UpdateTargets;
+            DataContainer.VirtualButtonPressed += OnVirtualButtonPressed;
         }
 
         public event Action DoClose;
@@ -598,6 +600,15 @@ namespace DisplayControl.ViewModels
         {
             Size = size;
             ClientHeight = _size.Height - reduceBy;
+        }
+
+        public void OnVirtualButtonPressed(int buttonNo, SwitchStatus newStatus)
+        {
+            if (buttonNo == 1)
+            {
+                // AIS warnings enable/disable
+                SuppressAisWarnings = newStatus == SwitchStatus.On;
+            }
         }
     }
 }

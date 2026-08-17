@@ -432,16 +432,22 @@ namespace Iot.Device.Nmea0183
         /// <param name="identifier">The name of the device.
         /// For YDWG-03, the string is "YDWG", other devices like the YDEN-02 and YDNR-02
         /// should work as well, but have not been tested and their identification string is uncertain</param>
+        /// <param name="preferred">Try this one first</param>
         /// <param name="logger">Optional logger</param>
         /// <returns>The IP address of the first device or null if none was found</returns>
         /// <remarks>
         /// This only tests for the presence of the device, it does not check which ports are available
         /// and how it is configured.
         /// </remarks>
-        public static async Task<IPAddress?> FindCompatibleDevice(string identifier, ILogger? logger = null)
+        public static async Task<IPAddress?> FindCompatibleDevice(string identifier, IPAddress? preferred, ILogger? logger = null)
         {
             var interf = NetworkServiceSearcher.GetPrimaryNetworkInterface();
             var list = NetworkServiceSearcher.GetAllValidAddressesInSubnet(interf.Address, interf.Mask);
+            if (preferred != null)
+            {
+                list.Insert(0, preferred);
+            }
+
             using (var client = new HttpClient())
             {
                 foreach (var candidate in list)

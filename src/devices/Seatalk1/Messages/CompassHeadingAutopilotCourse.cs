@@ -104,10 +104,6 @@ namespace Iot.Device.Seatalk1.Messages
             {
                 Logger.LogWarning($"Unknown autopilot status byte {data[4]}");
             }
-            else
-            {
-                Logger.LogInformation($"Current autopilot status: {status}. Measured current heading: {headingA}. Desired heading: {ret.AutoPilotCourse}");
-            }
 
             return ret;
         }
