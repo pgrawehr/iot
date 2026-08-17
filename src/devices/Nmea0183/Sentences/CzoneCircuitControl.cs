@@ -16,7 +16,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// </summary>
     public sealed class CzoneCircuitControl : Nmea2000PackedMessage
     {
-        private readonly byte _dipSwitch;
+        private ushort _rawChannel;
         private string _payload; // Temporarily store the payload for later use
 
         /// <summary>
@@ -24,21 +24,65 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         public const int HexId = 0xFF00;
 
-        /// <summary>
-        /// The Dip switch value for this board. Default for the first board is 0x80.
-        /// </summary>
-        public byte DipSwitch => _dipSwitch;
-
         /// <inheritdoc/>
         public override bool ReplacesOlderInstance => true;
 
         /// <summary>
-        /// Creates an empty instance of this class. Can be updated later.
+        /// Manufacturer code. For this message, this should be Bep Marine 2 (295)
         /// </summary>
-        /// <param name="dipSwitch">Dip switch value for this board (0-252)</param>
-        public CzoneCircuitControl(byte dipSwitch)
+        public ManufacturerCode Manufacturer
         {
-            _dipSwitch = dipSwitch;
+            get;
+        }
+
+        /// <summary>
+        /// Industry code. For this message, this should be Marine (4)
+        /// </summary>
+        public IndustryCode Industry
+        {
+            get;
+        }
+
+        /// <summary>
+        /// The offset between reported channel numbers and the actual channel number.
+        /// I don't know why this is the case, but when button 1 is pressed, a message about channel 5 is seen.
+        /// </summary>
+        public ushort ButtonOffset
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// What should happen to the switch.
+        /// </summary>
+        public SwitchStatus NewStatus
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// The channel that was toggled. Corrected with the offset, if properly supplied.
+        /// </summary>
+        public int Channel
+        {
+            get
+            {
+                return _rawChannel - ButtonOffset;
+            }
+        }
+
+        /// <summary>
+        /// Creates an instance of this class to trigger a particular switch.
+        /// </summary>
+        public CzoneCircuitControl(ushort rawchannel, ushort offset, SwitchStatus newStatus)
+        {
+            // For some reason, I saw this message sending the channel number + 5, meaning
+            // when button 1 was pressed, a message about channel 5 is seen.
+            _rawChannel = rawchannel;
+            ButtonOffset = offset;
+            NewStatus = newStatus;
             _payload = string.Empty;
         }
 
@@ -67,6 +111,33 @@ namespace Iot.Device.Nmea0183.Sentences
 
             string data = ReadString(field);
 
+            if (ReadManufacturerAndIndustryFromHexString(data, 0, out var manufacturer, out var industry))
+            {
+                Manufacturer = manufacturer;
+                Industry = industry;
+            }
+
+            if (ReadByteFromHexString(data, 4, out var rawChannel))
+            {
+                _rawChannel = rawChannel;
+            }
+
+            if (ReadByteFromHexString(data, 12, out byte b))
+            {
+                if (b == 0xF1)
+                {
+                    NewStatus = SwitchStatus.On;
+                }
+                else if (b == 0xF2)
+                {
+                    NewStatus = SwitchStatus.Off;
+                }
+                else
+                {
+                    NewStatus = SwitchStatus.NoAction;
+                }
+            }
+
             _payload = data;
             Valid = true;
         }
@@ -75,8 +146,15 @@ namespace Iot.Device.Nmea0183.Sentences
         public override string ToNmeaParameterList()
         {
             string manufacturer = WriteManufacturerAndIndustryToHex(ManufacturerCode.BepMarine2, IndustryCode.Marine);
-            string instance = WriteByteToHex(_dipSwitch);
-            return base.ToNmeaParameterList() + _payload;
+            string channel = WriteUshortToHex(_rawChannel);
+            string status = NewStatus switch
+            {
+                SwitchStatus.On => WriteByteToHex(0xF1),
+                SwitchStatus.Off => WriteByteToHex(0xF2),
+                _ => WriteByteToHex(4),
+            };
+
+            return base.ToNmeaParameterList() + manufacturer + channel + "00C8" + status + "00";
         }
 
         /// <inheritdoc/>

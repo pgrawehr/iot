@@ -225,7 +225,7 @@ namespace Iot.Device.Nmea0183.Samples
         {
             try
             {
-                using (NmeaTcpClient client = new NmeaTcpClient("Switch", "192.168.231.50", 1457, new Nmea2000YdwgParserFactory()))
+                using (NmeaTcpClient client = new NmeaTcpClient("Switch", "192.168.101.50", 1457, new Nmea2000YdwgParserFactory()))
                 {
                     bool closed = false;
                     Console.WriteLine("Connected!");
@@ -244,7 +244,7 @@ namespace Iot.Device.Nmea0183.Samples
                     bool exit = false;
                     int loop = 0;
                     _switches[0] = SwitchStatus.Off;
-                    _switches[1] = SwitchStatus.On;
+                    _switches[1] = SwitchStatus.Off;
                     _switches[2] = SwitchStatus.Off;
                     _switches[3] = SwitchStatus.Off;
                     while (!exit && !closed)
@@ -258,6 +258,18 @@ namespace Iot.Device.Nmea0183.Samples
                             {
                                 case ConsoleKey.Q:
                                     exit = true;
+                                    break;
+                                case ConsoleKey.D1:
+                                    _switches[0] = _switches[0] == SwitchStatus.On ? SwitchStatus.Off : SwitchStatus.On;
+                                    break;
+                                case ConsoleKey.D2:
+                                    _switches[1] = _switches[1] == SwitchStatus.On ? SwitchStatus.Off : SwitchStatus.On;
+                                    break;
+                                case ConsoleKey.D3:
+                                    _switches[2] = _switches[2] == SwitchStatus.On ? SwitchStatus.Off : SwitchStatus.On;
+                                    break;
+                                case ConsoleKey.D4:
+                                    _switches[3] = _switches[3] == SwitchStatus.On ? SwitchStatus.Off : SwitchStatus.On;
                                     break;
                             }
                         }
@@ -293,6 +305,11 @@ namespace Iot.Device.Nmea0183.Samples
             if (sentence is CzoneCircuitControl cc)
             {
                 Console.WriteLine($"Found a CzoneCircuitControl: {cc.ToReadableContent()}");
+                cc.ButtonOffset = 5;
+                if (cc.NewStatus != SwitchStatus.NoAction)
+                {
+                    _switches[cc.Channel] = cc.NewStatus;
+                }
             }
         }
 
