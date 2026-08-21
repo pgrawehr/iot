@@ -670,7 +670,8 @@ namespace DisplayControl
 
             _autopilotEmulator = new Nmea2000AutopilotEmulator(AutopilotEmulator, _rawNmea2000.InterfaceName);
 
-            _virtualButtons = new Nmea2000VirtualButtons(VirtualButtons, Nmea2000, 2, 5);
+            _virtualButtons = new Nmea2000VirtualButtons(VirtualButtons, Nmea2000, 2, 5,
+                SwitchStatus.Off, SwitchStatus.On, SwitchStatus.Off, SwitchStatus.Off);
             _virtualButtons.SwitchStatusChanged += (idx, status) => VirtualButtonPressed?.Invoke(idx, status);
 
             _udpServer.StartDecode();
@@ -763,6 +764,11 @@ namespace DisplayControl
             _autopilot.Start();
 
             _logger.LogInformation("NMEA routing setup complete");
+        }
+
+        public void SetSwitchStatus(int channel, SwitchStatus status)
+        {
+            _virtualButtons.SetSwitchStatus(channel, status);
         }
 
         /// <summary>

@@ -85,6 +85,29 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <summary>
+        /// Externally change the staus of the given switch.
+        /// This will trigger a status change event, but only if the state actually changed8 (to prevent an event loop)
+        /// </summary>
+        /// <param name="channel">Channel to update (0-3)</param>
+        /// <param name="newStatus">The new status of the switch (on or off)</param>
+        /// <exception cref="ArgumentOutOfRangeException">Invalid channel number</exception>
+        public void SetSwitchStatus(int channel, SwitchStatus newStatus)
+        {
+            if (_switches.TryGetValue(channel, out var status))
+            {
+                if (status != newStatus)
+                {
+                    _switches[channel] = newStatus;
+                    SwitchStatusChanged?.Invoke(channel, newStatus);
+                }
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(channel), $"No such channel: {channel}");
+            }
+        }
+
+        /// <summary>
         /// Make the given serial number known to the plotter. It seems this command
         /// must be sent exactly once when the plotter is on. Repeating it causes a configuration error.
         /// There's some confusion about the dipswitch value, as it may need to be set to anything _but_ the

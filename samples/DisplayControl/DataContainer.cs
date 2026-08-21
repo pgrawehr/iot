@@ -1045,6 +1045,7 @@ namespace DisplayControl
             if (_arduino != null)
             {
                 _arduino.ForceTankSensorEnable = enable;
+                _nmeaSensor.SetSwitchStatus(0, enable ? SwitchStatus.On : SwitchStatus.Off);
             }
         }
 
@@ -1082,6 +1083,7 @@ namespace DisplayControl
             if (_nmeaSensor != null)
             {
                 _nmeaSensor.AisManger.TrackEstimationParameters.SuppressAllVesselWarnings = suppress;
+                _nmeaSensor.SetSwitchStatus(1, suppress ? SwitchStatus.Off : SwitchStatus.On);
             }
         }
 

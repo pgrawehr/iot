@@ -21,7 +21,7 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact(Skip = "Only passes if hardware is present")]
         public async Task SearchForDevice()
         {
-            var result = await Nmea2000YdwgParser.FindCompatibleDevice("YDWG");
+            var result = await Nmea2000YdwgParser.FindCompatibleDevice("YDWG", null);
             Assert.NotNull(result);
         }
 

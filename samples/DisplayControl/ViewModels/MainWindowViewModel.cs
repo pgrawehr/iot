@@ -213,6 +213,7 @@ namespace DisplayControl.ViewModels
             {
                 this.RaiseAndSetIfChanged(ref _forceTankSensorEnable, value);
                 this.RaisePropertyChanged(nameof(TankSensorText));
+                DataContainer.ForceTankSensorEnable(_forceTankSensorEnable);
             }
         }
 
@@ -227,6 +228,8 @@ namespace DisplayControl.ViewModels
                 this.RaiseAndSetIfChanged(ref _aisWarningsSuppressed, value);
                 this.RaisePropertyChanged(nameof(SuppressAisWarningText));
                 this.RaisePropertyChanged(nameof(AisTargetWarningsColor));
+                DataContainer.SuppressAisWarnings(_aisWarningsSuppressed);
+
             }
         }
 
@@ -446,13 +449,11 @@ namespace DisplayControl.ViewModels
         public void EnableDisableForceTankSensorEnable()
         {
             // Call operation first, because the property will update the gui and reflect the actual state
-            DataContainer.ForceTankSensorEnable(!ForceTankSensorEnable);
             ForceTankSensorEnable = !ForceTankSensorEnable;
         }
 
         public void EnableDisableAisTargetWarnings()
         {
-            DataContainer.SuppressAisWarnings(!SuppressAisWarnings);
             SuppressAisWarnings = !SuppressAisWarnings;
         }
 
@@ -604,10 +605,14 @@ namespace DisplayControl.ViewModels
 
         public void OnVirtualButtonPressed(int buttonNo, SwitchStatus newStatus)
         {
-            if (buttonNo == 1)
+            if (buttonNo == 0)
+            {
+                ForceTankSensorEnable = newStatus == SwitchStatus.On;
+            }
+            else if (buttonNo == 1)
             {
                 // AIS warnings enable/disable
-                SuppressAisWarnings = newStatus == SwitchStatus.On;
+                SuppressAisWarnings = newStatus == SwitchStatus.Off;
             }
         }
     }
