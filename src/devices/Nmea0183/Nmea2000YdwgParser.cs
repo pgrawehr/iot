@@ -244,12 +244,6 @@ namespace Iot.Device.Nmea0183
                 List<byte> fullSequence = new List<byte>(dataLength);
                 int srcIndex = 2;
 
-                // TEST CODE
-                if (allData[2] == 1 && allData[3] == 0x50 && allData[4] == 0xFF)
-                {
-                    Logger.LogWarning("Seen something that is probably going to be a heading change");
-                }
-
                 while (srcIndex < allData.Count)
                 {
                     fullSequence.Add(allData[srcIndex]);
@@ -448,10 +442,10 @@ namespace Iot.Device.Nmea0183
                 list.Insert(0, preferred);
             }
 
+            IPAddress? result = null;
             using (var client = new HttpClient())
             {
                 ParallelOptions po = new ParallelOptions() { MaxDegreeOfParallelism = 3 };
-                IPAddress? result = null;
                 object oneLock = new object();
                 await Parallel.ForEachAsync(list, po, async (candidate, token) =>
                 {
@@ -461,11 +455,6 @@ namespace Iot.Device.Nmea0183
                         {
                             return;
                         }
-                    }
-
-                    if (logger != null)
-                    {
-                        logger.LogInformation($"Trying {candidate}...");
                     }
 
                     if (await NetworkServiceSearcher.IsYachtDevicesInterface(client, candidate, logger, identifier))
@@ -478,7 +467,7 @@ namespace Iot.Device.Nmea0183
                 });
             }
 
-            return null;
+            return result;
         }
     }
 }

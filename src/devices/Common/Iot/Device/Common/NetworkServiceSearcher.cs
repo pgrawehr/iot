@@ -126,7 +126,7 @@ namespace Iot.Device.Common
             catch (Exception x) when (x is UnauthorizedAccessException or SocketException or OperationCanceledException
                                           or AggregateException or HttpRequestException)
             {
-                logger?.LogInformation($"Doesn't work: {x.Message}");
+                logger?.LogInformation($"{candidate} doesn't work: {x.Message}");
                 return false;
             }
             catch (Exception y)
