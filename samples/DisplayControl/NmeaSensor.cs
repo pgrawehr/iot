@@ -87,7 +87,7 @@ namespace DisplayControl
         private Angle? _magneticVariation;
         private Temperature? _lastTemperature;
         private RelativeHumidity? _lastHumidity;
-        private AutopilotController _autopilot;
+        private NavigationRefiner _autopilot;
         private SensorMeasurement _smoothedTrueWindSpeed;
         private SensorMeasurement _maxWindGusts;
         private SensorMeasurement _hdgFromHandheld;
@@ -665,7 +665,7 @@ namespace DisplayControl
             // The plotter seems to send RMB and BOD messages only about every 35 seconds, causing havoc in the AutopilotController,
             // because the messages are already discarded each time.
             _cache.MaxDataAge = TimeSpan.FromMinutes(1);
-            _autopilot = new AutopilotController(_router, _router, _cache);
+            _autopilot = new NavigationRefiner(_router, _router, _cache);
             _autopilot.NmeaSourceName = HandheldSourceName;
 
             _autopilotEmulator = new Nmea2000AutopilotEmulator(AutopilotEmulator, _rawNmea2000.InterfaceName);

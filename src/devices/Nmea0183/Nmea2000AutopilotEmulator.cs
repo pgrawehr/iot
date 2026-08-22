@@ -14,7 +14,7 @@ using UnitsNet.Units;
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
-    /// Allows translating the input/output of an <see cref="AutopilotController"/> to NMEA2000, so that
+    /// Allows translating the input/output of an <see cref="NavigationRefiner"/> to NMEA2000, so that
     /// the pilot can be controlled from there.
     /// This is for cases when the AP is on the NMEA0183 network and the keypad/plotter is NMEA2000.
     /// It currently emulates an EV1-type autopilot from Raymarine. Unfortunately, the protocol messages

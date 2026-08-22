@@ -127,7 +127,8 @@ namespace DisplayControl.ViewModels
                 var tcpa = relPos.TimeToClosestPointOfApproach(now);
                 if (tcpa.HasValue && tcpa.Value.Duration() < TimeSpan.FromDays(1))
                 {
-                    sb.AppendLine($"TCPA: {tcpa:hh:mm:ss} ");
+                    string tcpa1 = tcpa.Value.ToString("hh:mm:ss", CultureInfo.CurrentCulture);
+                    sb.AppendLine($"TCPA: {tcpa1} ");
                 }
 
                 sb.Append($"Status: {relPos.SafetyState}, Type: {_target.IdentifyMmsiType()}");

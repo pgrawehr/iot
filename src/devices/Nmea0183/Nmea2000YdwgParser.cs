@@ -450,8 +450,19 @@ namespace Iot.Device.Nmea0183
 
             using (var client = new HttpClient())
             {
-                foreach (var candidate in list)
+                ParallelOptions po = new ParallelOptions() { MaxDegreeOfParallelism = 3 };
+                IPAddress? result = null;
+                object oneLock = new object();
+                await Parallel.ForEachAsync(list, po, async (candidate, token) =>
                 {
+                    lock (oneLock)
+                    {
+                        if (result != null)
+                        {
+                            return;
+                        }
+                    }
+
                     if (logger != null)
                     {
                         logger.LogInformation($"Trying {candidate}...");
@@ -459,9 +470,12 @@ namespace Iot.Device.Nmea0183
 
                     if (await NetworkServiceSearcher.IsYachtDevicesInterface(client, candidate, logger, identifier))
                     {
-                        return candidate;
+                        lock (oneLock)
+                        {
+                            result = candidate;
+                        }
                     }
-                }
+                });
             }
 
             return null;

@@ -112,7 +112,7 @@ namespace Iot.Device.Common
         {
             try
             {
-                using CancellationTokenSource ts = new CancellationTokenSource(700);
+                using CancellationTokenSource ts = new CancellationTokenSource(1000);
                 var uri = new Uri($"http://{candidate.ToString()}/", UriKind.Absolute);
                 var reply = await client.GetAsync(uri, ts.Token);
                 // The header contains a single entry with the declaration "YDWG", which should

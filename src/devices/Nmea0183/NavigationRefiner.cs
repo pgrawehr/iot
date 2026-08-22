@@ -14,12 +14,13 @@ using UnitsNet;
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
-    /// This class controls an auto pilot, given an input and an output stream.
+    /// This class optimizes the navigation sequences, given an input and an output stream.
     /// Depending on the input, it either refines the sequences to a higher resolution (many navigation programs will e.g. only
     /// output XTE messages with a cross track error accuracy of 0.1nm, which is useless for precise navigation) or create the
     /// sequences based on input waypoints.
+    /// It can be used to control an autopilot, or to feed a display with more accurate navigation data.
     /// </summary>
-    public sealed class AutopilotController : IDisposable
+    public sealed class NavigationRefiner : IDisposable
     {
         // Every nth iteration log the output (i.e. no route. This will repeat frequently, since normally
         // a specific state rests for longer)
@@ -56,7 +57,7 @@ namespace Iot.Device.Nmea0183
         /// <param name="input">Input stream (GPS device and plotter)</param>
         /// <param name="output">Output stream (emits rmb, xte, vtg, bwc, bod)</param>
         /// <param name="cache">Sentence cache, optional</param>
-        public AutopilotController(NmeaSinkAndSource input, NmeaSinkAndSource output, SentenceCache? cache = null)
+        public NavigationRefiner(NmeaSinkAndSource input, NmeaSinkAndSource output, SentenceCache? cache = null)
         {
             _output = output;
             if (cache == null)

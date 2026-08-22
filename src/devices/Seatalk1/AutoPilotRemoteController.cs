@@ -30,6 +30,7 @@ namespace Iot.Device.Seatalk1
         private readonly SeatalkInterface _parentInterface;
         private readonly object _lock = new object();
         private readonly ILogger _logger;
+        private readonly AutoResetEvent _dataUpdated;
         private ConcurrentDictionary<AutopilotCalibrationParameter, AutopilotCalibrationParameterMessage> _calibrationParameters;
 
         private DateTime _lastUpdateTime = new DateTime(0);
@@ -52,6 +53,7 @@ namespace Iot.Device.Seatalk1
         internal AutoPilotRemoteController(SeatalkInterface parentInterface)
         {
             _logger = this.GetCurrentClassLogger();
+            _dataUpdated = new AutoResetEvent(false);
             _calibrationParameters = new();
             _parentInterface = parentInterface ?? throw new ArgumentNullException(nameof(parentInterface));
             _parentInterface.MessageReceived += AutopilotMessageInterpretation;
@@ -167,6 +169,7 @@ namespace Iot.Device.Seatalk1
                     }
 
                     Alarms = ch.Alarms;
+                    _dataUpdated.Set();
                 }
                 else if (obj is CompassHeadingAndRudderPosition rb)
                 {
@@ -456,6 +459,7 @@ namespace Iot.Device.Seatalk1
 
         private void DesiredAngleUpdater()
         {
+            Stopwatch sw = new Stopwatch();
             while (_cancellationTokenSource is { IsCancellationRequested: false })
             {
                 Angle newDesiredHeading;
@@ -466,6 +470,7 @@ namespace Iot.Device.Seatalk1
                     {
                         newDesiredHeading = _ourDesiredAngle.Value;
                         direction = _ourDesiredDirection;
+                        sw.Restart();
                     }
                     else
                     {
@@ -515,6 +520,8 @@ namespace Iot.Device.Seatalk1
                         break;
                     }
 
+                    // Typically wait for an update, or we overshoot here, in particular if the change was big.
+                    _dataUpdated.WaitOne(TimeSpan.FromMilliseconds(1000));
                     currentHeading1 = AutopilotDesiredHeading;
                     if (currentHeading1.HasValue == false)
                     {
@@ -530,8 +537,13 @@ namespace Iot.Device.Seatalk1
                     ret = _ourDesiredAngle.HasValue && AnglesAreClose(_ourDesiredAngle.Value, currentDesiredHeading);
                     if (ret)
                     {
-                        _logger.LogInformation($"Reached new desired course {_ourDesiredAngle.GetValueOrDefault()}");
+                        _logger.LogInformation($"Reached new desired course {_ourDesiredAngle.GetValueOrDefault()}. (Actually set is {currentDesiredHeading})");
                         _ourDesiredAngle = null; // Done
+                    }
+                    else if (_ourDesiredAngle.HasValue && sw.Elapsed > TimeSpan.FromSeconds(15))
+                    {
+                        _logger.LogWarning($"Aborting course change to {_ourDesiredAngle.GetValueOrDefault()} as it took to long. Current Value is {currentDesiredHeading}.");
+                        _ourDesiredAngle = null;
                     }
                 }
 
@@ -542,7 +554,7 @@ namespace Iot.Device.Seatalk1
 
         internal bool AnglesAreClose(Angle angle1, Angle angle2)
         {
-            return UnitMath.Abs(AngleExtensions.Difference(angle1, angle2)) < Angle.FromDegrees(1.0);
+            return UnitMath.Abs(AngleExtensions.Difference(angle1, angle2)) < Angle.FromDegrees(0.1);
         }
 
         /// <summary>
