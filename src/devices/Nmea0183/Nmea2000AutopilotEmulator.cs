@@ -14,7 +14,7 @@ using UnitsNet.Units;
 namespace Iot.Device.Nmea0183
 {
     /// <summary>
-    /// Allows translating the input/output of an <see cref="NavigationRefiner"/> to NMEA2000, so that
+    /// Allows translating the input/output of an NMEA0183/Seatalk1 Autopilot to NMEA2000, so that
     /// the pilot can be controlled from there.
     /// This is for cases when the AP is on the NMEA0183 network and the keypad/plotter is NMEA2000.
     /// It currently emulates an EV1-type autopilot from Raymarine. Unfortunately, the protocol messages
@@ -23,6 +23,7 @@ namespace Iot.Device.Nmea0183
     /// </summary>
     public sealed class Nmea2000AutopilotEmulator : NmeaSinkAndSource
     {
+        private readonly TimeSpan _defaultMessageTimeout = TimeSpan.FromSeconds(5);
         private readonly SentenceCache _sentencesCache;
         private int _messageCounter;
         private Thread? _updateThread;
@@ -204,6 +205,18 @@ namespace Iot.Device.Nmea0183
                     _currentAwa = wsa.Angle;
                 }
             }
+            else if (sentence is RudderSensorAngle rud)
+            {
+                _sentencesCache.Add(source, rud);
+            }
+            else if (sentence is RecommendedMinimumNavToDestination rmc)
+            {
+                _sentencesCache.Add(source, rmc);
+            }
+            else if (sentence is RecommendedMinimumNavigationInformation rmb)
+            {
+                _sentencesCache.Add(source, rmb);
+            }
         }
 
         private Angle NewWindAngle(Angle newAwa, Angle oldAwa)
@@ -217,16 +230,16 @@ namespace Iot.Device.Nmea0183
             while (!_cancellationTokenSource.IsCancellationRequested)
             {
                 if (_sentencesCache.TryGetLastSentence(HeadingAndTrackControlStatus.Id,
-                        out HeadingAndTrackControlStatus? st) && st.Age < TimeSpan.FromSeconds(5))
+                        out HeadingAndTrackControlStatus? st) && st.Age < _defaultMessageTimeout)
                 {
                     // NMEA0183 autopilot status available (and not outdated).
                     // Send out an NMEA2000 autopilot status
-                    if (_messageCounter % 3 == 0)
+                    if (_messageCounter % 4 == 0)
                     {
                         SeatalkNgPilotStatus pilotStatus = new SeatalkNgPilotStatus(st.PilotStatus);
                         DispatchSentenceEvents(pilotStatus);
                     }
-                    else if (_messageCounter % 3 == 1)
+                    else if (_messageCounter % 4 == 1)
                     {
                         if (_currentAutopilotStatus == AutopilotStatus.Wind)
                         {
@@ -238,17 +251,67 @@ namespace Iot.Device.Nmea0183
                         SeatalkNgPilotHeading pilotHeading = new SeatalkNgPilotHeading(null, st.ActualHeading);
                         DispatchSentenceEvents(pilotHeading);
                     }
-                    else
+                    else if (_messageCounter % 4 == 2)
                     {
                         SeatalkNgPilotLockedHeading
                             lockedHeading = new SeatalkNgPilotLockedHeading(null, st.DesiredHeading);
                         DispatchSentenceEvents(lockedHeading);
                     }
+                    else
+                    {
+                        Angle? actualRudderAngle = null;
+                        Angle? commandedRudderAngle = null;
+                        _sentencesCache.TryGetLastSentence(RudderSensorAngle.Id,
+                            out RudderSensorAngle? rudderSensorAngle);
+                        if (st.CommandedRudderAngle.HasValue)
+                        {
+                            commandedRudderAngle = st.CommandedRudderAngle.Value;
+                        }
+
+                        if (rudderSensorAngle != null && rudderSensorAngle.Age < _defaultMessageTimeout)
+                        {
+                            actualRudderAngle = rudderSensorAngle.Starboard;
+                        }
+
+                        // In the ideal case, both angles are already valid at that point, but with an ST-2000 we have
+                        // neither (because the hardware is missing an encoder)
+                        if (!commandedRudderAngle.HasValue)
+                        {
+                            if (_currentAutopilotStatus == AutopilotStatus.Auto ||
+                                _currentAutopilotStatus == AutopilotStatus.Wind)
+                            {
+                                Angle diff = AngleExtensions.Difference(st.DesiredHeading.GetValueOrDefault(),
+                                    st.ActualHeading.GetValueOrDefault());
+                                commandedRudderAngle = diff;
+                            }
+                            else
+                            {
+                                // Use difference between COG and BWP instead (also in track mode!)
+                                if (_sentencesCache.TryGetLastSentence(RecommendedMinimumNavToDestination.Id,
+                                        out RecommendedMinimumNavToDestination? rmb) && rmb.Age < _defaultMessageTimeout
+                                    && _sentencesCache.TryGetLastSentence(RecommendedMinimumNavigationInformation.Id,
+                                        out RecommendedMinimumNavigationInformation? rmc) && rmc.Age < _defaultMessageTimeout)
+                                {
+                                    Angle diff = AngleExtensions.Difference(rmb.BearingToWayPoint.GetValueOrDefault(), rmc.TrackMadeGoodInDegreesTrue);
+                                    commandedRudderAngle = diff;
+                                }
+                            }
+                        }
+
+                        // Another option for the actual angle would be to derive it from the turn speed.
+                        if (!actualRudderAngle.HasValue)
+                        {
+                            actualRudderAngle = commandedRudderAngle;
+                        }
+
+                        Rudder rudder = new Rudder(actualRudderAngle, commandedRudderAngle, TurnDirection.NoCommand, 0);
+                        DispatchSentenceEvents(rudder);
+                    }
 
                     _messageCounter++;
                 }
 
-                _cancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(200));
+                _cancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(150));
             }
         }
     }

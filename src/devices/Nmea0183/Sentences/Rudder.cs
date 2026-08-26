@@ -16,6 +16,7 @@ namespace Iot.Device.Nmea0183.Sentences
 {
     public class Rudder : Nmea2000PackedMessage
     {
+        private byte _directionOrder;
         public const int HexId = 0x1F10D;
         public override bool ReplacesOlderInstance => true;
 
@@ -44,13 +45,30 @@ namespace Iot.Device.Nmea0183.Sentences
         /// 2 = To port
         /// 7 = Unknown/Not set
         /// </summary>
-        public byte DirectionOrder
+        public TurnDirection DirectionOrder
         {
-            get;
-            set;
+            get
+            {
+                return _directionOrder switch
+                {
+                    0 => TurnDirection.NoCommand,
+                    1 => TurnDirection.TurnToStarboard,
+                    2 => TurnDirection.TurnToPort,
+                    _ => TurnDirection.NoCommand,
+                };
+            }
+            set
+            {
+                _directionOrder = value switch
+                {
+                    TurnDirection.TurnToPort => 2,
+                    TurnDirection.TurnToStarboard => 1,
+                    _ => 0,
+                };
+            }
         }
 
-        public Rudder(Angle? actualAngle, Angle? desiredAngle, byte directionOrder, byte instance)
+        public Rudder(Angle? actualAngle, Angle? desiredAngle, TurnDirection directionOrder, byte instance)
         {
             Instance = instance;
             ActualAngle = actualAngle;
@@ -91,11 +109,11 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (ReadByteFromHexString(data, 2, out b))
             {
-                DirectionOrder = (byte)(b & 0x7);
+                _directionOrder = (byte)(b & 0x7);
             }
             else
             {
-                DirectionOrder = 7;
+                _directionOrder = 7;
             }
 
             if (ReadShortFromHexString(data, 4, out short v))
@@ -115,7 +133,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             StringBuilder sb = new StringBuilder();
             sb.Append(WriteByteToHex(Instance));
-            sb.Append(WriteByteToHex((byte)(DirectionOrder | 0xF8)));
+            sb.Append(WriteByteToHex((byte)(_directionOrder | 0xF8)));
             short? angle = null;
             if (DesiredAngle.HasValue)
             {

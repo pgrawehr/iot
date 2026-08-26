@@ -337,7 +337,7 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.NotNull(p);
             Assert.Equal(14.9, p.DesiredAngle.GetValueOrDefault().Degrees, 0.1);
             Assert.Equal(14.7, p.ActualAngle.GetValueOrDefault().Degrees, 0.1);
-            Assert.Equal(7, p.DirectionOrder);
+            Assert.Equal(TurnDirection.NoCommand, p.DirectionOrder);
             var result = p.ToNmeaMessage();
             DateTimeOffset t = DateTimeOffset.MinValue;
             Assert.Equal(ts.GetAsRawSentence(ref t).ToNmeaMessage(), result);
@@ -355,7 +355,7 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.NotNull(p);
             Assert.Equal(14.9, p.DesiredAngle.GetValueOrDefault().Degrees, 0.1);
             Assert.False(p.ActualAngle.HasValue);
-            Assert.Equal(0, p.DirectionOrder);
+            Assert.Equal(TurnDirection.NoCommand, p.DirectionOrder);
             var result = p.ToNmeaMessage();
             DateTimeOffset t = DateTimeOffset.MinValue;
             Assert.Equal(ts.GetAsRawSentence(ref t).ToNmeaMessage(), result);

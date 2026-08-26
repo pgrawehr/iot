@@ -16,7 +16,6 @@ using System.Threading.Tasks;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
 using UnitsNet;
 
 namespace Iot.Device.Nmea0183

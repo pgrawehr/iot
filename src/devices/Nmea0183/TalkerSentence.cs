@@ -96,6 +96,8 @@ namespace Iot.Device.Nmea0183
                             return new CzoneChannelState(sentence, time);
                         case CzoneCircuitStatus.HexId:
                             return new CzoneCircuitStatus(sentence, time);
+                        case IsoRequest.HexId:
+                            return new IsoRequest(sentence, time);
                     }
                 }
 

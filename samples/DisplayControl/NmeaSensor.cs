@@ -202,11 +202,7 @@ namespace DisplayControl
             // Commands from the emulator go only to NMEA2000
             rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, Nmea2000PackedMessage.Id, new List<string>() { Nmea2000 }, false, false));
             rules.Add(new FilterRule(VirtualButtons, TalkerId.Any, Nmea2000PackedMessage.Id, new List<string>() { Nmea2000 }, false, false));
-            rules.Add(new FilterRule("*", TalkerId.Any, HeadingAndTrackControlStatus.Id,
-                new List<string>() { AutopilotEmulator }, false, true));
-            rules.Add(new FilterRule("*", TalkerId.Any, WindSpeedAndAngle.Id,
-                new List<string>() { AutopilotEmulator }, false, true));
-            rules.Add(new FilterRule("*", TalkerId.Any, HeadingMagnetic.Id,
+            rules.Add(new FilterRule("*", TalkerId.Any, SentenceId.Any,
                 new List<string>() { AutopilotEmulator }, false, true));
             rules.Add(new FilterRule(AutopilotEmulator, TalkerId.Any, HeadingAndTrackControl.Id, new List<string>() { Seatalk1Name }, false, true));
             rules.Add(new FilterRule(VirtualButtons, TalkerId.Any, SentenceId.Any, new List<string>() { Nmea2000 }, false, true));
@@ -267,7 +263,7 @@ namespace DisplayControl
             // for the displays to work correctly
             string[] gpsSequences = new string[]
             {
-                "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG", "GSA"
+                "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG", "GSA", "GRS"
             };
 
             foreach (var gpsSequence in gpsSequences)
@@ -399,7 +395,7 @@ namespace DisplayControl
             // If we also have the plotter enabled, don't send it to the ship, to prevent flooding the bus with unnecessary duplicates
             string[] gpsSequences = new string[]
             {
-                "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG", "GSA"
+                "GGA", "GLL", "RMC", "ZDA", "GSV", "VTG", "GSA", "GRS"
             };
 
             foreach (var gpsSequence in gpsSequences)
@@ -570,6 +566,7 @@ namespace DisplayControl
             // Can be helpful for debugging, but generates lots of data
             // _parserShipInterface.LogSend = true;
             _parserShipInterface.OnParserError += OnParserError;
+            ////_parserShipInterface.LogSend = true;
             // This is some kind of "map projection" message that is only sent when the plotter is online
             // It's contents are quite irrelevant (as we know that everything here is WGS84), but it's a nice trick
             // to check for the presence of the plotter (and not only whether the plotter has an active route)
@@ -629,6 +626,7 @@ namespace DisplayControl
             _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControlStatus.Id);
             _seatalkPort.SentencesToTranslate.Add(RudderSensorAngle.Id);
             _seatalkPort.SentencesToTranslate.Add(HeadingAndTrackControl.Id);
+            _seatalkPort.UseRudderAngle = false;
 
             _openCpnServer = new NmeaTcpServer(OpenCpn, IPAddress.Any, 10110);
             _openCpnServer.OnParserError += OnParserError;
@@ -885,6 +883,16 @@ namespace DisplayControl
                         _manager.UpdateValues(new[] { SensorMeasurement.Latitude, SensorMeasurement.Longitude, SensorMeasurement.AltitudeEllipsoid, SensorMeasurement.AltitudeGeoid },
                             new IQuantity[] { Angle.FromDegrees(gga.LatitudeDegrees.GetValueOrDefault(0)), Angle.FromDegrees(gga.LongitudeDegrees.GetValueOrDefault(0)),
                                 Length.FromMeters(gga.EllipsoidAltitude.GetValueOrDefault(0)), Length.FromMeters(gga.GeoidAltitude.GetValueOrDefault(0)) });
+
+                        // Cheat about the source
+                        //_router.SendSentence(_parserHandheldInterface, new RawSentence(TalkerId.GlobalPositioningSystem, new SentenceId("GRS"),
+                        //    new List<string>()
+                        //    {
+                        //        gga.DateTime.ToString("hhmmss.ff", CultureInfo.InvariantCulture),
+                        //        "1",
+                        //        "0","0","0",string.Empty, string.Empty, string.Empty, string.Empty, string.Empty,string.Empty,
+                        //        string.Empty,string.Empty,string.Empty,
+                        //    }, gga.DateTime));
                     }
                     else
                     {

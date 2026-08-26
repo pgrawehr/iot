@@ -91,7 +91,7 @@ namespace Iot.Device.Seatalk1
                         AutopilotStatus.Wind => "W", // This one is just guess
                         _ => "M",
                     };
-                    var htd = new HeadingAndTrackControlStatus(status, apStatus.RudderPosition.Abs(), apStatus.RudderPosition > Angle.Zero ? "R" : "L", "N",
+                    var htd = new HeadingAndTrackControlStatus(status, null, string.Empty, "N",
                         null, null, null, null, apStatus.AutoPilotCourse, null, apStatus.AutoPilotCourse, false, false, false, apStatus.Alarms != 0, apStatus.CompassHeading);
                     DispatchSentenceEvents(htd);
                 }
