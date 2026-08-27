@@ -114,21 +114,6 @@ namespace Iot.Device.Nmea0183.Sentences
         };
 
         /// <summary>
-        /// Gets the description of a device function
-        /// </summary>
-        /// <param name="function">The device function code</param>
-        /// <returns>Description of the device function</returns>
-        public static string GetFunctionDescription(DeviceFunction function)
-        {
-            if (Enum.IsDefined(typeof(DeviceFunction), function))
-            {
-                return GetEnumDescription((DeviceFunction)function);
-            }
-
-            return $"Unknown Function ({function})";
-        }
-
-        /// <summary>
         /// Gets the description of a device class
         /// </summary>
         /// <param name="deviceClass">The device class code</param>
@@ -149,16 +134,16 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <param name="function">The device function code</param>
         /// <param name="deviceClass">The device class code</param>
         /// <returns>Specific device description, or generic description if not found</returns>
-        public static string GetDeviceDescription(DeviceFunction function, DeviceClass deviceClass)
+        public static string GetDeviceDescription(byte function, DeviceClass deviceClass)
         {
             // Try to find specific device description
-            if (DeviceDescriptions.TryGetValue(((byte)function, (byte)deviceClass), out string? description))
+            if (DeviceDescriptions.TryGetValue((function, (byte)deviceClass), out string? description))
             {
                 return description;
             }
 
             // Fallback to generic function + class description
-            string functionDesc = GetFunctionDescription(function);
+            string functionDesc = $"Unknown function {function} for this class";
             string classDesc = GetClassDescription(deviceClass);
 
             return $"{functionDesc} - {classDesc}";

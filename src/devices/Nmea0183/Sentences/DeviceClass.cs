@@ -66,5 +66,23 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>Deck, cargo and fishing equipment systems</summary>
         [Description("Deck, cargo and fishing equipment systems")]
         DeckCargoFishingEquipmentSystems = 90,
+
+        /// <summary>
+        /// Human Interface
+        /// </summary>
+        [Description("Human Interface")]
+        HumanInterface = 110,
+
+        /// <summary>
+        /// Displays, plotters, etc.
+        /// </summary>
+        [Description("Display")]
+        Display = 120,
+
+        /// <summary>
+        /// Entertainment equipment (music systems and the like)
+        /// </summary>
+        [Description("Entertainment")]
+        Entertainment = 125,
     }
 }

@@ -36,14 +36,15 @@ namespace Iot.Device.Nmea0183.Sentences
         public ManufacturerCode ManufacturerCode { get; set; }
 
         /// <summary>
-        /// Device instance (lower 3 bits, 0-7)
+        /// Device instance (all 8 bits)
         /// </summary>
         public byte DeviceInstance { get; set; }
 
         /// <summary>
         /// Device function (8 bits)
+        /// This is not an enum, because its value is worthless without the device class. Use DeviceDescription for a human-readable description.
         /// </summary>
-        public DeviceFunction DeviceFunction { get; set; }
+        public byte DeviceFunction { get; set; }
 
         /// <summary>
         /// Device class (7 bits)
@@ -72,11 +73,6 @@ namespace Iot.Device.Nmea0183.Sentences
         public string DeviceDescription => DeviceInformation.GetDeviceDescription(DeviceFunction, DeviceClass);
 
         /// <summary>
-        /// Gets the human-readable description of the device function
-        /// </summary>
-        public string FunctionDescription => DeviceInformation.GetFunctionDescription(DeviceFunction);
-
-        /// <summary>
         /// Gets the human-readable description of the device class
         /// </summary>
         public string ClassDescription => DeviceInformation.GetClassDescription(DeviceClass);
@@ -99,7 +95,7 @@ namespace Iot.Device.Nmea0183.Sentences
             uint uniqueNumber,
             ManufacturerCode manufacturerCode,
             byte deviceInstance,
-            DeviceFunction deviceFunction,
+            byte deviceFunction,
             DeviceClass deviceClass,
             byte systemInstance = 0,
             IndustryCode industryCode = IndustryCode.Marine,
@@ -171,20 +167,20 @@ namespace Iot.Device.Nmea0183.Sentences
                 // Byte 6 (bits 51-54): System Instance (4 bits)
                 // Byte 6-7 (bits 55-57): Industry Code (3 bits)
                 // Byte 7 (bit 63): Arbitrary Address Capable (1 bit)
-                if (ReadUnsignedFromHexString(data, 0, 16, true, out uint nameLow) &&
+                if (ReadUnsignedFromHexString(data, 0, 8, true, out uint nameLow) &&
                     ReadUnsignedFromHexString(data, 8, 8, true, out uint nameHigh))
                 {
                     // Extract fields from the 64-bit NAME
-                    ulong name = ((ulong)nameHigh << 32) | nameLow;
+                    ulong bitsequence = ((ulong)nameHigh << 32) | nameLow;
 
-                    UniqueNumber = (uint)(name & 0x1FFFFF); // Bits 0-20
-                    ManufacturerCode = (ManufacturerCode)((name >> 21) & 0x7FF); // Bits 21-31
-                    DeviceInstance = (byte)((name >> 32) & 0x7); // Bits 32-34
-                    DeviceFunction = (DeviceFunction)((name >> 35) & 0xFF); // Bits 35-42
-                    DeviceClass = (DeviceClass)((name >> 43) & 0x7F); // Bits 43-49
-                    SystemInstance = (byte)((name >> 51) & 0xF); // Bits 51-54
-                    IndustryCode = (IndustryCode)((name >> 55) & 0x7); // Bits 55-57
-                    ArbitraryAddressCapable = ((name >> 63) & 0x1) == 1; // Bit 63
+                    UniqueNumber = (uint)(bitsequence & 0x1FFFFF); // Bits 0-20
+                    ManufacturerCode = (ManufacturerCode)((bitsequence >> 21) & 0x7FF); // Bits 21-31
+                    DeviceInstance = (byte)((bitsequence >> 32) & 0xFF); // Bits 32-40
+                    DeviceFunction = (byte)((bitsequence >> 40) & 0xFF); // Bits 40-48
+                    DeviceClass = (DeviceClass)((bitsequence >> 49) & 0x7F); // Bits 43-49
+                    SystemInstance = (byte)((bitsequence >> 56) & 0xF);
+                    IndustryCode = (IndustryCode)((bitsequence >> 60) & 0x7); // Bits 60-62
+                    ArbitraryAddressCapable = ((bitsequence >> 63) & 0x1) == 1; // Bit 63
 
                     Valid = true;
                 }
@@ -211,11 +207,11 @@ namespace Iot.Device.Nmea0183.Sentences
             ulong name = 0;
             name |= (UniqueNumber & 0x1FFFFF); // Bits 0-20
             name |= ((ulong)((uint)ManufacturerCode & 0x7FF) << 21); // Bits 21-31
-            name |= ((ulong)(DeviceInstance & 0x7) << 32); // Bits 32-34
-            name |= ((ulong)DeviceFunction << 35); // Bits 35-42
-            name |= ((ulong)((int)DeviceClass & 0x7F) << 43); // Bits 43-49
-            name |= ((ulong)(SystemInstance & 0xF) << 51); // Bits 51-54
-            name |= ((ulong)((uint)IndustryCode & 0x7) << 55); // Bits 55-57
+            name |= ((ulong)(DeviceInstance & 0xFF) << 32); // Bits 32-34
+            name |= ((ulong)DeviceFunction << 40); // Bits 35-42
+            name |= ((ulong)((int)DeviceClass & 0x7F) << 49); // Bits 43-49
+            name |= ((ulong)(SystemInstance & 0xF) << 56); // Bits 51-54
+            name |= ((ulong)((uint)IndustryCode & 0x7) << 60); // Bits 55-57
             name |= ((ulong)(ArbitraryAddressCapable ? 1 : 0) << 63); // Bit 63
 
             // Convert to little-endian hex string

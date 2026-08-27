@@ -33,8 +33,8 @@ namespace Iot.Device.Nmea0183.Tests
                 uniqueNumber: 123456,
                 manufacturerCode: ManufacturerCode.Garmin,
                 deviceInstance: 0,
-                deviceFunction: DeviceFunction.Navigation, // Navigation
-                deviceClass: DeviceClass.NavigationSystems, // Navigation systems
+                deviceFunction: 130, // Navigation
+                deviceClass: DeviceClass.InterIntranetworkDevice, // Inter/Intranetwork Device
                 systemInstance: 0,
                 industryCode: IndustryCode.Marine,
                 arbitraryAddressCapable: true);
@@ -72,8 +72,8 @@ namespace Iot.Device.Nmea0183.Tests
         [Fact]
         public void IsoAddressClaimDecode()
         {
-            // Example: Address claim from a Raymarine device
-            string sentence = "$PCDIN,0EE00,12345678,42,08,F1BF9C3A96502004*12";
+            // Actual example from a Raymarine device
+            string sentence = "$PCDIN,00EE00,12345678,42,CD6571E79F82F0C0";
 
             var parsed = TalkerSentence.FromSentenceString(sentence, out var error);
             Assert.Equal(NmeaError.None, error);
@@ -85,6 +85,16 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.True(claim.Valid);
             Assert.Equal(0x42, claim.MessageSource);
             Assert.Equal(0xEE00u, claim.Identifier);
+            Assert.Equal(1140173u, claim.UniqueNumber);
+            Assert.Equal(ManufacturerCode.Raymarine, claim.ManufacturerCode);
+            Assert.Equal(0x9F, claim.DeviceInstance);
+            Assert.Equal(0x82, claim.DeviceFunction);
+            Assert.Equal(DeviceClass.Display, claim.DeviceClass);
+            Assert.Equal(0, claim.SystemInstance);
+            Assert.Equal(IndustryCode.Marine, claim.IndustryCode);
+
+            string recoded = claim.ToNmeaMessage();
+            Assert.Equal(sentence, recoded.Substring(0, 42)); // Skip checksum in comparison
         }
 
         [Fact]
@@ -94,8 +104,8 @@ namespace Iot.Device.Nmea0183.Tests
                 uniqueNumber: 100000,
                 manufacturerCode: ManufacturerCode.Raymarine,
                 deviceInstance: 1,
-                deviceFunction: DeviceFunction.SteeringAndControlSurfaces,
-                deviceClass: DeviceClass.SteeringAndControlSurfaces,
+                deviceFunction: 130,
+                deviceClass: DeviceClass.InterIntranetworkDevice,
                 systemInstance: 0,
                 industryCode: IndustryCode.Marine,
                 arbitraryAddressCapable: true);
@@ -108,6 +118,7 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Contains("0EE00", parameters); // PGN
             Assert.Contains("00000000", parameters); // Timestamp
             Assert.Contains("10", parameters); // Source
+            Assert.Contains("08", parameters); // Length (8 bytes)
         }
 
         [Fact]
@@ -118,11 +129,10 @@ namespace Iot.Device.Nmea0183.Tests
                 uniqueNumber: 123456,
                 manufacturerCode: ManufacturerCode.Garmin,
                 deviceInstance: 0,
-                deviceFunction: DeviceFunction.Navigation,
+                deviceFunction: 150,
                 deviceClass: DeviceClass.NavigationSystems);
 
             Assert.Equal("GPS", gpsClaim.DeviceDescription);
-            Assert.Equal("Navigation", gpsClaim.FunctionDescription);
             Assert.Equal("Navigation systems", gpsClaim.ClassDescription);
         }
 
@@ -134,11 +144,10 @@ namespace Iot.Device.Nmea0183.Tests
                 uniqueNumber: 654321,
                 manufacturerCode: ManufacturerCode.Raymarine,
                 deviceInstance: 0,
-                deviceFunction: DeviceFunction.SteeringAndControlSurfaces,
+                deviceFunction: 150,
                 deviceClass: DeviceClass.SteeringAndControlSurfaces);
 
             Assert.Equal("Autopilot", autopilotClaim.DeviceDescription);
-            Assert.Equal("Steering and Control Surfaces", autopilotClaim.FunctionDescription);
             Assert.Equal("Steering and Control surfaces", autopilotClaim.ClassDescription);
         }
 
@@ -150,7 +159,7 @@ namespace Iot.Device.Nmea0183.Tests
                 uniqueNumber: 999999,
                 manufacturerCode: ManufacturerCode.Garmin,
                 deviceInstance: 0,
-                deviceFunction: 195,
+                deviceFunction: 190,
                 deviceClass: DeviceClass.NavigationSystems);
 
             Assert.Equal("AIS", aisClaim.DeviceDescription);
@@ -168,7 +177,7 @@ namespace Iot.Device.Nmea0183.Tests
                 manufacturerCode: ManufacturerCode.Garmin,
                 deviceInstance: deviceInstance,
                 deviceFunction: 150,
-                deviceClass: 60);
+                deviceClass: DeviceClass.NavigationSystems);
 
             Assert.Equal(uniqueNumber, claim.UniqueNumber);
             Assert.Equal(deviceInstance, claim.DeviceInstance);
@@ -184,7 +193,7 @@ namespace Iot.Device.Nmea0183.Tests
                     manufacturerCode: ManufacturerCode.Garmin,
                     deviceInstance: 0,
                     deviceFunction: 150,
-                    deviceClass: 60));
+                    deviceClass: DeviceClass.NavigationSystems));
         }
 
         [Fact]
@@ -196,7 +205,7 @@ namespace Iot.Device.Nmea0183.Tests
                     manufacturerCode: ManufacturerCode.Garmin,
                     deviceInstance: 8,
                     deviceFunction: 150,
-                    deviceClass: 60));
+                    deviceClass: DeviceClass.NavigationSystems));
         }
 
         [Fact]
@@ -208,7 +217,7 @@ namespace Iot.Device.Nmea0183.Tests
                     manufacturerCode: ManufacturerCode.Garmin,
                     deviceInstance: 0,
                     deviceFunction: 150,
-                    deviceClass: 128));
+                    deviceClass: (DeviceClass)128));
         }
 
         [Fact]
@@ -220,7 +229,7 @@ namespace Iot.Device.Nmea0183.Tests
                     manufacturerCode: ManufacturerCode.Garmin,
                     deviceInstance: 0,
                     deviceFunction: 150,
-                    deviceClass: 60,
+                    deviceClass: DeviceClass.NavigationSystems,
                     systemInstance: 16));
         }
 
@@ -232,7 +241,7 @@ namespace Iot.Device.Nmea0183.Tests
                 manufacturerCode: ManufacturerCode.Garmin,
                 deviceInstance: 0,
                 deviceFunction: 150,
-                deviceClass: 60,
+                deviceClass: DeviceClass.NavigationSystems,
                 arbitraryAddressCapable: false);
 
             Assert.False(claim.ArbitraryAddressCapable);
@@ -246,14 +255,14 @@ namespace Iot.Device.Nmea0183.Tests
         }
 
         [Fact]
-        public void IsoAddressClaimToReadableContentWithDeviceDescription()
+        public void IsoAddressClaimToReadableContent()
         {
             var claim = new IsoAddressClaim(
                 uniqueNumber: 123456,
                 manufacturerCode: ManufacturerCode.Raymarine,
                 deviceInstance: 0,
-                deviceFunction: 150,
-                deviceClass: 40, // Autopilot
+                deviceFunction: 130,
+                deviceClass: DeviceClass.InterIntranetworkDevice,
                 industryCode: IndustryCode.Marine);
 
             claim.MessageSource = 0x42;
@@ -261,7 +270,7 @@ namespace Iot.Device.Nmea0183.Tests
             string readable = claim.ToReadableContent();
 
             Assert.Contains("ISO Address Claim", readable);
-            Assert.Contains("Autopilot", readable); // Device description
+            Assert.Contains("Source=66", readable); // 0x42 = 66
             Assert.Contains("Raymarine", readable);
             Assert.Contains("123456", readable);
             Assert.Contains("Marine", readable);
@@ -274,9 +283,10 @@ namespace Iot.Device.Nmea0183.Tests
                 uniqueNumber: 123456,
                 manufacturerCode: ManufacturerCode.Garmin,
                 deviceInstance: 0,
-                deviceFunction: 150,
-                deviceClass: 60);
+                deviceFunction: 130,
+                deviceClass: DeviceClass.InterIntranetworkDevice);
 
+            // Address claims should replace older instances (device announcing its presence)
             Assert.True(claim.ReplacesOlderInstance);
         }
 
@@ -291,11 +301,12 @@ namespace Iot.Device.Nmea0183.Tests
                 uniqueNumber: 999999,
                 manufacturerCode: manufacturer,
                 deviceInstance: 0,
-                deviceFunction: 150,
-                deviceClass: 60);
+                deviceFunction: 130,
+                deviceClass: DeviceClass.InterIntranetworkDevice);
 
             Assert.Equal(manufacturer, claim.ManufacturerCode);
 
+            // Roundtrip test
             string nmeaMessage = claim.ToNmeaMessage();
             var parsed = TalkerSentence.FromSentenceString(nmeaMessage, out var error);
             var decoded = (IsoAddressClaim)parsed!.TryGetTypedValue(ref _lastPacketTime)!;
@@ -314,12 +325,13 @@ namespace Iot.Device.Nmea0183.Tests
                 uniqueNumber: 123456,
                 manufacturerCode: ManufacturerCode.Garmin,
                 deviceInstance: 0,
-                deviceFunction: 150,
-                deviceClass: 60,
+                deviceFunction: 130,
+                deviceClass: DeviceClass.InterIntranetworkDevice,
                 industryCode: industry);
 
             Assert.Equal(industry, claim.IndustryCode);
 
+            // Roundtrip test
             string nmeaMessage = claim.ToNmeaMessage();
             var parsed = TalkerSentence.FromSentenceString(nmeaMessage, out var error);
             var decoded = (IsoAddressClaim)parsed!.TryGetTypedValue(ref _lastPacketTime)!;
