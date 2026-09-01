@@ -10,8 +10,6 @@ namespace Iot.Device.Nmea0183.Sentences
     /// <summary>
     /// ISO Address Claim (PGN 60928) - Claim a network address on NMEA2000 bus
     /// This message is used to claim or announce a device's presence on the NMEA2000 network.
-    /// The NAME field uniquely identifies the device and its capabilities.
-    /// See https://canboat.github.io/canboat/canboat.html for the NMEA2000 protocol specification.
     /// </summary>
     public class IsoAddressClaim : Nmea2000PackedMessage
     {
@@ -70,12 +68,12 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Gets the human-readable description of the device type based on function and class
         /// </summary>
-        public string DeviceDescription => DeviceInformation.GetDeviceDescription(DeviceFunction, DeviceClass);
+        public string DeviceDescription => Nmea2000DeviceInformation.GetDeviceDescription(DeviceFunction, DeviceClass);
 
         /// <summary>
         /// Gets the human-readable description of the device class
         /// </summary>
-        public string ClassDescription => DeviceInformation.GetClassDescription(DeviceClass);
+        public string ClassDescription => Nmea2000DeviceInformation.GetClassDescription(DeviceClass);
 
         /// <inheritdoc/>
         public override bool ReplacesOlderInstance => true;

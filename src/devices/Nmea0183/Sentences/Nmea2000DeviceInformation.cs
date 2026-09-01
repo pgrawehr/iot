@@ -6,13 +6,39 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
 
+#pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences
 {
     /// <summary>
-    /// Provides helper methods for NMEA2000 device information lookup
+    /// Provides information about a connected NMEA2000 device and helper methods for NMEA2000 device information lookup
     /// </summary>
-    public static class DeviceInformation
+    public class Nmea2000DeviceInformation
     {
+        private readonly IsoAddressClaim _addressClaim;
+
+        public Nmea2000DeviceInformation(IsoAddressClaim addressClaim)
+        {
+            _addressClaim = addressClaim;
+        }
+
+        public byte BusAddress => _addressClaim.MessageSource;
+
+        public UInt32 UniqueIdentifier => _addressClaim.UniqueNumber;
+
+        public UInt32 DeviceInstance => _addressClaim.DeviceInstance;
+
+        public DeviceClass DeviceClass => _addressClaim.DeviceClass;
+
+        public ManufacturerCode Manufacturer => _addressClaim.ManufacturerCode;
+
+        public IndustryCode Industry => _addressClaim.IndustryCode;
+
+        public bool ArbitraryAddressCapable => _addressClaim.ArbitraryAddressCapable;
+
+        public string DeviceDescription => _addressClaim.DeviceDescription;
+
+        public string ClassDescription => _addressClaim.ClassDescription;
+
         /// <summary>
         /// Lookup table for device function and class combinations to specific device descriptions
         /// Key: (DeviceFunction, DeviceClass), Value: Description

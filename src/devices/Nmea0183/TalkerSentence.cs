@@ -100,6 +100,8 @@ namespace Iot.Device.Nmea0183
                             return new IsoRequest(sentence, time);
                         case IsoAddressClaim.HexId:
                             return new IsoAddressClaim(sentence, time);
+                        case ProductInformation.HexId:
+                            return new ProductInformation(sentence, time);
                     }
                 }
 
@@ -230,12 +232,6 @@ namespace Iot.Device.Nmea0183
                 return null;
             }
 
-            if (sentence.Length > MaxSentenceLength)
-            {
-                errorCode = NmeaError.MessageToLong;
-                return null;
-            }
-
             // There can't be any nonprintable characters in the stream (such as TAB or NULL)
             if (sentence.Any(x => Char.IsControl(x)))
             {
@@ -260,6 +256,22 @@ namespace Iot.Device.Nmea0183
             string sentenceIdString = sentence.Substring(3, firstComma - 3);
 
             SentenceId sentenceId = new SentenceId(sentenceIdString);
+
+            if (sentenceId == Nmea2000PackedMessage.Id)
+            {
+                // NMEA2000 Messages can have a maximum payload length of 223 bytes, with two ASCII bytes
+                // per byte and a header, that's roughly 500 bytes.
+                if (sentence.Length > 500)
+                {
+                    errorCode = NmeaError.MessageToLong;
+                    return null;
+                }
+            }
+            else if (sentence.Length > MaxSentenceLength)
+            {
+                errorCode = NmeaError.MessageToLong;
+                return null;
+            }
 
             string[] fields = sentence.Substring(firstComma + 1).Split(',');
             int lastFieldIdx = fields.Length - 1;
