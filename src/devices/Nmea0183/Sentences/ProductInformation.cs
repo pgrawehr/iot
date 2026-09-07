@@ -206,13 +206,13 @@ namespace Iot.Device.Nmea0183.Sentences
             dataBuilder.Append(WriteFixedLengthString(ModelId, 64));
 
             // Software Version Code (null-terminated string)
-            dataBuilder.Append(WriteFixedLengthString(SoftwareVersionCode));
+            dataBuilder.Append(WriteFixedLengthString(SoftwareVersionCode, 64));
 
             // Model Version (null-terminated string)
-            dataBuilder.Append(WriteFixedLengthString(ModelVersion));
+            dataBuilder.Append(WriteFixedLengthString(ModelVersion, 64));
 
             // Serial Code (null-terminated string)
-            dataBuilder.Append(WriteFixedLengthString(SerialCode));
+            dataBuilder.Append(WriteFixedLengthString(SerialCode, 64));
 
             // Certification Level (1 byte)
             dataBuilder.Append(WriteByteToHex(CertificationLevel));
