@@ -138,6 +138,9 @@ namespace Iot.Device.Nmea0183
                 case CogSogRapidUpdate.HexId:
                     nmea2000PackedMessage = new CogSogRapidUpdate(sentence, time);
                     return true;
+                case GnssPositionData.HexId:
+                    nmea2000PackedMessage = new GnssPositionData(sentence, time);
+                    return true;
             }
 
             nmea2000PackedMessage = null;

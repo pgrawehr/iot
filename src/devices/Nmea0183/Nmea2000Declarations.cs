@@ -95,6 +95,7 @@ namespace Iot.Device.Nmea0183
             s_data.Add(ProductInformation.HexId, new Nmea2000PgnDeclaration(ProductInformation.HexId, "Product Information", 6, -1, true, false));
             s_data.Add(IsoAddressClaim.HexId, new Nmea2000PgnDeclaration(IsoAddressClaim.HexId, "ISO Address Claim", 6, 8, false, false));
             s_data.Add(IsoRequest.HexId, new Nmea2000PgnDeclaration(IsoRequest.HexId, "ISO Request", 6, 3, false, false));
+            s_data.Add(GnssPositionData.HexId, new Nmea2000PgnDeclaration(GnssPositionData.HexId, "GNSS Position Data", 3, -1, true, false));
         }
 
         /// <summary>

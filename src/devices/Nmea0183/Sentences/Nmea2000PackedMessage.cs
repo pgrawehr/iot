@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
@@ -475,6 +476,69 @@ namespace Iot.Device.Nmea0183.Sentences
             string timeStampText = MessageTimeStamp.ToString("X8", CultureInfo.InvariantCulture);
             string source = MessageSource.ToString("X2", CultureInfo.InvariantCulture);
             return $"{pgn},{timeStampText},{source},";
+        }
+
+        protected ushort? TryReadUShort(string input, int offset)
+        {
+            return ReadUshortFromHexString(input, offset, out ushort v) ? v : null;
+        }
+
+        protected uint? TryReadUInt(string input, int offset)
+        {
+            return ReadUintFromHexString(input, offset, out uint v) ? v : null;
+        }
+
+        protected int? TryReadInt32(string input, int offset)
+        {
+            return ReadSignedFromHexString(input, offset, 8, true, out int v) ? v : null;
+        }
+
+        protected long? TryReadInt64(string input, int offset)
+        {
+            if (input.Length < offset + 16)
+            {
+                return null;
+            }
+
+            Span<byte> bytes = stackalloc byte[8];
+            for (int i = 0; i < 8; i++)
+            {
+                string b = input.Substring(offset + i * 2, 2);
+                if (!byte.TryParse(b, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out bytes[i]))
+                {
+                    return null;
+                }
+            }
+
+            long value = BinaryPrimitives.ReadInt64LittleEndian(bytes);
+            return value == long.MaxValue ? null : value;
+        }
+
+        protected string WriteUInt32ToHex(uint value)
+        {
+            Span<byte> bytes = stackalloc byte[4];
+            BinaryPrimitives.WriteUInt32LittleEndian(bytes, value);
+            return Convert.ToHexString(bytes);
+        }
+
+        protected string WriteInt32ToHex(int value)
+        {
+            Span<byte> bytes = stackalloc byte[4];
+            BinaryPrimitives.WriteInt32LittleEndian(bytes, value);
+            return Convert.ToHexString(bytes);
+        }
+
+        protected string WriteInt64Scaled(double? value, double scale)
+        {
+            if (!value.HasValue)
+            {
+                return "FFFFFFFFFFFFFF7F";
+            }
+
+            long raw = (long)Math.Round(value.Value / scale);
+            Span<byte> bytes = stackalloc byte[8];
+            BinaryPrimitives.WriteInt64LittleEndian(bytes, raw);
+            return Convert.ToHexString(bytes);
         }
     }
 }
