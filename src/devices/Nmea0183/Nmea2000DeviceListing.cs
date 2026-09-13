@@ -14,14 +14,26 @@ namespace Iot.Device.Nmea0183
 {
     public class Nmea2000DeviceListing : NmeaSinkAndSource
     {
+        private enum ComponentState
+        {
+            WaitingForConnection,
+            AddressClaimSent,
+            ProductInformationRequestSent,
+            WaitingForData,
+        }
+
         private DateTimeOffset _lastUpdate;
         private ConcurrentDictionary<uint, IsoAddressClaim> _devices;
+        private ConcurrentDictionary<uint, ProductInformation> _deviceProductInformation;
+        private ComponentState _state;
 
         public Nmea2000DeviceListing(string interfaceName)
             : base(interfaceName)
         {
+            _state = ComponentState.WaitingForConnection;
             _lastUpdate = DateTimeOffset.UnixEpoch;
             _devices = new ConcurrentDictionary<uint, IsoAddressClaim>();
+            _deviceProductInformation = new ConcurrentDictionary<uint, ProductInformation>();
             UpdateInterval = TimeSpan.FromMinutes(10);
         }
 
@@ -43,17 +55,33 @@ namespace Iot.Device.Nmea0183
             {
                 DispatchSentenceEvents(new IsoRequest(IsoAddressClaim.HexId));
                 _lastUpdate = now;
+                _state = ComponentState.AddressClaimSent;
             }
 
             if (sentence is IsoAddressClaim claim)
             {
                 _devices[claim.MessageSource] = claim;
+                if (_state != ComponentState.ProductInformationRequestSent)
+                {
+                    DispatchSentenceEvents(new IsoRequest(ProductInformation.HexId));
+                    _state = ComponentState.ProductInformationRequestSent;
+                }
+            }
+
+            if (sentence is ProductInformation productInformation)
+            {
+                _deviceProductInformation[productInformation.MessageSource] = productInformation;
+                _state = ComponentState.WaitingForData;
             }
         }
 
         public List<Nmea2000DeviceInformation> GetDeviceList()
         {
-            var ret = _devices.Select(x => new Nmea2000DeviceInformation(x.Value))
+            var ret = _devices.Select(x =>
+                {
+                    _deviceProductInformation.TryGetValue(x.Key, out ProductInformation? productInformation);
+                    return new Nmea2000DeviceInformation(x.Value, productInformation);
+                })
                 .OrderBy(y => y.BusAddress)
                 .ToList();
             return ret;

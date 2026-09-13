@@ -275,7 +275,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (string.IsNullOrEmpty(text))
             {
-                return new string(' ', outputChars / 2);
+                text = string.Empty;
             }
 
             StringBuilder sb = new StringBuilder();
@@ -292,8 +292,11 @@ namespace Iot.Device.Nmea0183.Sentences
                 }
             }
 
-            // Add null terminator
-            sb.Append("00");
+            // Fill up with spaces
+            while (sb.Length < outputChars)
+            {
+                sb.Append("20");
+            }
 
             return sb.ToString();
         }

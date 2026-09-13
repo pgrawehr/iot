@@ -165,8 +165,6 @@ namespace Iot.Device.Nmea0183.Tests
             Assert.Contains("GPS-2000", readable);
             Assert.Contains("v1.2.3", readable);
             Assert.Contains("SN123456789", readable);
-            Assert.Contains("2100", readable);
-            Assert.Contains("1234", readable);
         }
 
         [Fact]

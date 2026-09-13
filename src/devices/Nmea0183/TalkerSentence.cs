@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -61,47 +62,9 @@ namespace Iot.Device.Nmea0183
                 var specificMessageId = sentence.Fields.FirstOrDefault();
                 if (specificMessageId != null && int.TryParse(specificMessageId, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int msgid))
                 {
-                    msgid &= 0x1FFFF;
-                    if ((msgid & 0x1FF00) == GroupFunctionMessage.HexId)
+                    if (GetKnownNmea2000Sentence(msgid, sentence, time, out Nmea2000PackedMessage? nmea2000Message))
                     {
-                        return new GroupFunctionMessage(sentence, time);
-                    }
-
-                    // Todo: For proprietary messages, we need to also check the manufacturer/industry bytes
-                    switch (msgid)
-                    {
-                        case SeaSmartEngineFast.HexId:
-                            return new SeaSmartEngineFast(sentence, time);
-                        case SeaSmartEngineDetail.HexId:
-                            return new SeaSmartEngineDetail(sentence, time);
-                        case SeaSmartFluidLevel.HexId:
-                            return new SeaSmartFluidLevel(sentence, time);
-                        case FastPositionUpdate.HexId:
-                            return new FastPositionUpdate(sentence, time);
-                        case SeatalkNgPilotLockedHeading.HexId:
-                            return new SeatalkNgPilotLockedHeading(sentence, time);
-                        case SeatalkNgPilotHeading.HexId:
-                            return new SeatalkNgPilotHeading(sentence, time);
-                        case SeatalkNgPilotStatus.HexId:
-                            return new SeatalkNgPilotStatus(sentence, time);
-                        case SeatalkNgPilotConfigurationValue.HexId:
-                            return new SeatalkNgPilotConfigurationValue(sentence, time);
-                        case Rudder.HexId:
-                            return new Rudder(sentence, time);
-                        case CzoneCircuitControl.HexId:
-                            return new CzoneCircuitControl(sentence, time);
-                        case CzoneModuleAnnounce.HexId:
-                            return new CzoneModuleAnnounce(sentence, time);
-                        case CzoneChannelState.HexId:
-                            return new CzoneChannelState(sentence, time);
-                        case CzoneCircuitStatus.HexId:
-                            return new CzoneCircuitStatus(sentence, time);
-                        case IsoRequest.HexId:
-                            return new IsoRequest(sentence, time);
-                        case IsoAddressClaim.HexId:
-                            return new IsoAddressClaim(sentence, time);
-                        case ProductInformation.HexId:
-                            return new ProductInformation(sentence, time);
+                        return nmea2000Message;
                     }
                 }
 
@@ -109,6 +72,76 @@ namespace Iot.Device.Nmea0183
             };
 
             return knownSentences;
+        }
+
+        private static bool GetKnownNmea2000Sentence(int msgid, TalkerSentence sentence, DateTimeOffset time,
+            [NotNullWhen(true)]out Nmea2000PackedMessage? nmea2000PackedMessage)
+        {
+            msgid &= 0x1FFFF;
+            if ((msgid & 0x1FF00) == GroupFunctionMessage.HexId)
+            {
+                nmea2000PackedMessage = new GroupFunctionMessage(sentence, time);
+                return true;
+            }
+
+            // Todo: For proprietary messages, we need to also check the manufacturer/industry bytes
+            switch (msgid)
+            {
+                case SeaSmartEngineFast.HexId:
+                    nmea2000PackedMessage = new SeaSmartEngineFast(sentence, time);
+                    return true;
+                case SeaSmartEngineDetail.HexId:
+                    nmea2000PackedMessage = new SeaSmartEngineDetail(sentence, time);
+                    return true;
+                case SeaSmartFluidLevel.HexId:
+                    nmea2000PackedMessage = new SeaSmartFluidLevel(sentence, time);
+                    return true;
+                case FastPositionUpdate.HexId:
+                    nmea2000PackedMessage = new FastPositionUpdate(sentence, time);
+                    return true;
+                case SeatalkNgPilotLockedHeading.HexId:
+                    nmea2000PackedMessage = new SeatalkNgPilotLockedHeading(sentence, time);
+                    return true;
+                case SeatalkNgPilotHeading.HexId:
+                    nmea2000PackedMessage = new SeatalkNgPilotHeading(sentence, time);
+                    return true;
+                case SeatalkNgPilotStatus.HexId:
+                    nmea2000PackedMessage = new SeatalkNgPilotStatus(sentence, time);
+                    return true;
+                case SeatalkNgPilotConfigurationValue.HexId:
+                    nmea2000PackedMessage = new SeatalkNgPilotConfigurationValue(sentence, time);
+                    return true;
+                case Rudder.HexId:
+                    nmea2000PackedMessage = new Rudder(sentence, time);
+                    return true;
+                case CzoneCircuitControl.HexId:
+                    nmea2000PackedMessage = new CzoneCircuitControl(sentence, time);
+                    return true;
+                case CzoneModuleAnnounce.HexId:
+                    nmea2000PackedMessage = new CzoneModuleAnnounce(sentence, time);
+                    return true;
+                case CzoneChannelState.HexId:
+                    nmea2000PackedMessage = new CzoneChannelState(sentence, time);
+                    return true;
+                case CzoneCircuitStatus.HexId:
+                    nmea2000PackedMessage = new CzoneCircuitStatus(sentence, time);
+                    return true;
+                case IsoRequest.HexId:
+                    nmea2000PackedMessage = new IsoRequest(sentence, time);
+                    return true;
+                case IsoAddressClaim.HexId:
+                    nmea2000PackedMessage = new IsoAddressClaim(sentence, time);
+                    return true;
+                case ProductInformation.HexId:
+                    nmea2000PackedMessage = new ProductInformation(sentence, time);
+                    return true;
+                case CogSogRapidUpdate.HexId:
+                    nmea2000PackedMessage = new CogSogRapidUpdate(sentence, time);
+                    return true;
+            }
+
+            nmea2000PackedMessage = null;
+            return false;
         }
 
         static TalkerSentence()

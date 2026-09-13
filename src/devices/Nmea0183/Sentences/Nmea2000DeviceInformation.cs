@@ -15,13 +15,26 @@ namespace Iot.Device.Nmea0183.Sentences
     public class Nmea2000DeviceInformation
     {
         private readonly IsoAddressClaim _addressClaim;
+        private readonly ProductInformation _productInformation;
 
-        public Nmea2000DeviceInformation(IsoAddressClaim addressClaim)
+        public Nmea2000DeviceInformation(IsoAddressClaim addressClaim, ProductInformation? productInformation)
         {
             _addressClaim = addressClaim;
+            _productInformation = productInformation ?? new ProductInformation(0, 0, string.Empty,
+                string.Empty, string.Empty, string.Empty, 0, 1);
         }
 
         public byte BusAddress => _addressClaim.MessageSource;
+
+        public string Name => _productInformation.ModelId;
+
+        public string SoftwareVersion => _productInformation.SoftwareVersionCode;
+
+        public string SerialNumber => _productInformation.SerialCode;
+
+        public int LoadEquivalentNumber => _productInformation.LoadEquivalency;
+
+        public ushort NmeaVersion => _productInformation.Nmea2000Version;
 
         public UInt32 UniqueIdentifier => _addressClaim.UniqueNumber;
 
@@ -219,6 +232,16 @@ namespace Iot.Device.Nmea0183.Sentences
             }
 
             return enumVal;
+        }
+
+        public string GetDeviceDescription()
+        {
+            return GetDeviceDescription(_addressClaim.DeviceFunction, DeviceClass);
+        }
+
+        public override string ToString()
+        {
+            return $"Device {Name} type {GetDeviceDescription()} bus address 0x{BusAddress:X2}";
         }
     }
 }
