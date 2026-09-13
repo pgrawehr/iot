@@ -52,6 +52,15 @@ namespace Iot.Device.Nmea0183.Sentences
             Valid = true;
         }
 
+        public CogSogRapidUpdate(Angle? courseOverGround, Speed? sog)
+            : base()
+        {
+            CourseOverGround = courseOverGround;
+            SpeedOverGround = sog;
+            IsTrueAngle = true;
+            Valid = true;
+        }
+
         public CogSogRapidUpdate(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, sentence.Fields, time)
         {
