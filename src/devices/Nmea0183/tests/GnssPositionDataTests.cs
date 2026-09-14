@@ -127,7 +127,7 @@ namespace Iot.Device.Nmea0183.Tests
         public void GnssPositionDataDecode_RealWorldMessage()
         {
             // Real PCDIN capture, PGN 129029 (Gnss Position Data)
-            const string sentence = "$PCDIN,1F805,00000000,05,FFCF50C05B3B1200A0E5C86CC879070061988970AD350180DCBCFFFFFFFFFF20FC0C460064002611000000";
+            const string sentence = "$PCDIN,01F805,00000000,05,FFCF50C05B3B1200A0E5C86CC879070061988970AD350180DCBCFFFFFFFFFF20FC0C460064002611000000";
 
             var parsed = TalkerSentence.FromSentenceString(sentence, out var error);
             Assert.Equal(NmeaError.None, error);
@@ -180,6 +180,9 @@ namespace Iot.Device.Nmea0183.Tests
 
             // Expected: 0 reference stations
             Assert.Empty(decoded.ReferenceStations);
+
+            var encoded = decoded.ToNmeaMessage();
+            Assert.Equal(sentence, encoded.Substring(0, encoded.IndexOf('*', StringComparison.Ordinal)));
         }
     }
 }

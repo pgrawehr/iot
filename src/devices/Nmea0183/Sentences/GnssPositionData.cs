@@ -17,7 +17,6 @@ namespace Iot.Device.Nmea0183.Sentences
     public class GnssPositionData : Nmea2000PackedMessage
     {
         public const int HexId = 0x1F805;
-        private static readonly DateTimeOffset s_unixEpoch = new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
         public override uint Identifier => HexId;
 
@@ -74,7 +73,7 @@ namespace Iot.Device.Nmea0183.Sentences
 
             if (days.HasValue && timeRaw.HasValue)
             {
-                PositionDateTimeUtc = s_unixEpoch.AddDays(days.Value).AddSeconds(timeRaw.Value * 0.0001);
+                PositionDateTimeUtc = DateTimeOffset.UnixEpoch.AddDays(days.Value).AddSeconds(timeRaw.Value * 0.0001);
             }
 
             long? latRaw = TryReadInt64(data, 14);
@@ -143,8 +142,8 @@ namespace Iot.Device.Nmea0183.Sentences
             if (PositionDateTimeUtc.HasValue)
             {
                 DateTimeOffset dt = PositionDateTimeUtc.Value.ToUniversalTime();
-                int days = (int)(dt.Date - s_unixEpoch.Date).TotalDays;
-                uint timeRaw = (uint)Math.Round((dt - dt.Date).TotalSeconds / 0.0001);
+                int days = (int)(dt.Date - DateTimeOffset.UnixEpoch.Date).TotalDays;
+                uint timeRaw = (uint)Math.Round(dt.TimeOfDay.TotalSeconds / 0.0001);
 
                 data.Append(WriteUshortToHex((ushort)days));
                 data.Append(WriteUInt32ToHex(timeRaw));
@@ -162,7 +161,7 @@ namespace Iot.Device.Nmea0183.Sentences
             byte typeMethod = (byte)(((byte)GnssMethod << 4) | ((byte)GnssType & 0x0F));
             data.Append(WriteByteToHex(typeMethod));
 
-            byte integrity = (byte)((byte)GnssIntegrity & 0x03);
+            byte integrity = (byte)(((byte)GnssIntegrity & 0x03) | 0xFC);
             data.Append(WriteByteToHex(integrity));
 
             data.Append(WriteByteToHex(NumberOfSatellites));
