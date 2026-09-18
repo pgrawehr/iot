@@ -20,10 +20,10 @@ namespace Iot.Device.Nmea0183
         static Nmea2000Declarations()
         {
             s_data = new Dictionary<uint, Nmea2000PgnDeclaration>();
-            s_data.Add(0x1F010, new Nmea2000PgnDeclaration(0x1F010, "System Time", 3, 8, false, false));
-            s_data.Add(0x1F801, new Nmea2000PgnDeclaration(0x1F801, "Position, Rapid Update", 2, 8, false, false));
-            s_data.Add(0x1F200, new Nmea2000PgnDeclaration(0x1F200, "Engine Parameters, Rapid update", 2, 8, false, false));
-            s_data.Add(0x1F201, new Nmea2000PgnDeclaration(0x1F201, "Engine Parameters, dynamic", 2, 26, true, false));
+            s_data.Add(SystemTime.HexId, new Nmea2000PgnDeclaration(SystemTime.HexId, "System Time", 3, 8, false, false));
+            s_data.Add(FastPositionUpdate.HexId, new Nmea2000PgnDeclaration(FastPositionUpdate.HexId, "Position, Rapid Update", 2, 8, false, false));
+            s_data.Add(SeaSmartEngineFast.HexId, new Nmea2000PgnDeclaration(SeaSmartEngineFast.HexId, "Engine Parameters, Rapid update", 2, 8, false, false));
+            s_data.Add(SeaSmartEngineDetail.HexId, new Nmea2000PgnDeclaration(SeaSmartEngineDetail.HexId, "Engine Parameters, dynamic", 2, 26, true, false));
             s_data.Add(SeatalkNgPilotStatus.HexId, new Nmea2000PgnDeclaration(SeatalkNgPilotStatus.HexId, "Seatalk: Pilot Mode", 7,
                 8, false, false,
                 // This message is addressed in a Group Function Message with Function=Command to change the pilot mode.

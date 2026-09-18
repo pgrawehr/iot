@@ -141,6 +141,9 @@ namespace Iot.Device.Nmea0183
                 case GnssPositionData.HexId:
                     nmea2000PackedMessage = new GnssPositionData(sentence, time);
                     return true;
+                case SystemTime.HexId:
+                    nmea2000PackedMessage = new SystemTime(sentence, time);
+                    return true;
             }
 
             nmea2000PackedMessage = null;
