@@ -805,6 +805,9 @@ namespace DisplayControl
             _displayDevice = null;
 
             _sensorManager.Dispose();
+
+            _board?.Dispose();
+            _board = null;
         }
 
         private sealed class MenuController

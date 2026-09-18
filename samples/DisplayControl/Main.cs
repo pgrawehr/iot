@@ -17,14 +17,11 @@ using Microsoft.Extensions.Logging;
 
 namespace DisplayControl
 {
-    internal sealed class Program : IDisposable
+    internal sealed class Program
     {
-        internal Program(GpioController controller)
+        internal Program()
         {
-            Controller = controller;
         }
-
-        public GpioController Controller { get; }
 
         public static AppBuilder BuildAvaloniaApp()
         {
@@ -88,30 +85,15 @@ namespace DisplayControl
             string fmt = date.ToString("yyyy-MM-dd");
             LogDispatcher.LoggerFactory = new MultiTargetLoggerFactory(new SimpleConsoleLoggerFactory(), 
                 new SimpleFileLoggerFactory($"/home/pi/projects/ShipLogs/OutputLog-{fmt}.txt", true));
-            using (GpioController controller = new GpioController(new RaspberryPi3Driver()))
-            {
-                Program prog = new Program(controller);
-                try
-                {
-                    Trace.Listeners.Add(new ConsoleTraceListener());
-                    prog.Run(args);
-                }
-                finally
-                {
-                    prog.Dispose();
-                }
-            }
+            Program prog = new Program();
+            Trace.Listeners.Add(new ConsoleTraceListener());
+            prog.Run(args);
         }
 
         public void Run(string[] args)
         {
             var builder = BuildAvaloniaApp();
             builder.StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnMainWindowClose);
-        }
-
-        public void Dispose()
-        {
-            Controller.Dispose();
         }
     }
 }
