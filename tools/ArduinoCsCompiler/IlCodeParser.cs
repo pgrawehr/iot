@@ -132,6 +132,12 @@ namespace ArduinoCsCompiler
         public static void DecodeForAssembler(TextWriter tw, ArduinoMethodDeclaration method, ExecutionSet set, Func<ExecutionSet, IlInstruction, int, string> tokenDecoder)
         {
             var instructions = DecodeMethod(method);
+            if (instructions.Count == 0)
+            {
+                tw.WriteLine("// Method has no body (probably missing native implementation)");
+                tw.WriteLine("ret");
+                return;
+            }
 
             StringBuilder sb = new StringBuilder();
             foreach (var instruction in instructions)
@@ -139,21 +145,37 @@ namespace ArduinoCsCompiler
                 sb.Clear();
                 sb.Append($"IL_{instruction.Pc:X4}: ");
 
-                sb.Append($"{instruction.Name.PadRight(10)} ");
-                if (instruction.ArgumentAddress.Length > 0)
+                try
                 {
-                    string? decodedArgument = instruction.DecodeArgument(set, tokenDecoder);
-                    if (decodedArgument != null)
+                    if (instruction.ArgumentAddress.Length > 0)
                     {
-                        sb.Append(decodedArgument);
+                        string? decodedArgument = instruction.DecodeArgument(set, tokenDecoder);
+                        // The above line may throw, therefore only append the instruction when it didn't.
+                        sb.Append($"{instruction.Name.PadRight(10)} ");
+                        if (decodedArgument != null)
+                        {
+                            sb.Append(decodedArgument);
+                        }
+                        else
+                        {
+                            sb.Append("(unknown) // TODO Argument not decoded");
+                        }
                     }
                     else
                     {
-                        sb.Append("(unknown) // TODO Argument not decoded");
+                        sb.Append($"{instruction.Name.PadRight(10)} ");
                     }
-                }
 
-                tw.WriteLine(sb.ToString().TrimEnd());
+                    tw.WriteLine(sb.ToString().TrimEnd());
+                }
+                catch (NotAvailableExecutionPathException x)
+                {
+                    sb.Append($"ldstr \"Method {x.Message} is not supported\"");
+                    tw.WriteLine(sb.ToString());
+                    tw.WriteLine("// TODO: Check this method/class is really expected to be missing");
+                    tw.WriteLine($"newobj instance void class [mscorlib]System.PlatformNotSupportedException::.ctor(string)");
+                    tw.WriteLine("throw");
+                }
             }
         }
 

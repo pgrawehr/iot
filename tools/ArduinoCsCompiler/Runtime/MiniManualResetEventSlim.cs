@@ -19,6 +19,10 @@ namespace ArduinoCsCompiler.Runtime
     {
         private ManualResetEvent _event;
 
+        static MiniManualResetEventSlim()
+        {
+        }
+
         public MiniManualResetEventSlim()
         {
             _event = new ManualResetEvent(false);
@@ -36,6 +40,8 @@ namespace ArduinoCsCompiler.Runtime
 
         public bool IsSet => _event.WaitOne(0);
 
+        public int SpinCount => 1;
+
         public void Set()
         {
             _event.Set();
@@ -46,14 +52,32 @@ namespace ArduinoCsCompiler.Runtime
             _event.Reset();
         }
 
-        public void WaitOne()
+        public void Wait()
         {
             _event.WaitOne();
         }
 
-        public void WaitOne(int millisecondsTimeout)
+        public void Wait(int millisecondsTimeout)
         {
             _event.WaitOne(millisecondsTimeout);
+        }
+
+        public void Wait(int millisecondsTimeout, CancellationToken cancellationToken)
+        {
+            int totalWait = millisecondsTimeout;
+            while (totalWait > 0)
+            {
+                if (_event.WaitOne(20))
+                {
+                    break;
+                }
+
+                totalWait -= 20;
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
         }
 
         protected virtual void Dispose(bool disposing)

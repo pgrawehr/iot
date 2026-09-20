@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -153,6 +154,44 @@ namespace ArduinoCsCompiler.Runtime
             {
                 lpIOIsPending = false;
                 return true;
+            }
+
+            [ArduinoImplementation(CompareByParameterNames = true)]
+            public static void CancelThreadpoolIo(SafeHandle pio)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation]
+            public static void CloseThreadpoolIo(IntPtr pio)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation]
+            internal static unsafe int CompareStringEx(
+                char* lpLocaleName,
+                uint dwCmpFlags,
+                char* lpString1,
+                int cchCount1,
+                char* lpString2,
+                int cchCount2,
+                void* lpVersionInformation,
+                void* lpReserved,
+                IntPtr lParam)
+            {
+                throw new NotImplementedException();
+            }
+
+            [ArduinoImplementation]
+            internal static unsafe int CompareStringOrdinal(
+                char* lpString1,
+                int cchCount1,
+                char* lpString2,
+                int cchCount2,
+                bool bIgnoreCase)
+            {
+                throw new NotImplementedException();
             }
 
             [ArduinoImplementation]

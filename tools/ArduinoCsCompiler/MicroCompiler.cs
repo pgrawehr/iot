@@ -464,6 +464,12 @@ namespace ArduinoCsCompiler
                 // For some reason, the NanoFramework is missing IEquatable<T> for now. This is bad, because the default
                 // equality comparer uses it. Therefore, we need to add it here, so that the EE can use it.
                 PrepareClass(set, typeof(IEquatable<>), stack);
+                var t = typeof(System.Collections.Generic.EqualityComparer<>);
+                PrepareClass(set, t, stack);
+                PrepareClass(set, typeof(System.Collections.Generic.IEqualityComparer<>), stack);
+                PrepareClass(set, t.Assembly.GetType("System.Collections.Generic.EnumEqualityComparer`1", true, false)!, stack);
+                PrepareClass(set, typeof(MiniInterop.CRITICAL_SECTION), stack);
+                PrepareClass(set, typeof(MiniInterop.CONDITION_VARIABLE), stack);
                 // The others will be replaced with their true types instead of the complex stuff below
                 return;
             }
@@ -722,7 +728,7 @@ namespace ArduinoCsCompiler
             foreach (var dependent in members.Where(f => f.Field != null))
             {
                 Type ft = dependent.Field!.FieldType;
-                if (ft.IsPointer || ft.IsByRef)
+                while (ft.IsPointer || ft.IsByRef)
                 {
                     ft = ft.GetElementType()!;
                 }
@@ -744,6 +750,11 @@ namespace ArduinoCsCompiler
             foreach (var m in classType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 var t = m.ReturnType;
+                while (t.IsPointer || t.IsByRef)
+                {
+                    t = t.GetElementType()!;
+                }
+
                 if (t != typeof(void))
                 {
                     PrepareClassDeclaration(set, t, stack);
@@ -2482,6 +2493,7 @@ namespace ArduinoCsCompiler
                     return newInfo1.Token;
                 }
 
+                /*
                 if (TargetFramework == TargetFramework.Nano && methodInfo.IsReplacement)
                 {
                     // This is an external method, so use a hand-crafted method declaration. This will (hopefully) prevent
@@ -2491,6 +2503,7 @@ namespace ArduinoCsCompiler
                     set.AddMethod(newInfo2);
                     return newInfo2.Token;
                 }
+                */
 
                 if (HasIntrinsicAttribute(methodInfo))
                 {

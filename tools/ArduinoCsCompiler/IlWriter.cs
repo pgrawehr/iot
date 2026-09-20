@@ -3,6 +3,7 @@
 
 using System;
 using System.CodeDom.Compiler;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -221,7 +222,15 @@ public class IlWriter
         List<ClassDeclaration> pvi = new List<ClassDeclaration>();
         string nameWithQuotes = $"'{MicroCompiler.PrivateImplementationDetailsName}'";
 
+        /*
         WriteClass(tw, GetClassDeclaration(typeof(System.IEquatable<>))!, true);
+        // TODO: Unify with code in MicroCompiler.PrepareLowLevelInterface
+        var t = typeof(System.Collections.Generic.EqualityComparer<>);
+        WriteClass(tw, GetClassDeclaration(typeof(IEqualityComparer<>))!, true);
+        WriteClass(tw, GetClassDeclaration(t)!, true);
+        WriteClass(tw, GetClassDeclaration(t.Assembly.GetType("System.Collections.Generic.EnumEqualityComparer`1", true, false))!, true);
+        */
+
         foreach (ClassDeclaration cl in _set.Classes)
         {
             if (cl.FullName == nameWithQuotes)
@@ -661,13 +670,15 @@ public class IlWriter
                 continue;
             }
 
+            /*
             if (m1.NativeMethod != 0)
             {
                 // Native methods are skipped here, as they are implemented outside of IL.
-                tw.WriteLine($"// Native method skipped - should be provided by existing implementation");
+                tw.WriteLine($"// TODO: Native method skipped - should be provided by existing implementation");
                 tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
                 continue;
             }
+            */
 
             if (m1.Flags.HasFlag(MethodFlags.Ctor) || m1.IlName == ArduinoMethodDeclaration.CctorName)
             {
@@ -692,7 +703,7 @@ public class IlWriter
                     else
                     {
                         // TODO: Write _only_ these, not their implementations
-                        tw.WriteLine("// Currently omitting:");
+                        tw.WriteLine("// TODO: Currently omitting:");
                         tw.WriteLine($"// {m1.MethodBase.MethodSignature()}");
                         continue;
                     }
@@ -738,17 +749,9 @@ public class IlWriter
             if (isAbstract.Length == 0)
             {
                 tw.Indent++;
-                if (!m1.Flags.HasFlag(MethodFlags.SpecialMethod))
-                {
-                    tw.WriteLine($".maxstack {m1.MaxStack}");
-                    tw.WriteLine("// TODO: Insert local declarations");
-                    IlCodeParser.DecodeForAssembler(tw, m1, _set, TokenDecoder);
-                }
-                else
-                {
-                    // A method that used to do an internalcall. This needs a new patching approach
-                    tw.WriteLine("ret // TODO: Replace with new native call");
-                }
+                tw.WriteLine($".maxstack {m1.MaxStack}");
+                tw.WriteLine("// TODO: Insert local declarations");
+                IlCodeParser.DecodeForAssembler(tw, m1, _set, TokenDecoder);
 
                 tw.Indent--;
             }
@@ -874,7 +877,7 @@ public class IlWriter
                 if (decl == null)
                 {
                     // the method is not part of the execution set, possibly because the class is external.
-                    return $"instance void {TypeNameForIl(mi.DeclaringType)}::{mi.Name}({args}) /* TODO Not part of execution set */";
+                    throw new NotAvailableExecutionPathException($"instance void {TypeNameForIl(mi.DeclaringType)}::{mi.Name}({args}) /* TODO Not part of execution set */");
                 }
 
                 // No need to update args, should be same
