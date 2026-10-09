@@ -75,13 +75,7 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     {
         ValidatePinNumber(pinNumber);
 
-        if (_interruptDriver == null)
-        {
-            throw new PlatformNotSupportedException(
-                "No interrupt driver was found - event callbacks not supported on this platform");
-        }
-
-        _interruptDriver.OpenPin(pinNumber);
+        _interruptDriver!.OpenPin(pinNumber);
         _pinModes[pinNumber]!.InUseByInterruptDriver = true;
         _interruptDriver.AddCallbackForPinValueChangedEvent(pinNumber, eventTypes, callback);
     }
@@ -159,19 +153,10 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     {
         ValidatePinNumber(pinNumber);
 
-        if (_pinModes[pinNumber]!.InUseByInterruptDriver)
-        {
-            _interruptDriver!.OpenPin(pinNumber);
+        _interruptDriver!.OpenPin(pinNumber);
+        _pinModes[pinNumber]!.InUseByInterruptDriver = true;
 
-            _interruptDriver.RemoveCallbackForPinValueChangedEvent(pinNumber, callback);
-
-            _pinModes[pinNumber]!.InUseByInterruptDriver = false;
-            _interruptDriver.ClosePin(pinNumber);
-        }
-        else
-        {
-            throw new InvalidOperationException($"Pin {pinNumber} is not in use for callbacks");
-        }
+        _interruptDriver.RemoveCallbackForPinValueChangedEvent(pinNumber, callback);
     }
 
     /// <summary>
@@ -495,29 +480,10 @@ internal unsafe class RaspberryPi3LinuxDriver : GpioDriver
     {
         ValidatePinNumber(pinNumber);
 
-        if (_interruptDriver == null)
-        {
-            throw new PlatformNotSupportedException(
-                "No interrupt driver was found - event callbacks not supported on this platform");
-        }
+        _interruptDriver!.OpenPin(pinNumber);
+        _pinModes[pinNumber]!.InUseByInterruptDriver = true;
 
-        if (_pinModes[pinNumber]!.InUseByInterruptDriver)
-        {
-            return _interruptDriver.WaitForEvent(pinNumber, eventTypes, cancellationToken);
-        }
-        else
-        {
-            // This is the typical case when this method is used: Wait for a sparse event synchronously.
-            // We open the pin, wait for the event, and close it again.
-            _interruptDriver.OpenPin(pinNumber);
-            _pinModes[pinNumber]!.InUseByInterruptDriver = true;
-
-            var ret = _interruptDriver.WaitForEvent(pinNumber, eventTypes, cancellationToken);
-
-            _pinModes[pinNumber]!.InUseByInterruptDriver = false;
-            _interruptDriver.ClosePin(pinNumber);
-            return ret;
-        }
+        return _interruptDriver.WaitForEvent(pinNumber, eventTypes, cancellationToken);
     }
 
     /// <summary>

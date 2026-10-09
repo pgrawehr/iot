@@ -4,7 +4,6 @@
     <TargetFramework>$(DefaultSampleTfms)</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Arduino\Arduino.csproj" />
     <ProjectReference Include="..\..\Mpu6xxx9xxx.csproj" />
   </ItemGroup>
 </Project>
