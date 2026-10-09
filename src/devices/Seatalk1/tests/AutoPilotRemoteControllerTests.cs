@@ -99,7 +99,7 @@ namespace Iot.Device.Tests.Seatalk1
             SetToStandby();
             Assert.Equal(AutopilotStatus.Standby, _testee.Status);
             // Also: Shouldn't block, despite no Cancellation given
-            Assert.False(_testee.TurnTo(Angle.FromDegrees(100), TurnDirection.Starboard));
+            Assert.False(_testee.TurnTo(Angle.FromDegrees(100), TurnDirection.TurnToStarboard));
         }
 
         [Fact]
@@ -134,7 +134,7 @@ namespace Iot.Device.Tests.Seatalk1
                 Assert.True(ks.Equals(i));
             }).Returns(true);
             _tokenSource.Cancel(); // Cancellation is only tested after the first command was sent
-            Assert.False(_testee.TurnBy(Angle.FromDegrees(90), TurnDirection.Starboard, _tokenSource.Token));
+            Assert.False(_testee.TurnBy(Angle.FromDegrees(90), TurnDirection.TurnToStarboard, _tokenSource.Token));
 
             _interface.Verify(x => x.SendMessage(ks));
         }
@@ -158,7 +158,7 @@ namespace Iot.Device.Tests.Seatalk1
                 Assert.Equal(ks, i);
             }).Returns(true);
             _tokenSource.Cancel(); // Cancellation is only tested after the first command was sent
-            Assert.False(_testee.TurnBy(Angle.FromDegrees(90), TurnDirection.Port, _tokenSource.Token));
+            Assert.False(_testee.TurnBy(Angle.FromDegrees(90), TurnDirection.TurnToPort, _tokenSource.Token));
 
             _interface.Verify(x => x.SendMessage(ks));
         }
@@ -213,7 +213,7 @@ namespace Iot.Device.Tests.Seatalk1
                 indexOfCommand++;
             }).Returns(true);
 
-            Assert.True(_testee.TurnBy(Angle.FromDegrees(12), TurnDirection.Port, _tokenSource.Token));
+            Assert.True(_testee.TurnBy(Angle.FromDegrees(12), TurnDirection.TurnToPort, _tokenSource.Token));
         }
 
         [Fact]
@@ -315,7 +315,7 @@ namespace Iot.Device.Tests.Seatalk1
 
             }).Returns(true);
 
-            TurnDirection? ignore = TurnDirection.Starboard;
+            TurnDirection? ignore = TurnDirection.TurnToStarboard;
             Assert.True(_testee.SetStatus(AutopilotStatus.Auto, ref ignore));
         }
     }

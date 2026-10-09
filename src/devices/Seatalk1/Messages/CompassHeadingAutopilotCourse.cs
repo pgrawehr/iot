@@ -66,23 +66,21 @@ namespace Iot.Device.Seatalk1.Messages
 
             uint u = ((uint)data[1]) >> 4;
             uint vw = data[2];
-            long heading = (u & 0x3) * 90 + (vw & 0x3F) * 2 + ((u & 0x4) == 0x4 ? 1 : 0);
+            uint lastBits = u switch
+            {
+                0xC => 2,
+                0x4 => 1,
+                _ => 0,
+            };
+
+            long heading = (u & 0x3) * 90 + (vw & 0x3F) * 2 + lastBits;
             Angle headingA = Angle.FromDegrees(heading);
 
-            Messages.TurnDirection td = (u & 0x8) == 0x8 ? TurnDirection.Starboard : TurnDirection.Port;
+            TurnDirection td = (u & 0x8) == 0x8 ? TurnDirection.TurnToStarboard : TurnDirection.TurnToPort;
 
-            double desiredCourse = ((vw >> 6) * 90) + (data[3] / 2.0);
+            long desiredCourse = ((vw >> 6) * 90) + (data[3] / 2);
 
             AutopilotStatus status = GetAutopilotStatus(data[4]);
-
-            if (status == AutopilotStatus.Undefined)
-            {
-                Logger.LogWarning($"Unknown autopilot status byte {data[4]}");
-            }
-            else
-            {
-                Logger.LogInformation($"Current autopilot status: {status}");
-            }
 
             sbyte rudder = (sbyte)data[6];
 
@@ -98,7 +96,7 @@ namespace Iot.Device.Seatalk1.Messages
                 alarms |= AutopilotAlarms.WindShift;
             }
 
-            return this with
+            var ret = this with
             {
                 CompassHeading = headingA,
                 AutoPilotType = data[8],
@@ -108,6 +106,13 @@ namespace Iot.Device.Seatalk1.Messages
                 Alarms = alarms,
                 TurnDirection = td,
             };
+
+            if (status == AutopilotStatus.Undefined)
+            {
+                Logger.LogWarning($"Unknown autopilot status byte {data[4]}");
+            }
+
+            return ret;
         }
 
         /// <inheritdoc />
@@ -133,7 +138,7 @@ namespace Iot.Device.Seatalk1.Messages
                 heading -= 90;
             }
 
-            if (TurnDirection == TurnDirection.Starboard)
+            if (TurnDirection == TurnDirection.TurnToStarboard)
             {
                 u |= 0x8;
             }

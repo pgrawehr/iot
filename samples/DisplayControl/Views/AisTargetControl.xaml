@@ -1,0 +1,25 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:DisplayControl.ViewModels;assembly=DisplayControl"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="450"
+             x:Class="DisplayControl.Views.AisTargetControl">
+    <Design.DataContext>
+        <vm:AisTargetViewModel/>
+    </Design.DataContext>
+    <StackPanel Orientation="Horizontal" Margin="5">
+        <Border Background="{Binding StatusColor}">
+            <StackPanel Orientation="Vertical" Spacing="5">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock VerticalAlignment="Center" Text="{Binding NameOrMmsi}" 
+                               Width="400" FontSize="30" Margin="5"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding FormattedMmsi}" 
+                               Width="250" FontSize="30" Margin="5"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Data}"
+                           Width="700" FontSize="30" Margin="5" TextWrapping="WrapWithOverflow"/>
+            </StackPanel>
+        </Border>
+     </StackPanel>
+</UserControl>

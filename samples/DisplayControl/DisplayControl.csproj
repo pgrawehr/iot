@@ -1,0 +1,85 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>DisplayControl</RootNamespace>
+    <Nullable>warnings</Nullable>
+    <!--We don't want package references, but individual project references-->
+    <PreferPackageReference>true</PreferPackageReference>
+    <NoWarn>$(NoWarn);NU1504</NoWarn>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+<ItemGroup>
+    <Folder Include="Models\" />
+    <Compile Update="**\*.xaml.cs">
+      <DependentUpon>%(Filename)</DependentUpon>
+    </Compile>
+    <AvaloniaResource Include="**\*.xaml">
+      <SubType>Designer</SubType>
+    </AvaloniaResource>
+    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Remove="tests\**" />
+    <AvaloniaXaml Remove="tests\**" />
+    <Compile Remove="tests\**" />
+    <EmbeddedResource Remove="tests\**" />
+    <None Remove="tests\**" />
+  </ItemGroup>
+
+<ItemGroup>
+  <None Remove="Views\AisTargetControl.xaml" />
+</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.10" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Themes.Simple" Version="11.0.10" />
+    <PackageReference Include="MathNet.Filtering" Version="0.7.0" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="MathNet.Spatial" Version="0.6.0" />
+    <PackageReference Include="MessageBox.Avalonia" Version="3.1.5.1" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.9" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Views\AisTargetControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\SensorValueControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\devices\Ads1115\Ads1115.csproj" />
+    <ProjectReference Include="..\..\src\devices\Arduino\Arduino.csproj" />
+    <ProjectReference Include="..\..\src\devices\Bmxx80\Bmxx80.csproj" />
+    <ProjectReference Include="..\..\src\devices\Common\Common.csproj" />
+    <ProjectReference Include="..\..\src\devices\CpuTemperature\CpuTemperature.csproj" />
+    <ProjectReference Include="..\..\src\devices\IG-500A\IG-500A.csproj" />
+    <ProjectReference Include="..\..\src\devices\Nmea0183\Nmea0183.csproj" />
+    <ProjectReference Include="..\..\src\devices\CharacterLcd\CharacterLcd.csproj" />
+    <ProjectReference Include="..\..\src\devices\Mcp23xxx\Mcp23xxx.csproj" />
+    <ProjectReference Include="..\..\src\devices\Seatalk1\Seatalk1.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Views\AisTargetControl.xaml.cs">
+      <DependentUpon>AisTargetControl.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Calibration_Cirrus.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Calibration_Cirrus_2025.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Calibration_Cirrus_v3.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="DisplayControl.sh">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

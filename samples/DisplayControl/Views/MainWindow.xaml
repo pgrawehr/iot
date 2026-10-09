@@ -1,0 +1,83 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DisplayControl.ViewModels;assembly=DisplayControl"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="530"
+        x:Class="DisplayControl.Views.MainWindow"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Main Data Display">
+    <Window.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style Selector="ScrollBar:horizontal /template/ Thumb#thumb">
+            <Setter Property="MinWidth" Value="10" />
+            <Setter Property="Height" Value="10" />
+        </Style>
+        <Style Selector="ScrollBar:vertical">
+            <Setter Property="Width" Value="20" />
+        </Style>
+        <Style Selector="ScrollBar:vertical /template/ Thumb#thumb">
+            <Setter Property="MinHeight" Value="20" />
+            <Setter Property="Width" Value="20" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+    </Window.Styles>
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+    <StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="2">
+            <Button Content="{Binding TankSensorText}" Command="{Binding EnableDisableForceTankSensorEnable}"/>
+            <Button Content="{Binding SuppressAisWarningText}" Command="{Binding EnableDisableAisTargetWarnings}" Background="{Binding AisTargetWarningsColor}"/>
+            <Button Content="Test Msg" Command="{Binding SendTestMessage}"/>
+            <Button Content="{Binding HeadingModeText}" Command="{Binding ChangeHeadingMode}" Background="{Binding HeadingModeColor}"/>
+            <Button Content="Reset Autopilot" Command="{Binding ResetAutopilot}"/>
+            <Button Content="Exit" Command="{Binding ExitCommand}" />
+
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="2" Background="{Binding StatusColor}">
+                <TextBlock Name="StatusBar" Text="{Binding Status}" Background="{Binding StatusColor}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,5,5,5" 
+                           Height ="{Binding HeaderHeight}"/>
+                <Button Name="ShowAll" Content="No Filter" Width="100" Command="{Binding FilterShowAll}" IsVisible="{Binding SensorsVisible}">
+                </Button>
+                <Button Name="ShowStatus" Content="Status" Width="100" Command="{Binding FilterShowStatus}" IsVisible="{Binding SensorsVisible}">
+                </Button>
+                <Button Name="Navigation" Content="Navigation" Width="150" Command="{Binding FilterNavigation}" IsVisible="{Binding SensorsVisible}">
+                </Button>
+                <Button Name="EngineFilter" Content="Engine" Width="100" Command="{Binding FilterForEngine}" IsVisible="{Binding SensorsVisible}">
+                </Button>
+                <Button Name="AisFilter" Content="AIS" Width="80" Command="{Binding FilterForAis}" IsVisible="{Binding SensorsVisible}">
+                </Button>
+                <Button Name="WeatherFilter" Content="Weather" Width="100" Command="{Binding FilterForWeather}" IsVisible="{Binding SensorsVisible}">
+                </Button>
+                <Button Name="WarningFilter" Content="Warn" Width="100" Command="{Binding FilterForWarn}" IsVisible="{Binding SensorsVisible}">
+                </Button>
+                <Button Name="AisTargets" Content="AisTargets" Width="120" Command="{Binding ShowAisTargets}" IsVisible="{Binding SensorsVisible}"/>
+                <Button Name="Sensors" Content="Sensors" Width="120" Command="{Binding ShowSensors}" IsVisible="{Binding AisTargetsVisible}"/>
+                <Button Name="AisTargetFilter" Content="{Binding AisFilterModeText}" Command="{Binding ChangeAisFilterMode}" IsVisible="{Binding AisTargetsVisible}"/>
+                <Button Name="AisSorting" Content="{Binding AisSortModeText}" Command="{Binding ChangeAisSortMode}" IsVisible="{Binding AisTargetsVisible}"/>
+        </StackPanel>
+        <Panel ClipToBounds="True" Height="{Binding ClientHeight}" IsVisible="{Binding SensorsVisible}">
+            <ScrollViewer VerticalScrollBarVisibility="Visible" DockPanel.Dock="Bottom" ClipToBounds="True">
+                <ItemsControl ItemsSource="{Binding SensorValues}">
+                </ItemsControl>
+            </ScrollViewer>
+        </Panel>
+        <Panel ClipToBounds="True" Height="{Binding ClientHeight}" IsVisible="{Binding AisTargetsVisible}">
+            <ScrollViewer VerticalScrollBarVisibility="Visible" DockPanel.Dock="Bottom" ClipToBounds="True">
+                <ItemsControl ItemsSource="{Binding AisTargets}">
+                </ItemsControl>
+            </ScrollViewer>
+        </Panel>
+    </StackPanel>
+</Window>

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SkiaSharp;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Iot.Device.Graphics.SkiaSharpAdapter
 {
