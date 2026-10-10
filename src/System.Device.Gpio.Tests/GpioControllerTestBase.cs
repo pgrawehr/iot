@@ -73,6 +73,24 @@ public abstract class GpioControllerTestBase
         }
     }
 
+    /// <summary>
+    /// For interactive tests, this shows whether the output is actually working by slowly blinking the attached LED (if any)
+    /// </summary>
+    [Fact]
+    public void BlinkTheLed()
+    {
+        using (GpioController controller = new GpioController(GetTestDriver()))
+        {
+            controller.OpenPin(OutputPin, PinMode.Output);
+            controller.Write(OutputPin, PinValue.High);
+            for (int i = 0; i < 20; i++)
+            {
+                controller.Toggle(OutputPin);
+                Thread.Sleep(200);
+            }
+        }
+    }
+
     [Fact]
     public void PinCanChangeStateWhileItIsOpen()
     {
