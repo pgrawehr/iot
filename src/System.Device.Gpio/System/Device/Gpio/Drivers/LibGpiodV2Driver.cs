@@ -414,8 +414,13 @@ public sealed class LibGpiodV2Driver : UnixDriver
             requestConfig.SetConsumer(ConsumerId);
             var lineSettings = lineSettingsFactory.Invoke();
             LineConfig lineConfig = LibGpiodProxyFactory.CreateLineConfig();
+            lineSettings.SetActiveLow(false);
+            lineSettings.SetBias(GpiodLineBias.AsIs);
+            lineSettings.SetDebouncePeriod(TimeSpan.Zero);
+            lineSettings.SetDirection(GpiodLineDirection.Output);
+            lineSettings.SetDrive(GpiodLineDrive.PushPull);
             lineConfig.AddLineSettings(offset, lineSettings);
-            _eventObserver.EnrichLineConfigWithPresentEventSubscriptions(lineConfig);
+            //// _eventObserver.EnrichLineConfigWithPresentEventSubscriptions(lineConfig);
 
             LineRequest request = _chip.RequestLines(requestConfig, lineConfig);
 
