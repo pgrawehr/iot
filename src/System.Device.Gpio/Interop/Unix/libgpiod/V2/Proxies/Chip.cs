@@ -202,7 +202,7 @@ internal class Chip : LibGpiodProxyBase
 
             if (lineRequestHandle.IsInvalid)
             {
-                throw new GpiodException($"Could not request line/s: {LastErr.GetMsg()}, " +
+                throw new GpiodException($"Could not request line/s for chip handle {_handle}: {LastErr.GetMsg()}, " +
                     $"RequestConfig: {requestConfig.MakeSnapshot()}\nLineConfig: {lineConfig.MakeSnapshot()}");
             }
 
