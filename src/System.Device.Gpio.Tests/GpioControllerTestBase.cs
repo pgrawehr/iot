@@ -86,7 +86,8 @@ public abstract class GpioControllerTestBase
     {
         using (GpioController controller = new GpioController(GetTestDriver()))
         {
-            controller.OpenPin(OutputPin, PinMode.Output, PinValue.Low);
+            controller.OpenPin(OutputPin, PinMode.Input);
+            controller.SetPinMode(OutputPin, PinMode.Output);
             controller.Write(OutputPin, PinValue.High);
             for (int i = 0; i < 20; i++)
             {
