@@ -21,10 +21,10 @@ public abstract class GpioControllerTestBase
 
     protected GpioControllerTestBase(ITestOutputHelper testOutputHelper)
     {
-        while (!Debugger.IsAttached)
-        {
-            Thread.Sleep(1000);
-        }
+        ////while (!Debugger.IsAttached)
+        ////{
+        ////    Thread.Sleep(1000);
+        ////}
 
         _testOutputHelper = testOutputHelper;
     }
