@@ -18,7 +18,9 @@ using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1;
 using UnitsNet;
 using CommandLine;
+using Iot.Device.Marine.Sentences;
 using Microsoft.Extensions.Logging;
+using Iot.Device.Marine.Sentences.Nmea0183;
 
 namespace Nmea.Simulator
 {

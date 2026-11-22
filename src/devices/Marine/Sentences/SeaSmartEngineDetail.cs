@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Marine.Sentences;
 using UnitsNet;
 using UnitsNet.Units;
 

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
+using Iot.Device.Marine.Sentences.Nmea2000;
 
 #pragma warning disable CS1591
 namespace Iot.Device.Nmea0183.Sentences

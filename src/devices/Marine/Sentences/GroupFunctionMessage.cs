@@ -8,6 +8,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Marine.Sentences.Nmea2000;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 

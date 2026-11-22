@@ -10,6 +10,8 @@ using System.IO;
 using System.Linq;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1.Messages;
+using Iot.Device.Marine.Sentences.Nmea0183;
+using Iot.Device.Marine.Sentences.Nmea2000;
 
 namespace Iot.Device.Nmea0183
 {

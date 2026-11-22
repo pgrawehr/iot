@@ -6,14 +6,15 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea0183
 {
     /// <summary>
     /// BOD sentence: Bearing origin to destination (between two waypoints, typically on the active leg)
     /// </summary>
-    public class BearingOriginToDestination : NmeaSentence
+    public class BearingOriginToDestination : Nmea0183Sentence
     {
         /// <summary>
         /// This sentence's id

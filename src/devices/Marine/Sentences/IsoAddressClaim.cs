@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Iot.Device.Marine.Sentences.Nmea2000;
 
 namespace Iot.Device.Nmea0183.Sentences
 {

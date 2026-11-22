@@ -28,6 +28,27 @@
     </AssemblyAttribute>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Sentences\Nmea0183\BearingAndDistanceToWayPoint.cs" />
+    <Compile Include="Sentences\Nmea0183\BearingOriginToDestination.cs" />
+    <Compile Include="Sentences\Nmea0183\CrossTrackError.cs" />
+    <Compile Include="Sentences\Nmea0183\DepthBelowSurface.cs" />
+    <Compile Include="Sentences\Nmea0183\DepthBelowTransducer.cs" />
+    <Compile Include="Sentences\Nmea0183\DepthOfWater.cs" />
+    <Compile Include="Sentences\Nmea0183\DistanceTraveledTroughWater.cs" />
+    <Compile Include="Sentences\Nmea0183\EngineRevolutions.cs" />
+    <Compile Include="Sentences\Nmea0183\EstimatedAccuracy.cs" />
+    <Compile Include="Sentences\Nmea0183\GlobalPositioningSystemFixData.cs" />
+    <Compile Include="Sentences\Nmea0183\Nmea0183Sentence.cs" />
+    <Compile Include="Sentences\Nmea2000\BinarySwitchStatus.cs" />
+    <Compile Include="Sentences\Nmea2000\CogSogRapidUpdate.cs" />
+    <Compile Include="Sentences\Nmea2000\CzoneChannelState.cs" />
+    <Compile Include="Sentences\Nmea2000\CzoneCircuitControl.cs" />
+    <Compile Include="Sentences\Nmea2000\CzoneCircuitStatus.cs" />
+    <Compile Include="Sentences\Nmea2000\CzoneModuleAnnounce.cs" />
+    <Compile Include="Sentences\Nmea2000\DeviceClass.cs" />
+    <Compile Include="Sentences\Nmea2000\FastPositionUpdate.cs" />
+    <Compile Include="Sentences\Nmea2000\FieldDeclaration.cs" />
+    <Compile Include="Sentences\Nmea2000\GnssPositionData.cs" />
     <Compile Include="Sentences\Seatalk1\ApparentWindAngle.cs" />
     <Compile Include="Sentences\Seatalk1\ApparentWindSpeed.cs" />
     <Compile Include="Sentences\Seatalk1\AutopilotAlarms.cs" />

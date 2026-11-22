@@ -7,12 +7,12 @@ using System.Text;
 using Iot.Device.Nmea0183;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea0183
 {
     /// <summary>
     /// DBS sentence: Depth below surface (sent by depth transducer if configured properly)
     /// </summary>
-    public class DepthBelowSurface : NmeaSentence
+    public class DepthBelowSurface : Nmea0183Sentence
     {
         /// <summary>
         /// This sentence's id

@@ -7,38 +7,34 @@ using System.Text;
 using Iot.Device.Nmea0183;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea0183
 {
     /// <summary>
-    /// DPT sentence: Depth of water, alternate to DBS (<see cref="DepthBelowSurface"/>). It's not unusual to get both.
+    /// DBt sentence: Depth below transducer
     /// </summary>
-    public class DepthOfWater : NmeaSentence
+    public class DepthBelowTransducer : Nmea0183Sentence
     {
         /// <summary>
         /// This sentence's id
         /// </summary>
-        public static SentenceId Id => new SentenceId("DPT");
+        public static SentenceId Id => new SentenceId("DBT");
         private static bool Matches(SentenceId sentence) => Id == sentence;
         private static bool Matches(TalkerSentence sentence) => Matches(sentence.Id);
 
         /// <summary>
         /// Constructs a new DBS sentence
         /// </summary>
-        /// <param name="depthBelowTransducer">Measured water depth, from transducer to ground</param>
-        /// <param name="transducerOffset">Configured transducer offset. Positive if the user prefers to see the depth below surface,
-        /// negative if the user prefers depth below keel.</param>
-        public DepthOfWater(Length depthBelowTransducer, Length transducerOffset)
+        public DepthBelowTransducer(Length depth)
             : base(OwnTalkerId, Id, DateTimeOffset.UtcNow)
         {
-            DepthBelowTransducer = depthBelowTransducer;
-            TransducerOffset = transducerOffset;
+            Depth = depth;
             Valid = true;
         }
 
         /// <summary>
         /// Internal constructor
         /// </summary>
-        public DepthOfWater(TalkerSentence sentence, DateTimeOffset time)
+        public DepthBelowTransducer(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
@@ -46,25 +42,25 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Constructor that decodes a message.
         /// </summary>
-        public DepthOfWater(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+        public DepthBelowTransducer(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
             IEnumerator<string> field = fields.GetEnumerator();
 
-            // This message does not provide any unit fields. They're always meters.
-            double? depthBelowTransducer = ReadValue(field);
-            double? transducerOffset = ReadValue(field);
+            // Same format as DBS
+            string feet = ReadString(field);
+            string feetUnit = ReadString(field);
+            double? meters = ReadValue(field);
+            string metersUnit = ReadString(field);
 
-            if (depthBelowTransducer.HasValue && transducerOffset.HasValue)
+            if (metersUnit == "M" && meters.HasValue)
             {
-                DepthBelowTransducer = Length.FromMeters(depthBelowTransducer.Value);
-                TransducerOffset = Length.FromMeters(transducerOffset.Value);
+                Depth = Length.FromMeters(meters.Value);
                 Valid = true;
             }
             else
             {
-                DepthBelowTransducer = Length.Zero;
-                TransducerOffset = Length.Zero;
+                Depth = Length.Zero;
                 Valid = false;
             }
         }
@@ -77,16 +73,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Cross track distance, meters
         /// </summary>
-        public Length DepthBelowTransducer
-        {
-            get;
-            private set;
-        }
-
-        /// <summary>
-        /// User-Configured offset from the depth transducer to either the waterline (if positive) or the keel (if negative)
-        /// </summary>
-        public Length TransducerOffset
+        public Length Depth
         {
             get;
             private set;
@@ -99,7 +86,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return FormattableString.Invariant($"{DepthBelowTransducer.Meters:F2},{TransducerOffset.Meters:F2}");
+                return FormattableString.Invariant($"{Depth.Feet:F1},f,{Depth.Meters:F2},M,{Depth.Fathoms:F2},F");
             }
 
             return string.Empty;
@@ -110,7 +97,7 @@ namespace Iot.Device.Nmea0183.Sentences
         {
             if (Valid)
             {
-                return $"Depth below transducer: {DepthBelowTransducer.Meters:F2}m, Offset: {TransducerOffset.Meters:F2}m";
+                return $"Depth below transducer: {Depth.Meters:F2}m";
             }
 
             return "No valid depth";

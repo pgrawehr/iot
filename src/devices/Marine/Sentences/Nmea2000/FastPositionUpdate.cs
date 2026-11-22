@@ -8,9 +8,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea2000
 {
     /// <summary>
     /// The NMEA2000 Fast Position Update message. Includes latitude and longitude only.

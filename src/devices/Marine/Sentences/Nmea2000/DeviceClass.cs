@@ -3,7 +3,7 @@
 
 using System.ComponentModel;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea2000
 {
     /// <summary>
     /// NMEA2000 Device Class codes

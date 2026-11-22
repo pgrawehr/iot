@@ -7,15 +7,16 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Nmea0183;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea0183
 {
     /// <summary>
     /// PGRME sentence. This sentence is a Garmin proprietary sentence.
     /// See https://developer.garmin.com/downloads/legacy/uploads/2015/08/190-00684-00.pdf
     /// </summary>
-    public class EstimatedAccuracy : NmeaSentence
+    public class EstimatedAccuracy : Nmea0183Sentence
     {
         /// <summary>
         /// This sentence's id

@@ -5,15 +5,17 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea0183
 {
     /// <summary>
     /// Engine revolutions (RPM) sentence.
     /// Note: This is superseeded by NMEA2000 commands, which provide a lot more details for engine parameters
     /// </summary>
-    public class EngineRevolutions : NmeaSentence
+    public class EngineRevolutions : Nmea0183Sentence
     {
         /// <summary>
         /// This sentence's id

@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences
 {
     /// <summary>
     /// Engine error status bits. If this is 0, the engine is running fine, anything else indicates

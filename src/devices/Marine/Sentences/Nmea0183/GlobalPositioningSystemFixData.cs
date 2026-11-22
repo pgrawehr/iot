@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea0183
 {
     // http://www.tronico.fi/OH6NT/docs/NMEA0183.pdf
     // page 14
@@ -15,7 +17,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// Represents GlobalPositioningSystemFixData (GGA) NMEA0183 sentence. This message is typically
     /// preferred over RMC if it is available.
     /// </summary>
-    public class GlobalPositioningSystemFixData : NmeaSentence
+    public class GlobalPositioningSystemFixData : Nmea0183Sentence
     {
         /// <summary>
         /// The GGA sentence identifer
@@ -111,18 +113,18 @@ namespace Iot.Device.Nmea0183.Sentences
             // seems nullable don't interpolate well
             string time = Valid ? DateTime.ToString("HHmmss.fff", CultureInfo.InvariantCulture) : string.Empty;
             string lat = _latitude.HasValue ? _latitude.Value.ToString("0000.00000", CultureInfo.InvariantCulture) : string.Empty;
-            string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : String.Empty;
-            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : String.Empty;
-            string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : String.Empty;
+            string latTurn = _latitudeTurn.HasValue ? $"{(char)_latitudeTurn.Value}" : string.Empty;
+            string lon = _longitude.HasValue ? _longitude.Value.ToString("00000.00000", CultureInfo.InvariantCulture) : string.Empty;
+            string lonTurn = _longitudeTurn.HasValue ? $"{(char)_longitudeTurn.Value}" : string.Empty;
             string quality = ((int)Status).ToString(CultureInfo.InvariantCulture);
             string numSats = NumberOfSatellites.ToString(CultureInfo.InvariantCulture);
             string geoidElevation = GeoidAltitude.HasValue
                 ? GeoidAltitude.Value.ToString("F1", CultureInfo.InvariantCulture)
-                : String.Empty;
+                : string.Empty;
             string hdop = Hdop.ToString(CultureInfo.InvariantCulture);
             string undulation = Undulation.HasValue
                 ? Undulation.Value.ToString("F1", CultureInfo.InvariantCulture)
-                : String.Empty;
+                : string.Empty;
 
             return FormattableString.Invariant($"{time},{lat},{latTurn},{lon},{lonTurn},{quality},{numSats},{hdop},{geoidElevation},M,{undulation},M,,");
         }

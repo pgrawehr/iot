@@ -8,14 +8,15 @@ using System.Linq;
 using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea0183
 {
     /// <summary>
     /// BWC message: Contains direction to the next waypoint, calculated on the great circle
     /// </summary>
-    public class BearingAndDistanceToWayPoint : NmeaSentence
+    public class BearingAndDistanceToWayPoint : Nmea0183Sentence
     {
         /// <summary>
         /// The id of this message is "BWC"

@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea2000
 {
     /// <summary>
     /// COG &amp; SOG, Rapid Update (PGN 129026)

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.Marine.Sentences.Nmea2000;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 

@@ -8,8 +8,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea2000
 {
     /// <summary>
     /// Represents the state of an array of on/off switches.

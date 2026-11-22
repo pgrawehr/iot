@@ -8,27 +8,33 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea2000
 {
     /// <summary>
     /// Represents the state of an array of on/off switches.
-    /// See also <see cref="CzoneChannelState"/>, which seems redundant
     /// </summary>
-    public sealed class CzoneCircuitStatus : Nmea2000PackedMessage
+    public sealed class BinarySwitchStatus : Nmea2000PackedMessage
     {
-        private readonly byte _dipSwitch;
+        private readonly int _instance;
         private readonly SwitchStatus[] _switches;
 
         /// <summary>
         /// Hexadecimal identifier for this message
         /// </summary>
-        public const int HexId = 0xFF04;
+        public const int HexId = 0x01F20D;
 
         /// <summary>
-        /// The Dip switch value for this board. Default for the first board is 0x80.
+        /// The number of switches supported by this message. This is the constant 28.
         /// </summary>
-        public byte DipSwitch => _dipSwitch;
+        public int MaxNumberOfSwitches => 28;
+
+        /// <summary>
+        /// The instance number of this set of switches. Any number between 0 and 252.
+        /// </summary>
+        public int Instance => _instance;
 
         /// <inheritdoc/>
         public override bool ReplacesOlderInstance => true;
@@ -36,19 +42,19 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <summary>
         /// Creates an empty instance of this class. Can be updated later.
         /// </summary>
-        /// <param name="dipSwitch">Dip switch value for this board (0-252)</param>
-        public CzoneCircuitStatus(byte dipSwitch)
-            : this(dipSwitch, new Dictionary<int, SwitchStatus>())
+        /// <param name="instance">Instance number of this switch bank (0-252)</param>
+        public BinarySwitchStatus(int instance)
+            : this(instance, new Dictionary<int, SwitchStatus>())
         {
         }
 
         /// <summary>
         /// Create an instance of this class from a list of switches
         /// </summary>
-        public CzoneCircuitStatus(byte dipSwitch, Dictionary<int, SwitchStatus> switches)
+        public BinarySwitchStatus(int instance, Dictionary<int, SwitchStatus> switches)
         {
-            _dipSwitch = dipSwitch;
-            _switches = new SwitchStatus[6];
+            _instance = instance;
+            _switches = new SwitchStatus[28];
             for (int i = 0; i < _switches.Length; i++)
             {
                 _switches[i] = SwitchStatus.Off;
@@ -67,7 +73,7 @@ namespace Iot.Device.Nmea0183.Sentences
         /// </summary>
         /// <param name="sentence">The sentence</param>
         /// <param name="time">The current time</param>
-        public CzoneCircuitStatus(TalkerSentence sentence, DateTimeOffset time)
+        public BinarySwitchStatus(TalkerSentence sentence, DateTimeOffset time)
             : this(sentence.TalkerId, Matches(sentence) ? sentence.Fields : throw new ArgumentException($"SentenceId does not match expected id '{Id}'"), time)
         {
         }
@@ -78,19 +84,33 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <param name="talkerId">The source talker id</param>
         /// <param name="fields">The parameters</param>
         /// <param name="time">The current time</param>
-        public CzoneCircuitStatus(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
+        public BinarySwitchStatus(TalkerId talkerId, IEnumerable<string> fields, DateTimeOffset time)
             : base(talkerId, Id, time)
         {
-            _switches = new SwitchStatus[6];
+            _switches = new SwitchStatus[28];
             IEnumerator<string> field = fields.GetEnumerator();
 
             ParseCommonFields(field);
 
             string data = ReadString(field);
 
-            if (ReadByteFromHexString(data, 0, out byte b))
+            if (ReadByteFromHexString(data, 0, out byte inst))
             {
-                _dipSwitch = b;
+                _instance = inst;
+            }
+
+            for (int i = 0; i < 7; i++)
+            {
+                ReadUnsignedFromHexString(data, i * 2 + 2, 2, false, out uint v);
+                // v now contains the bits for 4 switches
+                uint bits = v >> 6 & 0x3;
+                _switches[i * 4] = (SwitchStatus)bits;
+                bits = v >> 4 & 0x3;
+                _switches[i * 4 + 1] = (SwitchStatus)bits;
+                bits = v >> 2 & 0x3;
+                _switches[i * 4 + 2] = (SwitchStatus)bits;
+                bits = v & 0x3;
+                _switches[i * 4 + 3] = (SwitchStatus)bits;
             }
 
             Valid = true;
@@ -99,33 +119,18 @@ namespace Iot.Device.Nmea0183.Sentences
         /// <inheritdoc/>
         public override string ToNmeaParameterList()
         {
-            string manufacturer = WriteManufacturerAndIndustryToHex(ManufacturerCode.BepMarine2, IndustryCode.Marine);
-            string instance = WriteByteToHex(_dipSwitch);
-            string circuitStatusType = WriteByteToHex(0x0F);
-            byte stateBitmap = 0; // This is a 32-bit value with one bit per channel.
-            // This information seems redundant to CzoneChannelState. I don't know yet what the difference is.
-            if (_switches[0] == SwitchStatus.On)
+            string instance = Instance.ToString("X2", CultureInfo.InvariantCulture);
+            StringBuilder switchData = new StringBuilder();
+            for (int i = 0; i < 7; i++)
             {
-                stateBitmap = 1;
+                uint v = (uint)_switches[i * 4] << 6 |
+                         (uint)_switches[i * 4 + 1] << 4 |
+                         (uint)_switches[i * 4 + 2] << 2 |
+                         (uint)_switches[i * 4 + 3];
+                switchData.Append(v.ToString("X2", CultureInfo.InvariantCulture));
             }
 
-            if (_switches[1] == SwitchStatus.On)
-            {
-                stateBitmap |= 2;
-            }
-
-            if (_switches[2] == SwitchStatus.On)
-            {
-                stateBitmap |= 4;
-            }
-
-            if (_switches[3] == SwitchStatus.On)
-            {
-                stateBitmap |= 8;
-            }
-
-            string stateBitmapString = WriteByteToHex(stateBitmap);
-            return base.ToNmeaParameterList() + manufacturer + instance + circuitStatusType + stateBitmapString + "000000";
+            return base.ToNmeaParameterList() + instance + switchData;
         }
 
         /// <summary>
@@ -137,11 +142,11 @@ namespace Iot.Device.Nmea0183.Sentences
         }
 
         /// <summary>
-        /// Returns the status of the given switch
+        /// Read state of a particular switch
         /// </summary>
-        /// <param name="index">The switch number</param>
-        /// <returns>The status of a switch</returns>
-        /// <exception cref="IndexOutOfRangeException">Invalid switch index</exception>
+        /// <param name="index">The index of the switch</param>
+        /// <returns>The status of the switch</returns>
+        /// <exception cref="IndexOutOfRangeException">Thrown when the index is out of range</exception>
         public SwitchStatus GetSwitchState(int index)
         {
             return _switches[index];

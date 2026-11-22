@@ -7,12 +7,12 @@ using System.Text;
 using Iot.Device.Nmea0183;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences.Nmea0183
 {
     /// <summary>
     /// VLW sentence: Distance traveled trough water (total log distance)
     /// </summary>
-    public class DistanceTraveledTroughWater : NmeaSentence
+    public class DistanceTraveledTroughWater : Nmea0183Sentence
     {
         /// <summary>
         /// This sentence's id
