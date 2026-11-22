@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32002.185
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nmea0183", "Nmea0183.csproj", "{3A765366-633B-46B1-9336-3E588A7EFADD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Marine", "Marine.csproj", "{3A765366-633B-46B1-9336-3E588A7EFADD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nmea0183.Tests", "tests\Nmea0183.Tests.csproj", "{ED6C45AC-1EAE-4C55-82A3-EB2F693D2930}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Marine.Tests", "tests\Marine.Tests.csproj", "{ED6C45AC-1EAE-4C55-82A3-EB2F693D2930}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NmeaSimulator", "samples\NmeaSimulator\NmeaSimulator.csproj", "{B50647E2-B5A2-46F2-8B45-BD7D26597844}"
 EndProject

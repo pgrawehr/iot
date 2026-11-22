@@ -4,7 +4,7 @@
     <TargetFrameworks>$(DefaultTestTfms)</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <RootNamespace>Iot.Device.Nmea0183.Tests</RootNamespace>
+    <RootNamespace>Iot.Device.Marine.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,7 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Nmea0183.csproj" />
+    <ProjectReference Include="..\Marine.csproj" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.0.0" />
   </ItemGroup>
 
