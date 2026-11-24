@@ -8,6 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Iot.Device.Marine.Sentences;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1.Messages;
 using Iot.Device.Marine.Sentences.Nmea0183;

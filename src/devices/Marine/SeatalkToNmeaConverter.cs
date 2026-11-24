@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Iot.Device.Common;
+using Iot.Device.Marine.Sentences;
+using Iot.Device.Marine.Sentences.Nmea0183;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1.Messages;

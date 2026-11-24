@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Iot.Device.Marine.Sentences.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using UnitsNet;

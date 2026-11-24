@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Marine.Sentences;
 using Iot.Device.Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183

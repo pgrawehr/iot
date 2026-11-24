@@ -11,6 +11,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Iot.Device.Marine.Sentences;
 using Iot.Device.Nmea0183.Sentences;
 
 namespace Iot.Device.Nmea0183

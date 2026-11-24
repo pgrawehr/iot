@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using Iot.Device.Common;
+using Iot.Device.Marine.Sentences;
+using Iot.Device.Marine.Sentences.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 

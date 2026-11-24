@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Iot.Device.Common;
-using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Marine.Sentences.Nmea0183;
 using UnitsNet;
 
 namespace Iot.Device.Nmea0183

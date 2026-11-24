@@ -21,6 +21,7 @@ using CommandLine;
 using Iot.Device.Marine.Sentences;
 using Microsoft.Extensions.Logging;
 using Iot.Device.Marine.Sentences.Nmea0183;
+using Iot.Device.Marine.Sentences.Nmea2000;
 
 namespace Nmea.Simulator
 {

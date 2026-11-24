@@ -18,6 +18,7 @@ namespace Iot.Device.Nmea0183.Sentences
     /// If sending out messages, you might want to use the third constructor, it is usually the one with most arguments and not taking a talker sentence, as this
     /// is added automatically from the static field <see cref="OwnTalkerId"/>.
     /// </summary>
+    [Serializable]
     public abstract class NmeaSentence : IEquatable<NmeaSentence>
     {
         /// <summary>

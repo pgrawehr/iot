@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Iot.Device.Marine.Sentences;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 
