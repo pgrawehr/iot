@@ -5,15 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Xml.Serialization;
 using Iot.Device.Common;
 using Iot.Device.Marine.Sentences;
 using Iot.Device.Marine.Sentences.Nmea0183;
-using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Nmea0183;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// Corrects the magnetic deviation of an electronic compass.

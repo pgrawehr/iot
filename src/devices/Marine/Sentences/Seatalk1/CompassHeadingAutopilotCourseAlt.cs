@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Iot.Device.Marine;
 using Iot.Device.Nmea0183;
 
 namespace Iot.Device.Seatalk1.Messages

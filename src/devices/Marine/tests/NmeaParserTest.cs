@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Iot.Device.Marine;
 using Iot.Device.Marine.Sentences;
 using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.Sentences;

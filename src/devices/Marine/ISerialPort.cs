@@ -5,7 +5,7 @@ using System;
 using System.IO;
 using System.IO.Ports;
 
-namespace Iot.Device.Seatalk1
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// Abstraction over <see cref="SerialPort"/> to allow testing with mocked/fake transports.

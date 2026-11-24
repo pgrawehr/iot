@@ -3,13 +3,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using Iot.Device.Marine.Sentences;
-using Iot.Device.Nmea0183.Sentences;
-using Microsoft.Extensions.Logging;
+using Iot.Device.Nmea0183;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// Message routing for NMEA messages. See the Readme for an usage example.

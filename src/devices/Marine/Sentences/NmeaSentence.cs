@@ -4,10 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
+using Iot.Device.Nmea0183;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences
 {
     /// <summary>
     /// Base class for Nmea Sentences.

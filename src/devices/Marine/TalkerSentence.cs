@@ -2,19 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using Iot.Device.Marine.Sentences;
-using Iot.Device.Nmea0183.Sentences;
-using Iot.Device.Seatalk1.Messages;
 using Iot.Device.Marine.Sentences.Nmea0183;
 using Iot.Device.Marine.Sentences.Nmea2000;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Seatalk1.Messages;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// Represents NMEA0183 talker sentence (basically just a string with a talker id and a sentence id, plus a list of fields

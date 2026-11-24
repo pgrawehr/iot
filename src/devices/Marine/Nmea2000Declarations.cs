@@ -1,15 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Iot.Device.Marine.Sentences.Nmea2000;
+using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// Static class that declares NMEA2000 message metadata

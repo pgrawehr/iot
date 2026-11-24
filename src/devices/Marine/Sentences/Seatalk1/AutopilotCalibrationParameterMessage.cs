@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Iot.Device.Marine;
 using Iot.Device.Nmea0183;
 
 namespace Iot.Device.Seatalk1.Messages

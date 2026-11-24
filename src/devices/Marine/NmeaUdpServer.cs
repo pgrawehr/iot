@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,13 +9,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Iot.Device.Marine.Sentences;
-using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Nmea0183;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// This server distributes all incoming messages via UDP. The advantage is that clients do not need to

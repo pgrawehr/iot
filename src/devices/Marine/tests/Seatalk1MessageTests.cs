@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Iot.Device.Marine;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Seatalk1;
 using Iot.Device.Seatalk1.Messages;

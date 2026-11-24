@@ -3,21 +3,19 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Iot.Device.Common;
 using Iot.Device.Marine.Sentences;
 using Iot.Device.Marine.Sentences.Nmea0183;
-using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Nmea0183;
 using Microsoft.Extensions.Logging;
-using UnitsNet;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// This abstract class describes an NMEA data source or data sink.
     /// It can be a connection, a data processor (message converter) or an output device.
     /// </summary>
-    public abstract class NmeaSinkAndSource : IDisposable
+    public abstract class NmeaSinkAndSource : MarshalByRefObject, IDisposable
     {
         private ILogger _logger;
 

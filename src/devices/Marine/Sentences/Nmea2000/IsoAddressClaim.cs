@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Iot.Device.Marine.Components;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 

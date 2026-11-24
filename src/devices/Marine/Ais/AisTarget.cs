@@ -4,6 +4,7 @@
 using System;
 using System.Globalization;
 using Iot.Device.Common;
+using Iot.Device.Marine.Components;
 using Iot.Device.Nmea0183.AisSentences;
 
 namespace Iot.Device.Nmea0183.Ais

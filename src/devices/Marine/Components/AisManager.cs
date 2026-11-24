@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Common;
 using Iot.Device.Marine.Sentences;
+using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Ais;
 using Iot.Device.Nmea0183.AisSentences;
 using Iot.Device.Nmea0183.Sentences;
@@ -20,7 +21,7 @@ using Microsoft.Extensions.Logging;
 using UnitsNet;
 using NavigationStatus = Iot.Device.Nmea0183.Ais.NavigationStatus;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine.Components
 {
     /// <summary>
     /// Interpreter for AIS messages from NMEA-0183 data streams.
@@ -30,7 +31,7 @@ namespace Iot.Device.Nmea0183
     /// WARNING: Never rely on an AIS alarm as sole supervision of your surroundings! Many ships do not have AIS or the system may malfunction.
     /// Keep a lookout by eye and ear at all times!
     /// </remarks>
-    public class AisManager : NmeaSinkAndSource
+    public class AisManager : NmeaComponent
     {
         /// <summary>
         /// Delegate for AIS messages
@@ -42,7 +43,7 @@ namespace Iot.Device.Nmea0183
         public delegate void AisMessageHandler(bool received, uint sourceMmsi, uint destinationMmsi, string text);
 
         /// <summary>
-        /// A delegate for use in the <see cref="AisManager.OnAisWarning"/> callback
+        /// A delegate for use in the <see cref="OnAisWarning"/> callback
         /// </summary>
         /// <param name="id">Message id. To identify the message type (e.g. for suppression)</param>
         /// <param name="sourceMmsi">The source MMSI. May be 0 in case of a warning by the own infrastructure</param>
@@ -265,14 +266,14 @@ namespace Iot.Device.Nmea0183
             if (!_positionProvider.TryGetCurrentPosition(out var position, PreferredPositionSource, false,
                     out var track, out var sog, out var heading,
                     out var messageTime, currentTime) ||
-                (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
+                messageTime + TrackEstimationParameters.MaximumPositionAge < currentTime)
             {
                 // then use any source
                 if (PreferredPositionSource == null || !_positionProvider.TryGetCurrentPosition(out position, null,
                         false,
                         out track, out sog, out heading,
                         out messageTime, currentTime) ||
-                    (messageTime + TrackEstimationParameters.MaximumPositionAge) < currentTime)
+                    messageTime + TrackEstimationParameters.MaximumPositionAge < currentTime)
                 {
                     s.Position = position ?? new GeographicPosition();
 
@@ -327,7 +328,7 @@ namespace Iot.Device.Nmea0183
         {
             lock (_lock)
             {
-                var ship = GetOrCreateTarget<Ship>(mmsi, x => new Ship(x), lastSeenTime);
+                var ship = GetOrCreateTarget(mmsi, x => new Ship(x), lastSeenTime);
 
                 // The transceiver type is derived from the message type (a PositionReportClassA message is obviously only sent by class A equipment)
                 if (transceiverClass != AisTransceiverClass.Unknown)
@@ -379,12 +380,12 @@ namespace Iot.Device.Nmea0183
         private BaseStation GetOrCreateBaseStation(uint mmsi, AisTransceiverClass transceiverClass,
             DateTimeOffset? lastSeenTime)
         {
-            return GetOrCreateTarget<BaseStation>(mmsi, x => new BaseStation(mmsi), lastSeenTime);
+            return GetOrCreateTarget(mmsi, x => new BaseStation(mmsi), lastSeenTime);
         }
 
         private SarAircraft GetOrCreateSarAircraft(uint mmsi, DateTimeOffset? lastSeenTime)
         {
-            return GetOrCreateTarget<SarAircraft>(mmsi, x => new SarAircraft(mmsi), lastSeenTime);
+            return GetOrCreateTarget(mmsi, x => new SarAircraft(mmsi), lastSeenTime);
         }
 
         /// <summary>
@@ -433,7 +434,7 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="source">Message source</param>
         /// <param name="sentence">The new sentence</param>
-        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
+        protected override void ProcessInputSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             _cache?.Add(source, sentence);
 
@@ -502,7 +503,7 @@ namespace Iot.Device.Nmea0183
                         {
                             int year = now.Year;
                             // If we are supposed to arrive on a month less than the current, this probably means "next year".
-                            if (voyage.EtaMonth < now.Month ||
+                            if ((voyage.EtaMonth < now.Month) ||
                                 (voyage.EtaMonth == now.Month && voyage.EtaDay < now.Day))
                             {
                                 year += 1;

@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using Iot.Device.Marine;
+using Iot.Device.Marine.Sentences;
 using Iot.Device.Marine.Sentences.Nmea2000;
 
 #pragma warning disable CS1591

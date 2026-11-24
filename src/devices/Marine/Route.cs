@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Iot.Device.Common;
+using Iot.Device.Nmea0183;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// High-level representation of a route (a list of waypoints)

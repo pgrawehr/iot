@@ -28,6 +28,39 @@
     </AssemblyAttribute>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\AisManager.cs" />
+    <Compile Include="Components\AisMessageId.cs" />
+    <Compile Include="Components\AisWarningType.cs" />
+    <Compile Include="Components\AutopilotErrorState.cs" />
+    <Compile Include="Components\AutoPilotRemoteController.cs" />
+    <Compile Include="Components\Nmea2000AutopilotEmulator.cs" />
+    <Compile Include="Components\Nmea2000DeviceInformation.cs" />
+    <Compile Include="Components\Nmea2000DeviceListing.cs" />
+    <Compile Include="Components\Nmea2000VirtualButtons.cs" />
+    <Compile Include="Sentences\AisSentences\AddressedSafetyRelatedMessage.cs" />
+    <Compile Include="Sentences\AisSentences\AidToNavigationReportMessage.cs" />
+    <Compile Include="Sentences\AisSentences\BaseStationReportMessage.cs" />
+    <Compile Include="Sentences\AisSentences\BinaryAcknowledgeMessage.cs" />
+    <Compile Include="Sentences\AisSentences\BinaryAddressedMessage.cs" />
+    <Compile Include="Sentences\AisSentences\BinaryBroadcastMessage.cs" />
+    <Compile Include="Sentences\AisSentences\DataLinkManagementMessage.cs" />
+    <Compile Include="Sentences\AisSentences\ExtendedClassBCsPositionReportMessage.cs" />
+    <Compile Include="Sentences\AisSentences\InterrogationMessage.cs" />
+    <Compile Include="Sentences\AisSentences\PositionReportClassAAssignedScheduleMessage.cs" />
+    <Compile Include="Sentences\AisSentences\PositionReportClassAMessage.cs" />
+    <Compile Include="Sentences\AisSentences\PositionReportClassAMessageBase.cs" />
+    <Compile Include="Sentences\AisSentences\PositionReportClassAResponseToInterrogationMessage.cs" />
+    <Compile Include="Sentences\AisSentences\PositionReportForLongRangeApplicationsMessage.cs" />
+    <Compile Include="Sentences\AisSentences\SafetyRelatedAcknowledgementMessage.cs" />
+    <Compile Include="Sentences\AisSentences\SafetyRelatedBroadcastMessage.cs" />
+    <Compile Include="Sentences\AisSentences\StandardClassBCsPositionReportMessage.cs" />
+    <Compile Include="Sentences\AisSentences\StandardSarAircraftPositionReportMessage.cs" />
+    <Compile Include="Sentences\AisSentences\StaticAndVoyageRelatedDataMessage.cs" />
+    <Compile Include="Sentences\AisSentences\StaticDataReportMessage.cs" />
+    <Compile Include="Sentences\AisSentences\StaticDataReportPartAMessage.cs" />
+    <Compile Include="Sentences\AisSentences\StaticDataReportPartBMessage.cs" />
+    <Compile Include="Sentences\AisSentences\UtcAndDateInquiryMessage.cs" />
+    <Compile Include="Sentences\AisSentences\UtcAndDateResponseMessage.cs" />
     <Compile Include="Sentences\Nmea0183\BearingAndDistanceToWayPoint.cs" />
     <Compile Include="Sentences\Nmea0183\BearingOriginToDestination.cs" />
     <Compile Include="Sentences\Nmea0183\CrossTrackError.cs" />

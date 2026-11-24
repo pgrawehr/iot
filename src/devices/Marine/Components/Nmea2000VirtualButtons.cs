@@ -9,10 +9,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Iot.Device.Marine.Sentences;
 using Iot.Device.Marine.Sentences.Nmea2000;
+using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine.Components
 {
     /// <summary>
     /// This class provides a set of 4 virtual buttons that can be used to trigger events
@@ -23,7 +24,7 @@ namespace Iot.Device.Nmea0183
     /// another page in the "Data" menu with 4 buttons named according to your input.
     /// If the page shows a configuration error, run the "Init" command, then reboot the plotter.
     /// </summary>
-    public class Nmea2000VirtualButtons : NmeaSinkAndSource
+    public class Nmea2000VirtualButtons : NmeaComponent
     {
         private readonly ushort _buttonOffset;
         private readonly Dictionary<int, SwitchStatus> _switches;
@@ -141,7 +142,7 @@ namespace Iot.Device.Nmea0183
         /// </summary>
         /// <param name="source">The source of this message</param>
         /// <param name="sentence">The new message</param>
-        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
+        protected override void ProcessInputSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             // We received a sentence, check if we can handle it
             if (Nmea2000Source == null || source.InterfaceName == Nmea2000Source)

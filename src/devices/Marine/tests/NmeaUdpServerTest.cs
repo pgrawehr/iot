@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Iot.Device.Marine;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 using Xunit;

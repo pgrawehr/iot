@@ -2,16 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Text;
+using Iot.Device.Marine.Sentences;
 using Iot.Device.Marine.Sentences.Nmea0183;
-using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Nmea0183;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// This is a sink for writing received NMEA sentences to a log file. The log file

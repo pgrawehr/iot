@@ -3,11 +3,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Iot.Device.Marine.Sentences;
-using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Nmea0183;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// Delegate used for message filtering.

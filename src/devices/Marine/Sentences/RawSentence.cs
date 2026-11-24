@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Iot.Device.Nmea0183.Ais;
+using Iot.Device.Nmea0183;
+using Iot.Device.Nmea0183.Sentences;
 
-namespace Iot.Device.Nmea0183.Sentences
+namespace Iot.Device.Marine.Sentences
 {
     /// <summary>
     /// This sentence type is used either if no better matching type is known or as placeholder for whole messages.

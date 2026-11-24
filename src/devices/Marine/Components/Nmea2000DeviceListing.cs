@@ -7,18 +7,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Iot.Device.Marine;
 using Iot.Device.Marine.Sentences;
 using Iot.Device.Marine.Sentences.Nmea2000;
+using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine.Components
 {
     /// <summary>
     /// Helps generate a list of devices on the NMEA 2000 bus.
     /// It will send out an address claim request and then a product information request to all devices on the bus, and then collect the responses.
     /// </summary>
-    public class Nmea2000DeviceListing : NmeaSinkAndSource
+    public class Nmea2000DeviceListing : NmeaComponent
     {
         private enum ComponentState
         {
@@ -63,7 +63,7 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <inheritdoc/>
-        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
+        protected override void ProcessInputSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             // Received a sentence (from the component's point of view)
             DateTimeOffset now = DateTimeOffset.UtcNow;

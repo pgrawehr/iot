@@ -8,7 +8,7 @@ using System.Reflection;
 using Iot.Device.Marine.Sentences.Nmea2000;
 
 #pragma warning disable CS1591
-namespace Iot.Device.Marine
+namespace Iot.Device.Marine.Components
 {
     /// <summary>
     /// Provides information about a connected NMEA2000 device and helper methods for NMEA2000 device information lookup

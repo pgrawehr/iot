@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using Iot.Device.Common;
+using Iot.Device.Marine;
 using Iot.Device.Nmea0183.Sentences;
 using Shouldly;
 using UnitsNet;

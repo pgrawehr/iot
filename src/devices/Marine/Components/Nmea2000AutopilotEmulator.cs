@@ -7,12 +7,13 @@ using Iot.Device.Common;
 using Iot.Device.Marine.Sentences;
 using Iot.Device.Marine.Sentences.Nmea0183;
 using Iot.Device.Marine.Sentences.Nmea2000;
+using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 using UnitsNet.Units;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine.Components
 {
     /// <summary>
     /// Allows translating the input/output of an NMEA0183/Seatalk1 Autopilot to NMEA2000, so that
@@ -22,7 +23,7 @@ namespace Iot.Device.Nmea0183
     /// to control autopilots are highly manufacturer-dependent, so that this might not work with non-Raymarine
     /// equipment (e.g. a B&amp;G plotter)
     /// </summary>
-    public sealed class Nmea2000AutopilotEmulator : NmeaSinkAndSource
+    public sealed class Nmea2000AutopilotEmulator : NmeaComponent
     {
         private readonly TimeSpan _defaultMessageTimeout = TimeSpan.FromSeconds(5);
         private readonly SentenceCache _sentencesCache;
@@ -70,7 +71,7 @@ namespace Iot.Device.Nmea0183
         }
 
         /// <inheritdoc/>
-        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
+        protected override void ProcessInputSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             // We received a sentence, check if we can handle it
             if (Nmea2000Source == null || source.InterfaceName == Nmea2000Source)
@@ -233,7 +234,7 @@ namespace Iot.Device.Nmea0183
 
         private Angle NewWindAngle(Angle newAwa, Angle oldAwa)
         {
-            var diff = (newAwa - oldAwa);
+            var diff = newAwa - oldAwa;
             return (_currentHeading + diff).Normalize(true);
         }
 

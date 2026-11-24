@@ -5,14 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Iot.Device.Common;
+using Iot.Device.Marine.Components;
 using Iot.Device.Marine.Sentences.Nmea0183;
+using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using UnitsNet;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// Provides high-level methods to obtain position and other aggregated data from NMEA sources.

@@ -2,21 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using Iot.Device.Common;
 using Iot.Device.Marine.Sentences;
-using Iot.Device.Nmea0183.Sentences;
+using Iot.Device.Nmea0183;
 using Microsoft.Extensions.Logging;
 
-namespace Iot.Device.Nmea0183
+namespace Iot.Device.Marine
 {
     /// <summary>
     /// A TCP Server bidirectional sink and source. Provides NMEA sentences to each connected client.

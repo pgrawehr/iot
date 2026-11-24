@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Ports;
+using Iot.Device.Marine;
 using Iot.Device.Seatalk1;
 
 namespace Iot.Device.Nmea0183.Tests

@@ -17,14 +17,14 @@ using Iot.Device.Seatalk1.Messages;
 using Microsoft.Extensions.Logging;
 using UnitsNet;
 
-namespace Iot.Device.Seatalk1
+namespace Iot.Device.Marine.Components
 {
     /// <summary>
     /// Remote controller for an autopilot connected via Seatalk1.
     /// Besides offering direct control commands, it also keeps track of the current status of the autopilot, including rudder angle and heading
     /// and converts Nmea0183 messages to Seatalk1 messages and vice versa.
     /// </summary>
-    public class AutoPilotRemoteController : NmeaSinkAndSource, IDisposable
+    public class AutoPilotRemoteController : NmeaComponent, IDisposable
     {
         private const double AngleEpsilon = 0.9; // The protocol can only give angles in whole degrees
         private static readonly TimeSpan MaximumTimeout = TimeSpan.FromSeconds(6);
@@ -174,7 +174,7 @@ namespace Iot.Device.Seatalk1
         /// </summary>
         /// <param name="source">The source of the NMEA sentence</param>
         /// <param name="sentence">The received message</param>
-        public override void SendSentence(NmeaSinkAndSource source, NmeaSentence sentence)
+        protected override void ProcessInputSentence(NmeaSinkAndSource source, NmeaSentence sentence)
         {
             if (_seatalkInterfaceName == null || source.InterfaceName == _seatalkInterfaceName)
             {
@@ -339,7 +339,7 @@ namespace Iot.Device.Seatalk1
                 }
             }
 
-            bool ret = SendMessageAndVerifyStatus(new Keystroke(buttonToPress, 1), timeout, () => (Status == newStatus) || ((newStatus == AutopilotStatus.Standby) && IsStandby));
+            bool ret = SendMessageAndVerifyStatus(new Keystroke(buttonToPress, 1), timeout, () => Status == newStatus || newStatus == AutopilotStatus.Standby && IsStandby);
 
             if (ret && newStatus == AutopilotStatus.Track)
             {
@@ -579,7 +579,7 @@ namespace Iot.Device.Seatalk1
 
         internal bool AnglesAreClose(Angle angle1, Angle angle2, Angle allowedDiff)
         {
-            return UnitMath.Abs(AngleExtensions.Difference(angle1, angle2)) < allowedDiff;
+            return AngleExtensions.Difference(angle1, angle2).Abs() < allowedDiff;
         }
 
         /// <summary>

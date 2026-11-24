@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Iot.Device.Marine;
 using Iot.Device.Nmea0183;
 
 namespace Iot.Device.Seatalk1.Messages
