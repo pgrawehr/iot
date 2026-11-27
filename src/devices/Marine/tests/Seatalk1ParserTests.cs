@@ -10,6 +10,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Iot.Device.Marine.Sentences;
+using Iot.Device.Marine.Sentences.Nmea0183;
 using Iot.Device.Nmea0183;
 using Iot.Device.Nmea0183.Sentences;
 using Iot.Device.Nmea0183.Tests;

@@ -13,6 +13,9 @@ using UnitsNet;
 
 namespace Iot.Device.Marine.Sentences.Nmea2000
 {
+    /// <summary>
+    /// This message (PGN 0x1F112) contains the vessel heading, either magnetic or true.
+    /// </summary>
     public class VesselHeading : Nmea2000PackedMessage
     {
         /// <summary>
@@ -20,43 +23,67 @@ namespace Iot.Device.Marine.Sentences.Nmea2000
         /// </summary>
         public const int HexId = 0x1F112;
 
+        /// <inheritdoc/>
         public override uint Identifier => HexId;
 
+        /// <summary>
+        /// The vessel heading
+        /// </summary>
         public Angle Heading
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// The magnetic deviation
+        /// </summary>
         public Angle? Deviation
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// The magnetic variation
+        /// </summary>
         public Angle? Variation
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// True if this is a magnetic heading, false if it is true
+        /// </summary>
         public bool IsMagnetic
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// The instance ID of the sender
+        /// </summary>
         public int Sid
         {
             get;
             set;
         }
 
+        /// <inheritdoc/>
         public override string ToReadableContent()
         {
             return $"Vessel {(IsMagnetic ? "Magnetic" : "True")} Heading: {Heading} Variation: {Variation}";
         }
 
+        /// <summary>
+        /// Create a new vessel heading message
+        /// </summary>
+        /// <param name="heading">The new heading</param>
+        /// <param name="deviation">Optional: The current deviation</param>
+        /// <param name="variation">Optional: The current variation</param>
+        /// <param name="magnetic">True if the heading is magnetic, false if it is true</param>
         public VesselHeading(Angle heading, Angle? deviation, Angle? variation, bool magnetic)
         {
             Heading = heading;
@@ -122,6 +149,7 @@ namespace Iot.Device.Marine.Sentences.Nmea2000
         /// <inheritdoc/>
         public override bool ReplacesOlderInstance => true;
 
+        /// <inheritdoc/>
         public override string ToNmeaParameterList()
         {
             string data = "FF"; // SID

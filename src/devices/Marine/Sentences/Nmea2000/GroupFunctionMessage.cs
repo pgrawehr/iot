@@ -22,10 +22,19 @@ namespace Iot.Device.Marine.Sentences.Nmea2000
     /// </summary>
     public sealed class GroupFunctionMessage : Nmea2000PackedMessage
     {
-        // This message is usually addressed, so the last byte of the Id is the destination address (0xFF for
-        // broadcast)
+        /// <summary>
+        /// Identifier of this message (0x1ED00, addressed)
+        /// </summary>
+        /// <remarks>
+        /// This message is usually addressed, so the last byte of the Id is the destination address (0xFF for
+        /// broadcast)
+        /// </remarks>
         public const int HexId = 0x1ED00;
 
+        /// <summary>
+        /// Construct an instance of a GroupFunctionMessage
+        /// </summary>
+        /// <param name="function">The function type</param>
         public GroupFunctionMessage(GroupFunction function)
         {
             Function = function;
@@ -148,6 +157,11 @@ namespace Iot.Device.Marine.Sentences.Nmea2000
             Valid = true;
         }
 
+        /// <summary>
+        /// Clones the parameter set. Used for creating the corresponding reply.
+        /// </summary>
+        /// <param name="parameters">Parameter list</param>
+        /// <returns>A deep clone of the list</returns>
         public static List<FieldDeclaration> CloneParameters(List<FieldDeclaration> parameters)
         {
             var ret = new List<FieldDeclaration>(parameters.Count);
@@ -185,31 +199,51 @@ namespace Iot.Device.Marine.Sentences.Nmea2000
             return true;
         }
 
+        /// <summary>
+        /// Number of arguments in the request
+        /// </summary>
         public int NumberOfArguments { get; set; }
 
+        /// <summary>
+        /// The type of function call
+        /// </summary>
         public GroupFunction Function
         {
             get;
-            set;
         }
 
         /// <inheritdoc/>
         public override bool ReplacesOlderInstance => false;
 
+        /// <summary>
+        /// The PGN of the request
+        /// </summary>
         public uint Pgn { get; set; }
 
+        /// <summary>
+        /// The list of arguments
+        /// </summary>
         public List<FieldDeclaration> Parameters
         {
             get;
             private set;
         }
 
+        /// <summary>
+        /// If this is a <see cref="GroupFunction.Request"/> command, the new transmission interval.
+        /// Null or undefined to request a one-time reply.
+        /// </summary>
         public TimeSpan? TransmissionInterval
         {
             get;
             set;
         }
 
+        /// <summary>
+        /// If this is a <see cref="GroupFunction.Request"/> command, the new transmission offset, that is
+        /// the time until the first message shall be sent.
+        /// Null or undefined to request an immediate reply.
+        /// </summary>
         public TimeSpan? TransmissionOffset
         {
             get;
@@ -224,6 +258,9 @@ namespace Iot.Device.Marine.Sentences.Nmea2000
         /// </summary>
         public int PgnErrorCode { get; set; }
 
+        /// <summary>
+        /// Creates an acknowledgement message from this message.
+        /// </summary>
         public GroupFunctionMessage CreateAck()
         {
             if (Function != GroupFunction.Command)
@@ -243,6 +280,11 @@ namespace Iot.Device.Marine.Sentences.Nmea2000
             return reply;
         }
 
+        /// <summary>
+        /// Creates a non-acknowledge message for this command
+        /// </summary>
+        /// <param name="parameterError">Optional: The list of arguments that cause the problem</param>
+        /// <returns>An error reply</returns>
         public GroupFunctionMessage CreateNoAck(Func<FieldDeclaration, int?> parameterError)
         {
             if (Function != GroupFunction.Command && Function != GroupFunction.Request)
@@ -267,11 +309,13 @@ namespace Iot.Device.Marine.Sentences.Nmea2000
             return reply;
         }
 
+        /// <inheritdoc/>
         public override string ToReadableContent()
         {
             return $"Group function {Function} for Pgn {Pgn}";
         }
 
+        /// <inheritdoc/>
         public override string ToNmeaParameterList()
         {
             StringBuilder sb = new StringBuilder();

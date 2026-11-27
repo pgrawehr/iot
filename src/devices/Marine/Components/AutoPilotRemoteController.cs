@@ -339,7 +339,7 @@ namespace Iot.Device.Marine.Components
                 }
             }
 
-            bool ret = SendMessageAndVerifyStatus(new Keystroke(buttonToPress, 1), timeout, () => Status == newStatus || newStatus == AutopilotStatus.Standby && IsStandby);
+            bool ret = SendMessageAndVerifyStatus(new Keystroke(buttonToPress, 1), timeout, () => (Status == newStatus) || (newStatus == AutopilotStatus.Standby && IsStandby));
 
             if (ret && newStatus == AutopilotStatus.Track)
             {
